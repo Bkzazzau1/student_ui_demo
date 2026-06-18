@@ -45,7 +45,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (cameras.isEmpty) {
         setState(() {
           _openingCamera = false;
-          _cameraError = 'No camera found. Demo sample mode is available.';
+          _cameraError = 'No camera found. A fallback quality sample is available.';
         });
         return;
       }
@@ -70,7 +70,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       setState(() {
         _openingCamera = false;
         _cameraError =
-            'Camera could not open. Demo sample mode is available: $e';
+            'Camera could not open. A fallback quality sample is available: $e';
       });
     }
   }
@@ -88,7 +88,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       }
     } catch (e) {
       _cameraError =
-          'Camera sample failed, so a demo quality sample was used: $e';
+          'Camera sample failed, so a fallback quality sample was used: $e';
     }
     final next = await _service.addSample(qualityScore: quality);
     if (!mounted) return;

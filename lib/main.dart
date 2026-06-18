@@ -15,7 +15,7 @@ class StudentsUiDemoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Agentic AI Proctoring Demo',
+      title: 'K-SLAS Student Portal',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

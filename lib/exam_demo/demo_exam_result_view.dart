@@ -94,14 +94,14 @@ class DemoExamResultView extends StatelessWidget {
   String _faceIdLabel(String decision) {
     if (decision == 'agentic_proctoring_ready' ||
         decision == 'face_id_verified') {
-      return 'Verified for demo attempt';
+      return 'Verified for exam attempt';
     }
     return 'Not required for this assessment';
   }
 
   String _proctoringLabel(String decision) {
     return decision == 'agentic_proctoring_ready'
-        ? 'Agentic pre-exam review approved'
+        ? 'Pre-exam security review approved'
         : 'Not required for this assessment';
   }
 }

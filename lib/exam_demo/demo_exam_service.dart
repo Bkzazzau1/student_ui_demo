@@ -121,7 +121,7 @@ class DemoExamService {
         id: 'th1',
         section: DemoExamSection.theory,
         prompt:
-            'Explain how an agentic AI proctor should use evidence before making an exam startup decision.',
+            'Explain how a proctoring review should use evidence before making an exam startup decision.',
         marks: 5,
         keywords: <String>[
           'evidence',

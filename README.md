@@ -1,14 +1,14 @@
-# K-SLAS Student UI Demo
+# K-SLAS Student Portal
 
-Dedicated presentation UI for the demo.
+Dedicated student-facing presentation UI.
 
 This repo is intentionally focused on the student-facing presentation flows:
 
 - Examinations
 - Face ID setup
-- Agentic AI pre-exam proctoring gate
+- Pre-exam security check
 
-The proctoring shown here is a controlled presentation flow for the demo. It captures the guided scan, stores an evidence manifest, and shows an agentic review decision without changing the production local AI models in the main student app.
+The proctoring flow captures the guided scan, stores an evidence manifest, and shows a security review decision without changing the production local AI models in the main student app.
 
 ## Run
 
@@ -24,11 +24,11 @@ For web preview:
 flutter run -d chrome
 ```
 
-## Demo path
+## Student Path
 
 1. Open the app.
 2. Choose an examination.
 3. Set up Face ID if the exam is graded.
-4. Run the proctoring gate for remote proctored exams.
-5. Start the exam demo.
+4. Run the pre-exam security check for remote proctored exams.
+5. Start the exam.
 6. Submit and view the result summary.

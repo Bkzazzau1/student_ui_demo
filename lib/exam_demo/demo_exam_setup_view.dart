@@ -72,7 +72,7 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
                     label: Text(
                       _proctoringApproved
                           ? 'Proctoring approved'
-                          : 'Run proctoring gate',
+                          : 'Run security check',
                     ),
                   ),
                 FilledButton.icon(
@@ -225,17 +225,17 @@ class _ChecklistCard extends StatelessWidget {
           title: 'Face ID setup',
           detail: assessment.graded
               ? faceIdComplete
-                    ? 'Face ID is active and attached to this demo attempt.'
-                    : 'Set up Face ID before the proctoring gate or exam startup.'
+                    ? 'Face ID is active and attached to this exam attempt.'
+                    : 'Set up Face ID before the security check or exam startup.'
               : 'Practice assessment can start without Face ID.',
         ),
         _CheckRow(
           passed: !assessment.remoteProctored || proctoringApproved,
-          title: 'Agentic proctoring gate',
+          title: 'Pre-exam security check',
           detail: assessment.remoteProctored
               ? proctoringApproved
                     ? 'Guided scan approved. Evidence manifest saved for review.'
-                    : 'Run the guided 360 scan and agentic review before starting.'
+                    : 'Run the guided 360 scan and security review before starting.'
               : 'Not required for this assessment.',
         ),
         if (manifestPath != null)
@@ -264,7 +264,7 @@ class _RulesCard extends StatelessWidget {
         const Text('Do not refresh, close the window, or switch devices.'),
         if (remoteProctored)
           const Text(
-            'Face ID and guided proctoring approval are required before this demo exam starts.',
+            'Face ID and proctoring approval are required before this exam starts.',
           ),
       ],
     );

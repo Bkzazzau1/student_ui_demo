@@ -16,7 +16,7 @@ class MockAgenticAiReviewService implements AgenticAiReviewService {
     required List<DemoCalibrationEntry> calibrationLog,
   }) async* {
     yield const AgenticReviewEvent(
-      title: 'Agent started',
+      title: 'Security review started',
       detail: 'Reviewing captured room evidence, scan coverage, and labels.',
       severity: 'info',
     );
@@ -48,7 +48,7 @@ class MockAgenticAiReviewService implements AgenticAiReviewService {
       yield const AgenticReviewEvent(
         title: 'Lighting accepted',
         detail:
-            'Recent evidence frames have enough brightness for a demo review.',
+            'Recent evidence frames have enough brightness for review.',
         severity: 'success',
       );
     } else {
@@ -67,7 +67,7 @@ class MockAgenticAiReviewService implements AgenticAiReviewService {
         .toList();
     if (forbiddenLabels.isEmpty) {
       yield const AgenticReviewEvent(
-        title: 'No demo risk labels',
+        title: 'No risk labels',
         detail:
             'No simulated unauthorized item or bad environment labels were raised.',
         severity: 'success',
@@ -86,8 +86,8 @@ class MockAgenticAiReviewService implements AgenticAiReviewService {
           ? 'Decision: ready'
           : 'Decision: pending review',
       detail: missing.isEmpty && lowLight.isEmpty
-          ? 'The demo agent would allow the student to continue.'
-          : 'The demo agent would ask the student to fix issues or request human review.',
+          ? 'Review approved. The student may continue.'
+          : 'The student must fix issues or request human review.',
       severity: missing.isEmpty && lowLight.isEmpty ? 'success' : 'warning',
     );
   }

@@ -30,7 +30,7 @@ class DemoFaceIdService {
   DemoFaceIdService({GetStorage? storage}) : _storage = storage ?? GetStorage();
 
   static const int requiredSamples = 3;
-  static const String studentId = 'KASU/DEMO/2026/001';
+  static const String studentId = 'KSLAS/STD/2026/001';
   static const String _capturedKey = 'demo_face_id_captured_samples';
   static const String _qualityKey = 'demo_face_id_last_quality';
   static const String _updatedAtKey = 'demo_face_id_updated_at';

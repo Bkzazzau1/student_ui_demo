@@ -230,7 +230,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       setState(() {
         _status = DemoScanStatus.passed;
         _manifestPath = manifest;
-        _message = 'Room scan complete. Run the agentic AI review.';
+        _message = 'Room scan complete. Run the security review.';
       });
       return;
     }
@@ -310,7 +310,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     setState(() {
       _reviewing = true;
       _reviewEvents.clear();
-      _message = 'Agentic AI review is running...';
+      _message = 'Security review is running...';
     });
 
     await for (final event in _agent.review(
@@ -332,8 +332,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           ? DemoScanStatus.passed
           : DemoScanStatus.pendingReview;
       _message = decision == 'ready'
-          ? 'Agentic AI review passed. Demo exam can start.'
-          : 'Agentic AI review needs correction or human review.';
+          ? 'Security review approved. Exam can start.'
+          : 'Security review needs correction or human review.';
     });
     if (decision == 'ready' && widget.onApproved != null) {
       widget.onApproved!(manifest);
@@ -378,7 +378,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         title: Text(
           widget.compactExamGate
               ? 'Pre-exam proctoring'
-              : 'Agentic AI Proctoring Demo',
+              : 'K-SLAS Student Portal',
         ),
         backgroundColor: colorScheme.surface,
       ),
@@ -448,8 +448,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 onPressed: _scanComplete && !_reviewing
                     ? _runAgenticReview
                     : null,
-                icon: const Icon(Icons.smart_toy_outlined),
-                label: const Text('Run agent review'),
+                icon: const Icon(Icons.verified_user_outlined),
+                label: const Text('Run security review'),
               ),
               TextButton.icon(
                 onPressed: _reset,
@@ -625,7 +625,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Agentic AI review',
+            'Security review',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 10),

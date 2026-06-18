@@ -73,7 +73,7 @@ class DemoEvidenceService {
           )
           .toList(),
       'calibration_log': calibrationLog.map((entry) => entry.toJson()).toList(),
-      'agentic_review': reviewEvents
+      'security_review': reviewEvents
           .map(
             (event) => <String, String>{
               'title': event.title,

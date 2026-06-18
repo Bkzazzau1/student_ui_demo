@@ -16,7 +16,7 @@ class DemoExamHome extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        title: const Text('K-SLAS Student Demo'),
+        title: const Text('K-SLAS Student Portal'),
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.of(context).push(
@@ -32,7 +32,7 @@ class DemoExamHome extends StatelessWidget {
               ),
             ),
             icon: const Icon(Icons.security_outlined),
-            label: const Text('Proctoring demo'),
+            label: const Text('Proctoring'),
           ),
         ],
       ),
@@ -50,7 +50,7 @@ class DemoExamHome extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Presentation mode shows the student exam flow, Face ID enrollment, and the guided Agentic AI proctoring gate for remote proctored exams.',
+              'Student exam access includes Face ID enrollment and a pre-exam security check for remote proctored assessments.',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF475569),
@@ -112,7 +112,7 @@ class _SummaryBand extends StatelessWidget {
           _SummaryMetric(label: 'Available exams', value: '${assessments.length}'),
           _SummaryMetric(label: 'Graded', value: '$graded'),
           _SummaryMetric(label: 'Remote proctored', value: '$remote'),
-          const _SummaryMetric(label: 'Demo shell', value: 'Exam + Face + AI'),
+          const _SummaryMetric(label: 'Security', value: 'Face ID + Scan'),
         ],
       ),
     );

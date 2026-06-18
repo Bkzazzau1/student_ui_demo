@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="students_ui_demo"
+        android:label="K-SLAS Student Portal"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

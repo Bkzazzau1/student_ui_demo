@@ -1,11 +1,11 @@
 {
-    "name": "students_ui_demo",
-    "short_name": "students_ui_demo",
+    "name": "K-SLAS Student Portal",
+    "short_name": "K-SLAS",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "K-SLAS student examination portal.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
