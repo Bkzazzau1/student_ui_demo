@@ -245,7 +245,7 @@ class _ExamStatusBar extends StatelessWidget {
           _Pill('$answered/$total answered'),
           _Pill(
             assessment.remoteProctored
-                ? 'Agent: $agentDecision'
+                ? 'Security review completed'
                 : 'Normal mode',
           ),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
