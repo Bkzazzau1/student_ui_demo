@@ -60,6 +60,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   final List<AgenticReviewEvent> _reviewEvents = <AgenticReviewEvent>[];
   final Map<String, List<int>> _acceptedSignatures = <String, List<int>>{};
 
+  Timer? _autoCaptureTimer;
   List<int>? _previousSignature;
   DemoScanStatus _status = DemoScanStatus.idle;
   String _message = 'Open the camera, then start the guided room scan.';
@@ -93,6 +94,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   @override
   void dispose() {
+    _autoCaptureTimer?.cancel();
     unawaited(_frameSource.stop(_controller));
     _controller?.dispose();
     super.dispose();
@@ -113,6 +115,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           _openingCamera = false;
           _backupScanReady = true;
         });
+        _scheduleAutoCapture();
         return;
       }
       final camera = cameras.firstWhere(
@@ -129,9 +132,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _controller = controller;
         _openingCamera = false;
         _backupScanReady = false;
-        _message = 'Camera is ready. Start the scan and rotate slowly.';
+        _message = 'Camera is ready. Capturing will start automatically.';
       });
       await previousController?.dispose();
+      _scheduleAutoCapture();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -140,7 +144,19 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _message =
             'Camera could not open. Backup scan mode is ready. Check Windows camera privacy access and close other apps using the camera: $e';
       });
+      _scheduleAutoCapture();
     }
+  }
+
+  void _scheduleAutoCapture() {
+    _autoCaptureTimer?.cancel();
+    if (!_cameraReady || _scanComplete || _reviewing || _capturingTarget) {
+      return;
+    }
+    _autoCaptureTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (!mounted || !_cameraReady || _scanComplete || _reviewing) return;
+      unawaited(_captureCurrentTarget());
+    });
   }
 
   Future<CameraController> _createInitializedCameraController(
@@ -201,6 +217,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   Future<void> _captureCurrentTarget() async {
     if (_capturingTarget || _scanComplete) return;
+    _autoCaptureTimer?.cancel();
     final controller = _controller;
     final canUseRealCamera =
         controller != null && controller.value.isInitialized;
@@ -230,6 +247,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           _capturingTarget = false;
           _message = 'Could not capture this target. Try again.';
         });
+        _scheduleAutoCapture();
         return;
       }
       await _acceptTargetFrame(frame, 'Captured and saved target image.');
@@ -239,6 +257,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _capturingTarget = false;
         _message = 'Could not capture this target: $e';
       });
+      _scheduleAutoCapture();
     }
   }
 
@@ -267,6 +286,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _capturingTarget = false;
         _message = 'Image for $target could not be saved. Try again.';
       });
+      _scheduleAutoCapture();
       return;
     }
 
@@ -298,8 +318,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _lightingScore = frame.luma;
         _motionScore = motion;
         _sceneScore = scene;
-        _message = 'All target images captured. Run the security review.';
+        _message = 'All target images captured. Security review is running...';
       });
+      await _runSecurityReview();
       return;
     }
 
@@ -313,6 +334,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _sceneScore = scene;
       _message = 'Saved $target. Now capture $_currentTarget.';
     });
+    _scheduleAutoCapture();
   }
 
   void _addCalibrationEntry({
@@ -344,7 +366,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   List<String> _demoLabelsFor(DemoCameraScanFrame frame) {
     final labels = <String>[];
-    if (frame.luma < 0.18) labels.add('dark room');
+    if (frame.luma < 0.06) labels.add('dark room');
     if (frame.luma > 0.82) labels.add('possible glare');
     if (_currentTarget.contains('desk')) labels.add('desk area');
     if (_currentTarget.contains('lap')) labels.add('lap area');
@@ -377,6 +399,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   Future<void> _runSecurityReview() async {
     if (_reviewing) return;
+    _autoCaptureTimer?.cancel();
     setState(() {
       _reviewing = true;
       _reviewEvents.clear();
@@ -395,15 +418,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _manifestPath = manifest;
         _reviewEvents
           ..clear()
-          ..addAll(
-            result.findings.map(
-              (finding) => AgenticReviewEvent(
-                title: finding.title,
-                detail: finding.detail,
-                severity: finding.severity,
-              ),
-            ),
-          );
+          ..add(_studentReviewEvent(result));
         _status = result.approved
             ? DemoScanStatus.passed
             : result.needsRescan
@@ -416,7 +431,11 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             : 'Review required before exam startup.';
       });
       if (result.approved && widget.onApproved != null) {
+        await _showReviewDecisionDialog(result);
+        if (!mounted) return;
         widget.onApproved!(manifest);
+      } else {
+        await _showReviewDecisionDialog(result);
       }
     } catch (e) {
       if (!mounted) return;
@@ -428,14 +447,61 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _reviewEvents
           ..clear()
           ..add(
-            AgenticReviewEvent(
+            const AgenticReviewEvent(
               title: 'Review required',
-              detail: 'Security review service is unavailable: $e',
+              detail: 'The evidence record could not be reviewed at this time.',
               severity: 'warning',
             ),
           );
       });
     }
+  }
+
+  Future<void> _showReviewDecisionDialog(SecurityReviewResult result) async {
+    final title = result.approved
+        ? 'Review approved'
+        : result.needsRescan
+        ? 'Rescan required'
+        : 'Review required';
+    final message = result.approved
+        ? '${result.summary}\n\nClick OK to start the exam.'
+        : result.summary;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  AgenticReviewEvent _studentReviewEvent(SecurityReviewResult result) {
+    if (result.approved) {
+      return const AgenticReviewEvent(
+        title: 'Review approved',
+        detail: 'Pre-exam security check completed successfully.',
+        severity: 'success',
+      );
+    }
+    if (result.needsRescan) {
+      return const AgenticReviewEvent(
+        title: 'Rescan required',
+        detail: 'Please correct the issue and rescan before exam startup.',
+        severity: 'warning',
+      );
+    }
+    return const AgenticReviewEvent(
+      title: 'Review required',
+      detail: 'The evidence record requires invigilator review before startup.',
+      severity: 'warning',
+    );
   }
 
   Map<String, dynamic> _buildReviewManifest() {
@@ -496,6 +562,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   Future<void> _reset() async {
+    _autoCaptureTimer?.cancel();
     await _frameSource.stop(_controller);
     setState(() {
       _targets = _newTargets();
@@ -597,11 +664,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 label: const Text('Start 360 scan'),
               ),
               FilledButton.icon(
-                onPressed:
-                    _cameraReady &&
-                        _scanning &&
-                        !_capturingTarget &&
-                        !_scanComplete
+                onPressed: _cameraReady && !_capturingTarget && !_scanComplete
                     ? _captureCurrentTarget
                     : null,
                 icon: const Icon(Icons.camera_alt_outlined),
@@ -726,6 +789,26 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: FilledButton.icon(
+                    onPressed:
+                        _cameraReady && !_capturingTarget && !_scanComplete
+                        ? _captureCurrentTarget
+                        : null,
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: Text(
+                      _capturingTarget
+                          ? 'Saving image...'
+                          : _scanComplete
+                          ? 'All images captured'
+                          : 'Capture $_currentTarget',
+                    ),
                   ),
                 ),
               ),
