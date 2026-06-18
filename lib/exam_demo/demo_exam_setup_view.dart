@@ -116,6 +116,8 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
       MaterialPageRoute<void>(
         builder: (_) => ProctoringDemoHome(
           compactExamGate: true,
+          examId: widget.assessment.id,
+          attemptId: 'attempt-${DateTime.now().millisecondsSinceEpoch}',
           onApproved: (manifestPath) {
             setState(() {
               _proctoringApproved = true;

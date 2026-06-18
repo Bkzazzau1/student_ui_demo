@@ -4,20 +4,26 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import 'agentic_ai_review_service.dart';
 import 'camera_scan_frame_source.dart';
 import 'demo_evidence_service.dart';
 import 'proctoring_demo_models.dart';
+import 'security_review_service.dart';
 
 class ProctoringDemoHome extends StatefulWidget {
   const ProctoringDemoHome({
     super.key,
     this.onApproved,
     this.compactExamGate = false,
+    this.studentId = 'KASU/STU/2026/001',
+    this.examId = 'exam-csc305-mid',
+    this.attemptId = 'attempt-001',
   });
 
   final void Function(String? manifestPath)? onApproved;
   final bool compactExamGate;
+  final String studentId;
+  final String examId;
+  final String attemptId;
 
   @override
   State<ProctoringDemoHome> createState() => _ProctoringDemoHomeState();
@@ -41,7 +47,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   final DemoCameraScanFrameSource _frameSource = DemoCameraScanFrameSource();
   final DemoEvidenceService _evidence = DemoEvidenceService();
-  final AgenticAiReviewService _agent = MockAgenticAiReviewService();
+  final SecurityReviewService _securityReview = SecurityReviewService(
+    baseUrl: String.fromEnvironment(
+      'KSLAS_API_BASE_URL',
+      defaultValue: 'http://127.0.0.1:8080',
+    ),
+  );
 
   CameraController? _controller;
   List<DemoScanTarget> _targets = _newTargets();
@@ -364,7 +375,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     return bestDifference;
   }
 
-  Future<void> _runAgenticReview() async {
+  Future<void> _runSecurityReview() async {
     if (_reviewing) return;
     setState(() {
       _reviewing = true;
@@ -372,31 +383,106 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _message = 'Security review is running...';
     });
 
-    await for (final event in _agent.review(
-      targets: _targets,
-      calibrationLog: _calibrationLog,
-    )) {
+    try {
+      final result = await _securityReview.submitPreExamReview(
+        manifest: _buildReviewManifest(),
+        imagePaths: _targetImagePaths(),
+      );
+      final manifest = await _saveManifest(result.decision);
       if (!mounted) return;
-      setState(() => _reviewEvents.add(event));
+      setState(() {
+        _reviewing = false;
+        _manifestPath = manifest;
+        _reviewEvents
+          ..clear()
+          ..addAll(
+            result.findings.map(
+              (finding) => AgenticReviewEvent(
+                title: finding.title,
+                detail: finding.detail,
+                severity: finding.severity,
+              ),
+            ),
+          );
+        _status = result.approved
+            ? DemoScanStatus.passed
+            : result.needsRescan
+            ? DemoScanStatus.failed
+            : DemoScanStatus.pendingReview;
+        _message = result.approved
+            ? 'Security review approved. Exam can start.'
+            : result.needsRescan
+            ? 'Rescan required before exam startup.'
+            : 'Review required before exam startup.';
+      });
+      if (result.approved && widget.onApproved != null) {
+        widget.onApproved!(manifest);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _reviewing = false;
+        _status = DemoScanStatus.pendingReview;
+        _message =
+            'Review required before exam startup. Security review service is unavailable.';
+        _reviewEvents
+          ..clear()
+          ..add(
+            AgenticReviewEvent(
+              title: 'Review required',
+              detail: 'Security review service is unavailable: $e',
+              severity: 'warning',
+            ),
+          );
+      });
     }
+  }
 
-    final last = _reviewEvents.isEmpty ? null : _reviewEvents.last;
-    final decision = last?.severity == 'success' ? 'ready' : 'pending_review';
-    final manifest = await _saveManifest(decision);
-    if (!mounted) return;
-    setState(() {
-      _reviewing = false;
-      _manifestPath = manifest;
-      _status = decision == 'ready'
-          ? DemoScanStatus.passed
-          : DemoScanStatus.pendingReview;
-      _message = decision == 'ready'
-          ? 'Security review approved. Exam can start.'
-          : 'Security review needs correction or human review.';
-    });
-    if (decision == 'ready' && widget.onApproved != null) {
-      widget.onApproved!(manifest);
+  Map<String, dynamic> _buildReviewManifest() {
+    final calibrationByTarget = <String, DemoCalibrationEntry>{};
+    for (final entry in _calibrationLog) {
+      calibrationByTarget[entry.target] = entry;
     }
+    return <String, dynamic>{
+      'student_id': widget.studentId,
+      'exam_id': widget.examId,
+      'attempt_id': widget.attemptId,
+      'captured_at': DateTime.now().toUtc().toIso8601String(),
+      'targets': _targets.map((target) {
+        final calibration = calibrationByTarget[target.name];
+        return <String, dynamic>{
+          'name': target.name,
+          'captured': target.captured,
+          'image_key': target.framePath == null
+              ? null
+              : _fileNameFromPath(target.framePath!),
+          'lighting_score': calibration?.lightingScore ?? 0,
+          'motion_score': calibration?.motionScore ?? 0,
+          'scene_score': calibration?.sceneScore ?? 0,
+          'labels': target.labels,
+        };
+      }).toList(),
+    };
+  }
+
+  Map<String, String> _targetImagePaths() {
+    return <String, String>{
+      for (final target in _targets)
+        if (target.framePath != null)
+          _fieldKeyForTarget(target.name): target.framePath!,
+    };
+  }
+
+  String _fieldKeyForTarget(String target) {
+    return target
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+$'), '');
+  }
+
+  String _fileNameFromPath(String path) {
+    final parts = path.split(RegExp(r'[\\/]'));
+    return parts.isEmpty ? path : parts.last;
   }
 
   Future<String> _saveManifest(String decision) {
@@ -525,7 +611,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
               ),
               OutlinedButton.icon(
                 onPressed: _scanComplete && !_reviewing
-                    ? _runAgenticReview
+                    ? _runSecurityReview
                     : null,
                 icon: const Icon(Icons.verified_user_outlined),
                 label: const Text('Run security review'),
