@@ -1,16 +1,32 @@
-# students_ui_demo
+# K-SLAS Student UI Demo
 
-A new Flutter project.
+Dedicated presentation UI for the demo.
 
-## Getting Started
+This repo is intentionally focused on only two student-facing flows:
 
-This project is a starting point for a Flutter application.
+- Examinations
+- Face ID setup
 
-A few resources to get you started if this is your first Flutter project:
+The full local AI proctoring flow is not loaded in this presentation shell. This keeps the demo clean and stable while we prepare the production student app separately.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Run
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter clean
+flutter pub get
+flutter run -d windows
+```
+
+For web preview:
+
+```bash
+flutter run -d chrome
+```
+
+## Demo path
+
+1. Open the app.
+2. Choose an examination.
+3. Set up Face ID if the exam is graded.
+4. Start the exam demo.
+5. Submit and view the result summary.
