@@ -17,7 +17,7 @@ class LiveStatusPanel extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
             SizedBox(height: 8),
-            Text('Camera, sound, face view, and system checks remain required.'),
+            Text('Camera, sound, clear face view, and system checks remain required.'),
           ],
         ),
       ),
