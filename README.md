@@ -2,12 +2,13 @@
 
 Dedicated presentation UI for the demo.
 
-This repo is intentionally focused on only two student-facing flows:
+This repo is intentionally focused on the student-facing presentation flows:
 
 - Examinations
 - Face ID setup
+- Agentic AI pre-exam proctoring gate
 
-The full local AI proctoring flow is not loaded in this presentation shell. This keeps the demo clean and stable while we prepare the production student app separately.
+The proctoring shown here is a controlled presentation flow for the demo. It captures the guided scan, stores an evidence manifest, and shows an agentic review decision without changing the production local AI models in the main student app.
 
 ## Run
 
@@ -28,5 +29,6 @@ flutter run -d chrome
 1. Open the app.
 2. Choose an examination.
 3. Set up Face ID if the exam is graded.
-4. Start the exam demo.
-5. Submit and view the result summary.
+4. Run the proctoring gate for remote proctored exams.
+5. Start the exam demo.
+6. Submit and view the result summary.
