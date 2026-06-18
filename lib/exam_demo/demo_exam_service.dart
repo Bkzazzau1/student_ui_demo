@@ -3,7 +3,7 @@ import 'demo_exam_models.dart';
 class DemoExamService {
   static const DemoCourse _csc305 = DemoCourse(
     code: 'CSC 305',
-    title: 'Artificial Intelligence and Agentic Systems',
+    title: 'Secure Examination Systems',
     lecturer: 'Dr. A. Bello',
   );
 
@@ -70,24 +70,24 @@ class DemoExamService {
       const DemoQuestion(
         id: 'q1',
         section: DemoExamSection.objective,
-        prompt: 'Which AI component combines evidence and recommends an examination action?',
+        prompt: 'Which review step combines evidence and recommends an examination action?',
         marks: 1,
         options: <String>[
-          'Risk Agent',
-          'Router service',
-          'Disk scheduler',
-          'Printer spooler',
+          'Risk review',
+          'Printer setup',
+          'Course upload',
+          'Result download',
         ],
-        answer: 'Risk Agent',
+        answer: 'Risk review',
       ),
       const DemoQuestion(
         id: 'q2',
         section: DemoExamSection.objective,
-        prompt: 'What should happen before a student is punished for suspected malpractice?',
+        prompt: 'What should happen before a serious examination decision is finalized?',
         marks: 1,
         options: <String>[
           'Human review of evidence',
-          'Automatic failure by AI',
+          'Automatic decision only',
           'Deleting the session',
           'Ignoring all logs',
         ],
@@ -112,7 +112,7 @@ class DemoExamService {
       const DemoQuestion(
         id: 'fb1',
         section: DemoExamSection.fillBlank,
-        prompt: 'The local AI layer sends structured ____ logs to the backend.',
+        prompt: 'The secure exam app sends structured ____ logs to the backend.',
         marks: 2,
         answer: 'event',
       ),
@@ -130,11 +130,11 @@ class DemoExamService {
         id: 'th1',
         section: DemoExamSection.theory,
         prompt:
-            'Explain how an agentic proctoring engine should use identity, environment, screen, audio, risk, and evidence agents before allowing an examination to start.',
+            'Explain how identity check, room scan, screen monitoring, audio monitoring, risk review, and evidence review should work before allowing an examination to start.',
         marks: 5,
         keywords: <String>[
           'identity',
-          'environment',
+          'room',
           'screen',
           'audio',
           'risk',
