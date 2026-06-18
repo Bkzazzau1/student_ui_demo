@@ -93,6 +93,18 @@ class DemoCameraScanFrameSource {
 
   bool get _usable => _active && (_shouldContinue?.call() ?? false);
 
+  Future<DemoCameraScanFrame?> captureStillFrame(
+    CameraController controller,
+  ) async {
+    if (!controller.value.isInitialized) return null;
+    return _stillFrame(controller);
+  }
+
+  DemoCameraScanFrame captureFallbackFrame() {
+    _fallbackFrameIndex++;
+    return _fallbackFrame(_fallbackFrameIndex);
+  }
+
   void _startStill(CameraController controller) {
     _onStatus?.call('still-frame');
     _timer = Timer.periodic(stillCaptureInterval, (_) {
@@ -117,17 +129,7 @@ class DemoCameraScanFrameSource {
     if (!_usable || _busy) return;
     _busy = true;
     try {
-      _fallbackFrameIndex++;
-      final image = _fallbackImage(_fallbackFrameIndex);
-      await _onFrame?.call(
-        DemoCameraScanFrame(
-          mode: 'backup-frame',
-          luma: _averageDecodedLuma(image),
-          signature: _decodedSignature(image),
-          timestamp: DateTime.now(),
-          decodedImage: image,
-        ),
-      );
+      await _onFrame?.call(captureFallbackFrame());
     } finally {
       _busy = false;
     }
@@ -137,23 +139,38 @@ class DemoCameraScanFrameSource {
     if (!_usable || _busy || !controller.value.isInitialized) return;
     _busy = true;
     try {
-      final file = await controller.takePicture();
-      final decoded = img.decodeImage(await file.readAsBytes());
-      if (decoded == null) return;
-      await _onFrame?.call(
-        DemoCameraScanFrame(
-          mode: 'still-frame',
-          luma: _averageDecodedLuma(decoded),
-          signature: _decodedSignature(decoded),
-          timestamp: DateTime.now(),
-          decodedImage: decoded,
-        ),
-      );
+      final frame = await _stillFrame(controller);
+      if (frame == null) return;
+      await _onFrame?.call(frame);
     } catch (e) {
       _onStatus?.call('camera-busy: $e');
     } finally {
       _busy = false;
     }
+  }
+
+  Future<DemoCameraScanFrame?> _stillFrame(CameraController controller) async {
+    final file = await controller.takePicture();
+    final decoded = img.decodeImage(await file.readAsBytes());
+    if (decoded == null) return null;
+    return DemoCameraScanFrame(
+      mode: 'still-frame',
+      luma: _averageDecodedLuma(decoded),
+      signature: _decodedSignature(decoded),
+      timestamp: DateTime.now(),
+      decodedImage: decoded,
+    );
+  }
+
+  DemoCameraScanFrame _fallbackFrame(int index) {
+    final image = _fallbackImage(index);
+    return DemoCameraScanFrame(
+      mode: 'backup-frame',
+      luma: _averageDecodedLuma(image),
+      signature: _decodedSignature(image),
+      timestamp: DateTime.now(),
+      decodedImage: image,
+    );
   }
 
   void _handleLive(CameraImage image) {
@@ -255,10 +272,9 @@ class DemoCameraScanFrameSource {
     for (var y = 0; y < height; y++) {
       for (var x = 0; x < width; x++) {
         final band = ((x ~/ 80) + (y ~/ 60) + index) % 3;
-        final value =
-            (tone + band * 18 + ((x + y + index * 11) % 24))
-                .clamp(0, 255)
-                .toInt();
+        final value = (tone + band * 18 + ((x + y + index * 11) % 24))
+            .clamp(0, 255)
+            .toInt();
         image.setPixelRgb(
           x,
           y,

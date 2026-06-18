@@ -39,10 +39,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     'surroundings',
   ];
 
-  static const double _minimumSceneChangeScore = 0.032;
-  static const double _minimumMotionScore = 0.018;
-  static const double _minimumLightingScore = 0.20;
-
   final DemoCameraScanFrameSource _frameSource = DemoCameraScanFrameSource();
   final DemoEvidenceService _evidence = DemoEvidenceService();
   final AgenticAiReviewService _agent = MockAgenticAiReviewService();
@@ -65,6 +61,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   double _sceneScore = 0;
   bool _openingCamera = false;
   bool _backupScanReady = false;
+  bool _capturingTarget = false;
   bool _reviewing = false;
 
   static List<DemoScanTarget> _newTargets() =>
@@ -187,33 +184,57 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _motionScore = 0;
       _sceneScore = 0;
       _status = DemoScanStatus.scanning;
-      _message =
-          'Capture $_currentTarget. Move slowly until the scene changes.';
+      _message = 'Capture $_currentTarget and continue through each target.';
+    });
+  }
+
+  Future<void> _captureCurrentTarget() async {
+    if (_capturingTarget || _scanComplete) return;
+    final controller = _controller;
+    final canUseRealCamera =
+        controller != null && controller.value.isInitialized;
+    if (!canUseRealCamera && !_backupScanReady) {
+      setState(() => _message = 'Open the camera before capturing a target.');
+      return;
+    }
+
+    if (!_scanning) {
+      await _startScan();
+      if (!mounted || !_scanning) return;
+    }
+
+    await _frameSource.stop(controller);
+    setState(() {
+      _capturingTarget = true;
+      _message = 'Saving image for $_currentTarget...';
     });
 
-    bool shouldContinue() => mounted && _scanning && !_scanComplete;
-    void onStatus(String status) {
+    try {
+      final frame = canUseRealCamera
+          ? await _frameSource.captureStillFrame(controller)
+          : _frameSource.captureFallbackFrame();
+      if (frame == null) {
+        if (!mounted) return;
+        setState(() {
+          _capturingTarget = false;
+          _message = 'Could not capture this target. Try again.';
+        });
+        return;
+      }
+      await _acceptTargetFrame(frame, 'Captured and saved target image.');
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _frameMode = status);
-    }
-    if (controller != null && controller.value.isInitialized) {
-      await _frameSource.start(
-        controller: controller,
-        shouldContinue: shouldContinue,
-        onFrame: _handleFrame,
-        onStatus: onStatus,
-      );
-    } else {
-      await _frameSource.startFallback(
-        shouldContinue: shouldContinue,
-        onFrame: _handleFrame,
-        onStatus: onStatus,
-      );
+      setState(() {
+        _capturingTarget = false;
+        _message = 'Could not capture this target: $e';
+      });
     }
   }
 
-  Future<void> _handleFrame(DemoCameraScanFrame frame) async {
-    if (!_scanning || _scanComplete) return;
+  Future<void> _acceptTargetFrame(
+    DemoCameraScanFrame frame,
+    String note,
+  ) async {
     final target = _currentTarget;
     final previous = _previousSignature;
     final motion = previous == null
@@ -221,43 +242,23 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         : _signatureDifference(previous, frame.signature);
     final scene = _sceneDiversityScore(frame.signature);
     final labels = _demoLabelsFor(frame);
-    final enoughLight = frame.luma >= _minimumLightingScore;
-    final firstTarget = _acceptedSignatures.isEmpty;
-    final enoughMotion = firstTarget || motion >= _minimumMotionScore;
-    final uniqueScene = firstTarget || scene >= _minimumSceneChangeScore;
-
     _previousSignature = List<int>.from(frame.signature);
     _frameCount++;
-
-    if (!enoughLight || !enoughMotion || !uniqueScene) {
-      final note = !enoughLight
-          ? 'Need more light before this target can pass.'
-          : !enoughMotion
-          ? 'Camera has not moved enough for this target.'
-          : 'This scene looks too similar to a previous accepted target.';
-      _addCalibrationEntry(
-        target: target,
-        frame: frame,
-        motion: motion,
-        scene: scene,
-        labels: labels,
-        note: note,
-      );
-      if (!mounted) return;
-      setState(() {
-        _lightingScore = frame.luma;
-        _motionScore = motion;
-        _sceneScore = scene;
-        _message = note;
-      });
-      return;
-    }
 
     final framePath = await _evidence.saveTargetFrame(
       target: target,
       decodedImage: frame.decodedImage,
       cameraImage: frame.cameraImage,
     );
+    if (framePath == null) {
+      if (!mounted) return;
+      setState(() {
+        _capturingTarget = false;
+        _message = 'Image for $target could not be saved. Try again.';
+      });
+      return;
+    }
+
     _acceptedSignatures[target] = List<int>.from(frame.signature);
     final index = _currentTargetIndex;
     _targets[index] = _targets[index].copyWith(
@@ -271,29 +272,35 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       motion: motion,
       scene: scene,
       labels: labels,
-      note: 'Accepted and saved evidence frame.',
+      note: note,
       framePath: framePath,
     );
 
     if (_scanComplete) {
-      await _frameSource.stop(_controller);
       final manifest = await _saveManifest('scan_complete');
       if (!mounted) return;
       setState(() {
+        _capturingTarget = false;
         _status = DemoScanStatus.passed;
         _manifestPath = manifest;
-        _message = 'Room scan complete. Run the security review.';
+        _frameMode = frame.mode;
+        _lightingScore = frame.luma;
+        _motionScore = motion;
+        _sceneScore = scene;
+        _message = 'All target images captured. Run the security review.';
       });
       return;
     }
 
     if (!mounted) return;
     setState(() {
+      _capturingTarget = false;
       _currentTargetIndex++;
+      _frameMode = frame.mode;
       _lightingScore = frame.luma;
       _motionScore = motion;
       _sceneScore = scene;
-      _message = 'Accepted $target. Now capture $_currentTarget.';
+      _message = 'Saved $target. Now capture $_currentTarget.';
     });
   }
 
@@ -416,6 +423,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _lightingScore = 0;
       _motionScore = 0;
       _sceneScore = 0;
+      _capturingTarget = false;
       _status = DemoScanStatus.idle;
       _message = 'Open the camera, then start the guided room scan.';
     });
@@ -501,6 +509,19 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 onPressed: _cameraReady && !_scanning ? _startScan : null,
                 icon: const Icon(Icons.screen_rotation_alt_outlined),
                 label: const Text('Start 360 scan'),
+              ),
+              FilledButton.icon(
+                onPressed:
+                    _cameraReady &&
+                        _scanning &&
+                        !_capturingTarget &&
+                        !_scanComplete
+                    ? _captureCurrentTarget
+                    : null,
+                icon: const Icon(Icons.camera_alt_outlined),
+                label: Text(
+                  _capturingTarget ? 'Saving image...' : 'Capture target',
+                ),
               ),
               OutlinedButton.icon(
                 onPressed: _scanComplete && !_reviewing
@@ -639,24 +660,37 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 10),
-          ..._targets.map(
-            (target) => ListTile(
+          ..._targets.asMap().entries.map((entry) {
+            final index = entry.key;
+            final target = entry.value;
+            final active =
+                _scanning && !_scanComplete && index == _currentTargetIndex;
+            return ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
+              tileColor: active ? const Color(0xFFEFF6FF) : null,
               leading: Icon(
                 target.captured
                     ? Icons.check_circle
+                    : active
+                    ? Icons.camera_alt_outlined
                     : Icons.radio_button_unchecked,
                 color: target.captured
                     ? const Color(0xFF16A34A)
+                    : active
+                    ? const Color(0xFF1D4ED8)
                     : const Color(0xFF64748B),
               ),
               title: Text(target.name),
-              subtitle: target.labels.isEmpty
+              subtitle: target.framePath != null
+                  ? const Text('Image saved')
+                  : active
+                  ? const Text('Ready to capture')
+                  : target.labels.isEmpty
                   ? null
                   : Text(target.labels.join(', ')),
-            ),
-          ),
+            );
+          }),
           const Divider(height: 24),
           Text(
             'Calibration log',
