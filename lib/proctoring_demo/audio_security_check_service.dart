@@ -15,6 +15,12 @@ class AudioSecurityCheckResult {
     required this.peakRms,
     required this.voiceConfidence,
     required this.environmentLabel,
+    required this.dominantNoiseClass,
+    required this.humanVoiceDetected,
+    required this.phoneRingDetected,
+    required this.notificationDetected,
+    required this.tvOrRadioVoiceDetected,
+    required this.ambientNoiseAllowed,
     this.clipPath,
     this.message,
   });
@@ -26,6 +32,12 @@ class AudioSecurityCheckResult {
   final double peakRms;
   final double voiceConfidence;
   final String environmentLabel;
+  final String dominantNoiseClass;
+  final bool humanVoiceDetected;
+  final bool phoneRingDetected;
+  final bool notificationDetected;
+  final bool tvOrRadioVoiceDetected;
+  final bool ambientNoiseAllowed;
   final String? clipPath;
   final String? message;
 
@@ -37,6 +49,12 @@ class AudioSecurityCheckResult {
     'peak_rms': peakRms,
     'voice_confidence': voiceConfidence,
     'environment_label': environmentLabel,
+    'dominant_noise_class': dominantNoiseClass,
+    'human_voice_detected': humanVoiceDetected,
+    'phone_ring_detected': phoneRingDetected,
+    'notification_detected': notificationDetected,
+    'tv_or_radio_voice_detected': tvOrRadioVoiceDetected,
+    'ambient_noise_allowed': ambientNoiseAllowed,
     if (clipPath != null) 'clip_path': clipPath,
     if (message != null) 'message': message,
   };
@@ -63,6 +81,12 @@ class AudioSecurityCheckService {
         peakRms: 0,
         voiceConfidence: 0,
         environmentLabel: 'microphone_unavailable',
+        dominantNoiseClass: 'unclassified',
+        humanVoiceDetected: false,
+        phoneRingDetected: false,
+        notificationDetected: false,
+        tvOrRadioVoiceDetected: false,
+        ambientNoiseAllowed: false,
         message: 'Microphone access is required for the security check.',
       );
     }
@@ -118,6 +142,12 @@ class AudioSecurityCheckService {
         peakRms: 0,
         voiceConfidence: 0,
         environmentLabel: 'microphone_check_failed',
+        dominantNoiseClass: 'unclassified',
+        humanVoiceDetected: false,
+        phoneRingDetected: false,
+        notificationDetected: false,
+        tvOrRadioVoiceDetected: false,
+        ambientNoiseAllowed: false,
         message: 'Microphone check could not be completed: $e',
       );
     } finally {
@@ -137,6 +167,14 @@ class AudioSecurityCheckService {
     final nativeNoisePeak = nativeNoiseSignals.isEmpty
         ? 0.0
         : nativeNoiseSignals.reduce(math.max);
+    final effectivePeak = math.max(peak, nativeNoisePeak);
+    final humanVoiceDetected = voiceConfidence >= 0.70;
+    final dominantNoiseClass = _dominantNoiseClass(
+      averageRms: average,
+      peakRms: effectivePeak,
+      humanVoiceDetected: humanVoiceDetected,
+      inputLevelOk: inputLevelOk,
+    );
     return AudioSecurityCheckResult(
       microphoneAvailable: true,
       permissionGranted: true,
@@ -146,9 +184,15 @@ class AudioSecurityCheckService {
       voiceConfidence: voiceConfidence,
       environmentLabel: _environmentLabel(
         averageRms: average,
-        peakRms: math.max(peak, nativeNoisePeak),
+        peakRms: effectivePeak,
         voiceConfidence: voiceConfidence,
       ),
+      dominantNoiseClass: dominantNoiseClass,
+      humanVoiceDetected: humanVoiceDetected,
+      phoneRingDetected: false,
+      notificationDetected: false,
+      tvOrRadioVoiceDetected: false,
+      ambientNoiseAllowed: inputLevelOk && !humanVoiceDetected,
       clipPath: clipPath,
       message: inputLevelOk
           ? null
@@ -216,5 +260,18 @@ class AudioSecurityCheckService {
     if (averageRms > 0.45) return 'noisy_environment';
     if (averageRms > 0.20) return 'moderate_environment';
     return 'quiet_environment';
+  }
+
+  String _dominantNoiseClass({
+    required double averageRms,
+    required double peakRms,
+    required bool humanVoiceDetected,
+    required bool inputLevelOk,
+  }) {
+    if (!inputLevelOk) return 'unclassified';
+    if (humanVoiceDetected) return 'human_voice';
+    if (peakRms > 0.75 || averageRms > 0.45) return 'allowed_ambient_noise';
+    if (averageRms > 0.20) return 'allowed_ambient_noise';
+    return 'quiet_room';
   }
 }
