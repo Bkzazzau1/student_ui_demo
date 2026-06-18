@@ -5,7 +5,7 @@ import '../proctoring_demo/proctoring_demo_home.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_result_view.dart';
 import 'demo_exam_service.dart';
-import 'demo_exam_setup_view.dart';
+import 'secure_exam_setup_view.dart';
 
 class DemoExamHome extends StatelessWidget {
   const DemoExamHome({super.key});
@@ -64,7 +64,7 @@ class DemoExamHome extends StatelessWidget {
   Future<void> _openSetup(BuildContext context, DemoAssessment assessment) async {
     final result = await Navigator.of(context).push<DemoExamResult>(
       MaterialPageRoute<DemoExamResult>(
-        builder: (_) => DemoExamSetupView(assessment: assessment),
+        builder: (_) => SecureExamSetupView(assessment: assessment),
       ),
     );
     if (result == null || !context.mounted) return;
@@ -94,7 +94,7 @@ class _Header extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'Complete identity check, room scan, security review, and guided submission.',
+            'Complete identity check, room scan, audio review, system review, and guided submission.',
             style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 16),
           ),
         ],
@@ -114,8 +114,9 @@ class _Steps extends StatelessWidget {
       children: [
         Chip(label: Text('1 Identity check')),
         Chip(label: Text('2 360 room scan')),
-        Chip(label: Text('3 Security review')),
-        Chip(label: Text('4 Start')),
+        Chip(label: Text('3 Audio review')),
+        Chip(label: Text('4 System review')),
+        Chip(label: Text('5 Start')),
       ],
     );
   }
