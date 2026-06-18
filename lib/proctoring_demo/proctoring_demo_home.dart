@@ -101,26 +101,54 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         (item) => item.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(
-        camera,
-        ResolutionPreset.medium,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,
-      );
-      await _controller?.dispose();
-      await controller.initialize();
-      if (!mounted) return;
+      final controller = await _createInitializedCameraController(camera);
+      final previousController = _controller;
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
       setState(() {
         _controller = controller;
         _openingCamera = false;
         _message = 'Camera is ready. Start the scan and rotate slowly.';
       });
+      await previousController?.dispose();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _openingCamera = false;
-        _message = 'Camera could not open: $e';
+        _message =
+            'Camera could not open. Check camera privacy access and close other apps using the camera: $e';
       });
+    }
+  }
+
+  Future<CameraController> _createInitializedCameraController(
+    CameraDescription camera,
+  ) async {
+    final mediumController = CameraController(
+      camera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+    try {
+      await mediumController.initialize();
+      return mediumController;
+    } catch (_) {
+      await mediumController.dispose();
+    }
+
+    final lowController = CameraController(
+      camera,
+      ResolutionPreset.low,
+      enableAudio: false,
+    );
+    try {
+      await lowController.initialize();
+      return lowController;
+    } catch (_) {
+      await lowController.dispose();
+      rethrow;
     }
   }
 
