@@ -32,6 +32,7 @@ class DemoCameraScanFrameSource {
   Timer? _timer;
   bool _active = false;
   bool _busy = false;
+  int _fallbackFrameIndex = 0;
   Future<void> Function(DemoCameraScanFrame frame)? _onFrame;
   bool Function()? _shouldContinue;
   void Function(String status)? _onStatus;
@@ -62,6 +63,21 @@ class DemoCameraScanFrameSource {
     }
   }
 
+  Future<void> startFallback({
+    required bool Function() shouldContinue,
+    required Future<void> Function(DemoCameraScanFrame frame) onFrame,
+    required void Function(String status) onStatus,
+  }) async {
+    await stop(null);
+    _active = true;
+    _busy = false;
+    _fallbackFrameIndex = 0;
+    _onFrame = onFrame;
+    _shouldContinue = shouldContinue;
+    _onStatus = onStatus;
+    _startFallbackFrames();
+  }
+
   Future<void> stop(CameraController? controller) async {
     _timer?.cancel();
     _timer = null;
@@ -85,6 +101,36 @@ class DemoCameraScanFrameSource {
     Future<void>.delayed(const Duration(milliseconds: 500), () {
       if (_usable) unawaited(_captureStill(controller));
     });
+  }
+
+  void _startFallbackFrames() {
+    _onStatus?.call('backup-frame');
+    _timer = Timer.periodic(stillCaptureInterval, (_) {
+      unawaited(_captureFallback());
+    });
+    Future<void>.delayed(const Duration(milliseconds: 500), () {
+      if (_usable) unawaited(_captureFallback());
+    });
+  }
+
+  Future<void> _captureFallback() async {
+    if (!_usable || _busy) return;
+    _busy = true;
+    try {
+      _fallbackFrameIndex++;
+      final image = _fallbackImage(_fallbackFrameIndex);
+      await _onFrame?.call(
+        DemoCameraScanFrame(
+          mode: 'backup-frame',
+          luma: _averageDecodedLuma(image),
+          signature: _decodedSignature(image),
+          timestamp: DateTime.now(),
+          decodedImage: image,
+        ),
+      );
+    } finally {
+      _busy = false;
+    }
   }
 
   Future<void> _captureStill(CameraController controller) async {
@@ -198,5 +244,30 @@ class DemoCameraScanFrameSource {
       }
     }
     return values;
+  }
+
+  img.Image _fallbackImage(int index) {
+    const width = 640;
+    const height = 360;
+    final image = img.Image(width: width, height: height);
+    final tone = 88 + ((index * 23) % 96);
+    final accent = 70 + ((index * 41) % 120);
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final band = ((x ~/ 80) + (y ~/ 60) + index) % 3;
+        final value =
+            (tone + band * 18 + ((x + y + index * 11) % 24))
+                .clamp(0, 255)
+                .toInt();
+        image.setPixelRgb(
+          x,
+          y,
+          value,
+          (value + accent ~/ 4).clamp(0, 255).toInt(),
+          (value + accent ~/ 6).clamp(0, 255).toInt(),
+        );
+      }
+    }
+    return image;
   }
 }

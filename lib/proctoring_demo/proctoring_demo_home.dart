@@ -64,16 +64,24 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   double _motionScore = 0;
   double _sceneScore = 0;
   bool _openingCamera = false;
+  bool _backupScanReady = false;
   bool _reviewing = false;
 
   static List<DemoScanTarget> _newTargets() =>
       _requiredTargets.map((name) => DemoScanTarget(name: name)).toList();
 
-  bool get _cameraReady => _controller?.value.isInitialized ?? false;
+  bool get _realCameraReady => _controller?.value.isInitialized ?? false;
+  bool get _cameraReady => _realCameraReady || _backupScanReady;
   bool get _scanning => _status == DemoScanStatus.scanning;
   bool get _scanComplete => _targets.every((target) => target.captured);
   String get _currentTarget =>
       _targets[math.min(_currentTargetIndex, _targets.length - 1)].name;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_openCamera());
+  }
 
   @override
   void dispose() {
@@ -86,6 +94,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_openingCamera) return;
     setState(() {
       _openingCamera = true;
+      _backupScanReady = false;
       _message = 'Opening camera...';
     });
     try {
@@ -94,6 +103,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         setState(() {
           _message = 'No camera was found on this device.';
           _openingCamera = false;
+          _backupScanReady = true;
         });
         return;
       }
@@ -110,6 +120,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       setState(() {
         _controller = controller;
         _openingCamera = false;
+        _backupScanReady = false;
         _message = 'Camera is ready. Start the scan and rotate slowly.';
       });
       await previousController?.dispose();
@@ -117,8 +128,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       if (!mounted) return;
       setState(() {
         _openingCamera = false;
+        _backupScanReady = true;
         _message =
-            'Camera could not open. Check camera privacy access and close other apps using the camera: $e';
+            'Camera could not open. Backup scan mode is ready. Check Windows camera privacy access and close other apps using the camera: $e';
       });
     }
   }
@@ -154,7 +166,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   Future<void> _startScan() async {
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) {
+    if ((controller == null || !controller.value.isInitialized) &&
+        !_backupScanReady) {
       setState(() => _message = 'Open the camera before starting the scan.');
       return;
     }
@@ -169,6 +182,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _manifestPath = null;
       _frameCount = 0;
       _currentTargetIndex = 0;
+      _frameMode = 'not-started';
       _lightingScore = 0;
       _motionScore = 0;
       _sceneScore = 0;
@@ -177,15 +191,25 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           'Capture $_currentTarget. Move slowly until the scene changes.';
     });
 
-    await _frameSource.start(
-      controller: controller,
-      shouldContinue: () => mounted && _scanning && !_scanComplete,
-      onFrame: _handleFrame,
-      onStatus: (status) {
-        if (!mounted) return;
-        setState(() => _frameMode = status);
-      },
-    );
+    bool shouldContinue() => mounted && _scanning && !_scanComplete;
+    void onStatus(String status) {
+      if (!mounted) return;
+      setState(() => _frameMode = status);
+    }
+    if (controller != null && controller.value.isInitialized) {
+      await _frameSource.start(
+        controller: controller,
+        shouldContinue: shouldContinue,
+        onFrame: _handleFrame,
+        onStatus: onStatus,
+      );
+    } else {
+      await _frameSource.startFallback(
+        shouldContinue: shouldContinue,
+        onFrame: _handleFrame,
+        onStatus: onStatus,
+      );
+    }
   }
 
   Future<void> _handleFrame(DemoCameraScanFrame frame) async {
@@ -465,7 +489,13 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
               FilledButton.icon(
                 onPressed: _openingCamera ? null : _openCamera,
                 icon: const Icon(Icons.videocam_outlined),
-                label: Text(_cameraReady ? 'Camera ready' : 'Open camera'),
+                label: Text(
+                  _realCameraReady
+                      ? 'Camera ready'
+                      : _backupScanReady
+                      ? 'Backup ready'
+                      : 'Open camera',
+                ),
               ),
               FilledButton.icon(
                 onPressed: _cameraReady && !_scanning ? _startScan : null,
@@ -536,8 +566,17 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (_cameraReady)
+              if (_realCameraReady)
                 CameraPreview(_controller!)
+              else if (_backupScanReady)
+                Container(
+                  color: const Color(0xFF101828),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Backup scan mode ready',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                )
               else
                 Container(
                   color: const Color(0xFF101828),
