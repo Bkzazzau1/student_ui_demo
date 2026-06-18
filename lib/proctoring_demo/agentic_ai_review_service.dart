@@ -47,8 +47,7 @@ class MockAgenticAiReviewService implements AgenticAiReviewService {
     if (lowLight.isEmpty) {
       yield const AgenticReviewEvent(
         title: 'Lighting accepted',
-        detail:
-            'Recent evidence frames have enough brightness for review.',
+        detail: 'Recent evidence frames have enough brightness for review.',
         severity: 'success',
       );
     } else {
@@ -86,7 +85,7 @@ class MockAgenticAiReviewService implements AgenticAiReviewService {
           ? 'Decision: ready'
           : 'Decision: pending review',
       detail: missing.isEmpty && lowLight.isEmpty
-          ? 'Review approved. The student may continue.'
+          ? 'Backend response is required before exam startup.'
           : 'The student must fix issues or request human review.',
       severity: missing.isEmpty && lowLight.isEmpty ? 'success' : 'warning',
     );

@@ -441,11 +441,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             : result.needsRescan
             ? DemoScanStatus.failed
             : DemoScanStatus.pendingReview;
-        _message = result.approved
-            ? 'Security review approved. Exam can start.'
-            : result.needsRescan
-            ? 'Rescan required before exam startup.'
-            : 'Invigilator review required before exam startup.';
+        _message = _safeStudentText(result.summary);
       });
       await _showReviewDecisionDialog(result);
       if (!mounted) return;
@@ -473,19 +469,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   Future<void> _showReviewDecisionDialog(SecurityReviewResult result) async {
-    final title = result.approved
-        ? 'Review approved'
-        : result.needsRescan
-        ? 'Rescan required'
-        : 'Review required';
-    final message = result.approved
-        ? '${_safeStudentText(result.summary)}\n\nClick OK to start the exam.'
-        : _safeStudentText(result.summary);
+    final message = _safeStudentText(result.summary);
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text(title),
+        title: const Text('Backend response'),
         content: Text(message),
         actions: [
           FilledButton(
@@ -498,24 +487,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   AgenticReviewEvent _studentReviewEvent(SecurityReviewResult result) {
-    if (result.approved) {
-      return const AgenticReviewEvent(
-        title: 'Review approved',
-        detail: 'Pre-exam security check completed successfully.',
-        severity: 'success',
-      );
-    }
-    if (result.needsRescan) {
-      return const AgenticReviewEvent(
-        title: 'Rescan required',
-        detail: 'Please correct the issue and rescan before exam startup.',
-        severity: 'warning',
-      );
-    }
-    return const AgenticReviewEvent(
-      title: 'Review required',
-      detail: 'The evidence record requires invigilator review before startup.',
-      severity: 'warning',
+    return AgenticReviewEvent(
+      title: 'Backend response',
+      detail: _safeStudentText(result.summary),
+      severity: result.approved ? 'success' : 'warning',
     );
   }
 
