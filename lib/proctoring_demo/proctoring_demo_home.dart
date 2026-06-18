@@ -469,7 +469,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   Future<void> _showReviewDecisionDialog(SecurityReviewResult result) async {
-    final message = _safeStudentText(result.summary);
+    final message = _reviewMessage(result);
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -489,9 +489,24 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   AgenticReviewEvent _studentReviewEvent(SecurityReviewResult result) {
     return AgenticReviewEvent(
       title: 'Backend response',
-      detail: _safeStudentText(result.summary),
+      detail: _reviewMessage(result),
       severity: result.approved ? 'success' : 'warning',
     );
+  }
+
+  String _reviewMessage(SecurityReviewResult result) {
+    final parts = <String>[_safeStudentText(result.summary)];
+    if (result.issues.isNotEmpty) {
+      parts.add(
+        'Issues:\n${result.issues.map((issue) => '- ${_safeStudentText(issue)}').join('\n')}',
+      );
+    }
+    if (result.actions.isNotEmpty) {
+      parts.add(
+        'Required action:\n${result.actions.map((action) => '- ${_safeStudentText(action)}').join('\n')}',
+      );
+    }
+    return parts.join('\n\n');
   }
 
   String _safeStudentText(String value) {
@@ -511,6 +526,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'exam_id': widget.examId,
       'attempt_id': widget.attemptId,
       'captured_at': DateTime.now().toUtc().toIso8601String(),
+      'face_image_key': _faceImageKey(),
+      'face_identity': _faceIdentityReview(),
+      'system_review': _systemReviewPayload(),
       'audio': _audioResult?.toJson(),
       'targets': _targets.map((target) {
         final calibration = calibrationByTarget[target.name];
@@ -526,6 +544,49 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           'labels': target.labels,
         };
       }).toList(),
+    };
+  }
+
+  String? _faceImageKey() {
+    DemoScanTarget? frontTarget;
+    for (final target in _targets) {
+      final name = target.name.toLowerCase();
+      if (target.framePath != null &&
+          (name.contains('front') || name.contains('face'))) {
+        frontTarget = target;
+        break;
+      }
+    }
+    if (frontTarget?.framePath == null) return null;
+    return _fileNameFromPath(frontTarget!.framePath!);
+  }
+
+  Map<String, dynamic> _faceIdentityReview() {
+    final faceImageKey = _faceImageKey();
+    return <String, dynamic>{
+      'face_image_key': faceImageKey,
+      'face_capture_available': faceImageKey != null,
+      'student_id': widget.studentId,
+      'status': faceImageKey == null
+          ? 'face image not captured separately'
+          : 'front-facing image submitted for identity review',
+    };
+  }
+
+  Map<String, dynamic> _systemReviewPayload() {
+    return <String, dynamic>{
+      'camera_ready': _cameraReady,
+      'real_camera_ready': _realCameraReady,
+      'backup_scan_ready': _backupScanReady,
+      'scan_complete': _scanComplete,
+      'saved_views': _targets.where((target) => target.captured).length,
+      'required_views': _targets.length,
+      'frame_count': _frameCount,
+      'lighting_score': _lightingScore,
+      'movement_score': _movementScore,
+      'difference_score': _differenceScore,
+      'audio_label': _audioResult?.environmentLabel,
+      'audio_clip_recorded': _audioResult?.clipPath != null,
     };
   }
 

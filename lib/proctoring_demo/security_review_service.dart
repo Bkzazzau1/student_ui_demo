@@ -53,6 +53,9 @@ class SecurityReviewResult {
     required this.riskLevel,
     required this.riskScore,
     required this.summary,
+    required this.issues,
+    required this.actions,
+    required this.source,
     required this.findings,
   });
 
@@ -61,6 +64,9 @@ class SecurityReviewResult {
   final String riskLevel;
   final int riskScore;
   final String summary;
+  final List<String> issues;
+  final List<String> actions;
+  final String source;
   final List<SecurityFinding> findings;
 
   bool get approved => decision == 'approved';
@@ -74,6 +80,9 @@ class SecurityReviewResult {
       riskLevel: json['risk_level']?.toString() ?? 'medium',
       riskScore: int.tryParse(json['risk_score']?.toString() ?? '') ?? 50,
       summary: json['summary']?.toString() ?? 'Review completed.',
+      issues: _stringList(json['issues']),
+      actions: _stringList(json['actions']),
+      source: json['source']?.toString() ?? '',
       findings: ((json['findings'] as List?) ?? const [])
           .whereType<Map>()
           .map(
@@ -81,6 +90,13 @@ class SecurityReviewResult {
           )
           .toList(),
     );
+  }
+
+  static List<String> _stringList(Object? value) {
+    return ((value as List?) ?? const [])
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
   }
 }
 
