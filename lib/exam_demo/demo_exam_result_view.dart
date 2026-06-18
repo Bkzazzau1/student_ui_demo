@@ -64,11 +64,8 @@ class DemoExamResultView extends StatelessWidget {
                   'Duration used',
                   '${duration.inMinutes} min ${duration.inSeconds % 60} sec',
                 ),
-                ('Agent decision', result.agentDecision),
-                (
-                  'Proctoring evidence',
-                  result.proctoringManifestPath ?? 'Not required',
-                ),
+                ('Face ID status', _faceIdLabel(result.agentDecision)),
+                ('Demo mode', 'Exam + Face ID only'),
               ],
             ),
             const SizedBox(height: 14),
@@ -88,6 +85,12 @@ class DemoExamResultView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _faceIdLabel(String decision) {
+    return decision == 'face_id_verified'
+        ? 'Verified for demo attempt'
+        : 'Not required for this assessment';
   }
 }
 
