@@ -426,6 +426,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       final result = await _securityReview.submitPreExamReview(
         manifest: _buildReviewManifest(),
         imagePaths: _targetImagePaths(),
+        audioClipPath: audioResult.clipPath,
       );
       final manifest = await _saveManifest(result.decision);
       if (!mounted) return;

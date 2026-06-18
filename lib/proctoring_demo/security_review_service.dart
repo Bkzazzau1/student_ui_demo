@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -12,6 +13,7 @@ class SecurityReviewService {
   Future<SecurityReviewResult> submitPreExamReview({
     required Map<String, dynamic> manifest,
     required Map<String, String> imagePaths,
+    String? audioClipPath,
   }) async {
     final uri = Uri.parse('$baseUrl/api/proctoring/pre-exam-review');
     final request = http.MultipartRequest('POST', uri);
@@ -21,6 +23,15 @@ class SecurityReviewService {
       request.files.add(
         await http.MultipartFile.fromPath(entry.key, entry.value),
       );
+    }
+
+    if (audioClipPath != null && audioClipPath.trim().isNotEmpty) {
+      final file = File(audioClipPath);
+      if (await file.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('audio_clip', audioClipPath),
+        );
+      }
     }
 
     final streamed = await _client.send(request);
