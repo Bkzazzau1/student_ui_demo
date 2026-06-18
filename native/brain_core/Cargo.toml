@@ -1,0 +1,15 @@
+[package]
+name = "brain_core"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "brain_core"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.11.1"
+once_cell = "1.21.3"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+tract-onnx = "0.23.0-dev.3"

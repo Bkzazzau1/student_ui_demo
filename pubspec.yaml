@@ -39,6 +39,8 @@ dependencies:
   image: ^4.5.4
   get_storage: ^2.1.1
   http: ^1.6.0
+  record: ^6.2.0
+  flutter_rust_bridge: 2.11.1
 
 dev_dependencies:
   flutter_test:

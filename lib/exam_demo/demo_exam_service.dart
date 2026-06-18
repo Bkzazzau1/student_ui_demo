@@ -27,9 +27,9 @@ class DemoExamService {
 
   static List<DemoAssessment> assessments() => const <DemoAssessment>[
     DemoAssessment(
-      id: 'exam-csc305-mid',
+      id: 'exam-csc305-first-semester',
       course: _csc305,
-      title: 'Mid-semester proctored examination',
+      title: 'First semester proctored examination',
       kind: 'Examination',
       durationMinutes: 35,
       graded: true,
@@ -70,7 +70,8 @@ class DemoExamService {
       const DemoQuestion(
         id: 'q1',
         section: DemoExamSection.objective,
-        prompt: 'Which review step combines evidence and recommends an examination action?',
+        prompt:
+            'Which review step combines evidence and recommends an examination action?',
         marks: 1,
         options: <String>[
           'Risk review',
@@ -83,7 +84,8 @@ class DemoExamService {
       const DemoQuestion(
         id: 'q2',
         section: DemoExamSection.objective,
-        prompt: 'What should happen before a serious examination decision is finalized?',
+        prompt:
+            'What should happen before a serious examination decision is finalized?',
         marks: 1,
         options: <String>[
           'Human review of evidence',
@@ -96,7 +98,8 @@ class DemoExamService {
       const DemoQuestion(
         id: 'q3',
         section: DemoExamSection.objective,
-        prompt: 'Which item is normally unauthorized in a closed-book remote exam?',
+        prompt:
+            'Which item is normally unauthorized in a closed-book remote exam?',
         marks: 1,
         options: <String>[
           'Phone on desk',
@@ -112,14 +115,16 @@ class DemoExamService {
       const DemoQuestion(
         id: 'fb1',
         section: DemoExamSection.fillBlank,
-        prompt: 'The secure exam app sends structured ____ logs to the backend.',
+        prompt:
+            'The secure exam app sends structured ____ logs to the backend.',
         marks: 2,
         answer: 'event',
       ),
       const DemoQuestion(
         id: 'fb2',
         section: DemoExamSection.fillBlank,
-        prompt: 'A final proctoring decision should be based on evidence and ____ review.',
+        prompt:
+            'A final proctoring decision should be based on evidence and ____ review.',
         marks: 2,
         answer: 'human',
       ),

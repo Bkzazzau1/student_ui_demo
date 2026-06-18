@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import 'audio_security_check_service.dart';
 import 'camera_scan_frame_source.dart';
 import 'demo_evidence_service.dart';
 import 'proctoring_demo_models.dart';
@@ -15,7 +16,7 @@ class ProctoringDemoHome extends StatefulWidget {
     this.onApproved,
     this.compactExamGate = false,
     this.studentId = 'KASU/STU/2026/001',
-    this.examId = 'exam-csc305-mid',
+    this.examId = 'exam-csc305-first-semester',
     this.attemptId = 'attempt-001',
   });
 
@@ -62,6 +63,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   final DemoCameraScanFrameSource _frameSource = DemoCameraScanFrameSource();
   final DemoEvidenceService _evidence = DemoEvidenceService();
+  final AudioSecurityCheckService _audioCheck = AudioSecurityCheckService();
   final SecurityReviewService _securityReview = SecurityReviewService(
     baseUrl: String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -85,6 +87,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   double _lightingScore = 0;
   double _movementScore = 0;
   double _differenceScore = 0;
+  AudioSecurityCheckResult? _audioResult;
   bool _openingCamera = false;
   bool _backupScanReady = false;
   bool _capturingTarget = false;
@@ -111,6 +114,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   void dispose() {
     unawaited(_frameSource.stop(_controller));
     _controller?.dispose();
+    unawaited(_audioCheck.dispose());
     super.dispose();
   }
 
@@ -210,7 +214,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _movementScore = 0;
       _differenceScore = 0;
       _status = DemoScanStatus.scanning;
-      _message = '${_currentGuide.instruction} Static repeated views will not be accepted.';
+      _message =
+          '${_currentGuide.instruction} Static repeated views will not be accepted.';
     });
   }
 
@@ -359,7 +364,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _capturingTarget = false;
         _manifestPath = manifest;
         _status = DemoScanStatus.passed;
-        _message = 'All required room views captured. Security review is ready.';
+        _message =
+            'All required room views captured. Security review is ready.';
       });
       await _runSecurityReview();
       return;
@@ -395,7 +401,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_acceptedSignatures.isEmpty) return 1.0;
     var bestDifference = 1.0;
     for (final previous in _acceptedSignatures.values) {
-      bestDifference = math.min(bestDifference, _signatureDifference(previous, current));
+      bestDifference = math.min(
+        bestDifference,
+        _signatureDifference(previous, current),
+      );
     }
     return bestDifference;
   }
@@ -404,10 +413,16 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_reviewing || !_scanComplete) return;
     setState(() {
       _reviewing = true;
-      _message = 'Security review is running...';
+      _message = 'Checking room sound...';
     });
 
     try {
+      final audioResult = await _audioCheck.captureBaseline();
+      if (!mounted) return;
+      setState(() {
+        _audioResult = audioResult;
+        _message = 'Security review is running...';
+      });
       final result = await _securityReview.submitPreExamReview(
         manifest: _buildReviewManifest(),
         imagePaths: _targetImagePaths(),
@@ -441,7 +456,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       setState(() {
         _reviewing = false;
         _status = DemoScanStatus.pendingReview;
-        _message = 'Invigilator review required. The review service is unavailable.';
+        _message =
+            'Invigilator review required. The review service is unavailable.';
         _reviewEvents
           ..clear()
           ..add(
@@ -519,12 +535,15 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'exam_id': widget.examId,
       'attempt_id': widget.attemptId,
       'captured_at': DateTime.now().toUtc().toIso8601String(),
+      'audio': _audioResult?.toJson(),
       'targets': _targets.map((target) {
         final calibration = calibrationByTarget[target.name];
         return <String, dynamic>{
           'name': target.name,
           'captured': target.captured,
-          'image_key': target.framePath == null ? null : _fileNameFromPath(target.framePath!),
+          'image_key': target.framePath == null
+              ? null
+              : _fileNameFromPath(target.framePath!),
           'lighting_score': calibration?.lightingScore ?? 0,
           'movement_score': calibration?.motionScore ?? 0,
           'difference_score': calibration?.sceneScore ?? 0,
@@ -537,7 +556,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   Map<String, String> _targetImagePaths() {
     return <String, String>{
       for (final target in _targets)
-        if (target.framePath != null) _fieldKeyForTarget(target.name): target.framePath!,
+        if (target.framePath != null)
+          _fieldKeyForTarget(target.name): target.framePath!,
     };
   }
 
@@ -577,6 +597,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _lightingScore = 0;
       _movementScore = 0;
       _differenceScore = 0;
+      _audioResult = null;
       _capturingTarget = false;
       _reviewing = false;
       _status = DemoScanStatus.idle;
@@ -588,7 +609,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.compactExamGate ? 'Pre-exam proctoring' : 'Security Centre'),
+        title: Text(
+          widget.compactExamGate ? 'Pre-exam proctoring' : 'Security Centre',
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -606,7 +629,11 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                       final wide = constraints.maxWidth >= 920;
                       final camera = _buildCameraPanel();
                       final side = _buildSidePanel();
-                      if (!wide) return Column(children: [camera, const SizedBox(height: 14), side]);
+                      if (!wide) {
+                        return Column(
+                          children: [camera, const SizedBox(height: 14), side],
+                        );
+                      }
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -652,10 +679,14 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                     ? _captureCurrentTarget
                     : null,
                 icon: const Icon(Icons.camera_alt_outlined),
-                label: Text(_capturingTarget ? 'Checking...' : 'Capture current view'),
+                label: Text(
+                  _capturingTarget ? 'Checking...' : 'Capture current view',
+                ),
               ),
               OutlinedButton.icon(
-                onPressed: _scanComplete && !_reviewing ? _runSecurityReview : null,
+                onPressed: _scanComplete && !_reviewing
+                    ? _runSecurityReview
+                    : null,
                 icon: const Icon(Icons.verified_user_outlined),
                 label: const Text('Run security review'),
               ),
@@ -669,21 +700,43 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           const SizedBox(height: 12),
           Text(_message, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          LinearProgressIndicator(value: _targets.where((t) => t.captured).length / _targets.length),
+          LinearProgressIndicator(
+            value: _targets.where((t) => t.captured).length / _targets.length,
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _MetricChip(label: 'Saved views', value: '$_frameCount/${_targets.length}'),
-              _MetricChip(label: 'Light', value: _lightingScore.toStringAsFixed(3)),
-              _MetricChip(label: 'Movement', value: _movementScore.toStringAsFixed(3)),
-              _MetricChip(label: 'Difference', value: _differenceScore.toStringAsFixed(3)),
+              _MetricChip(
+                label: 'Saved views',
+                value: '$_frameCount/${_targets.length}',
+              ),
+              _MetricChip(
+                label: 'Light',
+                value: _lightingScore.toStringAsFixed(3),
+              ),
+              _MetricChip(
+                label: 'Movement',
+                value: _movementScore.toStringAsFixed(3),
+              ),
+              _MetricChip(
+                label: 'Difference',
+                value: _differenceScore.toStringAsFixed(3),
+              ),
+              _MetricChip(
+                label: 'Sound',
+                value: _audioResult?.environmentLabel ?? 'pending',
+              ),
             ],
           ),
           if (_manifestPath != null) ...[
             const SizedBox(height: 8),
-            Text(_manifestPath!, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
+            Text(
+              _manifestPath!,
+              style: Theme.of(context).textTheme.bodySmall,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ],
       ),
@@ -707,7 +760,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   color: const Color(0xFF101828),
                   alignment: Alignment.center,
                   child: Text(
-                    _backupScanReady ? 'Backup scan mode ready' : 'Camera preview',
+                    _backupScanReady
+                        ? 'Backup scan mode ready'
+                        : 'Camera preview',
                     style: const TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ),
@@ -724,7 +779,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   width: 260,
                   height: 180,
                   decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFF22C55E), width: 2),
+                    border: Border.all(
+                      color: const Color(0xFF22C55E),
+                      width: 2,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -734,12 +792,15 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: FilledButton.icon(
-                    onPressed: _cameraReady && !_capturingTarget && !_scanComplete
+                    onPressed:
+                        _cameraReady && !_capturingTarget && !_scanComplete
                         ? _captureCurrentTarget
                         : null,
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: Text(
-                      _scanComplete ? 'All views captured' : 'Capture $_currentTarget',
+                      _scanComplete
+                          ? 'All views captured'
+                          : 'Capture $_currentTarget',
                     ),
                   ),
                 ),
@@ -756,14 +817,20 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Required 360 views', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'Required 360 views',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
-          const Text('Move the camera or device to each direction. Repeated static views are rejected.'),
+          const Text(
+            'Move the camera or device to each direction. Repeated static views are rejected.',
+          ),
           const SizedBox(height: 10),
           ..._targets.asMap().entries.map((entry) {
             final index = entry.key;
             final target = entry.value;
-            final active = _scanning && !_scanComplete && index == _currentTargetIndex;
+            final active =
+                _scanning && !_scanComplete && index == _currentTargetIndex;
             return ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
@@ -874,7 +941,10 @@ class _OverlayLabel extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
