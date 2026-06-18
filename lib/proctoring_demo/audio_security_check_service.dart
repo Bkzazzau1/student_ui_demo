@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:record/record.dart';
-
 import '../rust/api/proctoring.dart' as native_proctoring;
 import '../rust/frb_generated.dart';
+import 'microphone_stream_recording_service.dart';
 
 class AudioSecurityCheckResult {
   const AudioSecurityCheckResult({
@@ -16,6 +15,7 @@ class AudioSecurityCheckResult {
     required this.peakRms,
     required this.voiceConfidence,
     required this.environmentLabel,
+    this.clipPath,
     this.message,
   });
 
@@ -26,6 +26,7 @@ class AudioSecurityCheckResult {
   final double peakRms;
   final double voiceConfidence;
   final String environmentLabel;
+  final String? clipPath;
   final String? message;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -36,22 +37,23 @@ class AudioSecurityCheckResult {
     'peak_rms': peakRms,
     'voice_confidence': voiceConfidence,
     'environment_label': environmentLabel,
+    if (clipPath != null) 'clip_path': clipPath,
     if (message != null) 'message': message,
   };
 }
 
 class AudioSecurityCheckService {
-  AudioSecurityCheckService({AudioRecorder? recorder})
-    : _recorder = recorder ?? AudioRecorder();
+  AudioSecurityCheckService({MicrophoneStreamRecordingService? microphone})
+    : _microphone = microphone ?? MicrophoneStreamRecordingService();
 
   static Future<bool>? _nativeReady;
 
-  final AudioRecorder _recorder;
+  final MicrophoneStreamRecordingService _microphone;
 
   Future<AudioSecurityCheckResult> captureBaseline({
     Duration duration = const Duration(seconds: 4),
   }) async {
-    final hasPermission = await _recorder.hasPermission();
+    final hasPermission = await _microphone.hasPermission();
     if (!hasPermission) {
       return const AudioSecurityCheckResult(
         microphoneAvailable: false,
@@ -72,47 +74,40 @@ class AudioSecurityCheckService {
     var nativeLossStreak = 0;
     var nativeLastSpeechStrikeAtMs = 0;
     final nativeReady = await _ensureNativeReady();
-    StreamSubscription<Uint8List>? subscription;
+    String? clipPath;
     try {
-      final stream = await _recorder.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: 16000,
-          numChannels: 1,
-          autoGain: false,
-          echoCancel: false,
-          noiseSuppress: false,
-        ),
-      );
-      subscription = stream.listen((chunk) {
-        final rms = _rms(chunk);
-        if (rms >= 0) samples.add(rms);
-        if (nativeReady) {
-          try {
-            final nowMs = DateTime.now().millisecondsSinceEpoch;
-            final decision = native_proctoring.analyzeAcousticChunk(
-              pcm16Bytes: chunk,
-              lossThresholdDbfs: -50,
-              lossStreak: nativeLossStreak,
-              lossSamplesToTrigger: 10,
-              speechThresholdDbfs: -28,
-              speechStreak: nativeSpeechStreak,
-              speechSamplesToTrigger: 4,
-              lastSpeechStrikeAtMs: nativeLastSpeechStrikeAtMs,
-              speechCooldownMs: 3000,
-              nowMs: nowMs,
-            );
-            nativeLossStreak = decision.updatedLossStreak;
-            nativeSpeechStreak = decision.updatedSpeechStreak;
-            nativeLastSpeechStrikeAtMs =
-                decision.updatedLastSpeechStrikeAtMs;
-            nativeSpeechSignals.add(decision.shouldTriggerSpeech);
-            nativeNoiseSignals.add(decision.normalizedTetherSignal);
-          } catch (_) {
-            nativeSpeechSignals.add(false);
+      await _microphone.start(
+        sampleRate: 44100,
+        maxBufferSeconds: 15,
+        onPcmChunk: (chunk) {
+          final rms = _rms(chunk);
+          if (rms >= 0) samples.add(rms);
+          if (nativeReady) {
+            try {
+              final nowMs = DateTime.now().millisecondsSinceEpoch;
+              final decision = native_proctoring.analyzeAcousticChunk(
+                pcm16Bytes: chunk,
+                lossThresholdDbfs: -50,
+                lossStreak: nativeLossStreak,
+                lossSamplesToTrigger: 10,
+                speechThresholdDbfs: -28,
+                speechStreak: nativeSpeechStreak,
+                speechSamplesToTrigger: 4,
+                lastSpeechStrikeAtMs: nativeLastSpeechStrikeAtMs,
+                speechCooldownMs: 3000,
+                nowMs: nowMs,
+              );
+              nativeLossStreak = decision.updatedLossStreak;
+              nativeSpeechStreak = decision.updatedSpeechStreak;
+              nativeLastSpeechStrikeAtMs = decision.updatedLastSpeechStrikeAtMs;
+              nativeSpeechSignals.add(decision.shouldTriggerSpeech);
+              nativeNoiseSignals.add(decision.normalizedTetherSignal);
+            } catch (_) {
+              nativeSpeechSignals.add(false);
+            }
           }
-        }
-      });
+        },
+      );
       await Future<void>.delayed(duration);
     } catch (e) {
       return AudioSecurityCheckResult(
@@ -126,12 +121,9 @@ class AudioSecurityCheckService {
         message: 'Microphone check could not be completed: $e',
       );
     } finally {
-      await subscription?.cancel();
-      try {
-        if (await _recorder.isRecording()) {
-          await _recorder.stop();
-        }
-      } catch (_) {}
+      clipPath = await _microphone.stopAndSaveWav(
+        filePrefix: 'pre_exam_audio_baseline',
+      );
     }
 
     final average = samples.isEmpty
@@ -157,13 +149,14 @@ class AudioSecurityCheckService {
         peakRms: math.max(peak, nativeNoisePeak),
         voiceConfidence: voiceConfidence,
       ),
+      clipPath: clipPath,
       message: inputLevelOk
           ? null
           : 'Microphone input level is too low for the security check.',
     );
   }
 
-  Future<void> dispose() => _recorder.dispose();
+  Future<void> dispose() => _microphone.dispose();
 
   static Future<bool> _ensureNativeReady() {
     return _nativeReady ??= () async {
