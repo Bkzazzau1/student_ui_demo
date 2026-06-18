@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../proctoring_demo/live_camera_monitor.dart';
+import '../proctoring_demo/live_exam_monitor.dart';
 import '../proctoring_demo/live_status_panel.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
@@ -14,11 +14,15 @@ class DemoExamAttemptView extends StatefulWidget {
     required this.assessment,
     required this.proctoringManifestPath,
     required this.agentDecision,
+    required this.attemptId,
+    this.studentId = 'KASU/STU/2026/001',
   });
 
   final DemoAssessment assessment;
   final String? proctoringManifestPath;
   final String agentDecision;
+  final String attemptId;
+  final String studentId;
 
   @override
   State<DemoExamAttemptView> createState() => _DemoExamAttemptViewState();
@@ -30,6 +34,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   late int _remainingSeconds;
   Timer? _timer;
   int _currentIndex = 0;
+  bool _paused = false;
+  String _pauseMessage = '';
   final Map<String, String> _answers = <String, String>{};
 
   @override
@@ -39,7 +45,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     _questions = DemoExamService.questionsFor(widget.assessment);
     _remainingSeconds = widget.assessment.durationMinutes * 60;
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
+      if (!mounted || _paused) return;
       if (_remainingSeconds <= 1) {
         _submit(autoSubmitted: true);
       } else {
@@ -52,6 +58,14 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  void _handleCriticalMonitoringEvent(String message) {
+    if (!mounted) return;
+    setState(() {
+      _paused = true;
+      _pauseMessage = message;
+    });
   }
 
   @override
@@ -68,7 +82,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Text(
-                _formatTime(_remainingSeconds),
+                _paused ? 'PAUSED' : _formatTime(_remainingSeconds),
                 style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
@@ -84,6 +98,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                 questions: _questions,
                 currentIndex: _currentIndex,
                 answers: _answers,
+                enabled: !_paused,
                 onSelect: (index) => setState(() => _currentIndex = index),
               ),
             ),
@@ -91,58 +106,82 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
               child: ListView(
                 padding: const EdgeInsets.all(18),
                 children: [
+                  if (_paused) ...[
+                    _PauseBanner(message: _pauseMessage),
+                    const SizedBox(height: 14),
+                  ],
                   _ExamStatusBar(
                     assessment: widget.assessment,
                     answered: answered,
                     total: _questions.length,
+                    paused: _paused,
                   ),
                   const SizedBox(height: 14),
-                  _QuestionCard(
-                    question: question,
-                    value: _answers[question.id] ?? '',
-                    onChanged: (value) =>
-                        setState(() => _answers[question.id] = value),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    alignment: WrapAlignment.spaceBetween,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _currentIndex == 0
-                            ? null
-                            : () => setState(() => _currentIndex--),
-                        icon: const Icon(Icons.chevron_left),
-                        label: const Text('Previous'),
+                  AbsorbPointer(
+                    absorbing: _paused,
+                    child: Opacity(
+                      opacity: _paused ? 0.55 : 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _QuestionCard(
+                            question: question,
+                            value: _answers[question.id] ?? '',
+                            enabled: !_paused,
+                            onChanged: (value) =>
+                                setState(() => _answers[question.id] = value),
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            alignment: WrapAlignment.spaceBetween,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: _currentIndex == 0 || _paused
+                                    ? null
+                                    : () => setState(() => _currentIndex--),
+                                icon: const Icon(Icons.chevron_left),
+                                label: const Text('Previous'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: _currentIndex == _questions.length - 1 || _paused
+                                    ? null
+                                    : () => setState(() => _currentIndex++),
+                                icon: const Icon(Icons.chevron_right),
+                                label: const Text('Next'),
+                              ),
+                              FilledButton.icon(
+                                onPressed: _paused
+                                    ? null
+                                    : () => _submit(autoSubmitted: false),
+                                icon: const Icon(Icons.upload_file),
+                                label: const Text('Submit exam'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      OutlinedButton.icon(
-                        onPressed: _currentIndex == _questions.length - 1
-                            ? null
-                            : () => setState(() => _currentIndex++),
-                        icon: const Icon(Icons.chevron_right),
-                        label: const Text('Next'),
-                      ),
-                      FilledButton.icon(
-                        onPressed: () => _submit(autoSubmitted: false),
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('Submit exam'),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
             if (widget.assessment.remoteProctored)
-              const SizedBox(
+              SizedBox(
                 width: 320,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(0, 18, 18, 18),
+                  padding: const EdgeInsets.fromLTRB(0, 18, 18, 18),
                   child: Column(
                     children: [
-                      LiveCameraMonitor(),
-                      SizedBox(height: 12),
-                      LiveStatusPanel(),
+                      LiveExamMonitor(
+                        studentId: widget.studentId,
+                        examId: widget.assessment.id,
+                        attemptId: widget.attemptId,
+                        onCriticalEvent: _handleCriticalMonitoringEvent,
+                      ),
+                      const SizedBox(height: 12),
+                      const LiveStatusPanel(),
                     ],
                   ),
                 ),
@@ -154,6 +193,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   }
 
   Future<void> _submit({required bool autoSubmitted}) async {
+    if (_paused) return;
     _timer?.cancel();
     if (!autoSubmitted && mounted) {
       final confirmed = await showDialog<bool>(
@@ -177,7 +217,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
       );
       if (confirmed != true) {
         _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-          if (!mounted) return;
+          if (!mounted || _paused) return;
           if (_remainingSeconds <= 1) {
             _submit(autoSubmitted: true);
           } else {
@@ -230,16 +270,51 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   }
 }
 
+class _PauseBanner extends StatelessWidget {
+  const _PauseBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFE4E6),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFB7185)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.pause_circle_filled, color: Color(0xFFE11D48)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Exam paused: $message',
+              style: const TextStyle(
+                color: Color(0xFF9F1239),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ExamStatusBar extends StatelessWidget {
   const _ExamStatusBar({
     required this.assessment,
     required this.answered,
     required this.total,
+    required this.paused,
   });
 
   final DemoAssessment assessment;
   final int answered;
   final int total;
+  final bool paused;
 
   @override
   Widget build(BuildContext context) {
@@ -256,12 +331,8 @@ class _ExamStatusBar extends StatelessWidget {
         children: [
           _Pill('${assessment.course.code} ${assessment.kind}'),
           _Pill('$answered/$total answered'),
-          _Pill(
-            assessment.remoteProctored
-                ? 'Camera monitoring active'
-                : 'Standard access',
-          ),
-          if (assessment.remoteProctored) const _Pill('Sound check active'),
+          _Pill(paused ? 'Monitoring hold' : assessment.remoteProctored ? 'Live monitoring active' : 'Standard access'),
+          if (assessment.remoteProctored) const _Pill('Sound monitoring active'),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
       ),
@@ -274,12 +345,14 @@ class _QuestionNavigator extends StatelessWidget {
     required this.questions,
     required this.currentIndex,
     required this.answers,
+    required this.enabled,
     required this.onSelect,
   });
 
   final List<DemoQuestion> questions;
   final int currentIndex;
   final Map<String, String> answers;
+  final bool enabled;
   final ValueChanged<int> onSelect;
 
   @override
@@ -292,9 +365,7 @@ class _QuestionNavigator extends StatelessWidget {
         children: [
           Text(
             'Questions',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -307,10 +378,9 @@ class _QuestionNavigator extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final selected = index == currentIndex;
-                final answered =
-                    answers[questions[index].id]?.isNotEmpty ?? false;
+                final answered = answers[questions[index].id]?.isNotEmpty ?? false;
                 return InkWell(
-                  onTap: () => onSelect(index),
+                  onTap: enabled ? () => onSelect(index) : null,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     alignment: Alignment.center,
@@ -318,16 +388,14 @@ class _QuestionNavigator extends StatelessWidget {
                       color: selected
                           ? const Color(0xFF1D4ED8)
                           : answered
-                          ? const Color(0xFFDCFCE7)
-                          : const Color(0xFFF1F5F9),
+                              ? const Color(0xFFDCFCE7)
+                              : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '${index + 1}',
                       style: TextStyle(
-                        color: selected
-                            ? Colors.white
-                            : const Color(0xFF0F172A),
+                        color: selected ? Colors.white : const Color(0xFF0F172A),
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -346,11 +414,13 @@ class _QuestionCard extends StatelessWidget {
   const _QuestionCard({
     required this.question,
     required this.value,
+    required this.enabled,
     required this.onChanged,
   });
 
   final DemoQuestion question;
   final String value;
+  final bool enabled;
   final ValueChanged<String> onChanged;
 
   @override
@@ -375,9 +445,7 @@ class _QuestionCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             question.prompt,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 16),
           if (question.options.isNotEmpty)
@@ -385,7 +453,7 @@ class _QuestionCard extends StatelessWidget {
               (option) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: InkWell(
-                  onTap: () => onChanged(option),
+                  onTap: enabled ? () => onChanged(option) : null,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding: const EdgeInsets.all(12),
@@ -396,9 +464,7 @@ class _QuestionCard extends StatelessWidget {
                             ? const Color(0xFF1D4ED8)
                             : const Color(0xFFE2E8F0),
                       ),
-                      color: value == option
-                          ? const Color(0xFFEFF6FF)
-                          : Colors.white,
+                      color: value == option ? const Color(0xFFEFF6FF) : Colors.white,
                     ),
                     child: Row(
                       children: [
@@ -420,6 +486,7 @@ class _QuestionCard extends StatelessWidget {
             )
           else
             TextField(
+              enabled: enabled,
               controller: TextEditingController(text: value)
                 ..selection = TextSelection.collapsed(offset: value.length),
               onChanged: onChanged,
