@@ -33,9 +33,11 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
   bool get _needsChecks => widget.assessment.remoteProctored;
 
+  bool get _hasReviewApproval => !_needsChecks || (_roomApproved && _manifestPath != null);
+
   bool get _canStart {
     final faceOk = !widget.assessment.graded || _faceId.isComplete;
-    final roomOk = !_needsChecks || _roomApproved;
+    final roomOk = !_needsChecks || _hasReviewApproval;
     final audioOk = !_needsChecks || _audioApproved;
     final systemOk = !_needsChecks || _systemApproved;
     return faceOk && roomOk && audioOk && systemOk;
@@ -53,7 +55,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           const SizedBox(height: 14),
           _Checklist(
             faceOk: !widget.assessment.graded || _faceId.isComplete,
-            roomOk: !_needsChecks || _roomApproved,
+            roomOk: !_needsChecks || _hasReviewApproval,
             audioOk: !_needsChecks || _audioApproved,
             systemOk: !_needsChecks || _systemApproved,
             manifestPath: _manifestPath,
@@ -76,11 +78,11 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                 FilledButton.icon(
                   onPressed: _faceId.isComplete ? _openRoomScan : null,
                   icon: const Icon(Icons.screen_rotation_alt_outlined),
-                  label: Text(_roomApproved ? 'Room scan approved' : 'Run 360 room scan'),
+                  label: Text(_hasReviewApproval ? 'Room scan approved' : 'Run 360 room scan'),
                 ),
               if (_needsChecks)
                 FilledButton.icon(
-                  onPressed: _roomApproved ? _openAudioSystemReview : null,
+                  onPressed: _hasReviewApproval ? _openAudioSystemReview : null,
                   icon: const Icon(Icons.settings_voice_outlined),
                   label: Text(
                     _audioApproved && _systemApproved
@@ -118,6 +120,12 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   Future<void> _openRoomScan() async {
+    setState(() {
+      _roomApproved = false;
+      _audioApproved = false;
+      _systemApproved = false;
+      _manifestPath = null;
+    });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ProctoringDemoHome(
@@ -125,6 +133,13 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           examId: widget.assessment.id,
           attemptId: 'attempt-${DateTime.now().millisecondsSinceEpoch}',
           onApproved: (manifestPath) {
+            if (manifestPath == null || manifestPath.trim().isEmpty) {
+              setState(() {
+                _roomApproved = false;
+                _manifestPath = null;
+              });
+              return;
+            }
             setState(() {
               _roomApproved = true;
               _manifestPath = manifestPath;
@@ -150,6 +165,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   Future<void> _startExam() async {
+    if (!_canStart) {
+      await _showBlockedStartMessage();
+      return;
+    }
+    if (widget.assessment.remoteProctored && (_manifestPath == null || !_roomApproved)) {
+      await _showBlockedStartMessage();
+      return;
+    }
     final result = await Navigator.of(context).push<DemoExamResult>(
       MaterialPageRoute<DemoExamResult>(
         builder: (_) => DemoExamAttemptView(
@@ -165,6 +188,24 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     );
     if (!mounted || result == null) return;
     Navigator.of(context).pop(result);
+  }
+
+  Future<void> _showBlockedStartMessage() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exam cannot start yet'),
+        content: const Text(
+          'Complete all required checks and wait for security review approval before starting the exam.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -233,23 +274,58 @@ class _Checklist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Card(
-      title: 'Startup checklist',
-      children: [
-        _CheckRow(passed: faceOk, title: 'Face ID', detail: 'Student identity must be confirmed.'),
-        if (needsChecks)
-          _CheckRow(passed: roomOk, title: '360 room scan', detail: 'All required room views must be captured.'),
-        if (needsChecks)
-          _CheckRow(passed: audioOk, title: 'Audio review', detail: 'Microphone permission must be confirmed.'),
-        if (needsChecks)
-          _CheckRow(passed: systemOk, title: 'System review', detail: 'Desktop exam environment must be confirmed.'),
-        if (manifestPath != null)
+    final rows = <_CheckRow>[
+      _CheckRow('Face ID', faceOk),
+      if (needsChecks) _CheckRow('360 room scan', roomOk),
+      if (needsChecks) _CheckRow('Audio review', audioOk),
+      if (needsChecks) _CheckRow('System review', systemOk),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
-            'Evidence record: $manifestPath',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            'Startup checklist',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
-      ],
+          const SizedBox(height: 12),
+          ...rows,
+          if (manifestPath != null) ...[
+            const SizedBox(height: 8),
+            Text('Evidence record: $manifestPath', style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckRow extends StatelessWidget {
+  const _CheckRow(this.label, this.ok);
+
+  final String label;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            ok ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: ok ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+          ),
+          const SizedBox(width: 8),
+          Text(label),
+        ],
+      ),
     );
   }
 }
@@ -261,90 +337,26 @@ class _Rules extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Card(
-      title: 'Exam rules',
-      children: [
-        const _RuleRow('Do not leave the exam screen during the attempt.'),
-        const _RuleRow('Do not use a phone, textbook, or another person.'),
-        const _RuleRow('Submit only your own work.'),
-        if (remote) const _RuleRow('Camera and audio readiness remain required until submission.'),
-      ],
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: const Color(0xFFFDE68A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 10),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
-class _CheckRow extends StatelessWidget {
-  const _CheckRow({required this.passed, required this.title, required this.detail});
-
-  final bool passed;
-  final String title;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(passed ? Icons.check_circle : Icons.radio_button_unchecked, color: passed ? const Color(0xFF16A34A) : const Color(0xFF64748B)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-                Text(detail, style: const TextStyle(color: Color(0xFF475569))),
-              ],
-            ),
+          Text(
+            'Rules before you start',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RuleRow extends StatelessWidget {
-  const _RuleRow(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          const Icon(Icons.circle, size: 8, color: Color(0xFF64748B)),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text)),
+          const SizedBox(height: 8),
+          Text(
+            remote
+                ? 'Complete identity, room, audio, system, and security review checks. Camera and audio readiness remain required until submission.'
+                : 'Keep your login secure and submit before the timer ends.',
+          ),
         ],
       ),
     );
@@ -361,10 +373,10 @@ class _DarkTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(text, style: const TextStyle(color: Colors.white)),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
     );
   }
 }
