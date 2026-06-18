@@ -1,0 +1,401 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
+
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+
+import 'live_proctoring_event_service.dart';
+import 'microphone_stream_recording_service.dart';
+
+class LiveExamMonitor extends StatefulWidget {
+  const LiveExamMonitor({
+    super.key,
+    required this.studentId,
+    required this.examId,
+    required this.attemptId,
+    required this.onCriticalEvent,
+  });
+
+  final String studentId;
+  final String examId;
+  final String attemptId;
+  final ValueChanged<String> onCriticalEvent;
+
+  @override
+  State<LiveExamMonitor> createState() => _LiveExamMonitorState();
+}
+
+class _LiveExamMonitorState extends State<LiveExamMonitor> {
+  final LiveProctoringEventService _events = LiveProctoringEventService(
+    baseUrl: const String.fromEnvironment(
+      'KSLAS_API_BASE_URL',
+      defaultValue: 'http://127.0.0.1:8080',
+    ),
+  );
+  final MicrophoneStreamRecordingService _microphone =
+      MicrophoneStreamRecordingService();
+
+  CameraController? _camera;
+  Timer? _heartbeat;
+  StreamSubscription<dynamic>? _placeholder;
+
+  final Map<String, DateTime> _lastEventAt = <String, DateTime>{};
+  final List<String> _eventsSent = <String>[];
+  final List<double> _audioSamples = <double>[];
+
+  String _cameraStatus = 'Opening camera...';
+  String _audioStatus = 'Starting sound monitor...';
+  String _systemStatus = 'Checking system...';
+  bool _cameraReady = false;
+  bool _audioReady = false;
+  bool _systemReady = false;
+  bool _openingCamera = false;
+  int _secondsLive = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_startCamera());
+    unawaited(_startAudio());
+    _startHeartbeat();
+  }
+
+  @override
+  void dispose() {
+    _heartbeat?.cancel();
+    _placeholder?.cancel();
+    _camera?.dispose();
+    _microphone.dispose();
+    _events.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startCamera() async {
+    if (_openingCamera) return;
+    setState(() {
+      _openingCamera = true;
+      _cameraStatus = 'Opening camera...';
+    });
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        await _raiseEvent(
+          eventType: 'camera_unavailable',
+          severity: 'critical',
+          message: 'Camera was not found during the exam.',
+        );
+        if (!mounted) return;
+        setState(() {
+          _openingCamera = false;
+          _cameraReady = false;
+          _cameraStatus = 'Camera not found';
+        });
+        return;
+      }
+      final camera = cameras.firstWhere(
+        (item) => item.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        camera,
+        ResolutionPreset.low,
+        enableAudio: false,
+      );
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _camera = controller;
+        _openingCamera = false;
+        _cameraReady = true;
+        _cameraStatus = 'Camera monitoring active';
+      });
+    } catch (e) {
+      await _raiseEvent(
+        eventType: 'camera_unavailable',
+        severity: 'critical',
+        message: 'Camera monitoring stopped during the exam.',
+        metadata: <String, Object?>{'error': e.toString()},
+      );
+      if (!mounted) return;
+      setState(() {
+        _openingCamera = false;
+        _cameraReady = false;
+        _cameraStatus = 'Camera monitoring unavailable';
+      });
+    }
+  }
+
+  Future<void> _startAudio() async {
+    try {
+      final permission = await _microphone.hasPermission();
+      if (!permission) {
+        await _raiseEvent(
+          eventType: 'microphone_unavailable',
+          severity: 'critical',
+          message: 'Microphone permission was not available during the exam.',
+        );
+        if (!mounted) return;
+        setState(() {
+          _audioReady = false;
+          _audioStatus = 'Microphone unavailable';
+        });
+        return;
+      }
+
+      await _microphone.start(
+        sampleRate: 44100,
+        maxBufferSeconds: 20,
+        onPcmChunk: _handleAudioChunk,
+      );
+      if (!mounted) return;
+      setState(() {
+        _audioReady = true;
+        _audioStatus = 'Sound monitoring active';
+      });
+    } catch (e) {
+      await _raiseEvent(
+        eventType: 'microphone_unavailable',
+        severity: 'critical',
+        message: 'Microphone monitoring stopped during the exam.',
+        metadata: <String, Object?>{'error': e.toString()},
+      );
+      if (!mounted) return;
+      setState(() {
+        _audioReady = false;
+        _audioStatus = 'Sound monitoring unavailable';
+      });
+    }
+  }
+
+  void _handleAudioChunk(Uint8List chunk) {
+    final rms = _rms(chunk);
+    if (rms < 0) return;
+    _audioSamples.add(rms);
+    if (_audioSamples.length > 24) {
+      _audioSamples.removeRange(0, _audioSamples.length - 24);
+    }
+
+    final average = _audioSamples.isEmpty
+        ? 0.0
+        : _audioSamples.fold<double>(0, (sum, value) => sum + value) /
+            _audioSamples.length;
+    final varied = _variation(_audioSamples) > 0.09;
+    final activeSpeechLike = average > 0.16 && varied;
+    if (activeSpeechLike) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'human_voice_detected',
+          severity: 'high',
+          message: 'Speech-like sound was detected during the exam.',
+          metadata: <String, Object?>{
+            'average_rms': average,
+            'variation': _variation(_audioSamples),
+          },
+        ),
+      );
+    }
+  }
+
+  void _startHeartbeat() {
+    _heartbeat?.cancel();
+    _heartbeat = Timer.periodic(const Duration(seconds: 5), (_) async {
+      if (!mounted) return;
+      final cameraStillReady = _camera?.value.isInitialized ?? false;
+      final platformOk = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      setState(() {
+        _secondsLive += 5;
+        _cameraReady = cameraStillReady;
+        _systemReady = platformOk;
+        _systemStatus = platformOk
+            ? 'System monitoring active'
+            : 'Unsupported system environment';
+      });
+
+      if (!cameraStillReady) {
+        await _raiseEvent(
+          eventType: 'camera_unavailable',
+          severity: 'critical',
+          message: 'Camera heartbeat failed during the exam.',
+        );
+      }
+      if (!_microphone.isRunning) {
+        setState(() {
+          _audioReady = false;
+          _audioStatus = 'Sound monitoring unavailable';
+        });
+        await _raiseEvent(
+          eventType: 'microphone_unavailable',
+          severity: 'critical',
+          message: 'Microphone heartbeat failed during the exam.',
+        );
+      }
+      if (!platformOk) {
+        await _raiseEvent(
+          eventType: 'system_monitoring_unavailable',
+          severity: 'critical',
+          message: 'System monitoring is not available on this device.',
+        );
+      }
+    });
+  }
+
+  Future<void> _raiseEvent({
+    required String eventType,
+    required String severity,
+    required String message,
+    Map<String, Object?> metadata = const <String, Object?>{},
+  }) async {
+    if (!_shouldEmit(eventType)) return;
+    final event = LiveProctoringEvent(
+      studentId: widget.studentId,
+      examId: widget.examId,
+      attemptId: widget.attemptId,
+      eventType: eventType,
+      severity: severity,
+      message: message,
+      createdAt: DateTime.now(),
+      metadata: metadata,
+    );
+    final synced = await _events.send(event);
+    if (!mounted) return;
+    setState(() {
+      _eventsSent.insert(0, synced ? '$eventType sent' : '$eventType queued locally');
+      if (_eventsSent.length > 5) _eventsSent.removeLast();
+    });
+    if (severity == 'critical' || severity == 'high') {
+      widget.onCriticalEvent(
+        synced
+            ? message
+            : '$message Monitoring event could not be confirmed by the backend.',
+      );
+    }
+  }
+
+  bool _shouldEmit(String eventType) {
+    final now = DateTime.now();
+    final last = _lastEventAt[eventType];
+    if (last != null && now.difference(last).inSeconds < 15) {
+      return false;
+    }
+    _lastEventAt[eventType] = now;
+    return true;
+  }
+
+  double _rms(Uint8List bytes) {
+    if (bytes.length < 2) return -1;
+    final data = ByteData.sublistView(bytes);
+    var total = 0.0;
+    var count = 0;
+    for (var i = 0; i + 1 < bytes.length; i += 2) {
+      final sample = data.getInt16(i, Endian.little) / 32768.0;
+      total += sample * sample;
+      count++;
+    }
+    if (count == 0) return -1;
+    return math.sqrt(total / count).clamp(0.0, 1.0);
+  }
+
+  double _variation(List<double> samples) {
+    if (samples.length < 2) return 0;
+    var total = 0.0;
+    for (var i = 1; i < samples.length; i++) {
+      total += (samples[i] - samples[i - 1]).abs();
+    }
+    return total / (samples.length - 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ready = _camera?.value.isInitialized ?? false;
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _StatusRow(
+              label: _cameraStatus,
+              ready: _cameraReady,
+              icon: Icons.videocam,
+            ),
+            const SizedBox(height: 10),
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: ready
+                    ? CameraPreview(_camera!)
+                    : Container(
+                        color: const Color(0xFF101828),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _cameraStatus,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _StatusRow(
+              label: _audioStatus,
+              ready: _audioReady,
+              icon: Icons.mic,
+            ),
+            const SizedBox(height: 8),
+            _StatusRow(
+              label: _systemStatus,
+              ready: _systemReady,
+              icon: Icons.desktop_windows,
+            ),
+            const SizedBox(height: 8),
+            Text('Live duration: ${_secondsLive}s'),
+            if (_eventsSent.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ..._eventsSent.map(
+                (event) => Text(
+                  event,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  const _StatusRow({
+    required this.label,
+    required this.ready,
+    required this.icon,
+  });
+
+  final String label;
+  final bool ready;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
+      ],
+    );
+  }
+}
