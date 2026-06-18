@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../face_demo/demo_face_id_service.dart';
 import '../face_demo/demo_face_id_view.dart';
+import '../proctoring_demo/proctoring_demo_home.dart';
 import 'demo_exam_attempt_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
@@ -18,6 +19,8 @@ class DemoExamSetupView extends StatefulWidget {
 class _DemoExamSetupViewState extends State<DemoExamSetupView> {
   final DemoFaceIdService _faceIdService = DemoFaceIdService();
   late DemoFaceIdSnapshot _faceId;
+  bool _proctoringApproved = false;
+  String? _manifestPath;
 
   @override
   void initState() {
@@ -44,9 +47,11 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
             _ChecklistCard(
               assessment: assessment,
               faceIdComplete: _faceId.isComplete,
+              proctoringApproved: _proctoringApproved,
+              manifestPath: _manifestPath,
             ),
             const SizedBox(height: 14),
-            _RulesCard(faceIdRequired: assessment.graded),
+            _RulesCard(remoteProctored: assessment.remoteProctored),
             const SizedBox(height: 14),
             Wrap(
               spacing: 10,
@@ -58,6 +63,16 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
                     icon: const Icon(Icons.face_retouching_natural),
                     label: Text(
                       _faceId.isComplete ? 'Face ID active' : 'Set up Face ID',
+                    ),
+                  ),
+                if (assessment.remoteProctored)
+                  FilledButton.icon(
+                    onPressed: _faceId.isComplete ? _openProctoring : null,
+                    icon: const Icon(Icons.security_outlined),
+                    label: Text(
+                      _proctoringApproved
+                          ? 'Proctoring approved'
+                          : 'Run proctoring gate',
                     ),
                   ),
                 FilledButton.icon(
@@ -78,7 +93,9 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
     );
   }
 
-  bool get _canStart => !widget.assessment.graded || _faceId.isComplete;
+  bool get _canStart =>
+      (!widget.assessment.graded || _faceId.isComplete) &&
+      (!widget.assessment.remoteProctored || _proctoringApproved);
 
   Future<void> _openFaceId() async {
     await Navigator.of(context).push<bool>(
@@ -94,13 +111,32 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
     setState(() => _faceId = _faceIdService.load());
   }
 
+  Future<void> _openProctoring() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ProctoringDemoHome(
+          compactExamGate: true,
+          onApproved: (manifestPath) {
+            setState(() {
+              _proctoringApproved = true;
+              _manifestPath = manifestPath;
+            });
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _startExam() async {
     final result = await Navigator.of(context).push<DemoExamResult>(
       MaterialPageRoute<DemoExamResult>(
         builder: (_) => DemoExamAttemptView(
           assessment: widget.assessment,
-          proctoringManifestPath: null,
-          agentDecision: widget.assessment.graded
+          proctoringManifestPath: _manifestPath,
+          agentDecision: widget.assessment.remoteProctored
+              ? 'agentic_proctoring_ready'
+              : widget.assessment.graded
               ? 'face_id_verified'
               : 'not_required',
         ),
@@ -148,7 +184,11 @@ class _SetupHeader extends StatelessWidget {
               _DarkTag('${assessment.durationMinutes} minutes'),
               _DarkTag('$questionCount questions'),
               _DarkTag(assessment.graded ? 'Official graded' : 'Practice'),
-              _DarkTag(assessment.graded ? 'Face ID required' : 'Face ID optional'),
+              _DarkTag(
+                assessment.remoteProctored
+                    ? 'Face ID + proctoring required'
+                    : 'Face ID optional',
+              ),
             ],
           ),
         ],
@@ -161,10 +201,14 @@ class _ChecklistCard extends StatelessWidget {
   const _ChecklistCard({
     required this.assessment,
     required this.faceIdComplete,
+    required this.proctoringApproved,
+    required this.manifestPath,
   });
 
   final DemoAssessment assessment;
   final bool faceIdComplete;
+  final bool proctoringApproved;
+  final String? manifestPath;
 
   @override
   Widget build(BuildContext context) {
@@ -182,24 +226,34 @@ class _ChecklistCard extends StatelessWidget {
           detail: assessment.graded
               ? faceIdComplete
                     ? 'Face ID is active and attached to this demo attempt.'
-                    : 'Set up Face ID before starting the exam demo.'
+                    : 'Set up Face ID before the proctoring gate or exam startup.'
               : 'Practice assessment can start without Face ID.',
         ),
-        const _CheckRow(
-          passed: true,
-          title: 'Local AI untouched',
-          detail:
-              'This dedicated UI is presentation-only and does not load the full local AI proctoring flow.',
+        _CheckRow(
+          passed: !assessment.remoteProctored || proctoringApproved,
+          title: 'Agentic proctoring gate',
+          detail: assessment.remoteProctored
+              ? proctoringApproved
+                    ? 'Guided scan approved. Evidence manifest saved for review.'
+                    : 'Run the guided 360 scan and agentic review before starting.'
+              : 'Not required for this assessment.',
         ),
+        if (manifestPath != null)
+          Text(
+            'Manifest: $manifestPath',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     );
   }
 }
 
 class _RulesCard extends StatelessWidget {
-  const _RulesCard({required this.faceIdRequired});
+  const _RulesCard({required this.remoteProctored});
 
-  final bool faceIdRequired;
+  final bool remoteProctored;
 
   @override
   Widget build(BuildContext context) {
@@ -208,8 +262,10 @@ class _RulesCard extends StatelessWidget {
       children: [
         const Text('Answer all visible sections before submitting.'),
         const Text('Do not refresh, close the window, or switch devices.'),
-        if (faceIdRequired)
-          const Text('Face ID enrollment must be active before the demo exam starts.'),
+        if (remoteProctored)
+          const Text(
+            'Face ID and guided proctoring approval are required before this demo exam starts.',
+          ),
       ],
     );
   }
