@@ -3,23 +3,33 @@ import 'demo_exam_models.dart';
 class DemoExamService {
   static const DemoCourse _csc305 = DemoCourse(
     code: 'CSC 305',
-    title: 'Artificial Intelligence',
+    title: 'Artificial Intelligence and Agentic Systems',
     lecturer: 'Dr. A. Bello',
+  );
+
+  static const DemoCourse _gst204 = DemoCourse(
+    code: 'GST 204',
+    title: 'Entrepreneurship and Innovation',
+    lecturer: 'Dr. M. Okafor',
   );
 
   static const DemoCourse _mat221 = DemoCourse(
     code: 'MAT 221',
-    title: 'Linear Algebra',
-    lecturer: 'Dr. M. Okafor',
+    title: 'Linear Algebra for Computing',
+    lecturer: 'Dr. S. Musa',
   );
 
-  static List<DemoCourse> courses() => const <DemoCourse>[_csc305, _mat221];
+  static List<DemoCourse> courses() => const <DemoCourse>[
+    _csc305,
+    _gst204,
+    _mat221,
+  ];
 
   static List<DemoAssessment> assessments() => const <DemoAssessment>[
     DemoAssessment(
       id: 'exam-csc305-mid',
       course: _csc305,
-      title: 'Mid-semester examination',
+      title: 'Mid-semester proctored examination',
       kind: 'Examination',
       durationMinutes: 35,
       graded: true,
@@ -31,9 +41,9 @@ class DemoExamService {
       ],
     ),
     DemoAssessment(
-      id: 'assess-csc305-quiz',
-      course: _csc305,
-      title: 'AI foundations quiz',
+      id: 'assess-gst204-ca',
+      course: _gst204,
+      title: 'Continuous assessment quiz',
       kind: 'Assessment',
       durationMinutes: 15,
       graded: true,
@@ -41,9 +51,9 @@ class DemoExamService {
       sections: <DemoExamSection>[DemoExamSection.objective],
     ),
     DemoAssessment(
-      id: 'exam-mat221-practice',
+      id: 'practice-mat221-matrix',
       course: _mat221,
-      title: 'Matrix operations practice',
+      title: 'Matrix operations practice test',
       kind: 'Practice',
       durationMinutes: 20,
       graded: false,
@@ -60,34 +70,33 @@ class DemoExamService {
       const DemoQuestion(
         id: 'q1',
         section: DemoExamSection.objective,
-        prompt: 'Which AI technique searches possible actions using states?',
+        prompt: 'Which AI component combines evidence and recommends an examination action?',
         marks: 1,
         options: <String>[
-          'State-space search',
-          'Data normalization',
-          'Packet switching',
-          'Memory paging',
+          'Risk Agent',
+          'Router service',
+          'Disk scheduler',
+          'Printer spooler',
         ],
-        answer: 'State-space search',
+        answer: 'Risk Agent',
       ),
       const DemoQuestion(
         id: 'q2',
         section: DemoExamSection.objective,
-        prompt: 'A model that improves from examples is using what process?',
+        prompt: 'What should happen before a student is punished for suspected malpractice?',
         marks: 1,
         options: <String>[
-          'Machine learning',
-          'Static routing',
-          'Manual sorting',
-          'Disk partitioning',
+          'Human review of evidence',
+          'Automatic failure by AI',
+          'Deleting the session',
+          'Ignoring all logs',
         ],
-        answer: 'Machine learning',
+        answer: 'Human review of evidence',
       ),
       const DemoQuestion(
         id: 'q3',
         section: DemoExamSection.objective,
-        prompt:
-            'Which item is normally unauthorized in a closed-book remote exam?',
+        prompt: 'Which item is normally unauthorized in a closed-book remote exam?',
         marks: 1,
         options: <String>[
           'Phone on desk',
@@ -103,16 +112,16 @@ class DemoExamService {
       const DemoQuestion(
         id: 'fb1',
         section: DemoExamSection.fillBlank,
-        prompt: 'An AI agent senses its environment using ____.',
+        prompt: 'The local AI layer sends structured ____ logs to the backend.',
         marks: 2,
-        answer: 'sensors',
+        answer: 'event',
       ),
       const DemoQuestion(
         id: 'fb2',
         section: DemoExamSection.fillBlank,
-        prompt: 'The action chosen by an agent is executed through an ____.',
+        prompt: 'A final proctoring decision should be based on evidence and ____ review.',
         marks: 2,
-        answer: 'actuator',
+        answer: 'human',
       ),
     ];
 
@@ -121,14 +130,16 @@ class DemoExamService {
         id: 'th1',
         section: DemoExamSection.theory,
         prompt:
-            'Explain how a proctoring review should use evidence before making an exam startup decision.',
+            'Explain how an agentic proctoring engine should use identity, environment, screen, audio, risk, and evidence agents before allowing an examination to start.',
         marks: 5,
         keywords: <String>[
+          'identity',
+          'environment',
+          'screen',
+          'audio',
+          'risk',
           'evidence',
-          'camera',
-          'lighting',
           'review',
-          'decision',
         ],
       ),
     ];
