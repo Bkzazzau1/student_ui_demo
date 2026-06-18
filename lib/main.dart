@@ -18,11 +18,12 @@ class StudentsUiDemoApp extends StatelessWidget {
       title: 'K-SLAS Student Portal',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF5F7FB),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1D4ED8),
+          seedColor: const Color(0xFF0F4C81),
           brightness: Brightness.light,
         ),
-        useMaterial3: true,
       ),
       home: const DemoExamHome(),
     );
