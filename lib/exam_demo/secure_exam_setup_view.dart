@@ -24,6 +24,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool _audioApproved = false;
   bool _systemApproved = false;
   String? _manifestPath;
+  String? _attemptId;
 
   @override
   void initState() {
@@ -33,7 +34,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
   bool get _needsChecks => widget.assessment.remoteProctored;
 
-  bool get _hasReviewApproval => !_needsChecks || (_roomApproved && _manifestPath != null);
+  bool get _hasReviewApproval => !_needsChecks || (_roomApproved && _manifestPath != null && _attemptId != null);
 
   bool get _canStart {
     final faceOk = !widget.assessment.graded || _faceId.isComplete;
@@ -120,18 +121,20 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   Future<void> _openRoomScan() async {
+    final attemptId = 'attempt-${DateTime.now().millisecondsSinceEpoch}';
     setState(() {
       _roomApproved = false;
       _audioApproved = false;
       _systemApproved = false;
       _manifestPath = null;
+      _attemptId = attemptId;
     });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ProctoringDemoHome(
           compactExamGate: true,
           examId: widget.assessment.id,
-          attemptId: 'attempt-${DateTime.now().millisecondsSinceEpoch}',
+          attemptId: attemptId,
           onApproved: (manifestPath) {
             if (manifestPath == null || manifestPath.trim().isEmpty) {
               setState(() {
@@ -169,7 +172,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       await _showBlockedStartMessage();
       return;
     }
-    if (widget.assessment.remoteProctored && (_manifestPath == null || !_roomApproved)) {
+    if (widget.assessment.remoteProctored && (_manifestPath == null || !_roomApproved || _attemptId == null)) {
       await _showBlockedStartMessage();
       return;
     }
@@ -178,6 +181,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         builder: (_) => DemoExamAttemptView(
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
+          attemptId: _attemptId ?? 'attempt-${DateTime.now().millisecondsSinceEpoch}',
           agentDecision: widget.assessment.remoteProctored
               ? 'security_review_ready'
               : widget.assessment.graded
