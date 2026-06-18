@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../face_demo/demo_face_id_view.dart';
+import '../proctoring_demo/proctoring_demo_home.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_result_view.dart';
 import 'demo_exam_service.dart';
@@ -24,6 +25,15 @@ class DemoExamHome extends StatelessWidget {
             icon: const Icon(Icons.face_retouching_natural),
             label: const Text('Face ID setup'),
           ),
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const ProctoringDemoHome(),
+              ),
+            ),
+            icon: const Icon(Icons.security_outlined),
+            label: const Text('Proctoring demo'),
+          ),
         ],
       ),
       body: SafeArea(
@@ -40,8 +50,11 @@ class DemoExamHome extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Presentation mode shows only the student exam flow and Face ID enrollment. Local AI and the full proctoring lab are not loaded in this demo shell.',
-              style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              'Presentation mode shows the student exam flow, Face ID enrollment, and the guided Agentic AI proctoring gate for remote proctored exams.',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
             ),
             const SizedBox(height: 12),
             ...assessments.map(
@@ -98,8 +111,8 @@ class _SummaryBand extends StatelessWidget {
         children: [
           _SummaryMetric(label: 'Available exams', value: '${assessments.length}'),
           _SummaryMetric(label: 'Graded', value: '$graded'),
-          _SummaryMetric(label: 'Proctored policy', value: '$remote'),
-          const _SummaryMetric(label: 'Demo shell', value: 'Exam + Face ID'),
+          _SummaryMetric(label: 'Remote proctored', value: '$remote'),
+          const _SummaryMetric(label: 'Demo shell', value: 'Exam + Face + AI'),
         ],
       ),
     );
@@ -195,7 +208,7 @@ class _AssessmentCard extends StatelessWidget {
                     _Tag(assessment.graded ? 'Graded' : 'Practice'),
                     _Tag(
                       assessment.remoteProctored
-                          ? 'Face ID required'
+                          ? 'Face ID + proctoring'
                           : 'Normal',
                     ),
                     _Tag('${assessment.durationMinutes} min'),
