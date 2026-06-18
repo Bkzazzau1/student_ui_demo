@@ -29,20 +29,35 @@ class ProctoringDemoHome extends StatefulWidget {
   State<ProctoringDemoHome> createState() => _ProctoringDemoHomeState();
 }
 
+class _ScanGuide {
+  const _ScanGuide(this.name, this.instruction);
+
+  final String name;
+  final String instruction;
+}
+
+class _FrameDecision {
+  const _FrameDecision.accept() : accepted = true, message = null;
+  const _FrameDecision.reject(this.message) : accepted = false;
+
+  final bool accepted;
+  final String? message;
+}
+
 class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
-  static const List<String> _requiredTargets = <String>[
-    'front',
-    'left wall',
-    'back-left corner',
-    'behind / back wall',
-    'back-right corner',
-    'right wall',
-    'ceiling / up',
-    'floor / down',
-    'desk surface',
-    'lap area',
-    'walls',
-    'surroundings',
+  static const List<_ScanGuide> _guides = <_ScanGuide>[
+    _ScanGuide('front view', 'Point the camera straight ahead.'),
+    _ScanGuide('left side', 'Turn slowly to the left side of the room.'),
+    _ScanGuide('back-left corner', 'Show the back-left corner clearly.'),
+    _ScanGuide('back wall', 'Turn further and show the wall behind you.'),
+    _ScanGuide('back-right corner', 'Show the back-right corner clearly.'),
+    _ScanGuide('right side', 'Turn slowly to the right side of the room.'),
+    _ScanGuide('ceiling', 'Tilt upward and show the ceiling area.'),
+    _ScanGuide('floor', 'Tilt downward and show the floor area.'),
+    _ScanGuide('desk surface', 'Show the desk surface and nearby items.'),
+    _ScanGuide('lap area', 'Show the lap area without hiding the camera.'),
+    _ScanGuide('walls', 'Sweep across the visible walls.'),
+    _ScanGuide('surroundings', 'Finish with a wide view of the surroundings.'),
   ];
 
   final DemoCameraScanFrameSource _frameSource = DemoCameraScanFrameSource();
@@ -60,31 +75,31 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   final List<AgenticReviewEvent> _reviewEvents = <AgenticReviewEvent>[];
   final Map<String, List<int>> _acceptedSignatures = <String, List<int>>{};
 
-  Timer? _autoCaptureTimer;
   List<int>? _previousSignature;
   DemoScanStatus _status = DemoScanStatus.idle;
-  String _message = 'Open the camera, then start the guided room scan.';
+  String _message = 'Open the camera and start the 360 room scan.';
   String _frameMode = 'not-started';
   String? _manifestPath;
   int _frameCount = 0;
   int _currentTargetIndex = 0;
   double _lightingScore = 0;
-  double _motionScore = 0;
-  double _sceneScore = 0;
+  double _movementScore = 0;
+  double _differenceScore = 0;
   bool _openingCamera = false;
   bool _backupScanReady = false;
   bool _capturingTarget = false;
   bool _reviewing = false;
 
   static List<DemoScanTarget> _newTargets() =>
-      _requiredTargets.map((name) => DemoScanTarget(name: name)).toList();
+      _guides.map((guide) => DemoScanTarget(name: guide.name)).toList();
 
   bool get _realCameraReady => _controller?.value.isInitialized ?? false;
   bool get _cameraReady => _realCameraReady || _backupScanReady;
   bool get _scanning => _status == DemoScanStatus.scanning;
   bool get _scanComplete => _targets.every((target) => target.captured);
-  String get _currentTarget =>
-      _targets[math.min(_currentTargetIndex, _targets.length - 1)].name;
+  _ScanGuide get _currentGuide =>
+      _guides[math.min(_currentTargetIndex, _guides.length - 1)];
+  String get _currentTarget => _currentGuide.name;
 
   @override
   void initState() {
@@ -94,7 +109,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   @override
   void dispose() {
-    _autoCaptureTimer?.cancel();
     unawaited(_frameSource.stop(_controller));
     _controller?.dispose();
     super.dispose();
@@ -111,11 +125,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         setState(() {
-          _message = 'No camera was found on this device.';
           _openingCamera = false;
           _backupScanReady = true;
+          _message = 'No camera was found. Backup scan mode is ready.';
         });
-        _scheduleAutoCapture();
         return;
       }
       final camera = cameras.firstWhere(
@@ -132,31 +145,17 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _controller = controller;
         _openingCamera = false;
         _backupScanReady = false;
-        _message = 'Camera is ready. Capturing will start automatically.';
+        _message = 'Camera is ready. Start the 360 room scan.';
       });
       await previousController?.dispose();
-      _scheduleAutoCapture();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _openingCamera = false;
         _backupScanReady = true;
-        _message =
-            'Camera could not open. Backup scan mode is ready. Check Windows camera privacy access and close other apps using the camera: $e';
+        _message = 'Camera could not open. Backup scan mode is ready: $e';
       });
-      _scheduleAutoCapture();
     }
-  }
-
-  void _scheduleAutoCapture() {
-    _autoCaptureTimer?.cancel();
-    if (!_cameraReady || _scanComplete || _reviewing || _capturingTarget) {
-      return;
-    }
-    _autoCaptureTimer = Timer(const Duration(milliseconds: 1400), () {
-      if (!mounted || !_cameraReady || _scanComplete || _reviewing) return;
-      unawaited(_captureCurrentTarget());
-    });
   }
 
   Future<CameraController> _createInitializedCameraController(
@@ -208,24 +207,22 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _currentTargetIndex = 0;
       _frameMode = 'not-started';
       _lightingScore = 0;
-      _motionScore = 0;
-      _sceneScore = 0;
+      _movementScore = 0;
+      _differenceScore = 0;
       _status = DemoScanStatus.scanning;
-      _message = 'Capture $_currentTarget and continue through each target.';
+      _message = '${_currentGuide.instruction} Static repeated views will not be accepted.';
     });
   }
 
   Future<void> _captureCurrentTarget() async {
-    if (_capturingTarget || _scanComplete) return;
-    _autoCaptureTimer?.cancel();
+    if (_capturingTarget || _scanComplete || _reviewing) return;
     final controller = _controller;
     final canUseRealCamera =
         controller != null && controller.value.isInitialized;
     if (!canUseRealCamera && !_backupScanReady) {
-      setState(() => _message = 'Open the camera before capturing a target.');
+      setState(() => _message = 'Open the camera before capturing this view.');
       return;
     }
-
     if (!_scanning) {
       await _startScan();
       if (!mounted || !_scanning) return;
@@ -234,7 +231,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     await _frameSource.stop(controller);
     setState(() {
       _capturingTarget = true;
-      _message = 'Saving image for $_currentTarget...';
+      _message = 'Checking camera movement for $_currentTarget...';
     });
 
     try {
@@ -245,36 +242,79 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         if (!mounted) return;
         setState(() {
           _capturingTarget = false;
-          _message = 'Could not capture this target. Try again.';
+          _message = 'Could not capture this view. Try again.';
         });
-        _scheduleAutoCapture();
         return;
       }
-      await _acceptTargetFrame(frame, 'Captured and saved target image.');
+
+      final previous = _previousSignature;
+      final movement = previous == null
+          ? 1.0
+          : _signatureDifference(previous, frame.signature);
+      final difference = _sceneDiversityScore(frame.signature);
+      final decision = _validateFrame(frame, movement, difference);
+
+      setState(() {
+        _frameMode = frame.mode;
+        _lightingScore = frame.luma;
+        _movementScore = movement;
+        _differenceScore = difference;
+      });
+
+      if (!decision.accepted) {
+        if (!mounted) return;
+        setState(() {
+          _capturingTarget = false;
+          _message = decision.message!;
+        });
+        return;
+      }
+
+      await _acceptTargetFrame(
+        frame: frame,
+        movement: movement,
+        difference: difference,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _capturingTarget = false;
-        _message = 'Could not capture this target: $e';
+        _message = 'Could not capture this view: $e';
       });
-      _scheduleAutoCapture();
     }
   }
 
-  Future<void> _acceptTargetFrame(
+  _FrameDecision _validateFrame(
     DemoCameraScanFrame frame,
-    String note,
-  ) async {
-    final target = _currentTarget;
-    final previous = _previousSignature;
-    final motion = previous == null
-        ? 1.0
-        : _signatureDifference(previous, frame.signature);
-    final scene = _sceneDiversityScore(frame.signature);
-    final labels = _demoLabelsFor(frame);
-    _previousSignature = List<int>.from(frame.signature);
-    _frameCount++;
+    double movement,
+    double difference,
+  ) {
+    if (frame.luma < 0.045) {
+      return const _FrameDecision.reject(
+        'The room is too dark. Improve lighting and capture again.',
+      );
+    }
+    if (_frameCount == 0) return const _FrameDecision.accept();
+    if (movement < 0.030 && difference < 0.050) {
+      return _FrameDecision.reject(
+        'This view is too similar to the previous one. Move the camera to ${_currentGuide.name} and capture again.',
+      );
+    }
+    if (difference < 0.035) {
+      return _FrameDecision.reject(
+        'A different direction is required. ${_currentGuide.instruction}',
+      );
+    }
+    return const _FrameDecision.accept();
+  }
 
+  Future<void> _acceptTargetFrame({
+    required DemoCameraScanFrame frame,
+    required double movement,
+    required double difference,
+  }) async {
+    final target = _currentTarget;
+    final labels = _labelsFor(frame);
     final framePath = await _evidence.saveTargetFrame(
       target: target,
       decodedImage: frame.decodedImage,
@@ -284,27 +324,32 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       if (!mounted) return;
       setState(() {
         _capturingTarget = false;
-        _message = 'Image for $target could not be saved. Try again.';
+        _message = 'This view could not be saved. Try again.';
       });
-      _scheduleAutoCapture();
       return;
     }
 
+    _previousSignature = List<int>.from(frame.signature);
     _acceptedSignatures[target] = List<int>.from(frame.signature);
-    final index = _currentTargetIndex;
-    _targets[index] = _targets[index].copyWith(
+    _frameCount++;
+
+    _targets[_currentTargetIndex] = _targets[_currentTargetIndex].copyWith(
       captured: true,
       framePath: framePath,
       labels: labels,
     );
-    _addCalibrationEntry(
-      target: target,
-      frame: frame,
-      motion: motion,
-      scene: scene,
-      labels: labels,
-      note: note,
-      framePath: framePath,
+    _calibrationLog.add(
+      DemoCalibrationEntry(
+        target: target,
+        mode: frame.mode,
+        lightingScore: frame.luma,
+        motionScore: movement,
+        sceneScore: difference,
+        labels: labels,
+        note: 'Accepted after movement check.',
+        timestamp: frame.timestamp,
+        framePath: framePath,
+      ),
     );
 
     if (_scanComplete) {
@@ -312,13 +357,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       if (!mounted) return;
       setState(() {
         _capturingTarget = false;
-        _status = DemoScanStatus.passed;
         _manifestPath = manifest;
-        _frameMode = frame.mode;
-        _lightingScore = frame.luma;
-        _motionScore = motion;
-        _sceneScore = scene;
-        _message = 'All target images captured. Security review is running...';
+        _status = DemoScanStatus.passed;
+        _message = 'All required room views captured. Security review is ready.';
       });
       await _runSecurityReview();
       return;
@@ -328,50 +369,15 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     setState(() {
       _capturingTarget = false;
       _currentTargetIndex++;
-      _frameMode = frame.mode;
-      _lightingScore = frame.luma;
-      _motionScore = motion;
-      _sceneScore = scene;
-      _message = 'Saved $target. Now capture $_currentTarget.';
+      _message = 'Saved $target. ${_currentGuide.instruction}';
     });
-    _scheduleAutoCapture();
   }
 
-  void _addCalibrationEntry({
-    required String target,
-    required DemoCameraScanFrame frame,
-    required double motion,
-    required double scene,
-    required List<String> labels,
-    required String note,
-    String? framePath,
-  }) {
-    _calibrationLog.add(
-      DemoCalibrationEntry(
-        target: target,
-        mode: frame.mode,
-        lightingScore: frame.luma,
-        motionScore: motion,
-        sceneScore: scene,
-        labels: labels,
-        note: note,
-        timestamp: frame.timestamp,
-        framePath: framePath,
-      ),
-    );
-    if (_calibrationLog.length > 80) {
-      _calibrationLog.removeRange(0, _calibrationLog.length - 80);
-    }
-  }
-
-  List<String> _demoLabelsFor(DemoCameraScanFrame frame) {
+  List<String> _labelsFor(DemoCameraScanFrame frame) {
     final labels = <String>[];
-    if (frame.luma < 0.06) labels.add('dark room');
+    if (frame.luma < 0.08) labels.add('low light');
     if (frame.luma > 0.82) labels.add('possible glare');
-    if (_currentTarget.contains('desk')) labels.add('desk area');
-    if (_currentTarget.contains('lap')) labels.add('lap area');
-    if (_currentTarget.contains('ceiling')) labels.add('ceiling');
-    if (_currentTarget.contains('floor')) labels.add('floor');
+    labels.add('movement checked');
     return labels;
   }
 
@@ -389,20 +395,15 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_acceptedSignatures.isEmpty) return 1.0;
     var bestDifference = 1.0;
     for (final previous in _acceptedSignatures.values) {
-      bestDifference = math.min(
-        bestDifference,
-        _signatureDifference(previous, current),
-      );
+      bestDifference = math.min(bestDifference, _signatureDifference(previous, current));
     }
     return bestDifference;
   }
 
   Future<void> _runSecurityReview() async {
-    if (_reviewing) return;
-    _autoCaptureTimer?.cancel();
+    if (_reviewing || !_scanComplete) return;
     setState(() {
       _reviewing = true;
-      _reviewEvents.clear();
       _message = 'Security review is running...';
     });
 
@@ -428,22 +429,19 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             ? 'Security review approved. Exam can start.'
             : result.needsRescan
             ? 'Rescan required before exam startup.'
-            : 'Review required before exam startup.';
+            : 'Invigilator review required before exam startup.';
       });
+      await _showReviewDecisionDialog(result);
+      if (!mounted) return;
       if (result.approved && widget.onApproved != null) {
-        await _showReviewDecisionDialog(result);
-        if (!mounted) return;
         widget.onApproved!(manifest);
-      } else {
-        await _showReviewDecisionDialog(result);
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _reviewing = false;
         _status = DemoScanStatus.pendingReview;
-        _message =
-            'Review required before exam startup. Security review service is unavailable.';
+        _message = 'Invigilator review required. The review service is unavailable.';
         _reviewEvents
           ..clear()
           ..add(
@@ -464,8 +462,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         ? 'Rescan required'
         : 'Review required';
     final message = result.approved
-        ? '${result.summary}\n\nClick OK to start the exam.'
-        : result.summary;
+        ? '${_safeStudentText(result.summary)}\n\nClick OK to start the exam.'
+        : _safeStudentText(result.summary);
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -504,6 +502,13 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     );
   }
 
+  String _safeStudentText(String value) {
+    return value.replaceAll(
+      RegExp(r'\b(agentic|agent|ai)\b', caseSensitive: false),
+      'security',
+    );
+  }
+
   Map<String, dynamic> _buildReviewManifest() {
     final calibrationByTarget = <String, DemoCalibrationEntry>{};
     for (final entry in _calibrationLog) {
@@ -519,12 +524,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         return <String, dynamic>{
           'name': target.name,
           'captured': target.captured,
-          'image_key': target.framePath == null
-              ? null
-              : _fileNameFromPath(target.framePath!),
+          'image_key': target.framePath == null ? null : _fileNameFromPath(target.framePath!),
           'lighting_score': calibration?.lightingScore ?? 0,
-          'motion_score': calibration?.motionScore ?? 0,
-          'scene_score': calibration?.sceneScore ?? 0,
+          'movement_score': calibration?.motionScore ?? 0,
+          'difference_score': calibration?.sceneScore ?? 0,
           'labels': target.labels,
         };
       }).toList(),
@@ -534,8 +537,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   Map<String, String> _targetImagePaths() {
     return <String, String>{
       for (final target in _targets)
-        if (target.framePath != null)
-          _fieldKeyForTarget(target.name): target.framePath!,
+        if (target.framePath != null) _fieldKeyForTarget(target.name): target.framePath!,
     };
   }
 
@@ -562,7 +564,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   Future<void> _reset() async {
-    _autoCaptureTimer?.cancel();
     await _frameSource.stop(_controller);
     setState(() {
       _targets = _newTargets();
@@ -574,33 +575,27 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _frameCount = 0;
       _currentTargetIndex = 0;
       _lightingScore = 0;
-      _motionScore = 0;
-      _sceneScore = 0;
+      _movementScore = 0;
+      _differenceScore = 0;
       _capturingTarget = false;
+      _reviewing = false;
       _status = DemoScanStatus.idle;
-      _message = 'Open the camera, then start the guided room scan.';
+      _message = 'Open the camera and start the 360 room scan.';
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        title: Text(
-          widget.compactExamGate
-              ? 'Pre-exam proctoring'
-              : 'K-SLAS Student Portal',
-        ),
-        backgroundColor: colorScheme.surface,
+        title: Text(widget.compactExamGate ? 'Pre-exam proctoring' : 'Security Centre'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(18),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
+              constraints: const BoxConstraints(maxWidth: 1180),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -608,14 +603,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   const SizedBox(height: 14),
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final wide = constraints.maxWidth >= 980;
+                      final wide = constraints.maxWidth >= 920;
                       final camera = _buildCameraPanel();
                       final side = _buildSidePanel();
-                      if (!wide) {
-                        return Column(
-                          children: [camera, const SizedBox(height: 14), side],
-                        );
-                      }
+                      if (!wide) return Column(children: [camera, const SizedBox(height: 14), side]);
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -627,7 +618,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                     },
                   ),
                   const SizedBox(height: 14),
-                  _buildAgentPanel(),
+                  _buildReviewPanel(),
                 ],
               ),
             ),
@@ -645,18 +636,11 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               FilledButton.icon(
                 onPressed: _openingCamera ? null : _openCamera,
                 icon: const Icon(Icons.videocam_outlined),
-                label: Text(
-                  _realCameraReady
-                      ? 'Camera ready'
-                      : _backupScanReady
-                      ? 'Backup ready'
-                      : 'Open camera',
-                ),
+                label: Text(_realCameraReady ? 'Camera ready' : 'Open camera'),
               ),
               FilledButton.icon(
                 onPressed: _cameraReady && !_scanning ? _startScan : null,
@@ -668,14 +652,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                     ? _captureCurrentTarget
                     : null,
                 icon: const Icon(Icons.camera_alt_outlined),
-                label: Text(
-                  _capturingTarget ? 'Saving image...' : 'Capture target',
-                ),
+                label: Text(_capturingTarget ? 'Checking...' : 'Capture current view'),
               ),
               OutlinedButton.icon(
-                onPressed: _scanComplete && !_reviewing
-                    ? _runSecurityReview
-                    : null,
+                onPressed: _scanComplete && !_reviewing ? _runSecurityReview : null,
                 icon: const Icon(Icons.verified_user_outlined),
                 label: const Text('Run security review'),
               ),
@@ -689,37 +669,21 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           const SizedBox(height: 12),
           Text(_message, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: _targets.where((t) => t.captured).length / _targets.length,
-          ),
+          LinearProgressIndicator(value: _targets.where((t) => t.captured).length / _targets.length),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _MetricChip(label: 'Frames', value: '$_frameCount'),
-              _MetricChip(label: 'Mode', value: _frameMode),
-              _MetricChip(
-                label: 'Light',
-                value: _lightingScore.toStringAsFixed(3),
-              ),
-              _MetricChip(
-                label: 'Motion',
-                value: _motionScore.toStringAsFixed(3),
-              ),
-              _MetricChip(
-                label: 'Scene',
-                value: _sceneScore.toStringAsFixed(3),
-              ),
+              _MetricChip(label: 'Saved views', value: '$_frameCount/${_targets.length}'),
+              _MetricChip(label: 'Light', value: _lightingScore.toStringAsFixed(3)),
+              _MetricChip(label: 'Movement', value: _movementScore.toStringAsFixed(3)),
+              _MetricChip(label: 'Difference', value: _differenceScore.toStringAsFixed(3)),
             ],
           ),
           if (_manifestPath != null) ...[
             const SizedBox(height: 8),
-            Text(
-              'Manifest: $_manifestPath',
-              style: Theme.of(context).textTheme.bodySmall,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(_manifestPath!, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
           ],
         ],
       ),
@@ -730,7 +694,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     return _Panel(
       padding: EdgeInsets.zero,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: Stack(
@@ -738,45 +702,21 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             children: [
               if (_realCameraReady)
                 CameraPreview(_controller!)
-              else if (_backupScanReady)
-                Container(
-                  color: const Color(0xFF101828),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Backup scan mode ready',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                )
               else
                 Container(
                   color: const Color(0xFF101828),
                   alignment: Alignment.center,
-                  child: const Text(
-                    'Camera preview',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  child: Text(
+                    _backupScanReady ? 'Backup scan mode ready' : 'Camera preview',
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ),
               Align(
                 alignment: Alignment.topCenter,
-                child: Container(
-                  margin: const EdgeInsets.all(12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.62),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _scanning
-                        ? 'Now capture: $_currentTarget'
-                        : 'Guided 360 environment capture',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                child: _OverlayLabel(
+                  text: _scanning
+                      ? '${_currentTarget.toUpperCase()} • ${_currentGuide.instruction}'
+                      : 'Guided 360 room scan',
                 ),
               ),
               Center(
@@ -784,10 +724,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   width: 260,
                   height: 180,
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: const Color(0xFF22C55E),
-                      width: 2,
-                    ),
+                    border: Border.all(color: const Color(0xFF22C55E), width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -797,17 +734,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: FilledButton.icon(
-                    onPressed:
-                        _cameraReady && !_capturingTarget && !_scanComplete
+                    onPressed: _cameraReady && !_capturingTarget && !_scanComplete
                         ? _captureCurrentTarget
                         : null,
                     icon: const Icon(Icons.camera_alt_outlined),
                     label: Text(
-                      _capturingTarget
-                          ? 'Saving image...'
-                          : _scanComplete
-                          ? 'All images captured'
-                          : 'Capture $_currentTarget',
+                      _scanComplete ? 'All views captured' : 'Capture $_currentTarget',
                     ),
                   ),
                 ),
@@ -824,20 +756,17 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Required scan targets',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('Required 360 views', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          const Text('Move the camera or device to each direction. Repeated static views are rejected.'),
           const SizedBox(height: 10),
           ..._targets.asMap().entries.map((entry) {
             final index = entry.key;
             final target = entry.value;
-            final active =
-                _scanning && !_scanComplete && index == _currentTargetIndex;
+            final active = _scanning && !_scanComplete && index == _currentTargetIndex;
             return ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
-              tileColor: active ? const Color(0xFFEFF6FF) : null,
               leading: Icon(
                 target.captured
                     ? Icons.check_circle
@@ -847,78 +776,47 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 color: target.captured
                     ? const Color(0xFF16A34A)
                     : active
-                    ? const Color(0xFF1D4ED8)
+                    ? const Color(0xFF0F4C81)
                     : const Color(0xFF64748B),
               ),
               title: Text(target.name),
-              subtitle: target.framePath != null
-                  ? const Text('Image saved')
-                  : active
-                  ? const Text('Ready to capture')
-                  : target.labels.isEmpty
-                  ? null
-                  : Text(target.labels.join(', ')),
+              subtitle: Text(
+                target.captured
+                    ? 'Saved after movement check'
+                    : active
+                    ? _currentGuide.instruction
+                    : 'Pending',
+              ),
             );
           }),
-          const Divider(height: 24),
-          Text(
-            'Calibration log',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 190,
-            child: _calibrationLog.isEmpty
-                ? const Center(child: Text('Scan frames will appear here.'))
-                : ListView.builder(
-                    itemCount: math.min(_calibrationLog.length, 20),
-                    itemBuilder: (context, index) {
-                      final entry = _calibrationLog.reversed.elementAt(index);
-                      return Text(
-                        '${entry.target}: L ${entry.lightingScore.toStringAsFixed(2)} '
-                        'M ${entry.motionScore.toStringAsFixed(2)} '
-                        'S ${entry.sceneScore.toStringAsFixed(2)} - ${entry.note}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    },
-                  ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildAgentPanel() {
+  Widget _buildReviewPanel() {
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Security review',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('Review status', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 10),
           if (_reviewEvents.isEmpty)
-            const Text('Run the review after all scan targets are captured.')
+            const Text('Complete the room scan to prepare the review record.')
           else
             ..._reviewEvents.map(
               (event) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
                   event.severity == 'success'
-                      ? Icons.check_circle_outline
-                      : event.severity == 'warning'
-                      ? Icons.warning_amber_outlined
+                      ? Icons.check_circle
                       : Icons.info_outline,
                   color: event.severity == 'success'
                       ? const Color(0xFF16A34A)
-                      : event.severity == 'warning'
-                      ? const Color(0xFFD97706)
-                      : const Color(0xFF2563EB),
+                      : const Color(0xFFF59E0B),
                 ),
-                title: Text(event.title),
-                subtitle: Text(event.detail),
+                title: Text(_safeStudentText(event.title)),
+                subtitle: Text(_safeStudentText(event.detail)),
               ),
             ),
         ],
@@ -931,7 +829,7 @@ class _Panel extends StatelessWidget {
   const _Panel({required this.child, this.padding = const EdgeInsets.all(16)});
 
   final Widget child;
-  final EdgeInsets padding;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -939,7 +837,7 @@ class _Panel extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: child,
@@ -955,19 +853,28 @@ class _MetricChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Chip(label: Text('$label: $value'));
+  }
+}
+
+class _OverlayLabel extends StatelessWidget {
+  const _OverlayLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
+        color: Colors.black.withValues(alpha: 0.62),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
       child: Text(
-        '$label: $value',
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF1E3A8A),
-        ),
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
       ),
     );
   }
