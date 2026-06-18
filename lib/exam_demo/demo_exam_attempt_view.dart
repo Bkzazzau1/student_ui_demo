@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../proctoring_demo/live_camera_monitor.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 
@@ -132,6 +133,14 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                 ],
               ),
             ),
+            if (widget.assessment.remoteProctored)
+              const SizedBox(
+                width: 320,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(0, 18, 18, 18),
+                  child: LiveCameraMonitor(),
+                ),
+              ),
           ],
         ),
       ),
@@ -245,8 +254,8 @@ class _ExamStatusBar extends StatelessWidget {
           _Pill('$answered/$total answered'),
           _Pill(
             assessment.remoteProctored
-                ? 'Security review completed'
-                : 'Normal mode',
+                ? 'Camera monitoring active'
+                : 'Standard access',
           ),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
