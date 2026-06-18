@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../proctoring_demo/live_camera_monitor.dart';
+import '../proctoring_demo/live_status_panel.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 
@@ -94,7 +95,6 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                     assessment: widget.assessment,
                     answered: answered,
                     total: _questions.length,
-                    agentDecision: widget.agentDecision,
                   ),
                   const SizedBox(height: 14),
                   _QuestionCard(
@@ -138,7 +138,13 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                 width: 320,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(0, 18, 18, 18),
-                  child: LiveCameraMonitor(),
+                  child: Column(
+                    children: [
+                      LiveCameraMonitor(),
+                      SizedBox(height: 12),
+                      LiveStatusPanel(),
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -229,13 +235,11 @@ class _ExamStatusBar extends StatelessWidget {
     required this.assessment,
     required this.answered,
     required this.total,
-    required this.agentDecision,
   });
 
   final DemoAssessment assessment;
   final int answered;
   final int total;
-  final String agentDecision;
 
   @override
   Widget build(BuildContext context) {
@@ -257,6 +261,7 @@ class _ExamStatusBar extends StatelessWidget {
                 ? 'Camera monitoring active'
                 : 'Standard access',
           ),
+          if (assessment.remoteProctored) const _Pill('Sound check active'),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
       ),
