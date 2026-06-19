@@ -28,17 +28,17 @@ class ContinuousLivenessResult {
   final String label;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'frame_fingerprint': frameFingerprint,
-        'luma_mean': lumaMean,
-        'luma_variance': lumaVariance,
-        'edge_energy': edgeEnergy,
-        'motion_score': motionScore,
-        'repeated_frame': repeatedFrame,
-        'flat_texture': flatTexture,
-        'replay_or_freeze_likely': replayOrFreezeLikely,
-        'spoof_risk_score': spoofRiskScore,
-        'label': label,
-      };
+    'frame_fingerprint': frameFingerprint,
+    'luma_mean': lumaMean,
+    'luma_variance': lumaVariance,
+    'edge_energy': edgeEnergy,
+    'motion_score': motionScore,
+    'repeated_frame': repeatedFrame,
+    'flat_texture': flatTexture,
+    'replay_or_freeze_likely': replayOrFreezeLikely,
+    'spoof_risk_score': spoofRiskScore,
+    'label': label,
+  };
 }
 
 class ContinuousBiometricLivenessService {
@@ -52,7 +52,9 @@ class ContinuousBiometricLivenessService {
   ContinuousLivenessResult? analyse(CameraImage image) {
     _frameCounter++;
     if (_frameCounter % 6 != 0) return null;
-    if (image.planes.isEmpty || image.width <= 0 || image.height <= 0) return null;
+    if (image.planes.isEmpty || image.width <= 0 || image.height <= 0) {
+      return null;
+    }
 
     final plane = image.planes.first;
     final width = image.width;
@@ -70,9 +72,15 @@ class ContinuousBiometricLivenessService {
     var sampleCount = 0;
 
     for (var gy = 0; gy < gridH; gy++) {
-      final y = ((gy + 0.5) * height / gridH).floor().clamp(0, height - 1);
+      final y = ((gy + 0.5) * height / gridH)
+          .floor()
+          .clamp(0, height - 1)
+          .toInt();
       for (var gx = 0; gx < gridW; gx++) {
-        final x = ((gx + 0.5) * width / gridW).floor().clamp(0, width - 1);
+        final x = ((gx + 0.5) * width / gridW)
+            .floor()
+            .clamp(0, width - 1)
+            .toInt();
         final idx = y * rowStride + x;
         if (idx < 0 || idx >= bytes.length) continue;
         final value = bytes[idx];
@@ -80,8 +88,14 @@ class ContinuousBiometricLivenessService {
         sum += value;
         sumSquares += value * value;
         sampleCount++;
-        final rightIdx = y * rowStride + math.min(width - 1, x + math.max(1, width ~/ 48));
-        final downIdx = math.min(height - 1, y + math.max(1, height ~/ 48)) * rowStride + x;
+        final rightX = math
+            .min(width - 1, x + math.max(1, width ~/ 48))
+            .toInt();
+        final downY = math
+            .min(height - 1, y + math.max(1, height ~/ 48))
+            .toInt();
+        final rightIdx = y * rowStride + rightX;
+        final downIdx = downY * rowStride + x;
         if (rightIdx >= 0 && rightIdx < bytes.length) {
           edges += (value - bytes[rightIdx]).abs();
         }
@@ -93,8 +107,13 @@ class ContinuousBiometricLivenessService {
 
     if (sampleCount < 12) return null;
     final mean = (sum / sampleCount) / 255.0;
-    final variance = ((sumSquares / sampleCount) - math.pow(sum / sampleCount, 2)) / (255.0 * 255.0);
-    final edgeEnergy = (edges / math.max(1, sampleCount * 2) / 255.0).clamp(0.0, 1.0);
+    final variance =
+        ((sumSquares / sampleCount) - math.pow(sum / sampleCount, 2)) /
+        (255.0 * 255.0);
+    final edgeEnergy = (edges / math.max(1, sampleCount * 2) / 255.0).clamp(
+      0.0,
+      1.0,
+    );
     final fingerprint = _fingerprintGrid(grid);
     final repeated = fingerprint == _lastFingerprint;
     if (repeated) {
@@ -110,7 +129,8 @@ class ContinuousBiometricLivenessService {
     }
     final motionAverage = _motionHistory.isEmpty
         ? 0.0
-        : _motionHistory.fold<double>(0, (sum, item) => sum + item) / _motionHistory.length;
+        : _motionHistory.fold<double>(0, (sum, item) => sum + item) /
+              _motionHistory.length;
 
     final flatTexture = variance < 0.006 && edgeEnergy < 0.035;
     if (flatTexture) {
@@ -119,7 +139,8 @@ class ContinuousBiometricLivenessService {
       _flatTextureStreak = math.max(0, _flatTextureStreak - 1);
     }
 
-    final lowMotionTooLong = _motionHistory.length >= 8 && motionAverage < 0.008;
+    final lowMotionTooLong =
+        _motionHistory.length >= 8 && motionAverage < 0.008;
     final repeatedFrame = _repeatStreak >= 3 || lowMotionTooLong;
     final replayOrFreezeLikely = repeatedFrame || _flatTextureStreak >= 4;
     var risk = 0.0;
@@ -130,8 +151,8 @@ class ContinuousBiometricLivenessService {
     risk = risk.clamp(0.0, 1.0);
     final label = replayOrFreezeLikely
         ? repeatedFrame
-            ? 'possible_frozen_or_replayed_face'
-            : 'possible_photo_or_flat_screen_face'
+              ? 'possible_frozen_or_replayed_face'
+              : 'possible_photo_or_flat_screen_face'
         : 'continuous_liveness_present';
 
     _lastFingerprint = fingerprint;
