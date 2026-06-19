@@ -1,0 +1,5 @@
+model_name=MediaPipe Face Landmarker
+asset_path=assets/models/face_landmarker/face_landmarker.task
+runtime=native_method_channel
+method_channel=kslas.face_landmarker
+fallback=gaze_head_pose_estimator.dart
