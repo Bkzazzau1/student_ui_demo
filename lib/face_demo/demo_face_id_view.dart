@@ -14,13 +14,61 @@ class DemoFaceIdView extends StatefulWidget {
   State<DemoFaceIdView> createState() => _DemoFaceIdViewState();
 }
 
+class _IdentityGuide {
+  const _IdentityGuide({
+    required this.title,
+    required this.instruction,
+    required this.icon,
+  });
+
+  final String title;
+  final String instruction;
+  final IconData icon;
+}
+
 class _DemoFaceIdViewState extends State<DemoFaceIdView> {
+  static const List<_IdentityGuide> _guides = <_IdentityGuide>[
+    _IdentityGuide(
+      title: 'Front face',
+      instruction: 'Look straight at the camera. Keep your full face inside the oval.',
+      icon: Icons.face_retouching_natural,
+    ),
+    _IdentityGuide(
+      title: 'Left angle',
+      instruction: 'Turn your face slightly to the left. Keep both eyes visible.',
+      icon: Icons.keyboard_arrow_left,
+    ),
+    _IdentityGuide(
+      title: 'Right angle',
+      instruction: 'Turn your face slightly to the right. Keep your chin level.',
+      icon: Icons.keyboard_arrow_right,
+    ),
+    _IdentityGuide(
+      title: 'Look up',
+      instruction: 'Raise your face slightly upward without leaving the oval.',
+      icon: Icons.keyboard_arrow_up,
+    ),
+    _IdentityGuide(
+      title: 'Look down',
+      instruction: 'Lower your face slightly downward. Do not cover your eyes.',
+      icon: Icons.keyboard_arrow_down,
+    ),
+    _IdentityGuide(
+      title: 'Close eyes',
+      instruction: 'Close your eyes for this final liveness image, then capture.',
+      icon: Icons.visibility_off_outlined,
+    ),
+  ];
+
   final DemoFaceIdService _service = DemoFaceIdService();
   late DemoFaceIdSnapshot _snapshot;
   CameraController? _controller;
   bool _openingCamera = false;
   bool _capturing = false;
   String? _cameraError;
+
+  _IdentityGuide get _currentGuide =>
+      _guides[math.min(_snapshot.capturedSamples, _guides.length - 1)];
 
   @override
   void initState() {
@@ -45,7 +93,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (cameras.isEmpty) {
         setState(() {
           _openingCamera = false;
-          _cameraError = 'No camera found. A fallback quality sample is available.';
+          _cameraError = 'No camera found. Identity image capture requires camera access.';
         });
         return;
       }
@@ -69,26 +117,30 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (!mounted) return;
       setState(() {
         _openingCamera = false;
-        _cameraError =
-            'Camera could not open. A fallback quality sample is available: $e';
+        _cameraError = 'Camera could not open for identity image capture: $e';
       });
     }
   }
 
   Future<void> _captureSample() async {
     if (_capturing || _snapshot.isComplete) return;
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      setState(() => _cameraError = 'Open the camera before capturing this identity image.');
+      return;
+    }
     setState(() => _capturing = true);
     var quality = 0.72 + math.Random().nextDouble() * 0.22;
     try {
-      final controller = _controller;
-      if (controller != null && controller.value.isInitialized) {
-        final file = await controller.takePicture();
-        final size = await file.length();
-        quality = (0.68 + math.min(size / 900000, 0.25)).clamp(0.0, 1.0);
-      }
+      final file = await controller.takePicture();
+      final size = await file.length();
+      quality = (0.68 + math.min(size / 900000, 0.25)).clamp(0.0, 1.0);
     } catch (e) {
-      _cameraError =
-          'Camera sample failed, so a fallback quality sample was used: $e';
+      setState(() {
+        _capturing = false;
+        _cameraError = 'Identity image capture failed: $e';
+      });
+      return;
     }
     final next = await _service.addSample(qualityScore: quality);
     if (!mounted) return;
@@ -112,13 +164,13 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     final progress = _snapshot.capturedSamples / _snapshot.requiredSamples;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(title: const Text('Face ID setup')),
+      appBar: AppBar(title: const Text('Identity setup')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(18),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 920),
+              constraints: const BoxConstraints(maxWidth: 980),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -131,18 +183,17 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                         controller: _controller,
                         openingCamera: _openingCamera,
                         cameraError: _cameraError,
+                        guide: _currentGuide,
+                        complete: _snapshot.isComplete,
                       );
                       final status = _StatusPanel(
                         snapshot: _snapshot,
                         progress: progress,
+                        guides: _guides,
                       );
                       if (!wide) {
                         return Column(
-                          children: [
-                            preview,
-                            const SizedBox(height: 14),
-                            status,
-                          ],
+                          children: [preview, const SizedBox(height: 14), status],
                         );
                       }
                       return Row(
@@ -168,25 +219,22 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                                child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Icon(Icons.camera_alt_outlined),
+                            : Icon(_currentGuide.icon),
                         label: Text(
                           _snapshot.isComplete
-                              ? 'Face ID active'
-                              : 'Capture face sample',
+                              ? 'Identity enrollment active'
+                              : 'Capture ${_currentGuide.title}',
                         ),
                       ),
                       OutlinedButton.icon(
                         onPressed: _reset,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Reset Face ID'),
+                        label: const Text('Reset identity images'),
                       ),
                       TextButton.icon(
-                        onPressed: () =>
-                            Navigator.of(context).pop(_snapshot.isComplete),
+                        onPressed: () => Navigator.of(context).pop(_snapshot.isComplete),
                         icon: const Icon(Icons.arrow_back),
                         label: const Text('Back'),
                       ),
@@ -231,18 +279,15 @@ class _Header extends StatelessWidget {
               children: [
                 Text(
                   snapshot.isComplete
-                      ? 'Face ID enrollment active'
-                      : 'Register Face ID for secure exams',
+                      ? 'Identity enrollment active'
+                      : 'Register identity images for secure exams',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  snapshot.statusText,
-                  style: const TextStyle(color: Color(0xFFCBD5E1)),
-                ),
+                Text(snapshot.statusText, style: const TextStyle(color: Color(0xFFCBD5E1))),
               ],
             ),
           ),
@@ -257,11 +302,15 @@ class _CameraPreviewPanel extends StatelessWidget {
     required this.controller,
     required this.openingCamera,
     required this.cameraError,
+    required this.guide,
+    required this.complete,
   });
 
   final CameraController? controller;
   final bool openingCamera;
   final String? cameraError;
+  final _IdentityGuide guide;
+  final bool complete;
 
   @override
   Widget build(BuildContext context) {
@@ -301,6 +350,22 @@ class _CameraPreviewPanel extends StatelessWidget {
                 ),
               ),
             ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.68),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  complete ? 'Identity images complete' : '${guide.title}: ${guide.instruction}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -309,10 +374,15 @@ class _CameraPreviewPanel extends StatelessWidget {
 }
 
 class _StatusPanel extends StatelessWidget {
-  const _StatusPanel({required this.snapshot, required this.progress});
+  const _StatusPanel({
+    required this.snapshot,
+    required this.progress,
+    required this.guides,
+  });
 
   final DemoFaceIdSnapshot snapshot;
   final double progress;
+  final List<_IdentityGuide> guides;
 
   @override
   Widget build(BuildContext context) {
@@ -328,25 +398,36 @@ class _StatusPanel extends StatelessWidget {
         children: [
           Text(
             'Enrollment status',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
           _Row(label: 'Student ID', value: snapshot.studentId),
-          _Row(label: 'Required samples', value: '${snapshot.requiredSamples}'),
-          _Row(label: 'Captured samples', value: '${snapshot.capturedSamples}'),
-          _Row(
-            label: 'Status',
-            value: snapshot.isComplete ? 'Active' : 'Pending',
-          ),
+          _Row(label: 'Required images', value: '${snapshot.requiredSamples}'),
+          _Row(label: 'Captured images', value: '${snapshot.capturedSamples}'),
+          _Row(label: 'Status', value: snapshot.isComplete ? 'Active' : 'Pending'),
           if (snapshot.lastQualityScore != null)
-            _Row(
-              label: 'Last quality',
-              value: '${(snapshot.lastQualityScore! * 100).round()}%',
-            ),
+            _Row(label: 'Last quality', value: '${(snapshot.lastQualityScore! * 100).round()}%'),
           const SizedBox(height: 12),
           LinearProgressIndicator(value: progress.clamp(0.0, 1.0)),
+          const SizedBox(height: 14),
+          ...guides.asMap().entries.map((entry) {
+            final done = entry.key < snapshot.capturedSamples;
+            final active = entry.key == snapshot.capturedSamples && !snapshot.isComplete;
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                done ? Icons.check_circle : active ? entry.value.icon : Icons.radio_button_unchecked,
+                color: done
+                    ? const Color(0xFF16A34A)
+                    : active
+                    ? const Color(0xFF0F4C81)
+                    : const Color(0xFF64748B),
+              ),
+              title: Text(entry.value.title),
+              subtitle: Text(entry.value.instruction),
+            );
+          }),
         ],
       ),
     );
@@ -367,17 +448,9 @@ class _Row extends StatelessWidget {
         children: [
           SizedBox(
             width: 150,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700))),
         ],
       ),
     );
