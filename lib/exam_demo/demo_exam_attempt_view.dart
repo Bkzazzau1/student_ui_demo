@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../proctoring_demo/live_exam_monitor.dart';
 import '../proctoring_demo/live_status_panel.dart';
 import '../proctoring_demo/live_system_security_monitor.dart';
+import '../proctoring_demo/review_clip_sampler.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 
@@ -189,6 +190,13 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                         onCriticalEvent: _handleCriticalMonitoringEvent,
                       ),
                       const SizedBox(height: 12),
+                      ReviewClipSampler(
+                        studentId: widget.studentId,
+                        examId: widget.assessment.id,
+                        attemptId: widget.attemptId,
+                        examDurationSeconds: widget.assessment.durationMinutes * 60,
+                      ),
+                      const SizedBox(height: 12),
                       const LiveStatusPanel(),
                     ],
                   ),
@@ -342,6 +350,7 @@ class _ExamStatusBar extends StatelessWidget {
           _Pill(paused ? 'Monitoring hold' : assessment.remoteProctored ? 'Live monitoring active' : 'Standard access'),
           if (assessment.remoteProctored) const _Pill('Sound monitoring active'),
           if (assessment.remoteProctored) const _Pill('System device review active'),
+          if (assessment.remoteProctored) const _Pill('Random review clips active'),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
       ),
