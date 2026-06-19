@@ -21,6 +21,7 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
   late DemoFaceIdSnapshot _faceId;
   bool _proctoringApproved = false;
   String? _manifestPath;
+  String? _attemptId;
 
   @override
   void initState() {
@@ -112,12 +113,18 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
   }
 
   Future<void> _openProctoring() async {
+    final attemptId = 'attempt-${DateTime.now().millisecondsSinceEpoch}';
+    setState(() {
+      _proctoringApproved = false;
+      _manifestPath = null;
+      _attemptId = attemptId;
+    });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ProctoringDemoHome(
           compactExamGate: true,
           examId: widget.assessment.id,
-          attemptId: 'attempt-${DateTime.now().millisecondsSinceEpoch}',
+          attemptId: attemptId,
           onApproved: (manifestPath) {
             setState(() {
               _proctoringApproved = true;
@@ -136,6 +143,8 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
         builder: (_) => DemoExamAttemptView(
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
+          attemptId:
+              _attemptId ?? 'attempt-${DateTime.now().millisecondsSinceEpoch}',
           agentDecision: widget.assessment.remoteProctored
               ? 'agentic_proctoring_ready'
               : widget.assessment.graded
