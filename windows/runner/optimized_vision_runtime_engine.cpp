@@ -456,6 +456,15 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(
   }
 
   flutter::EncodableMap outputs_map;
+  outputs_map[StringValue("objects")] =
+      flutter::EncodableValue(flutter::EncodableList());
+  outputs_map[StringValue("screen_glow")] = flutter::EncodableValue(false);
+  outputs_map[StringValue("mirror_reflection")] = flutter::EncodableValue(false);
+  outputs_map[StringValue("offscreen_interaction")] =
+      flutter::EncodableValue(false);
+  outputs_map[StringValue("runtime")] = StringValue(backend_);
+  outputs_map[StringValue("precision")] = StringValue(precision_);
+  outputs_map[StringValue("inference_ms")] = DoubleValue(last_inference_ms_);
   outputs_map[StringValue("model_path")] = StringValue(model_path_);
   outputs_map[StringValue("raw_outputs")] =
       flutter::EncodableValue(output_summaries);

@@ -207,6 +207,13 @@ private class AndroidOptimizedVisionRuntimeEngine {
             "precision" to precision,
             "inference_ms" to lastInferenceMs,
             "outputs" to mapOf(
+                "objects" to emptyList<Map<String, Any?>>(),
+                "screen_glow" to false,
+                "mirror_reflection" to false,
+                "offscreen_interaction" to false,
+                "runtime" to backend,
+                "precision" to precision,
+                "inference_ms" to lastInferenceMs,
                 "model_path" to modelPath,
                 "raw_outputs" to summaries,
             ),

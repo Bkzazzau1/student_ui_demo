@@ -11,6 +11,7 @@ import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
+import 'optimized_vision_runtime_bridge.dart';
 import 'visual_reflection_shadow_service.dart';
 import 'vision_compute_budget_service.dart';
 
@@ -49,6 +50,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       ContinuousBiometricLivenessService();
   final VisualReflectionShadowService _visualIntegrity =
       VisualReflectionShadowService();
+  final OptimizedVisionRuntimeBridge _optimizedVision =
+      OptimizedVisionRuntimeBridge();
   final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
 
   CameraController? _camera;
@@ -220,6 +223,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _handleVisualIntegrityResult(visual);
       }
 
+      final optimized = await _optimizedVision.runFrame(
+        image: image,
+        tasks: const <String>['object_reflection_shadow_detector'],
+      );
+      if (optimized != null && optimized.available) {
+        _handleOptimizedVisionSmokeResult(optimized);
+      }
+
       final liveness = _continuousLiveness.analyse(image);
       if (liveness != null) {
         _handleLivenessResult(liveness);
@@ -262,6 +273,25 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _visionBudget.recordWork(DateTime.now().difference(started));
       _analysingGazeFrame = false;
     }
+  }
+
+  void _handleOptimizedVisionSmokeResult(OptimizedVisionRuntimeResult result) {
+    _lastVisualFrameAt = DateTime.now();
+    if (mounted) {
+      setState(() {
+        _visualReady = true;
+        _visualStatus =
+            '${result.backend} optimized vision smoke active (${result.inferenceMs.toStringAsFixed(1)} ms)';
+      });
+    }
+    unawaited(
+      _raiseEvent(
+        eventType: 'optimized_vision_runtime_smoke',
+        severity: 'info',
+        message: 'Optimized vision runtime smoke inference completed.',
+        metadata: result.toJson(),
+      ),
+    );
   }
 
   void _handleVisualIntegrityResult(VisualReflectionShadowResult result) {
