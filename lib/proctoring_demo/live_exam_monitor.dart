@@ -11,6 +11,7 @@ import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
+import 'visual_reflection_shadow_service.dart';
 
 class LiveExamMonitor extends StatefulWidget {
   const LiveExamMonitor({
@@ -45,6 +46,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       AudioFingerprintIsolationService();
   final ContinuousBiometricLivenessService _continuousLiveness =
       ContinuousBiometricLivenessService();
+  final VisualReflectionShadowService _visualIntegrity =
+      VisualReflectionShadowService();
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -58,19 +61,23 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _systemStatus = 'Checking system...';
   String _gazeStatus = 'Starting gaze and head pose monitor...';
   String _livenessStatus = 'Starting continuous liveness anti-spoofing...';
+  String _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
   bool _gazeReady = false;
   bool _livenessReady = false;
+  bool _visualReady = false;
   bool _openingCamera = false;
   bool _analysingGazeFrame = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
   int _spoofRiskStreak = 0;
+  int _visualRiskStreak = 0;
   DateTime? _lastGazeFrameAt;
   DateTime? _lastLivenessFrameAt;
+  DateTime? _lastVisualFrameAt;
 
   @override
   void initState() {
@@ -101,6 +108,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _cameraStatus = 'Opening camera...';
       _gazeStatus = 'Starting gaze and head pose monitor...';
       _livenessStatus = 'Starting continuous liveness anti-spoofing...';
+      _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
     });
     try {
       final cameras = await availableCameras();
@@ -116,9 +124,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _cameraReady = false;
           _gazeReady = false;
           _livenessReady = false;
+          _visualReady = false;
           _cameraStatus = 'Camera not found';
           _gazeStatus = 'Gaze and head pose monitor unavailable';
           _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
+          _visualStatus = 'Reflection and object integrity scan unavailable';
         });
         return;
       }
@@ -132,10 +142,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         enableAudio: false,
       );
       await controller.initialize();
-      var gazeStreamReady = false;
+      var streamReady = false;
       try {
         await controller.startImageStream(_handleCameraImage);
-        gazeStreamReady = true;
+        streamReady = true;
       } catch (e) {
         await _raiseEvent(
           eventType: 'gaze_head_pose_monitor_unavailable',
@@ -155,15 +165,19 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _camera = controller;
         _openingCamera = false;
         _cameraReady = true;
-        _gazeReady = gazeStreamReady;
-        _livenessReady = gazeStreamReady;
+        _gazeReady = streamReady;
+        _livenessReady = streamReady;
+        _visualReady = streamReady;
         _cameraStatus = 'Camera monitoring active';
-        _gazeStatus = gazeStreamReady
+        _gazeStatus = streamReady
             ? 'Gaze vector and head pose monitoring active'
             : 'Gaze stream unavailable on this device';
-        _livenessStatus = gazeStreamReady
+        _livenessStatus = streamReady
             ? 'Continuous local liveness anti-spoofing active'
             : 'Liveness anti-spoofing stream unavailable';
+        _visualStatus = streamReady
+            ? 'Reflection, shadow, and object integrity scan active'
+            : 'Visual integrity stream unavailable';
       });
     } catch (e) {
       await _raiseEvent(
@@ -178,9 +192,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _cameraReady = false;
         _gazeReady = false;
         _livenessReady = false;
+        _visualReady = false;
         _cameraStatus = 'Camera monitoring unavailable';
         _gazeStatus = 'Gaze and head pose monitor unavailable';
         _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
+        _visualStatus = 'Reflection and object integrity scan unavailable';
       });
     }
   }
@@ -193,6 +209,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   Future<void> _analyseCameraImage(CameraImage image) async {
     try {
+      final visual = _visualIntegrity.analyse(image);
+      if (visual != null) {
+        _handleVisualIntegrityResult(visual);
+      }
+
       final liveness = _continuousLiveness.analyse(image);
       if (liveness != null) {
         _handleLivenessResult(liveness);
@@ -233,6 +254,50 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       return;
     } finally {
       _analysingGazeFrame = false;
+    }
+  }
+
+  void _handleVisualIntegrityResult(VisualReflectionShadowResult result) {
+    _lastVisualFrameAt = DateTime.now();
+    if (result.visualRiskScore >= 0.58 ||
+        result.screenGlowLikely ||
+        result.mirrorOrGlassLikely ||
+        result.offscreenInteractionLikely) {
+      _visualRiskStreak++;
+    } else {
+      _visualRiskStreak = math.max(0, _visualRiskStreak - 1);
+    }
+
+    if (mounted) {
+      setState(() {
+        _visualReady = true;
+        _visualStatus = result.visualRiskScore >= 0.58
+            ? 'Possible reflection/shadow/object risk ($_visualRiskStreak/3)'
+            : 'Reflection, shadow, and object integrity normal';
+      });
+    }
+
+    if (_visualRiskStreak >= 3) {
+      _visualRiskStreak = 0;
+      unawaited(
+        _raiseEvent(
+          eventType: 'object_reflection_shadow_risk',
+          severity: 'high',
+          message:
+              'Suspicious reflection, screen glow, shadow shift, or off-screen interaction pattern was detected.',
+          metadata: result.toJson(),
+        ),
+      );
+    } else if (result.visualRiskScore >= 0.40) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'object_reflection_shadow_warning',
+          severity: 'warning',
+          message:
+              'Weak reflection, screen-glow, shadow, or lower-frame movement signal detected.',
+          metadata: result.toJson(),
+        ),
+      );
     }
   }
 
@@ -374,12 +439,16 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       final livenessFresh =
           _lastLivenessFrameAt != null &&
           DateTime.now().difference(_lastLivenessFrameAt!).inSeconds <= 12;
+      final visualFresh =
+          _lastVisualFrameAt != null &&
+          DateTime.now().difference(_lastVisualFrameAt!).inSeconds <= 12;
       setState(() {
         _secondsLive += 5;
         _cameraReady = cameraStillReady;
         _systemReady = platformOk;
         _gazeReady = _gazeReady && gazeFresh;
         _livenessReady = _livenessReady && livenessFresh;
+        _visualReady = _visualReady && visualFresh;
         _systemStatus = platformOk
             ? 'System monitoring active'
             : 'Unsupported system environment';
@@ -388,6 +457,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         }
         if (cameraStillReady && !_livenessReady) {
           _livenessStatus = 'Continuous liveness anti-spoofing not receiving frames';
+        }
+        if (cameraStillReady && !_visualReady) {
+          _visualStatus = 'Reflection and object integrity scan not receiving frames';
         }
       });
 
@@ -428,6 +500,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'continuous_liveness_monitor_unavailable',
           severity: 'warning',
           message: 'Continuous liveness anti-spoofing is not receiving camera frames.',
+        );
+      }
+      if (cameraStillReady && !visualFresh) {
+        await _raiseEvent(
+          eventType: 'object_reflection_shadow_monitor_unavailable',
+          severity: 'warning',
+          message: 'Reflection, shadow, and object integrity scan is not receiving camera frames.',
         );
       }
     });
@@ -516,6 +595,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
               label: _audioStatus,
               ready: _audioReady,
               icon: Icons.mic,
+            ),
+            const SizedBox(height: 8),
+            _StatusRow(
+              label: _visualStatus,
+              ready: _visualReady,
+              icon: Icons.light_mode_outlined,
             ),
             const SizedBox(height: 8),
             _StatusRow(
