@@ -75,148 +75,215 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   Widget build(BuildContext context) {
     final question = _questions[_currentIndex];
     final answered = _answers.length;
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(
-        title: Text(widget.assessment.title),
-        automaticallyImplyLeading: false,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                _paused ? 'PAUSED' : _formatTime(_remainingSeconds),
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 760;
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F7FB),
+          appBar: AppBar(
+            title: Text(
+              widget.assessment.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Row(
-          children: [
-            SizedBox(
-              width: 270,
-              child: _QuestionNavigator(
-                questions: _questions,
-                currentIndex: _currentIndex,
-                answers: _answers,
-                enabled: !_paused,
-                onSelect: (index) => setState(() => _currentIndex = index),
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(18),
-                children: [
-                  if (_paused) ...[
-                    _PauseBanner(message: _pauseMessage),
-                    const SizedBox(height: 14),
-                  ],
-                  _ExamStatusBar(
-                    assessment: widget.assessment,
-                    answered: answered,
-                    total: _questions.length,
-                    paused: _paused,
-                  ),
-                  const SizedBox(height: 14),
-                  AbsorbPointer(
-                    absorbing: _paused,
-                    child: Opacity(
-                      opacity: _paused ? 0.55 : 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _QuestionCard(
-                            question: question,
-                            value: _answers[question.id] ?? '',
-                            enabled: !_paused,
-                            onChanged: (value) =>
-                                setState(() => _answers[question.id] = value),
-                          ),
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            alignment: WrapAlignment.spaceBetween,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: _currentIndex == 0 || _paused
-                                    ? null
-                                    : () => setState(() => _currentIndex--),
-                                icon: const Icon(Icons.chevron_left),
-                                label: const Text('Previous'),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed:
-                                    _currentIndex == _questions.length - 1 ||
-                                        _paused
-                                    ? null
-                                    : () => setState(() => _currentIndex++),
-                                icon: const Icon(Icons.chevron_right),
-                                label: const Text('Next'),
-                              ),
-                              FilledButton.icon(
-                                onPressed: _paused
-                                    ? null
-                                    : () => _submit(autoSubmitted: false),
-                                icon: const Icon(Icons.upload_file),
-                                label: const Text('Submit exam'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.assessment.remoteProctored)
-              SizedBox(
-                width: 320,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 18, 18, 18),
-                  child: ListView(
-                    children: [
-                      LiveExamMonitor(
-                        studentId: widget.studentId,
-                        examId: widget.assessment.id,
-                        attemptId: widget.attemptId,
-                        onCriticalEvent: _handleCriticalMonitoringEvent,
-                      ),
-                      const SizedBox(height: 12),
-                      LiveSystemSecurityMonitor(
-                        studentId: widget.studentId,
-                        examId: widget.assessment.id,
-                        attemptId: widget.attemptId,
-                        onCriticalEvent: _handleCriticalMonitoringEvent,
-                      ),
-                      const SizedBox(height: 12),
-                      ReviewClipSampler(
-                        studentId: widget.studentId,
-                        examId: widget.assessment.id,
-                        attemptId: widget.attemptId,
-                        examDurationSeconds:
-                            widget.assessment.durationMinutes * 60,
-                      ),
-                      const SizedBox(height: 12),
-                      CompanionCamPanel(
-                        studentId: widget.studentId,
-                        examId: widget.assessment.id,
-                        attemptId: widget.attemptId,
-                        onCompanionLost: _handleCriticalMonitoringEvent,
-                      ),
-                      const SizedBox(height: 12),
-                      const LiveStatusPanel(),
-                    ],
+            automaticallyImplyLeading: false,
+            actions: [
+              Padding(
+                padding: EdgeInsets.only(right: compact ? 12 : 16),
+                child: Center(
+                  child: Text(
+                    _paused ? 'PAUSED' : _formatTime(_remainingSeconds),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
               ),
+            ],
+          ),
+          bottomNavigationBar: compact
+              ? _MobileExamActionBar(
+                  canGoBack: _currentIndex > 0 && !_paused,
+                  canGoNext: _currentIndex < _questions.length - 1 && !_paused,
+                  canSubmit: !_paused,
+                  onPrevious: () => setState(() => _currentIndex--),
+                  onNext: () => setState(() => _currentIndex++),
+                  onSubmit: () => _submit(autoSubmitted: false),
+                )
+              : null,
+          body: SafeArea(
+            child: compact
+                ? _buildCompactAttempt(question, answered)
+                : _buildWideAttempt(question, answered),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWideAttempt(DemoQuestion question, int answered) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 270,
+          child: _QuestionNavigator(
+            questions: _questions,
+            currentIndex: _currentIndex,
+            answers: _answers,
+            enabled: !_paused,
+            onSelect: (index) => setState(() => _currentIndex = index),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(18),
+            children: [
+              if (_paused) ...[
+                _PauseBanner(message: _pauseMessage),
+                const SizedBox(height: 14),
+              ],
+              _ExamStatusBar(
+                assessment: widget.assessment,
+                answered: answered,
+                total: _questions.length,
+                paused: _paused,
+              ),
+              const SizedBox(height: 14),
+              _buildQuestionWorkArea(question, showActions: true),
+            ],
+          ),
+        ),
+        if (widget.assessment.remoteProctored)
+          SizedBox(
+            width: 320,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 18, 18, 18),
+              child: ListView(children: _buildProctoringPanels()),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCompactAttempt(DemoQuestion question, int answered) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
+      children: [
+        if (_paused) ...[
+          _PauseBanner(message: _pauseMessage),
+          const SizedBox(height: 12),
+        ],
+        _QuestionNavigator(
+          questions: _questions,
+          currentIndex: _currentIndex,
+          answers: _answers,
+          enabled: !_paused,
+          onSelect: (index) => setState(() => _currentIndex = index),
+          compact: true,
+        ),
+        const SizedBox(height: 12),
+        _ExamStatusBar(
+          assessment: widget.assessment,
+          answered: answered,
+          total: _questions.length,
+          paused: _paused,
+          compact: true,
+        ),
+        const SizedBox(height: 12),
+        _buildQuestionWorkArea(question, showActions: false),
+        if (widget.assessment.remoteProctored) ...[
+          const SizedBox(height: 12),
+          ..._buildProctoringPanels(compact: true),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildQuestionWorkArea(
+    DemoQuestion question, {
+    required bool showActions,
+  }) {
+    return AbsorbPointer(
+      absorbing: _paused,
+      child: Opacity(
+        opacity: _paused ? 0.55 : 1,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _QuestionCard(
+              question: question,
+              value: _answers[question.id] ?? '',
+              enabled: !_paused,
+              onChanged: (value) =>
+                  setState(() => _answers[question.id] = value),
+            ),
+            if (showActions) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.spaceBetween,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _currentIndex == 0 || _paused
+                        ? null
+                        : () => setState(() => _currentIndex--),
+                    icon: const Icon(Icons.chevron_left),
+                    label: const Text('Previous'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _currentIndex == _questions.length - 1 || _paused
+                        ? null
+                        : () => setState(() => _currentIndex++),
+                    icon: const Icon(Icons.chevron_right),
+                    label: const Text('Next'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _paused
+                        ? null
+                        : () => _submit(autoSubmitted: false),
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('Submit exam'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  List<Widget> _buildProctoringPanels({bool compact = false}) {
+    return [
+      LiveExamMonitor(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        onCriticalEvent: _handleCriticalMonitoringEvent,
+      ),
+      SizedBox(height: compact ? 10 : 12),
+      LiveSystemSecurityMonitor(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        onCriticalEvent: _handleCriticalMonitoringEvent,
+      ),
+      SizedBox(height: compact ? 10 : 12),
+      ReviewClipSampler(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        examDurationSeconds: widget.assessment.durationMinutes * 60,
+      ),
+      SizedBox(height: compact ? 10 : 12),
+      CompanionCamPanel(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        onCompanionLost: _handleCriticalMonitoringEvent,
+      ),
+      SizedBox(height: compact ? 10 : 12),
+      const LiveStatusPanel(),
+    ];
   }
 
   Future<void> _submit({required bool autoSubmitted}) async {
@@ -336,12 +403,14 @@ class _ExamStatusBar extends StatelessWidget {
     required this.answered,
     required this.total,
     required this.paused,
+    this.compact = false,
   });
 
   final DemoAssessment assessment;
   final int answered;
   final int total;
   final bool paused;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +423,7 @@ class _ExamStatusBar extends StatelessWidget {
       ),
       child: Wrap(
         spacing: 10,
-        runSpacing: 10,
+        runSpacing: compact ? 8 : 10,
         children: [
           _Pill('${assessment.course.code} ${assessment.kind}'),
           _Pill('$answered/$total answered'),
@@ -366,10 +435,10 @@ class _ExamStatusBar extends StatelessWidget {
                 : 'Standard access',
           ),
           if (assessment.remoteProctored)
-            const _Pill('Sound monitoring active'),
-          if (assessment.remoteProctored)
+            _Pill(compact ? 'Monitoring active' : 'Sound monitoring active'),
+          if (assessment.remoteProctored && !compact)
             const _Pill('System device review active'),
-          if (assessment.remoteProctored)
+          if (assessment.remoteProctored && !compact)
             const _Pill('Random review clips active'),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
@@ -385,6 +454,7 @@ class _QuestionNavigator extends StatelessWidget {
     required this.answers,
     required this.enabled,
     required this.onSelect,
+    this.compact = false,
   });
 
   final List<DemoQuestion> questions;
@@ -392,9 +462,65 @@ class _QuestionNavigator extends StatelessWidget {
   final Map<String, String> answers;
   final bool enabled;
   final ValueChanged<int> onSelect;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Questions',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${currentIndex + 1}/${questions.length}',
+                  style: const TextStyle(
+                    color: Color(0xFF475569),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 54,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: questions.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final selected = index == currentIndex;
+                  final answered =
+                      answers[questions[index].id]?.isNotEmpty ?? false;
+                  return _QuestionNumberButton(
+                    number: index + 1,
+                    selected: selected,
+                    answered: answered,
+                    enabled: enabled,
+                    onTap: () => onSelect(index),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(14),
@@ -420,34 +546,68 @@ class _QuestionNavigator extends StatelessWidget {
                 final selected = index == currentIndex;
                 final answered =
                     answers[questions[index].id]?.isNotEmpty ?? false;
-                return InkWell(
-                  onTap: enabled ? () => onSelect(index) : null,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? const Color(0xFF1D4ED8)
-                          : answered
-                          ? const Color(0xFFDCFCE7)
-                          : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${index + 1}',
-                      style: TextStyle(
-                        color: selected
-                            ? Colors.white
-                            : const Color(0xFF0F172A),
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
+                return _QuestionNumberButton(
+                  number: index + 1,
+                  selected: selected,
+                  answered: answered,
+                  enabled: enabled,
+                  onTap: () => onSelect(index),
                 );
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuestionNumberButton extends StatelessWidget {
+  const _QuestionNumberButton({
+    required this.number,
+    required this.selected,
+    required this.answered,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final int number;
+  final bool selected;
+  final bool answered;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 54,
+        height: 54,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? const Color(0xFF1D4ED8)
+              : answered
+              ? const Color(0xFFDCFCE7)
+              : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+          border: selected
+              ? null
+              : Border.all(
+                  color: answered
+                      ? const Color(0xFF86EFAC)
+                      : const Color(0xFFE2E8F0),
+                ),
+        ),
+        child: Text(
+          '$number',
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF0F172A),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ),
     );
   }
@@ -545,6 +705,68 @@ class _QuestionCard extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _MobileExamActionBar extends StatelessWidget {
+  const _MobileExamActionBar({
+    required this.canGoBack,
+    required this.canGoNext,
+    required this.canSubmit,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onSubmit,
+  });
+
+  final bool canGoBack;
+  final bool canGoNext;
+  final bool canSubmit;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x140F172A),
+              blurRadius: 18,
+              offset: Offset(0, -8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            IconButton.outlined(
+              onPressed: canGoBack ? onPrevious : null,
+              icon: const Icon(Icons.chevron_left),
+              tooltip: 'Previous question',
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: canGoNext ? onNext : null,
+                icon: const Icon(Icons.chevron_right),
+                label: const Text('Next'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              onPressed: canSubmit ? onSubmit : null,
+              icon: const Icon(Icons.upload_file),
+              tooltip: 'Submit exam',
+            ),
+          ],
+        ),
       ),
     );
   }
