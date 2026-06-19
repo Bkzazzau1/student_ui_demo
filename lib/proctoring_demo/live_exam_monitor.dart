@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'audio_fingerprint_isolation_service.dart';
+import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
@@ -42,6 +43,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       LandmarkGazeRuntimeSelector();
   final AudioFingerprintIsolationService _audioIsolation =
       AudioFingerprintIsolationService();
+  final ContinuousBiometricLivenessService _continuousLiveness =
+      ContinuousBiometricLivenessService();
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -54,16 +57,20 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _audioStatus = 'Starting sound monitor...';
   String _systemStatus = 'Checking system...';
   String _gazeStatus = 'Starting gaze and head pose monitor...';
+  String _livenessStatus = 'Starting continuous liveness anti-spoofing...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
   bool _gazeReady = false;
+  bool _livenessReady = false;
   bool _openingCamera = false;
   bool _analysingGazeFrame = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
+  int _spoofRiskStreak = 0;
   DateTime? _lastGazeFrameAt;
+  DateTime? _lastLivenessFrameAt;
 
   @override
   void initState() {
@@ -93,6 +100,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _openingCamera = true;
       _cameraStatus = 'Opening camera...';
       _gazeStatus = 'Starting gaze and head pose monitor...';
+      _livenessStatus = 'Starting continuous liveness anti-spoofing...';
     });
     try {
       final cameras = await availableCameras();
@@ -107,8 +115,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _openingCamera = false;
           _cameraReady = false;
           _gazeReady = false;
+          _livenessReady = false;
           _cameraStatus = 'Camera not found';
           _gazeStatus = 'Gaze and head pose monitor unavailable';
+          _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
         });
         return;
       }
@@ -146,10 +156,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _openingCamera = false;
         _cameraReady = true;
         _gazeReady = gazeStreamReady;
+        _livenessReady = gazeStreamReady;
         _cameraStatus = 'Camera monitoring active';
         _gazeStatus = gazeStreamReady
             ? 'Gaze vector and head pose monitoring active'
             : 'Gaze stream unavailable on this device';
+        _livenessStatus = gazeStreamReady
+            ? 'Continuous local liveness anti-spoofing active'
+            : 'Liveness anti-spoofing stream unavailable';
       });
     } catch (e) {
       await _raiseEvent(
@@ -163,8 +177,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _openingCamera = false;
         _cameraReady = false;
         _gazeReady = false;
+        _livenessReady = false;
         _cameraStatus = 'Camera monitoring unavailable';
         _gazeStatus = 'Gaze and head pose monitor unavailable';
+        _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
       });
     }
   }
@@ -177,6 +193,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   Future<void> _analyseCameraImage(CameraImage image) async {
     try {
+      final liveness = _continuousLiveness.analyse(image);
+      if (liveness != null) {
+        _handleLivenessResult(liveness);
+      }
+
       final result = await _gazeEstimator.analyse(image);
       if (result == null) return;
       _lastGazeFrameAt = DateTime.now();
@@ -212,6 +233,47 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       return;
     } finally {
       _analysingGazeFrame = false;
+    }
+  }
+
+  void _handleLivenessResult(ContinuousLivenessResult result) {
+    _lastLivenessFrameAt = DateTime.now();
+    if (result.spoofRiskScore >= 0.70 || result.replayOrFreezeLikely) {
+      _spoofRiskStreak++;
+    } else {
+      _spoofRiskStreak = math.max(0, _spoofRiskStreak - 1);
+    }
+
+    if (mounted) {
+      setState(() {
+        _livenessReady = true;
+        _livenessStatus = result.replayOrFreezeLikely
+            ? 'Possible spoof/replay liveness risk ($_spoofRiskStreak/3)'
+            : 'Continuous liveness present • anti-spoofing active';
+      });
+    }
+
+    if (_spoofRiskStreak >= 3) {
+      _spoofRiskStreak = 0;
+      unawaited(
+        _raiseEvent(
+          eventType: 'continuous_liveness_spoof_risk',
+          severity: 'high',
+          message:
+              'Continuous liveness anti-spoofing detected possible photo, screen, replay, or frozen-frame behaviour.',
+          metadata: result.toJson(),
+        ),
+      );
+    } else if (result.repeatedFrame || result.flatTexture) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'continuous_liveness_continuity_loss',
+          severity: 'warning',
+          message:
+              'Continuous liveness signal weakened; possible frozen frame, flat image, or replay source.',
+          metadata: result.toJson(),
+        ),
+      );
     }
   }
 
@@ -309,16 +371,23 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       final gazeFresh =
           _lastGazeFrameAt != null &&
           DateTime.now().difference(_lastGazeFrameAt!).inSeconds <= 12;
+      final livenessFresh =
+          _lastLivenessFrameAt != null &&
+          DateTime.now().difference(_lastLivenessFrameAt!).inSeconds <= 12;
       setState(() {
         _secondsLive += 5;
         _cameraReady = cameraStillReady;
         _systemReady = platformOk;
         _gazeReady = _gazeReady && gazeFresh;
+        _livenessReady = _livenessReady && livenessFresh;
         _systemStatus = platformOk
             ? 'System monitoring active'
             : 'Unsupported system environment';
         if (cameraStillReady && !_gazeReady) {
           _gazeStatus = 'Gaze and head pose monitor not receiving frames';
+        }
+        if (cameraStillReady && !_livenessReady) {
+          _livenessStatus = 'Continuous liveness anti-spoofing not receiving frames';
         }
       });
 
@@ -352,6 +421,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'gaze_head_pose_monitor_unavailable',
           severity: 'warning',
           message: 'Gaze and head pose monitor is not receiving camera frames.',
+        );
+      }
+      if (cameraStillReady && !livenessFresh) {
+        await _raiseEvent(
+          eventType: 'continuous_liveness_monitor_unavailable',
+          severity: 'warning',
+          message: 'Continuous liveness anti-spoofing is not receiving camera frames.',
         );
       }
     });
@@ -440,6 +516,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
               label: _audioStatus,
               ready: _audioReady,
               icon: Icons.mic,
+            ),
+            const SizedBox(height: 8),
+            _StatusRow(
+              label: _livenessStatus,
+              ready: _livenessReady,
+              icon: Icons.verified_user_outlined,
             ),
             const SizedBox(height: 8),
             _StatusRow(
