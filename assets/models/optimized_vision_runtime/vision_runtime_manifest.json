@@ -1,0 +1,33 @@
+{
+  "target_utilization": 0.15,
+  "default_frame_rate_fps": 1,
+  "max_input_size": {
+    "width": 416,
+    "height": 416
+  },
+  "models": [
+    {
+      "name": "object_reflection_shadow_detector",
+      "type": "object_detection",
+      "preferred_precision": "int8",
+      "fallback_precision": "fp16",
+      "onnx_path": "assets/models/optimized_vision_runtime/object_reflection_shadow_detector.int8.onnx",
+      "tensorrt_engine_path": "assets/models/optimized_vision_runtime/object_reflection_shadow_detector.fp16.engine",
+      "coreml_path": "assets/models/optimized_vision_runtime/object_reflection_shadow_detector.fp16.mlmodelc"
+    },
+    {
+      "name": "face_landmarker",
+      "type": "landmark_extraction",
+      "preferred_precision": "fp16",
+      "fallback_precision": "int8",
+      "mediapipe_task_path": "assets/models/face_landmarker/face_landmarker.task",
+      "onnx_path": "assets/models/optimized_vision_runtime/face_landmarker.fp16.onnx"
+    }
+  ],
+  "runtime_preference": {
+    "windows": ["onnxruntime_directml", "tensorrt", "onnxruntime_cpu"],
+    "macos": ["onnxruntime_coreml", "coreml", "onnxruntime_cpu"],
+    "linux": ["tensorrt", "onnxruntime_cpu"]
+  },
+  "fallback": "dart_lightweight_estimators"
+}
