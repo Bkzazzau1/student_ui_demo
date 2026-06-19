@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../proctoring_demo/live_exam_monitor.dart';
 import '../proctoring_demo/live_status_panel.dart';
+import '../proctoring_demo/live_system_security_monitor.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 
@@ -172,9 +173,16 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                 width: 320,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(0, 18, 18, 18),
-                  child: Column(
+                  child: ListView(
                     children: [
                       LiveExamMonitor(
+                        studentId: widget.studentId,
+                        examId: widget.assessment.id,
+                        attemptId: widget.attemptId,
+                        onCriticalEvent: _handleCriticalMonitoringEvent,
+                      ),
+                      const SizedBox(height: 12),
+                      LiveSystemSecurityMonitor(
                         studentId: widget.studentId,
                         examId: widget.assessment.id,
                         attemptId: widget.attemptId,
@@ -333,6 +341,7 @@ class _ExamStatusBar extends StatelessWidget {
           _Pill('$answered/$total answered'),
           _Pill(paused ? 'Monitoring hold' : assessment.remoteProctored ? 'Live monitoring active' : 'Standard access'),
           if (assessment.remoteProctored) const _Pill('Sound monitoring active'),
+          if (assessment.remoteProctored) const _Pill('System device review active'),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
       ),
