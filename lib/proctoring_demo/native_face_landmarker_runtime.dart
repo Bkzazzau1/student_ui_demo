@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +27,9 @@ class NativeFaceLandmarkerRuntime {
     if (_failed) return false;
     try {
       final modelBytes = await rootBundle.load(assetPath);
-      final modelDir = Directory('${Directory.systemTemp.path}/kslas_face_landmarker');
+      final modelDir = Directory(
+        '${Directory.systemTemp.path}/kslas_face_landmarker',
+      );
       if (!await modelDir.exists()) {
         await modelDir.create(recursive: true);
       }
@@ -37,9 +38,10 @@ class NativeFaceLandmarkerRuntime {
         modelBytes.buffer.asUint8List(),
         flush: true,
       );
-      final ok = await _channel.invokeMethod<bool>('initialize', <String, Object?>{
-        'model_path': modelFile.path,
-      });
+      final ok = await _channel.invokeMethod<bool>(
+        'initialize',
+        <String, Object?>{'model_path': modelFile.path},
+      );
       _ready = ok == true;
       _failed = !_ready;
       _runtimeModelPath = modelFile.path;
@@ -57,29 +59,36 @@ class NativeFaceLandmarkerRuntime {
     if (!_ready && !await initialize()) return null;
     try {
       final planes = image.planes
-          .map((plane) => <String, Object?>{
-                'bytes': Uint8List.fromList(plane.bytes),
-                'bytes_per_row': plane.bytesPerRow,
-                'bytes_per_pixel': plane.bytesPerPixel ?? 1,
-                'height': plane.height,
-                'width': plane.width,
-              })
+          .map(
+            (plane) => <String, Object?>{
+              'bytes': Uint8List.fromList(plane.bytes),
+              'bytes_per_row': plane.bytesPerRow,
+              'bytes_per_pixel': plane.bytesPerPixel ?? 1,
+              'height': plane.height,
+              'width': plane.width,
+            },
+          )
           .toList();
-      final result = await _channel.invokeMapMethod<String, Object?>(
-        'analyseFrame',
-        <String, Object?>{
-          'width': image.width,
-          'height': image.height,
-          'format': image.format.group.name,
-          'planes': planes,
-          'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
-        },
-      );
+      final result = await _channel
+          .invokeMapMethod<String, Object?>('analyseFrame', <String, Object?>{
+            'width': image.width,
+            'height': image.height,
+            'format': image.format.group.name,
+            'planes': planes,
+            'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
+          });
       if (result == null) return null;
-      final gaze = Map<String, Object?>.from(result['gaze_vector'] as Map? ?? const <String, Object?>{});
-      final pose = Map<String, Object?>.from(result['head_pose'] as Map? ?? const <String, Object?>{});
+      final gaze = Map<String, Object?>.from(
+        result['gaze_vector'] as Map? ?? const <String, Object?>{},
+      );
+      final pose = Map<String, Object?>.from(
+        result['head_pose'] as Map? ?? const <String, Object?>{},
+      );
       final label = result['label']?.toString() ?? 'landmark_runtime_result';
-      final confidence = _toDouble(result['confidence'], fallback: 0.0).clamp(0.0, 1.0);
+      final confidence = _toDouble(
+        result['confidence'],
+        fallback: 0.0,
+      ).clamp(0.0, 1.0);
       final lookingAway = result['looking_away'] == true;
       final stableHeadPose = result['stable_head_pose'] != false;
       return GazeHeadPoseResult(

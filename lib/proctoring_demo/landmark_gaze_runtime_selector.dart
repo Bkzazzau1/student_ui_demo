@@ -5,7 +5,7 @@ import 'native_face_landmarker_runtime.dart';
 
 class LandmarkGazeRuntimeSelector {
   LandmarkGazeRuntimeSelector({NativeFaceLandmarkerRuntime? runtime})
-      : _runtime = runtime ?? NativeFaceLandmarkerRuntime();
+    : _runtime = runtime ?? NativeFaceLandmarkerRuntime();
 
   final NativeFaceLandmarkerRuntime _runtime;
   final GazeHeadPoseEstimator _fallback = GazeHeadPoseEstimator();

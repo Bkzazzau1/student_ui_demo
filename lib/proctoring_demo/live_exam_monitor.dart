@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import 'gaze_head_pose_estimator.dart';
+import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 
@@ -37,7 +37,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   );
   final MicrophoneStreamRecordingService _microphone =
       MicrophoneStreamRecordingService();
-  final GazeHeadPoseEstimator _gazeEstimator = GazeHeadPoseEstimator();
+  final LandmarkGazeRuntimeSelector _gazeEstimator =
+      LandmarkGazeRuntimeSelector();
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -56,6 +57,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _systemReady = false;
   bool _gazeReady = false;
   bool _openingCamera = false;
+  bool _analysingGazeFrame = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   DateTime? _lastGazeFrameAt;
@@ -165,36 +167,48 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleCameraImage(CameraImage image) {
-    final result = _gazeEstimator.analyse(image);
-    if (result == null) return;
-    _lastGazeFrameAt = DateTime.now();
+    if (_analysingGazeFrame) return;
+    _analysingGazeFrame = true;
+    unawaited(_analyseCameraImage(image));
+  }
 
-    if (result.lookingAway && result.confidence >= 0.55) {
-      _gazeRiskStreak++;
-    } else {
-      _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
-    }
+  Future<void> _analyseCameraImage(CameraImage image) async {
+    try {
+      final result = await _gazeEstimator.analyse(image);
+      if (result == null) return;
+      _lastGazeFrameAt = DateTime.now();
 
-    if (mounted) {
-      setState(() {
-        _gazeReady = true;
-        _gazeStatus = result.lookingAway
-            ? 'Possible looking away detected (${_gazeRiskStreak}/3)'
-            : 'Focused forward • gaze/head pose stable';
-      });
-    }
+      if (result.lookingAway && result.confidence >= 0.55) {
+        _gazeRiskStreak++;
+      } else {
+        _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
+      }
 
-    if (_gazeRiskStreak >= 3) {
-      _gazeRiskStreak = 0;
-      unawaited(
-        _raiseEvent(
-          eventType: 'gaze_head_pose_deviation',
-          severity: 'high',
-          message:
-              'Sustained looking-away or head-pose deviation was detected during the exam.',
-          metadata: result.toJson(),
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _gazeReady = true;
+          _gazeStatus = result.lookingAway
+              ? 'Possible looking away detected ($_gazeRiskStreak/3)'
+              : 'Focused forward • gaze/head pose stable';
+        });
+      }
+
+      if (_gazeRiskStreak >= 3) {
+        _gazeRiskStreak = 0;
+        unawaited(
+          _raiseEvent(
+            eventType: 'gaze_head_pose_deviation',
+            severity: 'high',
+            message:
+                'Sustained looking-away or head-pose deviation was detected during the exam.',
+            metadata: result.toJson(),
+          ),
+        );
+      }
+    } catch (_) {
+      return;
+    } finally {
+      _analysingGazeFrame = false;
     }
   }
 
@@ -251,7 +265,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     final average = _audioSamples.isEmpty
         ? 0.0
         : _audioSamples.fold<double>(0, (sum, value) => sum + value) /
-            _audioSamples.length;
+              _audioSamples.length;
     final varied = _variation(_audioSamples) > 0.09;
     final activeSpeechLike = average > 0.16 && varied;
     if (activeSpeechLike) {
@@ -274,8 +288,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _heartbeat = Timer.periodic(const Duration(seconds: 5), (_) async {
       if (!mounted) return;
       final cameraStillReady = _camera?.value.isInitialized ?? false;
-      final platformOk = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-      final gazeFresh = _lastGazeFrameAt != null &&
+      final platformOk =
+          Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      final gazeFresh =
+          _lastGazeFrameAt != null &&
           DateTime.now().difference(_lastGazeFrameAt!).inSeconds <= 12;
       setState(() {
         _secondsLive += 5;
@@ -345,7 +361,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     final synced = await _events.send(event);
     if (!mounted) return;
     setState(() {
-      _eventsSent.insert(0, synced ? '$eventType sent' : '$eventType queued locally');
+      _eventsSent.insert(
+        0,
+        synced ? '$eventType sent' : '$eventType queued locally',
+      );
       if (_eventsSent.length > 5) _eventsSent.removeLast();
     });
     if (severity == 'critical' || severity == 'high') {
@@ -446,10 +465,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             if (_eventsSent.isNotEmpty) ...[
               const SizedBox(height: 8),
               ..._eventsSent.map(
-                (event) => Text(
-                  event,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                (event) =>
+                    Text(event, style: Theme.of(context).textTheme.bodySmall),
               ),
             ],
           ],
@@ -474,7 +491,10 @@ class _StatusRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+        Icon(
+          icon,
+          color: ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
