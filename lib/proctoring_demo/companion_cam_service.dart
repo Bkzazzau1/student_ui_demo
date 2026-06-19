@@ -66,7 +66,11 @@ class CompanionCamService {
     _secret = _randomToken(32);
     final token = _randomToken(24);
     final expiresAt = DateTime.now().toUtc().add(const Duration(minutes: 10));
-    final server = await HttpServer.bind(InternetAddress.anyIPv4, 0, shared: false);
+    final server = await HttpServer.bind(
+      InternetAddress.anyIPv4,
+      0,
+      shared: false,
+    );
     _server = server;
     final sig = _sign('$token|$attemptId|${expiresAt.toIso8601String()}');
     final uri = Uri(
@@ -113,12 +117,14 @@ class CompanionCamService {
         if (request.uri.path == '/cam') {
           if (!_validRequest(request.uri)) {
             request.response.statusCode = HttpStatus.forbidden;
-            request.response.write('Invalid or expired companion camera token.');
+            request.response.write(
+              'Invalid or expired companion camera token.',
+            );
             await request.response.close();
             continue;
           }
           request.response.headers.contentType = ContentType.html;
-          request.response.write(_htmlPage(request.uri));
+          request.response.write(_htmlPage());
           await request.response.close();
           continue;
         }
@@ -177,9 +183,14 @@ class CompanionCamService {
     final expRaw = uri.queryParameters['exp'] ?? '';
     final sig = uri.queryParameters['sig'] ?? '';
     final expMs = int.tryParse(expRaw);
-    if (token != session.token || attempt != attemptId || expMs == null) return false;
+    if (token != session.token || attempt != attemptId || expMs == null) {
+      return false;
+    }
     if (DateTime.now().toUtc().millisecondsSinceEpoch > expMs) return false;
-    final exp = DateTime.fromMillisecondsSinceEpoch(expMs, isUtc: true).toIso8601String();
+    final exp = DateTime.fromMillisecondsSinceEpoch(
+      expMs,
+      isUtc: true,
+    ).toIso8601String();
     return sig == _sign('$token|$attempt|$exp');
   }
 
@@ -211,13 +222,15 @@ class CompanionCamService {
     return '127.0.0.1';
   }
 
-  String _htmlPage(Uri uri) {
+  String _htmlPage() {
+    final session = _session!;
+    final pairingUri = Uri.parse(session.pairingUrl);
     final wsUri = Uri(
       scheme: 'ws',
-      host: uri.host,
-      port: uri.port,
+      host: session.host,
+      port: session.port,
       path: '/ws',
-      queryParameters: uri.queryParameters,
+      queryParameters: pairingUri.queryParameters,
     );
     return '''
 <!doctype html>

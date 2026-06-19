@@ -12,6 +12,7 @@ import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'visual_reflection_shadow_service.dart';
+import 'vision_compute_budget_service.dart';
 
 class LiveExamMonitor extends StatefulWidget {
   const LiveExamMonitor({
@@ -48,6 +49,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       ContinuousBiometricLivenessService();
   final VisualReflectionShadowService _visualIntegrity =
       VisualReflectionShadowService();
+  final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -61,7 +63,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _systemStatus = 'Checking system...';
   String _gazeStatus = 'Starting gaze and head pose monitor...';
   String _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-  String _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
+  String _visualStatus =
+      'Starting reflection, shadow, and object integrity scan...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
@@ -108,7 +111,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _cameraStatus = 'Opening camera...';
       _gazeStatus = 'Starting gaze and head pose monitor...';
       _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-      _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
+      _visualStatus =
+          'Starting reflection, shadow, and object integrity scan...';
     });
     try {
       final cameras = await availableCameras();
@@ -203,11 +207,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   void _handleCameraImage(CameraImage image) {
     if (_analysingGazeFrame) return;
+    if (!_visionBudget.shouldProcessFrame()) return;
+    final started = DateTime.now();
     _analysingGazeFrame = true;
-    unawaited(_analyseCameraImage(image));
+    unawaited(_analyseCameraImage(image, started));
   }
 
-  Future<void> _analyseCameraImage(CameraImage image) async {
+  Future<void> _analyseCameraImage(CameraImage image, DateTime started) async {
     try {
       final visual = _visualIntegrity.analyse(image);
       if (visual != null) {
@@ -253,6 +259,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     } catch (_) {
       return;
     } finally {
+      _visionBudget.recordWork(DateTime.now().difference(started));
       _analysingGazeFrame = false;
     }
   }
@@ -393,8 +400,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _audioStatus = result.humanVoiceLikely
             ? 'Human voice likely detected (${_voiceRiskStreak + 1}/3)'
             : result.allowedAmbientLikely
-                ? 'Allowed ambient audio fingerprint: ${result.label}'
-                : 'Unclear environment sound fingerprinted';
+            ? 'Allowed ambient audio fingerprint: ${result.label}'
+            : 'Unclear environment sound fingerprinted';
       });
     }
 
@@ -456,10 +463,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _gazeStatus = 'Gaze and head pose monitor not receiving frames';
         }
         if (cameraStillReady && !_livenessReady) {
-          _livenessStatus = 'Continuous liveness anti-spoofing not receiving frames';
+          _livenessStatus =
+              'Continuous liveness anti-spoofing not receiving frames';
         }
         if (cameraStillReady && !_visualReady) {
-          _visualStatus = 'Reflection and object integrity scan not receiving frames';
+          _visualStatus =
+              'Reflection and object integrity scan not receiving frames';
         }
       });
 
@@ -499,14 +508,16 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         await _raiseEvent(
           eventType: 'continuous_liveness_monitor_unavailable',
           severity: 'warning',
-          message: 'Continuous liveness anti-spoofing is not receiving camera frames.',
+          message:
+              'Continuous liveness anti-spoofing is not receiving camera frames.',
         );
       }
       if (cameraStillReady && !visualFresh) {
         await _raiseEvent(
           eventType: 'object_reflection_shadow_monitor_unavailable',
           severity: 'warning',
-          message: 'Reflection, shadow, and object integrity scan is not receiving camera frames.',
+          message:
+              'Reflection, shadow, and object integrity scan is not receiving camera frames.',
         );
       }
     });

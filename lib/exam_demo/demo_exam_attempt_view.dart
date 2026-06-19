@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../proctoring_demo/companion_cam_panel.dart';
 import '../proctoring_demo/live_exam_monitor.dart';
 import '../proctoring_demo/live_status_panel.dart';
 import '../proctoring_demo/live_system_security_monitor.dart';
@@ -147,7 +148,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                                 label: const Text('Previous'),
                               ),
                               OutlinedButton.icon(
-                                onPressed: _currentIndex == _questions.length - 1 || _paused
+                                onPressed:
+                                    _currentIndex == _questions.length - 1 ||
+                                        _paused
                                     ? null
                                     : () => setState(() => _currentIndex++),
                                 icon: const Icon(Icons.chevron_right),
@@ -194,7 +197,15 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
                         studentId: widget.studentId,
                         examId: widget.assessment.id,
                         attemptId: widget.attemptId,
-                        examDurationSeconds: widget.assessment.durationMinutes * 60,
+                        examDurationSeconds:
+                            widget.assessment.durationMinutes * 60,
+                      ),
+                      const SizedBox(height: 12),
+                      CompanionCamPanel(
+                        studentId: widget.studentId,
+                        examId: widget.assessment.id,
+                        attemptId: widget.attemptId,
+                        onCompanionLost: _handleCriticalMonitoringEvent,
                       ),
                       const SizedBox(height: 12),
                       const LiveStatusPanel(),
@@ -347,10 +358,19 @@ class _ExamStatusBar extends StatelessWidget {
         children: [
           _Pill('${assessment.course.code} ${assessment.kind}'),
           _Pill('$answered/$total answered'),
-          _Pill(paused ? 'Monitoring hold' : assessment.remoteProctored ? 'Live monitoring active' : 'Standard access'),
-          if (assessment.remoteProctored) const _Pill('Sound monitoring active'),
-          if (assessment.remoteProctored) const _Pill('System device review active'),
-          if (assessment.remoteProctored) const _Pill('Random review clips active'),
+          _Pill(
+            paused
+                ? 'Monitoring hold'
+                : assessment.remoteProctored
+                ? 'Live monitoring active'
+                : 'Standard access',
+          ),
+          if (assessment.remoteProctored)
+            const _Pill('Sound monitoring active'),
+          if (assessment.remoteProctored)
+            const _Pill('System device review active'),
+          if (assessment.remoteProctored)
+            const _Pill('Random review clips active'),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
       ),
@@ -383,7 +403,9 @@ class _QuestionNavigator extends StatelessWidget {
         children: [
           Text(
             'Questions',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -396,7 +418,8 @@ class _QuestionNavigator extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final selected = index == currentIndex;
-                final answered = answers[questions[index].id]?.isNotEmpty ?? false;
+                final answered =
+                    answers[questions[index].id]?.isNotEmpty ?? false;
                 return InkWell(
                   onTap: enabled ? () => onSelect(index) : null,
                   borderRadius: BorderRadius.circular(8),
@@ -406,14 +429,16 @@ class _QuestionNavigator extends StatelessWidget {
                       color: selected
                           ? const Color(0xFF1D4ED8)
                           : answered
-                              ? const Color(0xFFDCFCE7)
-                              : const Color(0xFFF1F5F9),
+                          ? const Color(0xFFDCFCE7)
+                          : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '${index + 1}',
                       style: TextStyle(
-                        color: selected ? Colors.white : const Color(0xFF0F172A),
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF0F172A),
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -463,7 +488,9 @@ class _QuestionCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             question.prompt,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 16),
           if (question.options.isNotEmpty)
@@ -482,7 +509,9 @@ class _QuestionCard extends StatelessWidget {
                             ? const Color(0xFF1D4ED8)
                             : const Color(0xFFE2E8F0),
                       ),
-                      color: value == option ? const Color(0xFFEFF6FF) : Colors.white,
+                      color: value == option
+                          ? const Color(0xFFEFF6FF)
+                          : Colors.white,
                     ),
                     child: Row(
                       children: [
