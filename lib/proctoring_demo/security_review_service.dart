@@ -14,6 +14,7 @@ class SecurityReviewService {
     required Map<String, dynamic> manifest,
     required Map<String, String> imagePaths,
     String? audioClipPath,
+    String? verificationVideoPath,
   }) async {
     final uri = Uri.parse('$baseUrl/api/proctoring/pre-exam-review');
     final request = http.MultipartRequest('POST', uri);
@@ -30,6 +31,15 @@ class SecurityReviewService {
       if (await file.exists()) {
         request.files.add(
           await http.MultipartFile.fromPath('audio_clip', audioClipPath),
+        );
+      }
+    }
+
+    if (verificationVideoPath != null && verificationVideoPath.trim().isNotEmpty) {
+      final file = File(verificationVideoPath);
+      if (await file.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('verification_video', verificationVideoPath),
         );
       }
     }
