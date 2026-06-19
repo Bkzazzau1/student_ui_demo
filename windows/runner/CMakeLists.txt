@@ -38,5 +38,46 @@ target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
+set(KSLAS_LOCAL_ONNXRUNTIME_ROOT
+  "${CMAKE_CURRENT_LIST_DIR}/../../third_party/onnxruntime-directml/package")
+if(EXISTS "${KSLAS_LOCAL_ONNXRUNTIME_ROOT}/runtimes/win-x64/native/onnxruntime.lib")
+  set(KSLAS_DEFAULT_ONNXRUNTIME_ROOT "${KSLAS_LOCAL_ONNXRUNTIME_ROOT}")
+else()
+  set(KSLAS_DEFAULT_ONNXRUNTIME_ROOT "")
+endif()
+
+set(ONNXRUNTIME_ROOT "${KSLAS_DEFAULT_ONNXRUNTIME_ROOT}" CACHE PATH "Optional ONNX Runtime root directory")
+if(NOT ONNXRUNTIME_ROOT AND KSLAS_DEFAULT_ONNXRUNTIME_ROOT)
+  set(ONNXRUNTIME_ROOT "${KSLAS_DEFAULT_ONNXRUNTIME_ROOT}" CACHE PATH
+    "Optional ONNX Runtime root directory" FORCE)
+endif()
+if(ONNXRUNTIME_ROOT)
+  target_compile_definitions(${BINARY_NAME} PRIVATE "KSLAS_ENABLE_ONNXRUNTIME")
+  target_include_directories(${BINARY_NAME} PRIVATE
+    "${ONNXRUNTIME_ROOT}/include"
+    "${ONNXRUNTIME_ROOT}/build/native/include"
+  )
+  target_link_libraries(${BINARY_NAME} PRIVATE
+    "${ONNXRUNTIME_ROOT}/runtimes/win-x64/native/onnxruntime.lib")
+  if(EXISTS "${ONNXRUNTIME_ROOT}/runtimes/win-x64/native/onnxruntime.dll")
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${ONNXRUNTIME_ROOT}/runtimes/win-x64/native/onnxruntime.dll"
+        "$<TARGET_FILE_DIR:${BINARY_NAME}>/onnxruntime.dll")
+  endif()
+  if(EXISTS "${ONNXRUNTIME_ROOT}/runtimes/win-x64/native/onnxruntime_providers_shared.dll")
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${ONNXRUNTIME_ROOT}/runtimes/win-x64/native/onnxruntime_providers_shared.dll"
+        "$<TARGET_FILE_DIR:${BINARY_NAME}>/onnxruntime_providers_shared.dll")
+  endif()
+  if(EXISTS "${ONNXRUNTIME_ROOT}/runtimes/win-x64/native/DirectML.dll")
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${ONNXRUNTIME_ROOT}/runtimes/win-x64/native/DirectML.dll"
+        "$<TARGET_FILE_DIR:${BINARY_NAME}>/DirectML.dll")
+  endif()
+endif()
+
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)

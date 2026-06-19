@@ -8,11 +8,7 @@ enum VisionRuntimeBackend {
   fallbackDart,
 }
 
-enum VisionModelPrecision {
-  int8,
-  fp16,
-  fp32Fallback,
-}
+enum VisionModelPrecision { int8, fp16, fp32Fallback }
 
 class OptimizedVisionRuntimePolicy {
   const OptimizedVisionRuntimePolicy({
@@ -34,14 +30,14 @@ class OptimizedVisionRuntimePolicy {
   final int batchSize;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'backend': backend.name,
-        'precision': precision.name,
-        'target_utilization': targetUtilization,
-        'max_input_width': maxInputWidth,
-        'max_input_height': maxInputHeight,
-        'target_fps': targetFps,
-        'batch_size': batchSize,
-      };
+    'backend': backend.name,
+    'precision': precision.name,
+    'target_utilization': targetUtilization,
+    'max_input_width': maxInputWidth,
+    'max_input_height': maxInputHeight,
+    'target_fps': targetFps,
+    'batch_size': batchSize,
+  };
 
   static OptimizedVisionRuntimePolicy forCurrentPlatform() {
     if (Platform.isWindows) {
@@ -70,6 +66,28 @@ class OptimizedVisionRuntimePolicy {
       return const OptimizedVisionRuntimePolicy(
         backend: VisionRuntimeBackend.onnxRuntimeCpu,
         precision: VisionModelPrecision.int8,
+        targetUtilization: 0.15,
+        maxInputWidth: 416,
+        maxInputHeight: 416,
+        targetFps: 1,
+        batchSize: 1,
+      );
+    }
+    if (Platform.isAndroid) {
+      return const OptimizedVisionRuntimePolicy(
+        backend: VisionRuntimeBackend.onnxRuntimeCpu,
+        precision: VisionModelPrecision.int8,
+        targetUtilization: 0.15,
+        maxInputWidth: 416,
+        maxInputHeight: 416,
+        targetFps: 1,
+        batchSize: 1,
+      );
+    }
+    if (Platform.isIOS) {
+      return const OptimizedVisionRuntimePolicy(
+        backend: VisionRuntimeBackend.onnxRuntimeCoreML,
+        precision: VisionModelPrecision.fp16,
         targetUtilization: 0.15,
         maxInputWidth: 416,
         maxInputHeight: 416,
