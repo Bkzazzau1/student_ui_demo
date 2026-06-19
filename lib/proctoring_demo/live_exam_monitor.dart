@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import 'audio_fingerprint_isolation_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
@@ -39,6 +40,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       MicrophoneStreamRecordingService();
   final LandmarkGazeRuntimeSelector _gazeEstimator =
       LandmarkGazeRuntimeSelector();
+  final AudioFingerprintIsolationService _audioIsolation =
+      AudioFingerprintIsolationService();
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -46,7 +49,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   final Map<String, DateTime> _lastEventAt = <String, DateTime>{};
   final List<String> _eventsSent = <String>[];
-  final List<double> _audioSamples = <double>[];
 
   String _cameraStatus = 'Opening camera...';
   String _audioStatus = 'Starting sound monitor...';
@@ -60,6 +62,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _analysingGazeFrame = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
+  int _voiceRiskStreak = 0;
   DateTime? _lastGazeFrameAt;
 
   @override
@@ -237,7 +240,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       if (!mounted) return;
       setState(() {
         _audioReady = true;
-        _audioStatus = 'Sound monitoring active';
+        _audioStatus = 'Audio fingerprinting and voice isolation active';
       });
     } catch (e) {
       await _raiseEvent(
@@ -255,29 +258,42 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleAudioChunk(Uint8List chunk) {
-    final rms = _rms(chunk);
-    if (rms < 0) return;
-    _audioSamples.add(rms);
-    if (_audioSamples.length > 24) {
-      _audioSamples.removeRange(0, _audioSamples.length - 24);
+    final result = _audioIsolation.analysePcm16(chunk);
+    if (result == null) return;
+
+    if (mounted) {
+      setState(() {
+        _audioStatus = result.humanVoiceLikely
+            ? 'Human voice likely detected (${_voiceRiskStreak + 1}/3)'
+            : result.allowedAmbientLikely
+                ? 'Allowed ambient audio fingerprint: ${result.label}'
+                : 'Unclear environment sound fingerprinted';
+      });
     }
 
-    final average = _audioSamples.isEmpty
-        ? 0.0
-        : _audioSamples.fold<double>(0, (sum, value) => sum + value) /
-              _audioSamples.length;
-    final varied = _variation(_audioSamples) > 0.09;
-    final activeSpeechLike = average > 0.16 && varied;
-    if (activeSpeechLike) {
+    if (result.humanVoiceLikely) {
+      _voiceRiskStreak++;
+    } else {
+      _voiceRiskStreak = math.max(0, _voiceRiskStreak - 1);
+    }
+
+    if (_voiceRiskStreak >= 3) {
+      _voiceRiskStreak = 0;
       unawaited(
         _raiseEvent(
-          eventType: 'human_voice_detected',
+          eventType: 'audio_voice_isolation_alert',
           severity: 'high',
-          message: 'Speech-like sound was detected during the exam.',
-          metadata: <String, Object?>{
-            'average_rms': average,
-            'variation': _variation(_audioSamples),
-          },
+          message: 'Human voice was isolated from the exam audio environment.',
+          metadata: result.toJson(),
+        ),
+      );
+    } else if (result.repeatedFingerprint && !result.allowedAmbientLikely) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'audio_repeated_fingerprint_detected',
+          severity: 'warning',
+          message: 'A repeated non-ambient audio fingerprint was detected.',
+          metadata: result.toJson(),
         ),
       );
     }
@@ -384,29 +400,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     }
     _lastEventAt[eventType] = now;
     return true;
-  }
-
-  double _rms(Uint8List bytes) {
-    if (bytes.length < 2) return -1;
-    final data = ByteData.sublistView(bytes);
-    var total = 0.0;
-    var count = 0;
-    for (var i = 0; i + 1 < bytes.length; i += 2) {
-      final sample = data.getInt16(i, Endian.little) / 32768.0;
-      total += sample * sample;
-      count++;
-    }
-    if (count == 0) return -1;
-    return math.sqrt(total / count).clamp(0.0, 1.0);
-  }
-
-  double _variation(List<double> samples) {
-    if (samples.length < 2) return 0;
-    var total = 0.0;
-    for (var i = 1; i < samples.length; i++) {
-      total += (samples[i] - samples[i - 1]).abs();
-    }
-    return total / (samples.length - 1);
   }
 
   @override
