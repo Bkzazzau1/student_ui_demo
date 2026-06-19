@@ -59,7 +59,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   Widget build(BuildContext context) {
     final questions = DemoExamService.questionsFor(widget.assessment);
     return Scaffold(
-      appBar: AppBar(title: const Text('Exam setup')),
+      appBar: AppBar(title: Text(_setupTitle)),
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
@@ -114,11 +114,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               FilledButton.icon(
                 onPressed: _canStart(context) ? _startExam : null,
                 icon: const Icon(Icons.edit_document),
-                label: Text(
-                  widget.assessment.isStrictExam
-                      ? 'Start exam'
-                      : 'Start assessment',
-                ),
+                label: Text(_startLabel),
               ),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
@@ -216,7 +212,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               ? 'security_review_ready'
               : widget.assessment.graded
               ? 'face_id_verified'
-              : 'not_required',
+              : 'attendance_only',
         ),
       ),
     );
@@ -258,6 +254,18 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         ],
       ),
     );
+  }
+
+  String get _setupTitle {
+    if (widget.assessment.isStrictExam) return 'Exam setup';
+    if (widget.assessment.attendanceOnly) return 'Attendance practice';
+    return 'Assessment setup';
+  }
+
+  String get _startLabel {
+    if (widget.assessment.isStrictExam) return 'Start exam';
+    if (widget.assessment.attendanceOnly) return 'Mark attendance and start';
+    return 'Start assessment';
   }
 }
 

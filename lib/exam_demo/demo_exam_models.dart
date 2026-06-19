@@ -21,6 +21,9 @@ class DemoAssessment {
     required this.remoteProctored,
     required this.sections,
     this.policy = AssessmentPolicy.practice,
+    this.availableDateIso,
+    this.availableUntilIso,
+    this.weeklyWeekday,
   });
 
   final String id;
@@ -32,13 +35,20 @@ class DemoAssessment {
   final bool remoteProctored;
   final List<DemoExamSection> sections;
   final AssessmentPolicy policy;
+  final String? availableDateIso;
+  final String? availableUntilIso;
+  final int? weeklyWeekday;
 
   bool get isStrictExam => policy == AssessmentPolicy.strictExam;
 
   bool get sendsEventsToLecturer => policy == AssessmentPolicy.gradedAssessment;
 
-  String get reviewAudience =>
-      sendsEventsToLecturer ? 'lecturer' : 'invigilator';
+  bool get attendanceOnly => policy == AssessmentPolicy.practice;
+
+  String get reviewAudience {
+    if (attendanceOnly) return 'attendance';
+    return sendsEventsToLecturer ? 'lecturer' : 'invigilator';
+  }
 
   String get assessmentType {
     switch (policy) {
@@ -48,6 +58,59 @@ class DemoAssessment {
         return 'graded_assessment';
       case AssessmentPolicy.practice:
         return 'practice';
+    }
+  }
+
+  bool isAvailableOn(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    final starts = _parseDate(availableDateIso);
+    final ends = _parseDate(availableUntilIso);
+    if (starts != null && day.isBefore(starts)) return false;
+    if (ends != null && day.isAfter(ends)) return false;
+    if (weeklyWeekday != null) return date.weekday == weeklyWeekday;
+    if (starts != null) return _sameDay(day, starts);
+    return true;
+  }
+
+  String scheduleLabel() {
+    if (weeklyWeekday != null) {
+      return 'Weekly ${_weekdayName(weeklyWeekday!)}';
+    }
+    final starts = _parseDate(availableDateIso);
+    if (starts == null) return 'Open schedule';
+    return '${starts.day.toString().padLeft(2, '0')}/${starts.month.toString().padLeft(2, '0')}/${starts.year}';
+  }
+
+  static DateTime? _parseDate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return null;
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
+  static bool _sameDay(DateTime left, DateTime right) =>
+      left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
+
+  static String _weekdayName(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return 'Monday';
+      case DateTime.tuesday:
+        return 'Tuesday';
+      case DateTime.wednesday:
+        return 'Wednesday';
+      case DateTime.thursday:
+        return 'Thursday';
+      case DateTime.friday:
+        return 'Friday';
+      case DateTime.saturday:
+        return 'Saturday';
+      case DateTime.sunday:
+        return 'Sunday';
+      default:
+        return 'week';
     }
   }
 }

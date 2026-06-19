@@ -25,7 +25,15 @@ class DemoExamService {
     _mat221,
   ];
 
-  static List<DemoAssessment> assessments() => const <DemoAssessment>[
+  static List<DemoAssessment> assessments([DateTime? date]) =>
+      assessmentsForDate(date ?? DateTime.now());
+
+  static List<DemoAssessment> assessmentsForDate(DateTime date) =>
+      allAssessments()
+          .where((assessment) => assessment.isAvailableOn(date))
+          .toList();
+
+  static List<DemoAssessment> allAssessments() => const <DemoAssessment>[
     DemoAssessment(
       id: 'exam-csc305-first-semester',
       course: _csc305,
@@ -35,6 +43,7 @@ class DemoExamService {
       graded: true,
       remoteProctored: true,
       policy: AssessmentPolicy.strictExam,
+      availableDateIso: '2026-06-19',
       sections: <DemoExamSection>[
         DemoExamSection.objective,
         DemoExamSection.fillBlank,
@@ -50,17 +59,20 @@ class DemoExamService {
       graded: true,
       remoteProctored: false,
       policy: AssessmentPolicy.gradedAssessment,
+      availableDateIso: '2026-06-19',
       sections: <DemoExamSection>[DemoExamSection.objective],
     ),
     DemoAssessment(
       id: 'practice-mat221-matrix',
       course: _mat221,
-      title: 'Matrix operations practice test',
+      title: 'Weekly matrix attendance practice',
       kind: 'Practice',
       durationMinutes: 20,
       graded: false,
       remoteProctored: false,
       policy: AssessmentPolicy.practice,
+      availableDateIso: '2026-06-19',
+      weeklyWeekday: DateTime.friday,
       sections: <DemoExamSection>[
         DemoExamSection.objective,
         DemoExamSection.fillBlank,

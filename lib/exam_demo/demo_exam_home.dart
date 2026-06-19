@@ -12,7 +12,8 @@ class DemoExamHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final assessments = DemoExamService.assessments();
+    final today = DateTime.now();
+    final assessments = DemoExamService.assessmentsForDate(today);
     return Scaffold(
       appBar: AppBar(
         title: const Text('K-SLAS Student Portal'),
@@ -39,25 +40,28 @@ class DemoExamHome extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
-          const _Header(),
+          _Header(today: today),
           const SizedBox(height: 14),
           const _Steps(),
           const SizedBox(height: 18),
           Text(
-            'Available assessments',
+            'Courses to write today',
             style: Theme.of(
               context,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 10),
-          for (final assessment in assessments)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _AssessmentCard(
-                assessment: assessment,
-                onStart: () => _openSetup(context, assessment),
+          if (assessments.isEmpty)
+            const _EmptySchedule()
+          else
+            for (final assessment in assessments)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _AssessmentCard(
+                  assessment: assessment,
+                  onStart: () => _openSetup(context, assessment),
+                ),
               ),
-            ),
         ],
       ),
     );
@@ -82,7 +86,9 @@ class DemoExamHome extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  const _Header({required this.today});
+
+  final DateTime today;
 
   @override
   Widget build(BuildContext context) {
@@ -92,10 +98,10 @@ class _Header extends StatelessWidget {
         color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Secure assessment gateway',
             style: TextStyle(
               color: Colors.white,
@@ -103,15 +109,18 @@ class _Header extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Complete identity check, room scan, audio review, system review, and guided submission.',
-            style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 16),
+            'Showing courses scheduled for ${_formatDate(today)}. Ungraded weekly practice is attendance-only and does not use proctoring.',
+            style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 16),
           ),
         ],
       ),
     );
   }
+
+  static String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 class _Steps extends StatelessWidget {
@@ -123,12 +132,37 @@ class _Steps extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        Chip(label: Text('1 Identity check')),
-        Chip(label: Text('2 360 room scan')),
-        Chip(label: Text('3 Audio review')),
-        Chip(label: Text('4 System review')),
-        Chip(label: Text('5 Start')),
+        Chip(label: Text('Exam: strict proctoring')),
+        Chip(label: Text('Graded: lecturer review')),
+        Chip(label: Text('Practice: attendance only')),
+        Chip(label: Text('Listed by date')),
       ],
+    );
+  }
+}
+
+class _EmptySchedule extends StatelessWidget {
+  const _EmptySchedule();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            const Icon(Icons.event_available_outlined),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No exam, graded assessment, or weekly attendance practice is scheduled for today.',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -144,11 +178,11 @@ class _AssessmentCard extends StatelessWidget {
     final sections = assessment.sections
         .map((section) => section.label)
         .join(', ');
-    final reviewRoute = assessment.sendsEventsToLecturer
+    final reviewRoute = assessment.attendanceOnly
+        ? 'Attendance only'
+        : assessment.sendsEventsToLecturer
         ? 'Events to lecturer'
-        : assessment.isStrictExam
-        ? 'Events to invigilator'
-        : 'No live review';
+        : 'Events to invigilator';
     return Card(
       elevation: 0,
       child: Padding(
@@ -182,6 +216,7 @@ class _AssessmentCard extends StatelessWidget {
                       Chip(label: Text(assessment.policy.label)),
                       Chip(label: Text(reviewRoute)),
                       Chip(label: Text('${assessment.durationMinutes} min')),
+                      Chip(label: Text(assessment.scheduleLabel())),
                     ],
                   ),
                   const SizedBox(height: 6),

@@ -12,7 +12,7 @@ class DemoExamResultView extends StatelessWidget {
     final duration = result.endedAt.difference(result.startedAt);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(title: const Text('Exam result')),
+      appBar: AppBar(title: Text(_resultTitle)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(18),
@@ -92,6 +92,9 @@ class DemoExamResultView extends StatelessWidget {
   }
 
   String _faceIdLabel(String decision) {
+    if (result.assessment.attendanceOnly) {
+      return 'Not required for attendance practice';
+    }
     if (decision == 'agentic_proctoring_ready' ||
         decision == 'face_id_verified') {
       return 'Verified for exam attempt';
@@ -100,9 +103,19 @@ class DemoExamResultView extends StatelessWidget {
   }
 
   String _proctoringLabel(String decision) {
-    return decision == 'agentic_proctoring_ready'
+    if (result.assessment.attendanceOnly) {
+      return 'Attendance-only practice, no proctoring';
+    }
+    return decision == 'agentic_proctoring_ready' ||
+            decision == 'security_review_ready'
         ? 'Pre-exam security review approved'
         : 'Not required for this assessment';
+  }
+
+  String get _resultTitle {
+    if (result.assessment.isStrictExam) return 'Exam result';
+    if (result.assessment.attendanceOnly) return 'Attendance practice result';
+    return 'Assessment result';
   }
 }
 
