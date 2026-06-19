@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import 'gaze_head_pose_estimator.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 
@@ -36,6 +37,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   );
   final MicrophoneStreamRecordingService _microphone =
       MicrophoneStreamRecordingService();
+  final GazeHeadPoseEstimator _gazeEstimator = GazeHeadPoseEstimator();
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -48,11 +50,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _cameraStatus = 'Opening camera...';
   String _audioStatus = 'Starting sound monitor...';
   String _systemStatus = 'Checking system...';
+  String _gazeStatus = 'Starting gaze and head pose monitor...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
+  bool _gazeReady = false;
   bool _openingCamera = false;
   int _secondsLive = 0;
+  int _gazeRiskStreak = 0;
+  DateTime? _lastGazeFrameAt;
 
   @override
   void initState() {
@@ -66,7 +72,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   void dispose() {
     _heartbeat?.cancel();
     _placeholder?.cancel();
-    _camera?.dispose();
+    final camera = _camera;
+    if (camera != null && camera.value.isStreamingImages) {
+      unawaited(camera.stopImageStream());
+    }
+    camera?.dispose();
     _microphone.dispose();
     _events.dispose();
     super.dispose();
@@ -77,6 +87,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     setState(() {
       _openingCamera = true;
       _cameraStatus = 'Opening camera...';
+      _gazeStatus = 'Starting gaze and head pose monitor...';
     });
     try {
       final cameras = await availableCameras();
@@ -90,7 +101,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         setState(() {
           _openingCamera = false;
           _cameraReady = false;
+          _gazeReady = false;
           _cameraStatus = 'Camera not found';
+          _gazeStatus = 'Gaze and head pose monitor unavailable';
         });
         return;
       }
@@ -104,7 +117,22 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         enableAudio: false,
       );
       await controller.initialize();
+      var gazeStreamReady = false;
+      try {
+        await controller.startImageStream(_handleCameraImage);
+        gazeStreamReady = true;
+      } catch (e) {
+        await _raiseEvent(
+          eventType: 'gaze_head_pose_monitor_unavailable',
+          severity: 'warning',
+          message: 'Gaze and head pose monitoring stream could not start.',
+          metadata: <String, Object?>{'error': e.toString()},
+        );
+      }
       if (!mounted) {
+        if (controller.value.isStreamingImages) {
+          await controller.stopImageStream();
+        }
         await controller.dispose();
         return;
       }
@@ -112,7 +140,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _camera = controller;
         _openingCamera = false;
         _cameraReady = true;
+        _gazeReady = gazeStreamReady;
         _cameraStatus = 'Camera monitoring active';
+        _gazeStatus = gazeStreamReady
+            ? 'Gaze vector and head pose monitoring active'
+            : 'Gaze stream unavailable on this device';
       });
     } catch (e) {
       await _raiseEvent(
@@ -125,8 +157,44 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       setState(() {
         _openingCamera = false;
         _cameraReady = false;
+        _gazeReady = false;
         _cameraStatus = 'Camera monitoring unavailable';
+        _gazeStatus = 'Gaze and head pose monitor unavailable';
       });
+    }
+  }
+
+  void _handleCameraImage(CameraImage image) {
+    final result = _gazeEstimator.analyse(image);
+    if (result == null) return;
+    _lastGazeFrameAt = DateTime.now();
+
+    if (result.lookingAway && result.confidence >= 0.55) {
+      _gazeRiskStreak++;
+    } else {
+      _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
+    }
+
+    if (mounted) {
+      setState(() {
+        _gazeReady = true;
+        _gazeStatus = result.lookingAway
+            ? 'Possible looking away detected (${_gazeRiskStreak}/3)'
+            : 'Focused forward • gaze/head pose stable';
+      });
+    }
+
+    if (_gazeRiskStreak >= 3) {
+      _gazeRiskStreak = 0;
+      unawaited(
+        _raiseEvent(
+          eventType: 'gaze_head_pose_deviation',
+          severity: 'high',
+          message:
+              'Sustained looking-away or head-pose deviation was detected during the exam.',
+          metadata: result.toJson(),
+        ),
+      );
     }
   }
 
@@ -207,13 +275,19 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       if (!mounted) return;
       final cameraStillReady = _camera?.value.isInitialized ?? false;
       final platformOk = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      final gazeFresh = _lastGazeFrameAt != null &&
+          DateTime.now().difference(_lastGazeFrameAt!).inSeconds <= 12;
       setState(() {
         _secondsLive += 5;
         _cameraReady = cameraStillReady;
         _systemReady = platformOk;
+        _gazeReady = _gazeReady && gazeFresh;
         _systemStatus = platformOk
             ? 'System monitoring active'
             : 'Unsupported system environment';
+        if (cameraStillReady && !_gazeReady) {
+          _gazeStatus = 'Gaze and head pose monitor not receiving frames';
+        }
       });
 
       if (!cameraStillReady) {
@@ -239,6 +313,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'system_monitoring_unavailable',
           severity: 'critical',
           message: 'System monitoring is not available on this device.',
+        );
+      }
+      if (cameraStillReady && !gazeFresh) {
+        await _raiseEvent(
+          eventType: 'gaze_head_pose_monitor_unavailable',
+          severity: 'warning',
+          message: 'Gaze and head pose monitor is not receiving camera frames.',
         );
       }
     });
@@ -347,6 +428,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
               label: _audioStatus,
               ready: _audioReady,
               icon: Icons.mic,
+            ),
+            const SizedBox(height: 8),
+            _StatusRow(
+              label: _gazeStatus,
+              ready: _gazeReady,
+              icon: Icons.visibility_outlined,
             ),
             const SizedBox(height: 8),
             _StatusRow(
