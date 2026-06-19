@@ -19,17 +19,17 @@ class DemoFaceIdSnapshot {
 
   String get statusText {
     if (isComplete) {
-      return 'Face ID is active for secure examination startup.';
+      return 'Identity image enrollment is active for secure examination startup.';
     }
     final remaining = requiredSamples - capturedSamples;
-    return 'Capture $remaining more face sample${remaining == 1 ? '' : 's'} to activate Face ID.';
+    return 'Capture $remaining more guided identity image${remaining == 1 ? '' : 's'} to activate exam identity check.';
   }
 }
 
 class DemoFaceIdService {
   DemoFaceIdService({GetStorage? storage}) : _storage = storage ?? GetStorage();
 
-  static const int requiredSamples = 3;
+  static const int requiredSamples = 6;
   static const String studentId = 'KSLAS/STD/2026/001';
   static const String _capturedKey = 'demo_face_id_captured_samples';
   static const String _qualityKey = 'demo_face_id_last_quality';
