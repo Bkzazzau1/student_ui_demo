@@ -65,7 +65,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   final DemoEvidenceService _evidence = DemoEvidenceService();
   final AudioSecurityCheckService _audioCheck = AudioSecurityCheckService();
   final SecurityReviewService _securityReview = SecurityReviewService(
-    baseUrl: String.fromEnvironment(
+    baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
       defaultValue: 'http://127.0.0.1:8080',
     ),
@@ -82,16 +82,18 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   String _message = 'Open the camera and start the 360 room scan.';
   String _frameMode = 'not-started';
   String? _manifestPath;
+  String? _verificationVideoPath;
+  AudioSecurityCheckResult? _audioResult;
   int _frameCount = 0;
   int _currentTargetIndex = 0;
   double _lightingScore = 0;
   double _movementScore = 0;
   double _differenceScore = 0;
-  AudioSecurityCheckResult? _audioResult;
   bool _openingCamera = false;
   bool _backupScanReady = false;
   bool _capturingTarget = false;
   bool _reviewing = false;
+  bool _recordingVideo = false;
 
   static List<DemoScanTarget> _newTargets() =>
       _guides.map((guide) => DemoScanTarget(name: guide.name)).toList();
@@ -207,6 +209,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _acceptedSignatures.clear();
       _previousSignature = null;
       _manifestPath = null;
+      _verificationVideoPath = null;
+      _audioResult = null;
       _frameCount = 0;
       _currentTargetIndex = 0;
       _frameMode = 'not-started';
@@ -365,7 +369,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _manifestPath = manifest;
         _status = DemoScanStatus.passed;
         _message =
-            'All required room views captured. Security review is ready.';
+            'All room pictures captured. Recording short verification video next.';
       });
       await _runSecurityReview();
       return;
@@ -377,6 +381,36 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _currentTargetIndex++;
       _message = 'Saved $target. ${_currentGuide.instruction}';
     });
+  }
+
+  Future<String?> _recordVerificationVideo() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return null;
+    if (controller.value.isRecordingVideo) return null;
+    try {
+      await _frameSource.stop(controller);
+      if (!mounted) return null;
+      setState(() {
+        _recordingVideo = true;
+        _message = 'Recording 7-second verification video. Keep your face visible.';
+      });
+      await controller.startVideoRecording();
+      await Future<void>.delayed(const Duration(seconds: 7));
+      final file = await controller.stopVideoRecording();
+      return file.path;
+    } catch (_) {
+      try {
+        if (controller.value.isRecordingVideo) {
+          final file = await controller.stopVideoRecording();
+          return file.path;
+        }
+      } catch (_) {}
+      return null;
+    } finally {
+      if (mounted) {
+        setState(() => _recordingVideo = false);
+      }
+    }
   }
 
   List<String> _labelsFor(DemoCameraScanFrame frame) {
@@ -413,20 +447,33 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_reviewing || !_scanComplete) return;
     setState(() {
       _reviewing = true;
-      _message = 'Checking room sound...';
+      _message = 'Preparing verification video and room sound evidence...';
     });
 
     try {
-      final audioResult = await _audioCheck.captureBaseline();
+      final videoPath = await _recordVerificationVideo();
+      if (!mounted) return;
+      setState(() {
+        _verificationVideoPath = videoPath;
+        _message = videoPath == null
+            ? 'Verification video unavailable. Learning room sound for 15 seconds...'
+            : 'Verification video captured. Learning room sound for 15 seconds...';
+      });
+
+      final audioResult = await _audioCheck.captureBaseline(
+        duration: const Duration(seconds: 15),
+      );
       if (!mounted) return;
       setState(() {
         _audioResult = audioResult;
-        _message = 'Security review is running...';
+        _message = 'Submitting pictures, verification video, and room sound together...';
       });
+
       final result = await _securityReview.submitPreExamReview(
         manifest: _buildReviewManifest(),
         imagePaths: _targetImagePaths(),
         audioClipPath: audioResult.clipPath,
+        verificationVideoPath: videoPath,
       );
       final manifest = await _saveManifest(result.decision);
       if (!mounted) return;
@@ -530,6 +577,14 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'face_identity': _faceIdentityReview(),
       'system_review': _systemReviewPayload(),
       'audio': _audioResult?.toJson(),
+      'verification_video': <String, dynamic>{
+        'required': true,
+        'duration_seconds': 7,
+        'captured': _verificationVideoPath != null,
+        'file_name': _verificationVideoPath == null
+            ? null
+            : _fileNameFromPath(_verificationVideoPath!),
+      },
       'targets': _targets.map((target) {
         final calibration = calibrationByTarget[target.name];
         return <String, dynamic>{
@@ -587,6 +642,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'difference_score': _differenceScore,
       'audio_label': _audioResult?.environmentLabel,
       'audio_clip_recorded': _audioResult?.clipPath != null,
+      'audio_learning_seconds': _audioResult?.sampleDurationSeconds,
+      'verification_video_recorded': _verificationVideoPath != null,
     };
   }
 
@@ -629,6 +686,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _acceptedSignatures.clear();
       _previousSignature = null;
       _manifestPath = null;
+      _verificationVideoPath = null;
       _frameCount = 0;
       _currentTargetIndex = 0;
       _lightingScore = 0;
@@ -637,6 +695,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _audioResult = null;
       _capturingTarget = false;
       _reviewing = false;
+      _recordingVideo = false;
       _status = DemoScanStatus.idle;
       _message = 'Open the camera and start the 360 room scan.';
     });
@@ -721,9 +780,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 ),
               ),
               OutlinedButton.icon(
-                onPressed: _scanComplete && !_reviewing
-                    ? _runSecurityReview
-                    : null,
+                onPressed: _scanComplete && !_reviewing ? _runSecurityReview : null,
                 icon: const Icon(Icons.verified_user_outlined),
                 label: const Text('Run security review'),
               ),
@@ -745,26 +802,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _MetricChip(
-                label: 'Saved views',
-                value: '$_frameCount/${_targets.length}',
-              ),
-              _MetricChip(
-                label: 'Light',
-                value: _lightingScore.toStringAsFixed(3),
-              ),
-              _MetricChip(
-                label: 'Movement',
-                value: _movementScore.toStringAsFixed(3),
-              ),
-              _MetricChip(
-                label: 'Difference',
-                value: _differenceScore.toStringAsFixed(3),
-              ),
-              _MetricChip(
-                label: 'Sound',
-                value: _audioResult?.environmentLabel ?? 'pending',
-              ),
+              _MetricChip(label: 'Saved views', value: '$_frameCount/${_targets.length}'),
+              _MetricChip(label: 'Light', value: _lightingScore.toStringAsFixed(3)),
+              _MetricChip(label: 'Movement', value: _movementScore.toStringAsFixed(3)),
+              _MetricChip(label: 'Difference', value: _differenceScore.toStringAsFixed(3)),
+              _MetricChip(label: 'Video', value: _verificationVideoPath == null ? (_recordingVideo ? 'recording' : 'pending') : 'captured'),
+              _MetricChip(label: 'Sound', value: _audioResult == null ? 'pending' : '${_audioResult!.environmentLabel} (${_audioResult!.sampleDurationSeconds}s)'),
             ],
           ),
           if (_manifestPath != null) ...[
@@ -797,16 +840,16 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   color: const Color(0xFF101828),
                   alignment: Alignment.center,
                   child: Text(
-                    _backupScanReady
-                        ? 'Backup scan mode ready'
-                        : 'Camera preview',
+                    _backupScanReady ? 'Backup scan mode ready' : 'Camera preview',
                     style: const TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ),
               Align(
                 alignment: Alignment.topCenter,
                 child: _OverlayLabel(
-                  text: _scanning
+                  text: _recordingVideo
+                      ? 'VERIFICATION VIDEO • keep your face visible'
+                      : _scanning
                       ? '${_currentTarget.toUpperCase()} • ${_currentGuide.instruction}'
                       : 'Guided 360 room scan',
                 ),
@@ -816,10 +859,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   width: 260,
                   height: 180,
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: const Color(0xFF22C55E),
-                      width: 2,
-                    ),
+                    border: Border.all(color: const Color(0xFF22C55E), width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
@@ -829,16 +869,11 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: FilledButton.icon(
-                    onPressed:
-                        _cameraReady && !_capturingTarget && !_scanComplete
+                    onPressed: _cameraReady && !_capturingTarget && !_scanComplete
                         ? _captureCurrentTarget
                         : null,
                     icon: const Icon(Icons.camera_alt_outlined),
-                    label: Text(
-                      _scanComplete
-                          ? 'All views captured'
-                          : 'Capture $_currentTarget',
-                    ),
+                    label: Text(_scanComplete ? 'All views captured' : 'Capture $_currentTarget'),
                   ),
                 ),
               ),
@@ -854,20 +889,14 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Required 360 views',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('Required 360 views', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          const Text(
-            'Move the camera or device to each direction. Repeated static views are rejected.',
-          ),
+          const Text('Move the camera or device to each direction. Repeated static views are rejected.'),
           const SizedBox(height: 10),
           ..._targets.asMap().entries.map((entry) {
             final index = entry.key;
             final target = entry.value;
-            final active =
-                _scanning && !_scanComplete && index == _currentTargetIndex;
+            final active = _scanning && !_scanComplete && index == _currentTargetIndex;
             return ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
@@ -912,9 +941,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
               (event) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
-                  event.severity == 'success'
-                      ? Icons.check_circle
-                      : Icons.info_outline,
+                  event.severity == 'success' ? Icons.check_circle : Icons.info_outline,
                   color: event.severity == 'success'
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFF59E0B),
@@ -978,10 +1005,7 @@ class _OverlayLabel extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
       ),
     );
   }
