@@ -21,6 +21,7 @@ class AudioSecurityCheckResult {
     required this.notificationDetected,
     required this.tvOrRadioVoiceDetected,
     required this.ambientNoiseAllowed,
+    required this.sampleDurationSeconds,
     this.clipPath,
     this.message,
   });
@@ -38,6 +39,7 @@ class AudioSecurityCheckResult {
   final bool notificationDetected;
   final bool tvOrRadioVoiceDetected;
   final bool ambientNoiseAllowed;
+  final int sampleDurationSeconds;
   final String? clipPath;
   final String? message;
 
@@ -55,6 +57,8 @@ class AudioSecurityCheckResult {
     'notification_detected': notificationDetected,
     'tv_or_radio_voice_detected': tvOrRadioVoiceDetected,
     'ambient_noise_allowed': ambientNoiseAllowed,
+    'sample_duration_seconds': sampleDurationSeconds,
+    'environment_learning_completed': sampleDurationSeconds >= 15,
     if (clipPath != null) 'clip_path': clipPath,
     if (message != null) 'message': message,
   };
@@ -69,7 +73,7 @@ class AudioSecurityCheckService {
   final MicrophoneStreamRecordingService _microphone;
 
   Future<AudioSecurityCheckResult> captureBaseline({
-    Duration duration = const Duration(seconds: 4),
+    Duration duration = const Duration(seconds: 15),
   }) async {
     final hasPermission = await _microphone.hasPermission();
     if (!hasPermission) {
@@ -87,6 +91,7 @@ class AudioSecurityCheckService {
         notificationDetected: false,
         tvOrRadioVoiceDetected: false,
         ambientNoiseAllowed: false,
+        sampleDurationSeconds: 0,
         message: 'Microphone access is required for the security check.',
       );
     }
@@ -99,10 +104,11 @@ class AudioSecurityCheckService {
     var nativeLastSpeechStrikeAtMs = 0;
     final nativeReady = await _ensureNativeReady();
     String? clipPath;
+    final startedAt = DateTime.now();
     try {
       await _microphone.start(
         sampleRate: 44100,
-        maxBufferSeconds: 15,
+        maxBufferSeconds: math.max(15, duration.inSeconds),
         onPcmChunk: (chunk) {
           final rms = _rms(chunk);
           if (rms >= 0) samples.add(rms);
@@ -148,11 +154,12 @@ class AudioSecurityCheckService {
         notificationDetected: false,
         tvOrRadioVoiceDetected: false,
         ambientNoiseAllowed: false,
+        sampleDurationSeconds: DateTime.now().difference(startedAt).inSeconds,
         message: 'Microphone check could not be completed: $e',
       );
     } finally {
       clipPath = await _microphone.stopAndSaveWav(
-        filePrefix: 'pre_exam_audio_baseline',
+        filePrefix: 'pre_exam_audio_baseline_15s',
       );
     }
 
@@ -175,6 +182,7 @@ class AudioSecurityCheckService {
       humanVoiceDetected: humanVoiceDetected,
       inputLevelOk: inputLevelOk,
     );
+    final measuredSeconds = DateTime.now().difference(startedAt).inSeconds;
     return AudioSecurityCheckResult(
       microphoneAvailable: true,
       permissionGranted: true,
@@ -193,9 +201,10 @@ class AudioSecurityCheckService {
       notificationDetected: false,
       tvOrRadioVoiceDetected: false,
       ambientNoiseAllowed: inputLevelOk && !humanVoiceDetected,
+      sampleDurationSeconds: measuredSeconds,
       clipPath: clipPath,
       message: inputLevelOk
-          ? null
+          ? 'Room sound learned for $measuredSeconds seconds.'
           : 'Microphone input level is too low for the security check.',
     );
   }
