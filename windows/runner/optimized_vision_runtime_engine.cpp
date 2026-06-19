@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <stdexcept>
@@ -26,6 +27,16 @@
 #endif
 
 namespace {
+
+struct Detection {
+  double x1 = 0.0;
+  double y1 = 0.0;
+  double x2 = 0.0;
+  double y2 = 0.0;
+  double confidence = 0.0;
+  int64_t class_id = -1;
+  std::string label;
+};
 
 flutter::EncodableValue StringValue(const char* value) {
   return flutter::EncodableValue(std::string(value));
@@ -146,6 +157,174 @@ std::wstring Utf8ToWide(const std::string& value) {
 #else
   return std::wstring(value.begin(), value.end());
 #endif
+}
+
+std::string LabelForClass(int64_t class_id) {
+  switch (class_id) {
+    case 0:
+      return "phone";
+    case 1:
+      return "screen_glow";
+    case 2:
+      return "mirror_reflection";
+    case 3:
+      return "offscreen_interaction";
+    case 67:
+      return "cell_phone";
+    default:
+      return "class_" + std::to_string(class_id);
+  }
+}
+
+double Clamp01(double value) {
+  return std::max(0.0, std::min(1.0, value));
+}
+
+double Logistic(double value) {
+  if (value >= 0.0 && value <= 1.0) {
+    return value;
+  }
+  return 1.0 / (1.0 + std::exp(-value));
+}
+
+flutter::EncodableMap BoundingBoxValue(const Detection& detection) {
+  flutter::EncodableMap box;
+  box[StringValue("x1")] = DoubleValue(Clamp01(detection.x1));
+  box[StringValue("y1")] = DoubleValue(Clamp01(detection.y1));
+  box[StringValue("x2")] = DoubleValue(Clamp01(detection.x2));
+  box[StringValue("y2")] = DoubleValue(Clamp01(detection.y2));
+  return box;
+}
+
+flutter::EncodableValue DetectionValue(const Detection& detection) {
+  flutter::EncodableMap object;
+  object[StringValue("label")] = StringValue(detection.label);
+  object[StringValue("class_id")] = flutter::EncodableValue(detection.class_id);
+  object[StringValue("confidence")] = DoubleValue(detection.confidence);
+  object[StringValue("box")] =
+      flutter::EncodableValue(BoundingBoxValue(detection));
+  return flutter::EncodableValue(object);
+}
+
+bool IsPhoneLike(const std::string& label) {
+  return label.find("phone") != std::string::npos ||
+         label.find("mobile") != std::string::npos ||
+         label.find("screen") != std::string::npos;
+}
+
+bool IsMirrorLike(const std::string& label) {
+  return label.find("mirror") != std::string::npos ||
+         label.find("glass") != std::string::npos ||
+         label.find("reflection") != std::string::npos;
+}
+
+bool IsOffscreenLike(const std::string& label) {
+  return label.find("offscreen") != std::string::npos ||
+         label.find("interaction") != std::string::npos ||
+         label.find("hand") != std::string::npos;
+}
+
+void DecodeCandidate(const float* values,
+                     int64_t length,
+                     std::vector<Detection>* detections) {
+  if (values == nullptr || detections == nullptr || length < 6) {
+    return;
+  }
+
+  int64_t class_id = -1;
+  double confidence = 0.0;
+  if (length == 6) {
+    confidence = Logistic(values[4]);
+    class_id = static_cast<int64_t>(std::llround(values[5]));
+  } else {
+    const double objectness = Logistic(values[4]);
+    for (int64_t i = 5; i < length; ++i) {
+      const double score = Logistic(values[i]) * objectness;
+      if (score > confidence) {
+        confidence = score;
+        class_id = i - 5;
+      }
+    }
+  }
+
+  if (confidence < 0.35 || class_id < 0) {
+    return;
+  }
+
+  const double a = values[0];
+  const double b = values[1];
+  const double c = values[2];
+  const double d = values[3];
+  Detection detection;
+  detection.confidence = Clamp01(confidence);
+  detection.class_id = class_id;
+  detection.label = LabelForClass(class_id);
+
+  if (a >= 0.0 && b >= 0.0 && c <= 1.5 && d <= 1.5) {
+    if (c > a && d > b) {
+      detection.x1 = a;
+      detection.y1 = b;
+      detection.x2 = c;
+      detection.y2 = d;
+    } else {
+      detection.x1 = a - c / 2.0;
+      detection.y1 = b - d / 2.0;
+      detection.x2 = a + c / 2.0;
+      detection.y2 = b + d / 2.0;
+    }
+  } else {
+    const double scale =
+        std::max(1.0, std::max(std::abs(a), std::max(std::abs(b),
+                 std::max(std::abs(c), std::abs(d)))));
+    detection.x1 = (a - c / 2.0) / scale;
+    detection.y1 = (b - d / 2.0) / scale;
+    detection.x2 = (a + c / 2.0) / scale;
+    detection.y2 = (b + d / 2.0) / scale;
+  }
+
+  detections->push_back(detection);
+}
+
+std::vector<Detection> ParseDetections(const float* data,
+                                       const std::vector<int64_t>& shape,
+                                       size_t element_count) {
+  std::vector<Detection> detections;
+  if (data == nullptr || element_count < 6) {
+    return detections;
+  }
+
+  if (shape.size() == 2 && shape[1] >= 6) {
+    const int64_t rows = shape[0];
+    const int64_t columns = shape[1];
+    for (int64_t row = 0; row < rows; ++row) {
+      DecodeCandidate(data + row * columns, columns, &detections);
+    }
+  } else if (shape.size() == 3) {
+    const int64_t dim1 = shape[1];
+    const int64_t dim2 = shape[2];
+    if (dim2 >= 6) {
+      for (int64_t row = 0; row < dim1; ++row) {
+        DecodeCandidate(data + row * dim2, dim2, &detections);
+      }
+    } else if (dim1 >= 6) {
+      std::vector<float> candidate(static_cast<size_t>(dim1));
+      for (int64_t row = 0; row < dim2; ++row) {
+        for (int64_t col = 0; col < dim1; ++col) {
+          candidate[static_cast<size_t>(col)] = data[col * dim2 + row];
+        }
+        DecodeCandidate(candidate.data(), dim1, &detections);
+      }
+    }
+  }
+
+  std::sort(detections.begin(), detections.end(),
+            [](const Detection& a, const Detection& b) {
+              return a.confidence > b.confidence;
+            });
+  if (detections.size() > 20) {
+    detections.resize(20);
+  }
+  return detections;
 }
 
 }  // namespace
@@ -429,14 +608,16 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(
                                output_name_ptrs_.size());
 
   flutter::EncodableList output_summaries;
+  std::vector<Detection> detections;
   for (size_t i = 0; i < outputs.size(); ++i) {
     flutter::EncodableMap summary;
     summary[StringValue("name")] =
         StringValue(i < output_names_.size() ? output_names_[i] : "");
     if (outputs[i].IsTensor()) {
       auto info = outputs[i].GetTensorTypeAndShapeInfo();
+      const auto output_shape = info.GetShape();
       flutter::EncodableList dims;
-      for (const auto dim : info.GetShape()) {
+      for (const auto dim : output_shape) {
         dims.push_back(flutter::EncodableValue(dim));
       }
       summary[StringValue("shape")] = flutter::EncodableValue(dims);
@@ -444,6 +625,9 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(
           flutter::EncodableValue(static_cast<int64_t>(info.GetElementCount()));
       if (info.GetElementType() == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) {
         const float* data = outputs[i].GetTensorData<float>();
+        auto parsed =
+            ParseDetections(data, output_shape, info.GetElementCount());
+        detections.insert(detections.end(), parsed.begin(), parsed.end());
         const size_t limit = std::min<size_t>(info.GetElementCount(), 16);
         flutter::EncodableList sample;
         for (size_t j = 0; j < limit; ++j) {
@@ -454,14 +638,34 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(
     }
     output_summaries.push_back(flutter::EncodableValue(summary));
   }
+  std::sort(detections.begin(), detections.end(),
+            [](const Detection& a, const Detection& b) {
+              return a.confidence > b.confidence;
+            });
+  if (detections.size() > 20) {
+    detections.resize(20);
+  }
+
+  flutter::EncodableList objects;
+  bool screen_glow = false;
+  bool mirror_reflection = false;
+  bool offscreen_interaction = false;
+  for (const auto& detection : detections) {
+    objects.push_back(DetectionValue(detection));
+    screen_glow = screen_glow || IsPhoneLike(detection.label);
+    mirror_reflection = mirror_reflection || IsMirrorLike(detection.label);
+    offscreen_interaction =
+        offscreen_interaction || IsOffscreenLike(detection.label);
+  }
 
   flutter::EncodableMap outputs_map;
-  outputs_map[StringValue("objects")] =
-      flutter::EncodableValue(flutter::EncodableList());
-  outputs_map[StringValue("screen_glow")] = flutter::EncodableValue(false);
-  outputs_map[StringValue("mirror_reflection")] = flutter::EncodableValue(false);
+  outputs_map[StringValue("objects")] = flutter::EncodableValue(objects);
+  outputs_map[StringValue("screen_glow")] =
+      flutter::EncodableValue(screen_glow);
+  outputs_map[StringValue("mirror_reflection")] =
+      flutter::EncodableValue(mirror_reflection);
   outputs_map[StringValue("offscreen_interaction")] =
-      flutter::EncodableValue(false);
+      flutter::EncodableValue(offscreen_interaction);
   outputs_map[StringValue("runtime")] = StringValue(backend_);
   outputs_map[StringValue("precision")] = StringValue(precision_);
   outputs_map[StringValue("inference_ms")] = DoubleValue(last_inference_ms_);

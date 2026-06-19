@@ -13,6 +13,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.nio.FloatBuffer
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToLong
 import kotlin.system.measureNanoTime
 
 class MainActivity : FlutterActivity() {
@@ -196,21 +197,29 @@ private class AndroidOptimizedVisionRuntimeEngine {
 
     private fun availableResponse(outputs: OrtSession.Result): Map<String, Any?> {
         val summaries = mutableListOf<Map<String, Any?>>()
+        val detections = mutableListOf<Detection>()
         var index = 0
         for (entry in outputs) {
-            summaries.add(summarizeOutput(index, entry.value))
+            val value = entry.value
+            summaries.add(summarizeOutput(index, value))
+            detections.addAll(parseDetections(value))
             index++
         }
+        val sortedDetections = detections.sortedByDescending { it.confidence }.take(20)
+        val objects = sortedDetections.map { it.toMap() }
+        val screenGlow = sortedDetections.any { it.label.isPhoneLike() }
+        val mirrorReflection = sortedDetections.any { it.label.isMirrorLike() }
+        val offscreenInteraction = sortedDetections.any { it.label.isOffscreenLike() }
         return mapOf(
             "available" to true,
             "backend" to backend,
             "precision" to precision,
             "inference_ms" to lastInferenceMs,
             "outputs" to mapOf(
-                "objects" to emptyList<Map<String, Any?>>(),
-                "screen_glow" to false,
-                "mirror_reflection" to false,
-                "offscreen_interaction" to false,
+                "objects" to objects,
+                "screen_glow" to screenGlow,
+                "mirror_reflection" to mirrorReflection,
+                "offscreen_interaction" to offscreenInteraction,
                 "runtime" to backend,
                 "precision" to precision,
                 "inference_ms" to lastInferenceMs,
@@ -218,6 +227,41 @@ private class AndroidOptimizedVisionRuntimeEngine {
                 "raw_outputs" to summaries,
             ),
         )
+    }
+
+    private fun parseDetections(value: OnnxValue): List<Detection> {
+        val tensor = value as? OnnxTensor ?: return emptyList()
+        val info = tensor.info as? TensorInfo ?: return emptyList()
+        if (info.type != ai.onnxruntime.OnnxJavaType.FLOAT) return emptyList()
+        val shape = info.shape
+        val data = tensor.floatBuffer
+        val detections = mutableListOf<Detection>()
+        if (shape.size == 2 && shape[1] >= 6) {
+            val rows = shape[0].toInt()
+            val columns = shape[1].toInt()
+            for (row in 0 until rows) {
+                detections.decodeCandidate(FloatArray(columns) { col ->
+                    data.get(row * columns + col)
+                })
+            }
+        } else if (shape.size == 3) {
+            val dim1 = shape[1].toInt()
+            val dim2 = shape[2].toInt()
+            if (dim2 >= 6) {
+                for (row in 0 until dim1) {
+                    detections.decodeCandidate(FloatArray(dim2) { col ->
+                        data.get(row * dim2 + col)
+                    })
+                }
+            } else if (dim1 >= 6) {
+                for (row in 0 until dim2) {
+                    detections.decodeCandidate(FloatArray(dim1) { col ->
+                        data.get(col * dim2 + row)
+                    })
+                }
+            }
+        }
+        return detections
     }
 
     private fun summarizeOutput(index: Int, value: OnnxValue): Map<String, Any?> {
@@ -247,6 +291,101 @@ private class AndroidOptimizedVisionRuntimeEngine {
             "model_path" to modelPath,
         ),
     )
+}
+
+private data class Detection(
+    val x1: Double,
+    val y1: Double,
+    val x2: Double,
+    val y2: Double,
+    val confidence: Double,
+    val classId: Long,
+    val label: String,
+) {
+    fun toMap(): Map<String, Any?> = mapOf(
+        "label" to label,
+        "class_id" to classId,
+        "confidence" to confidence.coerceIn(0.0, 1.0),
+        "box" to mapOf(
+            "x1" to x1.coerceIn(0.0, 1.0),
+            "y1" to y1.coerceIn(0.0, 1.0),
+            "x2" to x2.coerceIn(0.0, 1.0),
+            "y2" to y2.coerceIn(0.0, 1.0),
+        ),
+    )
+}
+
+private fun MutableList<Detection>.decodeCandidate(values: FloatArray) {
+    if (values.size < 6) return
+    var confidence = 0.0
+    var classId = -1L
+    if (values.size == 6) {
+        confidence = values[4].logistic()
+        classId = values[5].roundToLong()
+    } else {
+        val objectness = values[4].logistic()
+        for (index in 5 until values.size) {
+            val score = values[index].logistic() * objectness
+            if (score > confidence) {
+                confidence = score
+                classId = (index - 5).toLong()
+            }
+        }
+    }
+    if (confidence < 0.35 || classId < 0) return
+
+    val a = values[0].toDouble()
+    val b = values[1].toDouble()
+    val c = values[2].toDouble()
+    val d = values[3].toDouble()
+    val box = if (a >= 0.0 && b >= 0.0 && c <= 1.5 && d <= 1.5) {
+        if (c > a && d > b) {
+            doubleArrayOf(a, b, c, d)
+        } else {
+            doubleArrayOf(a - c / 2.0, b - d / 2.0, a + c / 2.0, b + d / 2.0)
+        }
+    } else {
+        val scale = maxOf(1.0, kotlin.math.abs(a), kotlin.math.abs(b), kotlin.math.abs(c), kotlin.math.abs(d))
+        doubleArrayOf((a - c / 2.0) / scale, (b - d / 2.0) / scale, (a + c / 2.0) / scale, (b + d / 2.0) / scale)
+    }
+    add(
+        Detection(
+            x1 = box[0],
+            y1 = box[1],
+            x2 = box[2],
+            y2 = box[3],
+            confidence = confidence.coerceIn(0.0, 1.0),
+            classId = classId,
+            label = classId.labelForClass(),
+        ),
+    )
+}
+
+private fun Float.logistic(): Double {
+    val value = toDouble()
+    if (value in 0.0..1.0) return value
+    return 1.0 / (1.0 + kotlin.math.exp(-value))
+}
+
+private fun Long.labelForClass(): String = when (this) {
+    0L -> "phone"
+    1L -> "screen_glow"
+    2L -> "mirror_reflection"
+    3L -> "offscreen_interaction"
+    67L -> "cell_phone"
+    else -> "class_$this"
+}
+
+private fun String.isPhoneLike(): Boolean {
+    return contains("phone") || contains("mobile") || contains("screen")
+}
+
+private fun String.isMirrorLike(): Boolean {
+    return contains("mirror") || contains("glass") || contains("reflection")
+}
+
+private fun String.isOffscreenLike(): Boolean {
+    return contains("offscreen") || contains("interaction") || contains("hand")
 }
 
 private fun Map<*, *>?.stringValue(key: String, fallback: String): String {

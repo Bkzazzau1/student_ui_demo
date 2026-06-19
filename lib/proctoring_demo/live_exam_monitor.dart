@@ -277,21 +277,80 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   void _handleOptimizedVisionSmokeResult(OptimizedVisionRuntimeResult result) {
     _lastVisualFrameAt = DateTime.now();
+    final objects = (result.outputs['objects'] as List? ?? const <Object?>[])
+        .whereType<Map>()
+        .map((item) => Map<String, Object?>.from(item))
+        .toList();
+    final screenGlow = result.outputs['screen_glow'] == true;
+    final mirrorReflection = result.outputs['mirror_reflection'] == true;
+    final offscreenInteraction =
+        result.outputs['offscreen_interaction'] == true;
+    final maxConfidence = objects.fold<double>(
+      0,
+      (best, object) => math.max(
+        best,
+        double.tryParse(object['confidence']?.toString() ?? '') ?? 0,
+      ),
+    );
+    final visualRiskScore =
+        (maxConfidence +
+                (screenGlow ? 0.18 : 0.0) +
+                (mirrorReflection ? 0.18 : 0.0) +
+                (offscreenInteraction ? 0.18 : 0.0))
+            .clamp(0.0, 1.0);
+    final detectedRisk =
+        objects.isNotEmpty &&
+        (screenGlow ||
+            mirrorReflection ||
+            offscreenInteraction ||
+            maxConfidence >= 0.50);
+
+    if (detectedRisk && visualRiskScore >= 0.58) {
+      _visualRiskStreak++;
+    } else {
+      _visualRiskStreak = math.max(0, _visualRiskStreak - 1);
+    }
+
     if (mounted) {
       setState(() {
         _visualReady = true;
-        _visualStatus =
-            '${result.backend} optimized vision smoke active (${result.inferenceMs.toStringAsFixed(1)} ms)';
+        _visualStatus = detectedRisk
+            ? '${objects.length} optimized vision object signal(s) ($_visualRiskStreak/3)'
+            : '${result.backend} optimized vision active (${result.inferenceMs.toStringAsFixed(1)} ms)';
       });
     }
-    unawaited(
-      _raiseEvent(
-        eventType: 'optimized_vision_runtime_smoke',
-        severity: 'info',
-        message: 'Optimized vision runtime smoke inference completed.',
-        metadata: result.toJson(),
-      ),
-    );
+
+    if (_visualRiskStreak >= 3) {
+      _visualRiskStreak = 0;
+      unawaited(
+        _raiseEvent(
+          eventType: 'object_reflection_shadow_risk',
+          severity: 'high',
+          message:
+              'Optimized vision detected a sustained object, reflection, screen-glow, or off-screen interaction risk.',
+          metadata: result.toJson(),
+        ),
+      );
+    } else if (detectedRisk && visualRiskScore >= 0.40) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'object_reflection_shadow_warning',
+          severity: 'warning',
+          message:
+              'Optimized vision detected a possible object, reflection, screen-glow, or off-screen interaction signal.',
+          metadata: result.toJson(),
+        ),
+      );
+    } else {
+      unawaited(
+        _raiseEvent(
+          eventType: 'optimized_vision_runtime_smoke',
+          severity: 'info',
+          message: 'Optimized vision runtime inference completed.',
+          metadata: result.toJson(),
+        ),
+      );
+    }
   }
 
   void _handleVisualIntegrityResult(VisualReflectionShadowResult result) {
