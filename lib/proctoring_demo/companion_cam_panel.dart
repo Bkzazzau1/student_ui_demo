@@ -14,12 +14,16 @@ class CompanionCamPanel extends StatefulWidget {
     required this.examId,
     required this.attemptId,
     required this.onCompanionLost,
+    this.assessmentType = 'exam',
+    this.reviewAudience = 'invigilator',
   });
 
   final String studentId;
   final String examId;
   final String attemptId;
   final ValueChanged<String> onCompanionLost;
+  final String assessmentType;
+  final String reviewAudience;
 
   @override
   State<CompanionCamPanel> createState() => _CompanionCamPanelState();
@@ -55,7 +59,10 @@ class _CompanionCamPanelState extends State<CompanionCamPanel> {
     _events = LiveProctoringEventService(baseUrl: _baseUrl);
     _frameSub = _service.frames.listen(_onFrame);
     _connectionSub = _service.connectionChanges.listen(_onConnectionChanged);
-    _heartbeat = Timer.periodic(const Duration(seconds: 10), (_) => _checkHeartbeat());
+    _heartbeat = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _checkHeartbeat(),
+    );
     unawaited(_start());
   }
 
@@ -82,7 +89,8 @@ class _CompanionCamPanelState extends State<CompanionCamPanel> {
         _session = session;
         _starting = false;
         _connected = false;
-        _status = 'Scan QR with phone on same Wi-Fi. Place phone behind or beside you.';
+        _status =
+            'Scan QR with phone on same Wi-Fi. Place phone behind or beside you.';
       });
       await _sendEvent(
         eventType: 'companion_cam_qr_generated',
@@ -130,7 +138,9 @@ class _CompanionCamPanelState extends State<CompanionCamPanel> {
     });
     unawaited(
       _sendEvent(
-        eventType: connected ? 'companion_cam_connected' : 'companion_cam_disconnected',
+        eventType: connected
+            ? 'companion_cam_connected'
+            : 'companion_cam_disconnected',
         severity: connected ? 'info' : 'warning',
         message: connected
             ? 'Companion camera connected over local Wi-Fi.'
@@ -141,10 +151,13 @@ class _CompanionCamPanelState extends State<CompanionCamPanel> {
 
   void _checkHeartbeat() {
     final last = _lastFrameAt;
-    if (_connected && last != null && DateTime.now().difference(last).inSeconds > 20) {
+    if (_connected &&
+        last != null &&
+        DateTime.now().difference(last).inSeconds > 20) {
       setState(() {
         _connected = false;
-        _status = 'Companion camera feed stale. Phone may be locked or disconnected.';
+        _status =
+            'Companion camera feed stale. Phone may be locked or disconnected.';
       });
       unawaited(
         _sendEvent(
@@ -157,7 +170,9 @@ class _CompanionCamPanelState extends State<CompanionCamPanel> {
           },
         ),
       );
-      widget.onCompanionLost('Companion camera feed stopped. Keep phone camera connected for this high-stakes exam.');
+      widget.onCompanionLost(
+        'Companion camera feed stopped. Keep phone camera connected for this high-stakes exam.',
+      );
     }
   }
 
@@ -177,6 +192,8 @@ class _CompanionCamPanelState extends State<CompanionCamPanel> {
         message: message,
         createdAt: DateTime.now(),
         metadata: metadata,
+        assessmentType: widget.assessmentType,
+        reviewAudience: widget.reviewAudience,
       ),
     );
   }
@@ -195,7 +212,9 @@ class _CompanionCamPanelState extends State<CompanionCamPanel> {
               children: [
                 Icon(
                   _connected ? Icons.link : Icons.qr_code_2,
-                  color: _connected ? const Color(0xFF16A34A) : const Color(0xFFF59E0B),
+                  color: _connected
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFF59E0B),
                 ),
                 const SizedBox(width: 8),
                 const Expanded(

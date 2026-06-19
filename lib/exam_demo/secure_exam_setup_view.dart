@@ -34,14 +34,25 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
   bool get _needsChecks => widget.assessment.remoteProctored;
 
-  bool get _hasReviewApproval => !_needsChecks || (_roomApproved && _manifestPath != null && _attemptId != null);
+  bool get _hasReviewApproval =>
+      !_needsChecks ||
+      (_roomApproved && _manifestPath != null && _attemptId != null);
 
-  bool get _canStart {
+  bool _canStartOnDevice(BuildContext context) {
+    final phoneSized = MediaQuery.sizeOf(context).shortestSide < 600;
+    return !phoneSized || !widget.assessment.graded;
+  }
+
+  bool _canStart(BuildContext context) {
     final faceOk = !widget.assessment.graded || _faceId.isComplete;
     final roomOk = !_needsChecks || _hasReviewApproval;
     final audioOk = !_needsChecks || _audioApproved;
     final systemOk = !_needsChecks || _systemApproved;
-    return faceOk && roomOk && audioOk && systemOk;
+    return faceOk &&
+        roomOk &&
+        audioOk &&
+        systemOk &&
+        _canStartOnDevice(context);
   }
 
   @override
@@ -52,7 +63,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
-          _Header(assessment: widget.assessment, questionCount: questions.length),
+          _Header(
+            assessment: widget.assessment,
+            questionCount: questions.length,
+          ),
           const SizedBox(height: 14),
           _Checklist(
             faceOk: !widget.assessment.graded || _faceId.isComplete,
@@ -73,13 +87,19 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                 FilledButton.icon(
                   onPressed: _openFaceId,
                   icon: const Icon(Icons.face_retouching_natural),
-                  label: Text(_faceId.isComplete ? 'Face ID active' : 'Set up Face ID'),
+                  label: Text(
+                    _faceId.isComplete ? 'Face ID active' : 'Set up Face ID',
+                  ),
                 ),
               if (_needsChecks)
                 FilledButton.icon(
                   onPressed: _faceId.isComplete ? _openRoomScan : null,
                   icon: const Icon(Icons.screen_rotation_alt_outlined),
-                  label: Text(_hasReviewApproval ? 'Room scan approved' : 'Run 360 room scan'),
+                  label: Text(
+                    _hasReviewApproval
+                        ? 'Room scan approved'
+                        : 'Run 360 room scan',
+                  ),
                 ),
               if (_needsChecks)
                 FilledButton.icon(
@@ -92,9 +112,13 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                   ),
                 ),
               FilledButton.icon(
-                onPressed: _canStart ? _startExam : null,
+                onPressed: _canStart(context) ? _startExam : null,
                 icon: const Icon(Icons.edit_document),
-                label: const Text('Start exam'),
+                label: Text(
+                  widget.assessment.isStrictExam
+                      ? 'Start exam'
+                      : 'Start assessment',
+                ),
               ),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
@@ -168,11 +192,16 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   Future<void> _startExam() async {
-    if (!_canStart) {
+    if (!_canStartOnDevice(context)) {
+      await _showPhoneBlockedMessage();
+      return;
+    }
+    if (!_canStart(context)) {
       await _showBlockedStartMessage();
       return;
     }
-    if (widget.assessment.remoteProctored && (_manifestPath == null || !_roomApproved || _attemptId == null)) {
+    if (widget.assessment.remoteProctored &&
+        (_manifestPath == null || !_roomApproved || _attemptId == null)) {
       await _showBlockedStartMessage();
       return;
     }
@@ -181,7 +210,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         builder: (_) => DemoExamAttemptView(
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
-          attemptId: _attemptId ?? 'attempt-${DateTime.now().millisecondsSinceEpoch}',
+          attemptId:
+              _attemptId ?? 'attempt-${DateTime.now().millisecondsSinceEpoch}',
           agentDecision: widget.assessment.remoteProctored
               ? 'security_review_ready'
               : widget.assessment.graded
@@ -201,6 +231,24 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         title: const Text('Exam cannot start yet'),
         content: const Text(
           'Complete all required checks and wait for security review approval before starting the exam.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showPhoneBlockedMessage() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Use a larger device'),
+        content: const Text(
+          'Exam and graded assessment attempts must be completed on a laptop, tablet, Windows desktop, or Mac. Phones are only used for companion camera monitoring.',
         ),
         actions: [
           FilledButton(
@@ -250,7 +298,11 @@ class _Header extends StatelessWidget {
               _DarkTag('${assessment.durationMinutes} minutes'),
               _DarkTag('$questionCount questions'),
               _DarkTag(assessment.graded ? 'Official graded' : 'Practice'),
-              _DarkTag(assessment.remoteProctored ? 'Full proctoring required' : 'Standard access'),
+              _DarkTag(
+                assessment.remoteProctored
+                    ? 'Full proctoring required'
+                    : 'Standard access',
+              ),
             ],
           ),
         ],
@@ -296,13 +348,18 @@ class _Checklist extends StatelessWidget {
         children: [
           Text(
             'Startup checklist',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
           ...rows,
           if (manifestPath != null) ...[
             const SizedBox(height: 8),
-            Text('Evidence record: $manifestPath', style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Evidence record: $manifestPath',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ],
       ),
@@ -353,7 +410,9 @@ class _Rules extends StatelessWidget {
         children: [
           Text(
             'Rules before you start',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(
@@ -380,7 +439,13 @@ class _DarkTag extends StatelessWidget {
         color: const Color(0xFF1F2937),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }

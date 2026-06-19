@@ -12,6 +12,8 @@ class LiveProctoringEvent {
     required this.message,
     required this.createdAt,
     this.metadata = const <String, Object?>{},
+    this.assessmentType = 'exam',
+    this.reviewAudience = 'invigilator',
   });
 
   final String studentId;
@@ -22,22 +24,26 @@ class LiveProctoringEvent {
   final String message;
   final DateTime createdAt;
   final Map<String, Object?> metadata;
+  final String assessmentType;
+  final String reviewAudience;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'student_id': studentId,
-        'exam_id': examId,
-        'attempt_id': attemptId,
-        'event_type': eventType,
-        'severity': severity,
-        'message': message,
-        'created_at': createdAt.toUtc().toIso8601String(),
-        if (metadata.isNotEmpty) 'metadata': metadata,
-      };
+    'student_id': studentId,
+    'exam_id': examId,
+    'attempt_id': attemptId,
+    'event_type': eventType,
+    'severity': severity,
+    'message': message,
+    'created_at': createdAt.toUtc().toIso8601String(),
+    'assessment_type': assessmentType,
+    'review_audience': reviewAudience,
+    if (metadata.isNotEmpty) 'metadata': metadata,
+  };
 }
 
 class LiveProctoringEventService {
   LiveProctoringEventService({http.Client? client, required this.baseUrl})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   final String baseUrl;
@@ -47,7 +53,9 @@ class LiveProctoringEventService {
     final attempts = <Uri>[
       Uri.parse('$baseUrl/api/proctoring/live-events'),
       Uri.parse('$baseUrl/api/proctoring/pre-exam-review'),
-      Uri.parse('$baseUrl/api/exam-attempts/${event.attemptId}/proctoring-alerts'),
+      Uri.parse(
+        '$baseUrl/api/exam-attempts/${event.attemptId}/proctoring-alerts',
+      ),
     ];
 
     for (final uri in attempts) {

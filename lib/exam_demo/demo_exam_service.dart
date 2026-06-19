@@ -34,6 +34,7 @@ class DemoExamService {
       durationMinutes: 35,
       graded: true,
       remoteProctored: true,
+      policy: AssessmentPolicy.strictExam,
       sections: <DemoExamSection>[
         DemoExamSection.objective,
         DemoExamSection.fillBlank,
@@ -48,6 +49,7 @@ class DemoExamService {
       durationMinutes: 15,
       graded: true,
       remoteProctored: false,
+      policy: AssessmentPolicy.gradedAssessment,
       sections: <DemoExamSection>[DemoExamSection.objective],
     ),
     DemoAssessment(
@@ -58,6 +60,7 @@ class DemoExamService {
       durationMinutes: 20,
       graded: false,
       remoteProctored: false,
+      policy: AssessmentPolicy.practice,
       sections: <DemoExamSection>[
         DemoExamSection.objective,
         DemoExamSection.fillBlank,

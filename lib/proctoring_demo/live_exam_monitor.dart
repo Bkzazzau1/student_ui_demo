@@ -22,12 +22,16 @@ class LiveExamMonitor extends StatefulWidget {
     required this.examId,
     required this.attemptId,
     required this.onCriticalEvent,
+    this.assessmentType = 'exam',
+    this.reviewAudience = 'invigilator',
   });
 
   final String studentId;
   final String examId;
   final String attemptId;
   final ValueChanged<String> onCriticalEvent;
+  final String assessmentType;
+  final String reviewAudience;
 
   @override
   State<LiveExamMonitor> createState() => _LiveExamMonitorState();
@@ -628,6 +632,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       message: message,
       createdAt: DateTime.now(),
       metadata: metadata,
+      assessmentType: widget.assessmentType,
+      reviewAudience: widget.reviewAudience,
     );
     final synced = await _events.send(event);
     if (!mounted) return;

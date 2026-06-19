@@ -20,6 +20,7 @@ class DemoAssessment {
     required this.graded,
     required this.remoteProctored,
     required this.sections,
+    this.policy = AssessmentPolicy.practice,
   });
 
   final String id;
@@ -30,6 +31,40 @@ class DemoAssessment {
   final bool graded;
   final bool remoteProctored;
   final List<DemoExamSection> sections;
+  final AssessmentPolicy policy;
+
+  bool get isStrictExam => policy == AssessmentPolicy.strictExam;
+
+  bool get sendsEventsToLecturer => policy == AssessmentPolicy.gradedAssessment;
+
+  String get reviewAudience =>
+      sendsEventsToLecturer ? 'lecturer' : 'invigilator';
+
+  String get assessmentType {
+    switch (policy) {
+      case AssessmentPolicy.strictExam:
+        return 'exam';
+      case AssessmentPolicy.gradedAssessment:
+        return 'graded_assessment';
+      case AssessmentPolicy.practice:
+        return 'practice';
+    }
+  }
+}
+
+enum AssessmentPolicy { strictExam, gradedAssessment, practice }
+
+extension AssessmentPolicyX on AssessmentPolicy {
+  String get label {
+    switch (this) {
+      case AssessmentPolicy.strictExam:
+        return 'Strict exam';
+      case AssessmentPolicy.gradedAssessment:
+        return 'Graded assessment';
+      case AssessmentPolicy.practice:
+        return 'Practice';
+    }
+  }
 }
 
 enum DemoExamSection { objective, fillBlank, theory }

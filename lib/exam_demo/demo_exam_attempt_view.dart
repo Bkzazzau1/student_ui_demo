@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../proctoring_demo/companion_cam_panel.dart';
 import '../proctoring_demo/live_exam_monitor.dart';
+import '../proctoring_demo/live_proctoring_event_service.dart';
 import '../proctoring_demo/live_status_panel.dart';
 import '../proctoring_demo/live_system_security_monitor.dart';
 import '../proctoring_demo/review_clip_sampler.dart';
@@ -32,6 +33,12 @@ class DemoExamAttemptView extends StatefulWidget {
 }
 
 class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
+  final LiveProctoringEventService _events = LiveProctoringEventService(
+    baseUrl: const String.fromEnvironment(
+      'KSLAS_API_BASE_URL',
+      defaultValue: 'http://127.0.0.1:8080',
+    ),
+  );
   late final DateTime _startedAt;
   late final List<DemoQuestion> _questions;
   late int _remainingSeconds;
@@ -60,6 +67,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   @override
   void dispose() {
     _timer?.cancel();
+    _events.dispose();
     super.dispose();
   }
 
@@ -259,6 +267,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
         onCriticalEvent: _handleCriticalMonitoringEvent,
+        assessmentType: widget.assessment.assessmentType,
+        reviewAudience: widget.assessment.reviewAudience,
       ),
       SizedBox(height: compact ? 10 : 12),
       LiveSystemSecurityMonitor(
@@ -266,6 +276,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
         onCriticalEvent: _handleCriticalMonitoringEvent,
+        assessmentType: widget.assessment.assessmentType,
+        reviewAudience: widget.assessment.reviewAudience,
       ),
       SizedBox(height: compact ? 10 : 12),
       ReviewClipSampler(
@@ -273,6 +285,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
         examDurationSeconds: widget.assessment.durationMinutes * 60,
+        assessmentType: widget.assessment.assessmentType,
+        reviewAudience: widget.assessment.reviewAudience,
       ),
       SizedBox(height: compact ? 10 : 12),
       CompanionCamPanel(
@@ -280,6 +294,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
         onCompanionLost: _handleCriticalMonitoringEvent,
+        assessmentType: widget.assessment.assessmentType,
+        reviewAudience: widget.assessment.reviewAudience,
       ),
       SizedBox(height: compact ? 10 : 12),
       const LiveStatusPanel(),
@@ -323,8 +339,41 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     }
 
     final result = _score();
+    await _sendSubmissionEvent(result, autoSubmitted: autoSubmitted);
     if (!mounted) return;
     Navigator.of(context).pop(result);
+  }
+
+  Future<void> _sendSubmissionEvent(
+    DemoExamResult result, {
+    required bool autoSubmitted,
+  }) {
+    return _events.send(
+      LiveProctoringEvent(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        eventType: autoSubmitted
+            ? 'assessment_auto_submitted'
+            : 'assessment_submitted',
+        severity: 'info',
+        message: widget.assessment.sendsEventsToLecturer
+            ? 'Graded assessment submitted for lecturer review.'
+            : 'Exam attempt submitted for invigilator review.',
+        createdAt: DateTime.now(),
+        assessmentType: widget.assessment.assessmentType,
+        reviewAudience: widget.assessment.reviewAudience,
+        metadata: <String, Object?>{
+          'answered_count': _answers.length,
+          'question_count': _questions.length,
+          'total_marks': result.totalMarks,
+          'scored_marks': result.scoredMarks,
+          'percent': result.percent,
+          'auto_submitted': autoSubmitted,
+          'recipient_role': widget.assessment.reviewAudience,
+        },
+      ),
+    );
   }
 
   DemoExamResult _score() {

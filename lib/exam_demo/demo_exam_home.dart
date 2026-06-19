@@ -27,7 +27,9 @@ class DemoExamHome extends StatelessWidget {
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const ProctoringDemoHome()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const ProctoringDemoHome(),
+                ),
               ),
               child: const Text('Security Centre'),
             ),
@@ -43,9 +45,9 @@ class DemoExamHome extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             'Available assessments',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 10),
           for (final assessment in assessments)
@@ -61,7 +63,10 @@ class DemoExamHome extends StatelessWidget {
     );
   }
 
-  Future<void> _openSetup(BuildContext context, DemoAssessment assessment) async {
+  Future<void> _openSetup(
+    BuildContext context,
+    DemoAssessment assessment,
+  ) async {
     final result = await Navigator.of(context).push<DemoExamResult>(
       MaterialPageRoute<DemoExamResult>(
         builder: (_) => SecureExamSetupView(assessment: assessment),
@@ -69,7 +74,9 @@ class DemoExamHome extends StatelessWidget {
     );
     if (result == null || !context.mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => DemoExamResultView(result: result)),
+      MaterialPageRoute<void>(
+        builder: (_) => DemoExamResultView(result: result),
+      ),
     );
   }
 }
@@ -90,7 +97,11 @@ class _Header extends StatelessWidget {
         children: [
           Text(
             'Secure assessment gateway',
-            style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           SizedBox(height: 8),
           Text(
@@ -130,7 +141,14 @@ class _AssessmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sections = assessment.sections.map((section) => section.label).join(', ');
+    final sections = assessment.sections
+        .map((section) => section.label)
+        .join(', ');
+    final reviewRoute = assessment.sendsEventsToLecturer
+        ? 'Events to lecturer'
+        : assessment.isStrictExam
+        ? 'Events to invigilator'
+        : 'No live review';
     return Card(
       elevation: 0,
       child: Padding(
@@ -143,13 +161,31 @@ class _AssessmentCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(assessment.title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                  Text(
+                    assessment.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('${assessment.course.code} • ${assessment.course.title}'),
+                  Text(
+                    '${assessment.course.code} • ${assessment.course.title}',
+                  ),
                   const SizedBox(height: 4),
                   Text('Lecturer: ${assessment.course.lecturer}'),
                   const SizedBox(height: 8),
-                  Text('${assessment.kind} • ${assessment.durationMinutes} min • $sections'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      Chip(label: Text(assessment.policy.label)),
+                      Chip(label: Text(reviewRoute)),
+                      Chip(label: Text('${assessment.durationMinutes} min')),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(sections),
                 ],
               ),
             ),

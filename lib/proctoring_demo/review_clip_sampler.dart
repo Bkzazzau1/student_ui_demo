@@ -13,12 +13,16 @@ class ReviewClipSampler extends StatefulWidget {
     required this.examId,
     required this.attemptId,
     required this.examDurationSeconds,
+    this.assessmentType = 'exam',
+    this.reviewAudience = 'invigilator',
   });
 
   final String studentId;
   final String examId;
   final String attemptId;
   final int examDurationSeconds;
+  final String assessmentType;
+  final String reviewAudience;
 
   @override
   State<ReviewClipSampler> createState() => _ReviewClipSamplerState();
@@ -112,7 +116,8 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
     for (var i = 0; i < _sampleCount; i++) {
       final startMin = (i * segment).round() + 5;
       final startMax = math.max(startMin + 1, ((i + 1) * segment).round());
-      final second = startMin + _random.nextInt(math.max(1, startMax - startMin));
+      final second =
+          startMin + _random.nextInt(math.max(1, startMax - startMin));
       _timers.add(
         Timer(Duration(seconds: second), () {
           unawaited(_captureSample(i + 1));
@@ -123,7 +128,8 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
 
   Future<void> _captureSample(int sampleNumber) async {
     final controller = _camera;
-    if (controller == null || !controller.value.isInitialized || _recording) return;
+    if (controller == null || !controller.value.isInitialized || _recording)
+      return;
     setState(() {
       _recording = true;
       _status = 'Capturing review clip $sampleNumber of $_sampleCount';
@@ -147,7 +153,10 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
         },
       );
       if (!mounted) return;
-      setState(() => _status = 'Review clips captured: ${_captured.length}/$_sampleCount');
+      setState(
+        () => _status =
+            'Review clips captured: ${_captured.length}/$_sampleCount',
+      );
     } catch (e) {
       try {
         if (controller.value.isRecordingVideo) {
@@ -186,6 +195,8 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
         message: message,
         createdAt: DateTime.now(),
         metadata: metadata,
+        assessmentType: widget.assessmentType,
+        reviewAudience: widget.reviewAudience,
       ),
     );
   }
