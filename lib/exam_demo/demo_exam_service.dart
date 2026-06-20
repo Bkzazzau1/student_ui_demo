@@ -28,16 +28,41 @@ class DemoExamService {
   static List<DemoAssessment> assessments([DateTime? date]) =>
       assessmentsForDate(date ?? DateTime.now());
 
-  static List<DemoAssessment> assessmentsForDate(DateTime date) =>
-      allAssessments()
-          .where((assessment) => assessment.isAvailableOn(date))
-          .toList();
+  static List<DemoAssessment> assessmentsForDate(DateTime date) {
+    final scheduled = allAssessments()
+        .where((assessment) => assessment.isAvailableOn(date))
+        .toList();
+    if (scheduled.isNotEmpty) return scheduled;
+    return <DemoAssessment>[_sampleExamForDate(date)];
+  }
+
+  static DemoAssessment _sampleExamForDate(DateTime date) {
+    return DemoAssessment(
+      id: 'sample-exam-${date.year}-${date.month}-${date.day}',
+      course: _csc305,
+      title: 'Sample exam for today',
+      kind: 'Examination',
+      durationMinutes: 20,
+      graded: true,
+      remoteProctored: true,
+      policy: AssessmentPolicy.strictExam,
+      availableDateIso: _dateIso(date),
+      sections: const <DemoExamSection>[
+        DemoExamSection.objective,
+        DemoExamSection.fillBlank,
+        DemoExamSection.theory,
+      ],
+    );
+  }
+
+  static String _dateIso(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   static List<DemoAssessment> allAssessments() => const <DemoAssessment>[
     DemoAssessment(
       id: 'exam-csc305-first-semester',
       course: _csc305,
-      title: 'First semester proctored examination',
+      title: 'First semester supervised examination',
       kind: 'Examination',
       durationMinutes: 35,
       graded: true,
@@ -85,44 +110,41 @@ class DemoExamService {
       const DemoQuestion(
         id: 'q1',
         section: DemoExamSection.objective,
-        prompt:
-            'Which review step combines evidence and recommends an examination action?',
+        prompt: 'What should you do before you start a test?',
         marks: 1,
         options: <String>[
-          'Risk review',
-          'Printer setup',
-          'Course upload',
-          'Result download',
+          'Read the instructions',
+          'Skip the instructions',
+          'Close the test',
+          'Guess all answers',
         ],
-        answer: 'Risk review',
+        answer: 'Read the instructions',
       ),
       const DemoQuestion(
         id: 'q2',
         section: DemoExamSection.objective,
-        prompt:
-            'What should happen before a serious examination decision is finalized?',
+        prompt: 'Who should you contact if you cannot start a scheduled test?',
         marks: 1,
         options: <String>[
-          'Human review of evidence',
-          'Automatic decision only',
-          'Deleting the session',
-          'Ignoring all logs',
+          'Your lecturer',
+          'Another student',
+          'A random website',
+          'Nobody',
         ],
-        answer: 'Human review of evidence',
+        answer: 'Your lecturer',
       ),
       const DemoQuestion(
         id: 'q3',
         section: DemoExamSection.objective,
-        prompt:
-            'Which item is normally unauthorized in a closed-book remote exam?',
+        prompt: 'What should you keep ready before a supervised exam?',
         marks: 1,
         options: <String>[
-          'Phone on desk',
           'Student ID',
-          'Webcam',
-          'Approved scratch paper',
+          'Loud music',
+          'Another person beside you',
+          'A second phone',
         ],
-        answer: 'Phone on desk',
+        answer: 'Student ID',
       ),
     ];
 
@@ -130,18 +152,16 @@ class DemoExamService {
       const DemoQuestion(
         id: 'fb1',
         section: DemoExamSection.fillBlank,
-        prompt:
-            'The secure exam app sends structured ____ logs to the backend.',
+        prompt: 'Weekly practice can be used to mark ____.',
         marks: 2,
-        answer: 'event',
+        answer: 'attendance',
       ),
       const DemoQuestion(
         id: 'fb2',
         section: DemoExamSection.fillBlank,
-        prompt:
-            'A final proctoring decision should be based on evidence and ____ review.',
+        prompt: 'Submit your answers before the ____ ends.',
         marks: 2,
-        answer: 'human',
+        answer: 'time',
       ),
     ];
 
@@ -150,16 +170,15 @@ class DemoExamService {
         id: 'th1',
         section: DemoExamSection.theory,
         prompt:
-            'Explain how identity check, room scan, screen monitoring, audio monitoring, risk review, and evidence review should work before allowing an examination to start.',
+            'Explain three things a student should do to prepare for an online test.',
         marks: 5,
         keywords: <String>[
-          'identity',
-          'room',
-          'screen',
-          'audio',
-          'risk',
-          'evidence',
-          'review',
+          'read',
+          'time',
+          'quiet',
+          'id',
+          'internet',
+          'submit',
         ],
       ),
     ];

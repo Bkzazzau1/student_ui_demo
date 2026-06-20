@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../face_demo/demo_face_id_service.dart';
 import '../face_demo/demo_face_id_view.dart';
 import '../proctoring_demo/proctoring_demo_home.dart';
+import '../proctoring_demo/security_review_service.dart';
 import 'demo_exam_attempt_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
@@ -22,6 +23,7 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
   bool _proctoringApproved = false;
   String? _manifestPath;
   String? _attemptId;
+  SecurityReviewResult? _startApproval;
 
   @override
   void initState() {
@@ -72,8 +74,8 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
                     icon: const Icon(Icons.security_outlined),
                     label: Text(
                       _proctoringApproved
-                          ? 'Proctoring approved'
-                          : 'Run security check',
+                          ? 'Exam check approved'
+                          : 'Run exam check',
                     ),
                   ),
                 FilledButton.icon(
@@ -96,7 +98,9 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
 
   bool get _canStart =>
       (!widget.assessment.graded || _faceId.isComplete) &&
-      (!widget.assessment.remoteProctored || _proctoringApproved);
+      (!widget.assessment.remoteProctored ||
+          (_proctoringApproved &&
+              _startApproval?.approvedToStart == true));
 
   Future<void> _openFaceId() async {
     await Navigator.of(context).push<bool>(
@@ -118,6 +122,7 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
       _proctoringApproved = false;
       _manifestPath = null;
       _attemptId = attemptId;
+      _startApproval = null;
     });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -125,10 +130,11 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
           compactExamGate: true,
           examId: widget.assessment.id,
           attemptId: attemptId,
-          onApproved: (manifestPath) {
+          onStartApproved: (manifestPath, result) {
             setState(() {
               _proctoringApproved = true;
               _manifestPath = manifestPath;
+              _startApproval = result;
             });
             Navigator.of(context).pop();
           },
@@ -145,8 +151,9 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
           proctoringManifestPath: _manifestPath,
           attemptId:
               _attemptId ?? 'attempt-${DateTime.now().millisecondsSinceEpoch}',
+          examStartToken: _startApproval?.examStartToken ?? '',
           agentDecision: widget.assessment.remoteProctored
-              ? 'agentic_proctoring_ready'
+              ? 'approved_to_start'
               : widget.assessment.graded
               ? 'face_id_verified'
               : 'not_required',
@@ -197,7 +204,7 @@ class _SetupHeader extends StatelessWidget {
               _DarkTag(assessment.graded ? 'Official graded' : 'Practice'),
               _DarkTag(
                 assessment.remoteProctored
-                    ? 'Face ID + proctoring required'
+                    ? 'Face ID + exam check required'
                     : 'Face ID optional',
               ),
             ],
@@ -245,13 +252,13 @@ class _ChecklistCard extends StatelessWidget {
           title: 'Pre-exam security check',
           detail: assessment.remoteProctored
               ? proctoringApproved
-                    ? 'Guided scan approved. Evidence manifest saved for review.'
-                    : 'Run the guided 360 scan and security review before starting.'
+                    ? 'Guided scan approved. Record saved.'
+                    : 'Run the guided 360 scan and exam check before starting.'
               : 'Not required for this assessment.',
         ),
         if (manifestPath != null)
           Text(
-            'Manifest: $manifestPath',
+            'Saved record: $manifestPath',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall,
@@ -275,7 +282,7 @@ class _RulesCard extends StatelessWidget {
         const Text('Do not refresh, close the window, or switch devices.'),
         if (remoteProctored)
           const Text(
-            'Face ID and proctoring approval are required before this exam starts.',
+            'Face ID and exam check approval are required before this exam starts.',
           ),
       ],
     );

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../face_demo/demo_face_id_service.dart';
 import '../face_demo/demo_face_id_view.dart';
-import '../proctoring_demo/audio_system_review_view.dart';
 import '../proctoring_demo/proctoring_demo_home.dart';
+import '../proctoring_demo/security_review_service.dart';
 import 'demo_exam_attempt_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
@@ -25,6 +25,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool _systemApproved = false;
   String? _manifestPath;
   String? _attemptId;
+  SecurityReviewResult? _startApproval;
 
   @override
   void initState() {
@@ -36,7 +37,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
   bool get _hasReviewApproval =>
       !_needsChecks ||
-      (_roomApproved && _manifestPath != null && _attemptId != null);
+      (_roomApproved &&
+          _manifestPath != null &&
+          _attemptId != null &&
+          _startApproval?.approvedToStart == true);
 
   bool _canStartOnDevice(BuildContext context) {
     final phoneSized = MediaQuery.sizeOf(context).shortestSide < 600;
@@ -73,7 +77,9 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
             roomOk: !_needsChecks || _hasReviewApproval,
             audioOk: !_needsChecks || _audioApproved,
             systemOk: !_needsChecks || _systemApproved,
+            backendOk: !_needsChecks || _startApproval?.approvedToStart == true,
             manifestPath: _manifestPath,
+            approval: _startApproval,
             needsChecks: _needsChecks,
           ),
           const SizedBox(height: 14),
@@ -97,18 +103,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                   icon: const Icon(Icons.screen_rotation_alt_outlined),
                   label: Text(
                     _hasReviewApproval
-                        ? 'Room scan approved'
-                        : 'Run 360 room scan',
-                  ),
-                ),
-              if (_needsChecks)
-                FilledButton.icon(
-                  onPressed: _hasReviewApproval ? _openAudioSystemReview : null,
-                  icon: const Icon(Icons.settings_voice_outlined),
-                  label: Text(
-                    _audioApproved && _systemApproved
-                        ? 'Audio and system approved'
-                        : 'Run audio and system review',
+                        ? 'Start approval received'
+                        : 'Request start approval',
                   ),
                 ),
               FilledButton.icon(
@@ -148,6 +144,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       _systemApproved = false;
       _manifestPath = null;
       _attemptId = attemptId;
+      _startApproval = null;
     });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -155,36 +152,27 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           compactExamGate: true,
           examId: widget.assessment.id,
           attemptId: attemptId,
-          onApproved: (manifestPath) {
+          onStartApproved: (manifestPath, result) {
             if (manifestPath == null || manifestPath.trim().isEmpty) {
               setState(() {
                 _roomApproved = false;
                 _manifestPath = null;
+                _startApproval = null;
               });
               return;
             }
             setState(() {
               _roomApproved = true;
+              _audioApproved = true;
+              _systemApproved = true;
               _manifestPath = manifestPath;
+              _startApproval = result;
             });
             Navigator.of(context).pop();
           },
         ),
       ),
     );
-  }
-
-  Future<void> _openAudioSystemReview() async {
-    final result = await Navigator.of(context).push<AudioSystemReviewResult>(
-      MaterialPageRoute<AudioSystemReviewResult>(
-        builder: (_) => const AudioSystemReviewView(),
-      ),
-    );
-    if (!mounted || result == null) return;
-    setState(() {
-      _audioApproved = result.audioReady;
-      _systemApproved = result.systemReady;
-    });
   }
 
   Future<void> _startExam() async {
@@ -197,7 +185,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       return;
     }
     if (widget.assessment.remoteProctored &&
-        (_manifestPath == null || !_roomApproved || _attemptId == null)) {
+        (_manifestPath == null ||
+            !_roomApproved ||
+            _attemptId == null ||
+            _startApproval?.approvedToStart != true)) {
       await _showBlockedStartMessage();
       return;
     }
@@ -208,8 +199,9 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           proctoringManifestPath: _manifestPath,
           attemptId:
               _attemptId ?? 'attempt-${DateTime.now().millisecondsSinceEpoch}',
+          examStartToken: _startApproval?.examStartToken ?? '',
           agentDecision: widget.assessment.remoteProctored
-              ? 'security_review_ready'
+              ? 'approved_to_start'
               : widget.assessment.graded
               ? 'face_id_verified'
               : 'attendance_only',
@@ -226,7 +218,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       builder: (context) => AlertDialog(
         title: const Text('Exam cannot start yet'),
         content: const Text(
-          'Complete all required checks and wait for security review approval before starting the exam.',
+          'Complete the full exam check and wait for approval before starting the exam.',
         ),
         actions: [
           FilledButton(
@@ -244,7 +236,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       builder: (context) => AlertDialog(
         title: const Text('Use a larger device'),
         content: const Text(
-          'Exam and graded assessment attempts must be completed on a laptop, tablet, Windows desktop, or Mac. Phones are only used for companion camera monitoring.',
+          'Exam and graded assessment attempts must be completed on a laptop, tablet, Windows desktop, or Mac. Phones are only used as an extra camera when needed.',
         ),
         actions: [
           FilledButton(
@@ -308,7 +300,7 @@ class _Header extends StatelessWidget {
               _DarkTag(assessment.graded ? 'Official graded' : 'Practice'),
               _DarkTag(
                 assessment.remoteProctored
-                    ? 'Full proctoring required'
+                    ? 'Full exam check required'
                     : 'Standard access',
               ),
             ],
@@ -325,24 +317,29 @@ class _Checklist extends StatelessWidget {
     required this.roomOk,
     required this.audioOk,
     required this.systemOk,
+    required this.backendOk,
     required this.needsChecks,
     required this.manifestPath,
+    required this.approval,
   });
 
   final bool faceOk;
   final bool roomOk;
   final bool audioOk;
   final bool systemOk;
+  final bool backendOk;
   final bool needsChecks;
   final String? manifestPath;
+  final SecurityReviewResult? approval;
 
   @override
   Widget build(BuildContext context) {
     final rows = <_CheckRow>[
       _CheckRow('Face ID', faceOk),
-      if (needsChecks) _CheckRow('360 room scan', roomOk),
-      if (needsChecks) _CheckRow('Audio review', audioOk),
-      if (needsChecks) _CheckRow('System review', systemOk),
+      if (needsChecks) _CheckRow('Photos and video', roomOk),
+      if (needsChecks) _CheckRow('Sound check', audioOk),
+      if (needsChecks) _CheckRow('Device check', systemOk),
+      if (needsChecks) _CheckRow('Backend start approval', backendOk),
     ];
     return Container(
       padding: const EdgeInsets.all(16),
@@ -365,13 +362,31 @@ class _Checklist extends StatelessWidget {
           if (manifestPath != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Evidence record: $manifestPath',
+              'Saved record: $manifestPath',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (approval != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _approvalText(approval!),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ],
       ),
     );
+  }
+
+  String _approvalText(SecurityReviewResult approval) {
+    final status = approval.status.isEmpty ? approval.decision : approval.status;
+    if (approval.approvedToStart) {
+      return 'Backend approved start. Token received.';
+    }
+    if (approval.requiresHumanReview) {
+      return 'Waiting for exam officer review.';
+    }
+    return 'Backend decision: $status';
   }
 }
 
@@ -425,7 +440,7 @@ class _Rules extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             remote
-                ? 'Complete identity, room, audio, system, and security review checks. Camera and audio readiness remain required until submission.'
+                ? 'Complete identity, room, video, sound, and device checks. Camera and sound must remain ready until you submit.'
                 : 'Keep your login secure and submit before the timer ends.',
           ),
         ],

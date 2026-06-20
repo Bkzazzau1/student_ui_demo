@@ -65,9 +65,9 @@ class DemoExamResultView extends StatelessWidget {
                   '${duration.inMinutes} min ${duration.inSeconds % 60} sec',
                 ),
                 ('Face ID status', _faceIdLabel(result.agentDecision)),
-                ('Proctoring status', _proctoringLabel(result.agentDecision)),
+                ('Exam check status', _proctoringLabel(result.agentDecision)),
                 (
-                  'Evidence manifest',
+                  'Saved record',
                   result.proctoringManifestPath ?? 'Not required',
                 ),
               ],
@@ -95,7 +95,8 @@ class DemoExamResultView extends StatelessWidget {
     if (result.assessment.attendanceOnly) {
       return 'Not required for attendance practice';
     }
-    if (decision == 'agentic_proctoring_ready' ||
+    if (decision == 'approved_to_start' ||
+        decision == 'agentic_proctoring_ready' ||
         decision == 'face_id_verified') {
       return 'Verified for exam attempt';
     }
@@ -104,11 +105,12 @@ class DemoExamResultView extends StatelessWidget {
 
   String _proctoringLabel(String decision) {
     if (result.assessment.attendanceOnly) {
-      return 'Attendance-only practice, no proctoring';
+      return 'Attendance-only practice, no exam check';
     }
-    return decision == 'agentic_proctoring_ready' ||
+    return decision == 'approved_to_start' ||
+            decision == 'agentic_proctoring_ready' ||
             decision == 'security_review_ready'
-        ? 'Pre-exam security review approved'
+        ? 'Exam checks completed'
         : 'Not required for this assessment';
   }
 

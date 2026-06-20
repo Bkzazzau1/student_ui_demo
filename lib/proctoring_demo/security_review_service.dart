@@ -67,6 +67,11 @@ class SecurityReviewResult {
     required this.actions,
     required this.source,
     required this.findings,
+    this.status = '',
+    this.approvalSource = '',
+    this.aiRecommendation = '',
+    this.requiresHumanReview = false,
+    this.examStartToken = '',
   });
 
   final String reviewId;
@@ -78,10 +83,25 @@ class SecurityReviewResult {
   final List<String> actions;
   final String source;
   final List<SecurityFinding> findings;
+  final String status;
+  final String approvalSource;
+  final String aiRecommendation;
+  final bool requiresHumanReview;
+  final String examStartToken;
 
-  bool get approved => decision == 'approved';
-  bool get needsRescan => decision == 'rescan_required';
-  bool get needsReview => decision == 'review_required';
+  bool get approved =>
+      status == 'approved_to_start' ||
+      (status.isEmpty && decision == 'approved');
+  bool get approvedToStart =>
+      status == 'approved_to_start' && examStartToken.trim().isNotEmpty;
+  bool get needsRescan =>
+      status == 'rescan_required' || decision == 'rescan_required';
+  bool get needsReview =>
+      status == 'manual_review_required' ||
+      status == 'review_required' ||
+      decision == 'review_required';
+  bool get blocked => status == 'blocked';
+  bool get systemError => status == 'system_error';
 
   factory SecurityReviewResult.fromJson(Map<String, dynamic> json) {
     return SecurityReviewResult(
@@ -99,6 +119,11 @@ class SecurityReviewResult {
             (item) => SecurityFinding.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
+      status: json['status']?.toString() ?? '',
+      approvalSource: json['approval_source']?.toString() ?? '',
+      aiRecommendation: json['ai_recommendation']?.toString() ?? '',
+      requiresHumanReview: json['requires_human_review'] == true,
+      examStartToken: json['exam_start_token']?.toString() ?? '',
     );
   }
 

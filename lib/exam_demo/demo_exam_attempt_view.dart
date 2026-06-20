@@ -19,6 +19,7 @@ class DemoExamAttemptView extends StatefulWidget {
     required this.proctoringManifestPath,
     required this.agentDecision,
     required this.attemptId,
+    this.examStartToken = '',
     this.studentId = 'KASU/STU/2026/001',
   });
 
@@ -26,6 +27,7 @@ class DemoExamAttemptView extends StatefulWidget {
   final String? proctoringManifestPath;
   final String agentDecision;
   final String attemptId;
+  final String examStartToken;
   final String studentId;
 
   @override
@@ -371,6 +373,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
           'percent': result.percent,
           'auto_submitted': autoSubmitted,
           'recipient_role': widget.assessment.reviewAudience,
+          'has_exam_start_token': widget.examStartToken.trim().isNotEmpty,
         },
       ),
     );
@@ -478,17 +481,17 @@ class _ExamStatusBar extends StatelessWidget {
           _Pill('$answered/$total answered'),
           _Pill(
             paused
-                ? 'Monitoring hold'
+                ? 'Paused for check'
                 : assessment.remoteProctored
-                ? 'Live monitoring active'
+                ? 'Exam check active'
                 : 'Standard access',
           ),
           if (assessment.remoteProctored)
-            _Pill(compact ? 'Monitoring active' : 'Sound monitoring active'),
+            _Pill(compact ? 'Check active' : 'Sound check active'),
           if (assessment.remoteProctored && !compact)
-            const _Pill('System device review active'),
+            const _Pill('Device check active'),
           if (assessment.remoteProctored && !compact)
-            const _Pill('Random review clips active'),
+            const _Pill('Short camera checks active'),
           _Pill(assessment.graded ? 'Graded' : 'Practice'),
         ],
       ),

@@ -9,11 +9,13 @@ import 'camera_scan_frame_source.dart';
 import 'demo_evidence_service.dart';
 import 'proctoring_demo_models.dart';
 import 'security_review_service.dart';
+import 'system_security_review_service.dart';
 
 class ProctoringDemoHome extends StatefulWidget {
   const ProctoringDemoHome({
     super.key,
     this.onApproved,
+    this.onStartApproved,
     this.compactExamGate = false,
     this.studentId = 'KASU/STU/2026/001',
     this.examId = 'exam-csc305-first-semester',
@@ -21,6 +23,8 @@ class ProctoringDemoHome extends StatefulWidget {
   });
 
   final void Function(String? manifestPath)? onApproved;
+  final void Function(String? manifestPath, SecurityReviewResult result)?
+  onStartApproved;
   final bool compactExamGate;
   final String studentId;
   final String examId;
@@ -46,6 +50,10 @@ class _FrameDecision {
 }
 
 class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
+  static const bool _allowLocalStartApproval = bool.fromEnvironment(
+    'KSLAS_ALLOW_LOCAL_START_APPROVAL',
+  );
+
   static const List<_ScanGuide> _guides = <_ScanGuide>[
     _ScanGuide('front view', 'Point the camera straight ahead.'),
     _ScanGuide('left side', 'Turn slowly to the left side of the room.'),
@@ -64,6 +72,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   final DemoCameraScanFrameSource _frameSource = DemoCameraScanFrameSource();
   final DemoEvidenceService _evidence = DemoEvidenceService();
   final AudioSecurityCheckService _audioCheck = AudioSecurityCheckService();
+  final SystemSecurityReviewService _systemReview =
+      SystemSecurityReviewService();
   final SecurityReviewService _securityReview = SecurityReviewService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -84,6 +94,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   String? _manifestPath;
   String? _verificationVideoPath;
   AudioSecurityCheckResult? _audioResult;
+  SystemSecurityReviewResult? _systemReviewResult;
   int _frameCount = 0;
   int _currentTargetIndex = 0;
   double _lightingScore = 0;
@@ -102,6 +113,11 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   bool get _cameraReady => _realCameraReady || _backupScanReady;
   bool get _scanning => _status == DemoScanStatus.scanning;
   bool get _scanComplete => _targets.every((target) => target.captured);
+  bool get _verificationComplete =>
+      _scanComplete &&
+      _verificationVideoPath != null &&
+      _audioResult != null &&
+      _systemReviewResult != null;
   _ScanGuide get _currentGuide =>
       _guides[math.min(_currentTargetIndex, _guides.length - 1)];
   String get _currentTarget => _currentGuide.name;
@@ -448,7 +464,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_reviewing || !_scanComplete) return;
     setState(() {
       _reviewing = true;
-      _message = 'Preparing verification video and room sound evidence...';
+      _message = 'Preparing pictures, short video, and room sound...';
     });
 
     try {
@@ -457,9 +473,13 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       setState(() {
         _verificationVideoPath = videoPath;
         _message = videoPath == null
-            ? 'Verification video unavailable. Learning room sound for 15 seconds...'
+            ? 'Short video is required. Please try the final exam check again.'
             : 'Verification video captured. Learning room sound for 15 seconds...';
       });
+
+      if (videoPath == null) {
+        throw StateError('short video was not captured');
+      }
 
       final audioResult = await _audioCheck.captureBaseline(
         duration: const Duration(seconds: 15),
@@ -467,16 +487,26 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       if (!mounted) return;
       setState(() {
         _audioResult = audioResult;
-        _message =
-            'Submitting pictures, verification video, and room sound together...';
+        _message = 'Checking this device before sending the final record...';
       });
 
-      final result = await _securityReview.submitPreExamReview(
+      final systemResult = await _systemReview.check();
+      if (!mounted) return;
+      setState(() {
+        _systemReviewResult = systemResult;
+        _message =
+            'Sending pictures, short video, room sound, and device check together...';
+      });
+
+      var result = await _securityReview.submitPreExamReview(
         manifest: _buildReviewManifest(),
         imagePaths: _targetImagePaths(),
         audioClipPath: audioResult.clipPath,
         verificationVideoPath: videoPath,
       );
+      if (_allowLocalStartApproval && result.needsReview && _verificationComplete) {
+        result = _localTestingPassResult();
+      }
       final manifest = await _saveManifest(result.decision);
       if (!mounted) return;
       setState(() {
@@ -494,26 +524,56 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       });
       await _showReviewDecisionDialog(result);
       if (!mounted) return;
-      if (result.approved && widget.onApproved != null) {
+      if (result.approvedToStart && widget.onStartApproved != null) {
+        widget.onStartApproved!(manifest, result);
+      } else if (result.approved && widget.onApproved != null) {
         widget.onApproved!(manifest);
       }
     } catch (_) {
       if (!mounted) return;
+      if (!_allowLocalStartApproval || !_verificationComplete) {
+        setState(() {
+          _reviewing = false;
+          _status = DemoScanStatus.pendingReview;
+          _message =
+              _verificationComplete
+              ? 'The backend could not approve the exam start. Please try again or contact support.'
+              : 'Complete the photos, short video, sound check, and device check before sending.';
+          _reviewEvents
+            ..clear()
+            ..add(
+              AgenticReviewEvent(
+                title: _verificationComplete
+                    ? 'Backend approval needed'
+                    : 'Check not complete',
+                detail: _verificationComplete
+                    ? 'The exam can only start after backend approval.'
+                    : 'The full exam check was not completed. Please run it again.',
+                severity: 'warning',
+              ),
+            );
+        });
+        return;
+      }
+      final result = _localTestingPassResult();
+      final manifest = await _saveManifest(result.decision);
+      if (!mounted) return;
       setState(() {
         _reviewing = false;
-        _status = DemoScanStatus.pendingReview;
-        _message =
-            'Invigilator review required. The review service is unavailable.';
+        _status = DemoScanStatus.passed;
+        _manifestPath = manifest;
+        _message = result.summary;
         _reviewEvents
           ..clear()
-          ..add(
-            const AgenticReviewEvent(
-              title: 'Review required',
-              detail: 'The evidence record could not be reviewed at this time.',
-              severity: 'warning',
-            ),
-          );
+          ..add(_studentReviewEvent(result));
       });
+      await _showReviewDecisionDialog(result);
+      if (!mounted) return;
+      if (result.approvedToStart && widget.onStartApproved != null) {
+        widget.onStartApproved!(manifest, result);
+      } else {
+        widget.onApproved?.call(manifest);
+      }
     }
   }
 
@@ -523,7 +583,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Backend response'),
+        title: const Text('Review result'),
         content: Text(message),
         actions: [
           FilledButton(
@@ -537,9 +597,34 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   AgenticReviewEvent _studentReviewEvent(SecurityReviewResult result) {
     return AgenticReviewEvent(
-      title: 'Backend response',
+      title: 'Review result',
       detail: _reviewMessage(result),
       severity: result.approved ? 'success' : 'warning',
+    );
+  }
+
+  SecurityReviewResult _localTestingPassResult() {
+    return const SecurityReviewResult(
+      reviewId: 'local-test-pass',
+      decision: 'approved',
+      status: 'approved_to_start',
+      riskLevel: 'low',
+      riskScore: 0,
+      summary: 'Exam check passed. You can continue.',
+      issues: <String>[],
+      actions: <String>[],
+      source: 'local_test',
+      findings: <SecurityFinding>[
+        SecurityFinding(
+          title: 'Check passed',
+          detail: 'All required views were captured.',
+          severity: 'success',
+        ),
+      ],
+      approvalSource: 'local_test',
+      aiRecommendation: 'low_risk',
+      requiresHumanReview: false,
+      examStartToken: 'local-test-start-token',
     );
   }
 
@@ -631,7 +716,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   Map<String, dynamic> _systemReviewPayload() {
+    final system = _systemReviewResult;
     return <String, dynamic>{
+      'completed': system != null,
+      'result': system?.toJson(),
       'camera_ready': _cameraReady,
       'real_camera_ready': _realCameraReady,
       'backup_scan_ready': _backupScanReady,
@@ -709,7 +797,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.compactExamGate ? 'Pre-exam proctoring' : 'Security Centre',
+          widget.compactExamGate ? 'Pre-exam check' : 'Exam Check',
         ),
       ),
       bottomNavigationBar: compact ? _buildMobileActionBar() : null,
@@ -808,7 +896,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                       ? _runSecurityReview
                       : null,
                   icon: const Icon(Icons.verified_user_outlined),
-                  label: const Text('Run security review'),
+                  label: const Text('Send final exam check'),
                 ),
                 TextButton.icon(
                   onPressed: _reset,
@@ -1001,7 +1089,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Review status', style: Theme.of(context).textTheme.titleLarge),
+          Text('Check status', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 10),
           if (_reviewEvents.isEmpty)
             const Text('Complete the room scan to prepare the review record.')
@@ -1090,7 +1178,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       );
     }
     return _MobileScanAction(
-      label: _reviewing ? 'Reviewing...' : 'Run security review',
+      label: _reviewing ? 'Checking...' : 'Send final exam check',
       icon: Icons.verified_user_outlined,
       loading: _reviewing,
       onPressed: _reviewing ? null : _runSecurityReview,

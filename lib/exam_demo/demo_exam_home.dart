@@ -32,7 +32,7 @@ class DemoExamHome extends StatelessWidget {
                   builder: (_) => const ProctoringDemoHome(),
                 ),
               ),
-              child: const Text('Security Centre'),
+              child: const Text('Exam Check'),
             ),
           ),
         ],
@@ -102,7 +102,7 @@ class _Header extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Secure assessment gateway',
+            'Student assessment page',
             style: TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -111,7 +111,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Showing courses scheduled for ${_formatDate(today)}. Ungraded weekly practice is attendance-only and does not use proctoring.',
+            'Showing courses scheduled for ${_formatDate(today)}. Weekly practice is only for attendance.',
             style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 16),
           ),
         ],
@@ -132,10 +132,10 @@ class _Steps extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        Chip(label: Text('Exam: strict proctoring')),
-        Chip(label: Text('Graded: lecturer review')),
+        Chip(label: Text('Exam: supervised')),
+        Chip(label: Text('Quiz: lecturer checks it')),
         Chip(label: Text('Practice: attendance only')),
-        Chip(label: Text('Listed by date')),
+        Chip(label: Text('Shown by date')),
       ],
     );
   }
@@ -181,8 +181,8 @@ class _AssessmentCard extends StatelessWidget {
     final reviewRoute = assessment.attendanceOnly
         ? 'Attendance only'
         : assessment.sendsEventsToLecturer
-        ? 'Events to lecturer'
-        : 'Events to invigilator';
+        ? 'Lecturer will see it'
+        : 'Exam officer will see it';
     return Card(
       elevation: 0,
       child: Padding(
