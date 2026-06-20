@@ -13,9 +13,15 @@ class AudioSecurityCheckResult {
     required this.inputLevelOk,
     required this.averageRms,
     required this.peakRms,
+    required this.noiseFloorRms,
+    required this.zeroCrossingRate,
+    required this.dynamicVariation,
     required this.voiceConfidence,
     required this.environmentLabel,
     required this.dominantNoiseClass,
+    required this.soundProfile,
+    required this.environmentDescription,
+    required this.recommendedAction,
     required this.humanVoiceDetected,
     required this.phoneRingDetected,
     required this.notificationDetected,
@@ -31,9 +37,15 @@ class AudioSecurityCheckResult {
   final bool inputLevelOk;
   final double averageRms;
   final double peakRms;
+  final double noiseFloorRms;
+  final double zeroCrossingRate;
+  final double dynamicVariation;
   final double voiceConfidence;
   final String environmentLabel;
   final String dominantNoiseClass;
+  final String soundProfile;
+  final String environmentDescription;
+  final String recommendedAction;
   final bool humanVoiceDetected;
   final bool phoneRingDetected;
   final bool notificationDetected;
@@ -49,9 +61,15 @@ class AudioSecurityCheckResult {
     'input_level_ok': inputLevelOk,
     'average_rms': averageRms,
     'peak_rms': peakRms,
+    'noise_floor_rms': noiseFloorRms,
+    'zero_crossing_rate': zeroCrossingRate,
+    'dynamic_variation': dynamicVariation,
     'voice_confidence': voiceConfidence,
     'environment_label': environmentLabel,
     'dominant_noise_class': dominantNoiseClass,
+    'sound_profile': soundProfile,
+    'environment_description': environmentDescription,
+    'recommended_action': recommendedAction,
     'human_voice_detected': humanVoiceDetected,
     'phone_ring_detected': phoneRingDetected,
     'notification_detected': notificationDetected,
@@ -83,9 +101,15 @@ class AudioSecurityCheckService {
         inputLevelOk: false,
         averageRms: 0,
         peakRms: 0,
+        noiseFloorRms: 0,
+        zeroCrossingRate: 0,
+        dynamicVariation: 0,
         voiceConfidence: 0,
         environmentLabel: 'microphone_unavailable',
         dominantNoiseClass: 'unclassified',
+        soundProfile: 'microphone_unavailable',
+        environmentDescription: 'Microphone permission is not available.',
+        recommendedAction: 'Allow microphone access and run the sound review again.',
         humanVoiceDetected: false,
         phoneRingDetected: false,
         notificationDetected: false,
@@ -97,6 +121,8 @@ class AudioSecurityCheckService {
     }
 
     final samples = <double>[];
+    final zcrSamples = <double>[];
+    final slopeSamples = <double>[];
     final nativeSpeechSignals = <bool>[];
     final nativeNoiseSignals = <double>[];
     var nativeSpeechStreak = 0;
@@ -110,8 +136,10 @@ class AudioSecurityCheckService {
         sampleRate: 44100,
         maxBufferSeconds: math.max(15, duration.inSeconds),
         onPcmChunk: (chunk) {
-          final rms = _rms(chunk);
-          if (rms >= 0) samples.add(rms);
+          final features = _chunkFeatures(chunk);
+          if (features.rms >= 0) samples.add(features.rms);
+          if (features.zeroCrossingRate >= 0) zcrSamples.add(features.zeroCrossingRate);
+          if (features.slopeEnergy >= 0) slopeSamples.add(features.slopeEnergy);
           if (nativeReady) {
             try {
               final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -146,9 +174,15 @@ class AudioSecurityCheckService {
         inputLevelOk: false,
         averageRms: 0,
         peakRms: 0,
+        noiseFloorRms: 0,
+        zeroCrossingRate: 0,
+        dynamicVariation: 0,
         voiceConfidence: 0,
         environmentLabel: 'microphone_check_failed',
         dominantNoiseClass: 'unclassified',
+        soundProfile: 'microphone_check_failed',
+        environmentDescription: 'The app could not complete the room sound learning process.',
+        recommendedAction: 'Check microphone access and run the sound review again.',
         humanVoiceDetected: false,
         phoneRingDetected: false,
         notificationDetected: false,
@@ -163,32 +197,85 @@ class AudioSecurityCheckService {
       );
     }
 
-    final average = samples.isEmpty
-        ? 0.0
-        : samples.fold<double>(0, (sum, value) => sum + value) / samples.length;
+    final average = _average(samples);
     final peak = samples.isEmpty ? 0.0 : samples.reduce(math.max);
+    final sortedRms = List<double>.from(samples)..sort();
+    final noiseFloor = sortedRms.isEmpty
+        ? 0.0
+        : sortedRms[(sortedRms.length * 0.20).floor().clamp(0, sortedRms.length - 1)];
+    final zcr = _average(zcrSamples);
+    final slope = _average(slopeSamples);
     final inputLevelOk = peak > 0.01;
+    final rmsVariation = _variation(samples);
     final voiceConfidence = nativeSpeechSignals.isEmpty
         ? _voiceConfidence(samples)
-        : _nativeVoiceConfidence(nativeSpeechSignals);
+        : math.max(_voiceConfidence(samples), _nativeVoiceConfidence(nativeSpeechSignals));
     final nativeNoisePeak = nativeNoiseSignals.isEmpty
         ? 0.0
         : nativeNoiseSignals.reduce(math.max);
     final effectivePeak = math.max(peak, nativeNoisePeak);
     final humanVoiceDetected = voiceConfidence >= 0.70;
-    final dominantNoiseClass = _dominantNoiseClass(
+    final phoneRingDetected = _phoneRingLikely(
+      peakRms: effectivePeak,
+      zcr: zcr,
+      variation: rmsVariation,
+      slope: slope,
+    );
+    final notificationDetected = _notificationLikely(
+      peakRms: effectivePeak,
+      zcr: zcr,
+      variation: rmsVariation,
+      slope: slope,
+    );
+    final tvOrRadioVoiceDetected = humanVoiceDetected && rmsVariation < 0.065 && average > 0.05;
+    final soundProfile = _soundProfile(
       averageRms: average,
       peakRms: effectivePeak,
+      noiseFloorRms: noiseFloor,
+      zcr: zcr,
+      slope: slope,
+      variation: rmsVariation,
       humanVoiceDetected: humanVoiceDetected,
+      phoneRingDetected: phoneRingDetected,
+      notificationDetected: notificationDetected,
       inputLevelOk: inputLevelOk,
     );
+    final dominantNoiseClass = _dominantNoiseClass(
+      soundProfile: soundProfile,
+      inputLevelOk: inputLevelOk,
+    );
+    final ambientAllowed = inputLevelOk &&
+        !humanVoiceDetected &&
+        !phoneRingDetected &&
+        !notificationDetected &&
+        !tvOrRadioVoiceDetected;
     final measuredSeconds = DateTime.now().difference(startedAt).inSeconds;
+    final description = _environmentDescription(
+      soundProfile: soundProfile,
+      averageRms: average,
+      peakRms: effectivePeak,
+      noiseFloorRms: noiseFloor,
+      zcr: zcr,
+      variation: rmsVariation,
+    );
+    final action = _recommendedAction(
+      inputLevelOk: inputLevelOk,
+      ambientAllowed: ambientAllowed,
+      humanVoiceDetected: humanVoiceDetected,
+      phoneRingDetected: phoneRingDetected,
+      notificationDetected: notificationDetected,
+      soundProfile: soundProfile,
+    );
+
     return AudioSecurityCheckResult(
       microphoneAvailable: true,
       permissionGranted: true,
       inputLevelOk: inputLevelOk,
       averageRms: average,
       peakRms: peak,
+      noiseFloorRms: noiseFloor,
+      zeroCrossingRate: zcr,
+      dynamicVariation: rmsVariation,
       voiceConfidence: voiceConfidence,
       environmentLabel: _environmentLabel(
         averageRms: average,
@@ -196,15 +283,18 @@ class AudioSecurityCheckService {
         voiceConfidence: voiceConfidence,
       ),
       dominantNoiseClass: dominantNoiseClass,
+      soundProfile: soundProfile,
+      environmentDescription: description,
+      recommendedAction: action,
       humanVoiceDetected: humanVoiceDetected,
-      phoneRingDetected: false,
-      notificationDetected: false,
-      tvOrRadioVoiceDetected: false,
-      ambientNoiseAllowed: inputLevelOk && !humanVoiceDetected,
+      phoneRingDetected: phoneRingDetected,
+      notificationDetected: notificationDetected,
+      tvOrRadioVoiceDetected: tvOrRadioVoiceDetected,
+      ambientNoiseAllowed: ambientAllowed,
       sampleDurationSeconds: measuredSeconds,
       clipPath: clipPath,
       message: inputLevelOk
-          ? 'Room sound learned for $measuredSeconds seconds.'
+          ? 'Room sound learned for $measuredSeconds seconds: $description'
           : 'Microphone input level is too low for the security check.',
     );
   }
@@ -222,18 +312,44 @@ class AudioSecurityCheckService {
     }();
   }
 
-  double _rms(Uint8List bytes) {
-    if (bytes.length < 2) return -1;
+  _AudioChunkFeatures _chunkFeatures(Uint8List bytes) {
+    if (bytes.length < 2) return const _AudioChunkFeatures();
     final data = ByteData.sublistView(bytes);
     var total = 0.0;
+    var peak = 0.0;
+    var zeroCrossings = 0;
     var count = 0;
+    var previous = 0.0;
+    var previousSet = false;
+    var slopeEnergy = 0.0;
     for (var i = 0; i + 1 < bytes.length; i += 2) {
       final sample = data.getInt16(i, Endian.little) / 32768.0;
+      final absSample = sample.abs();
+      peak = math.max(peak, absSample);
       total += sample * sample;
+      if (previousSet) {
+        if ((sample >= 0 && previous < 0) || (sample < 0 && previous >= 0)) {
+          zeroCrossings++;
+        }
+        final diff = sample - previous;
+        slopeEnergy += diff * diff;
+      }
+      previous = sample;
+      previousSet = true;
       count++;
     }
-    if (count == 0) return -1;
-    return math.sqrt(total / count).clamp(0.0, 1.0);
+    if (count == 0) return const _AudioChunkFeatures();
+    return _AudioChunkFeatures(
+      rms: math.sqrt(total / count).clamp(0.0, 1.0),
+      peak: peak.clamp(0.0, 1.0),
+      zeroCrossingRate: (zeroCrossings / count).clamp(0.0, 1.0),
+      slopeEnergy: math.sqrt(slopeEnergy / math.max(1, count - 1)).clamp(0.0, 1.0),
+    );
+  }
+
+  double _average(List<double> values) {
+    if (values.isEmpty) return 0;
+    return values.fold<double>(0, (sum, value) => sum + value) / values.length;
   }
 
   double _voiceConfidence(List<double> samples) {
@@ -259,6 +375,100 @@ class AudioSecurityCheckService {
     return total / (samples.length - 1);
   }
 
+  bool _phoneRingLikely({
+    required double peakRms,
+    required double zcr,
+    required double variation,
+    required double slope,
+  }) {
+    return peakRms >= 0.55 && zcr >= 0.18 && variation >= 0.060 && slope >= 0.045;
+  }
+
+  bool _notificationLikely({
+    required double peakRms,
+    required double zcr,
+    required double variation,
+    required double slope,
+  }) {
+    return peakRms >= 0.38 && zcr >= 0.24 && variation >= 0.045 && slope >= 0.055;
+  }
+
+  String _soundProfile({
+    required double averageRms,
+    required double peakRms,
+    required double noiseFloorRms,
+    required double zcr,
+    required double slope,
+    required double variation,
+    required bool humanVoiceDetected,
+    required bool phoneRingDetected,
+    required bool notificationDetected,
+    required bool inputLevelOk,
+  }) {
+    if (!inputLevelOk) return 'microphone_input_too_low';
+    if (humanVoiceDetected) return 'human_voice_or_conversation';
+    if (phoneRingDetected) return 'phone_ring_like_sound';
+    if (notificationDetected) return 'notification_or_sharp_beep';
+    if (averageRms < 0.025 && peakRms < 0.11) return 'quiet_room';
+    if (variation < 0.025 && zcr < 0.20 && noiseFloorRms > 0.018) {
+      return 'steady_fan_ac_generator_hum';
+    }
+    if (variation >= 0.025 && variation < 0.11 && peakRms < 0.60 && zcr < 0.28) {
+      return 'traffic_or_open_environment_noise';
+    }
+    if (peakRms >= 0.65 && variation >= 0.060) return 'sudden_loud_environment_noise';
+    if (averageRms >= 0.35) return 'loud_allowed_ambient_noise';
+    return 'mixed_ambient_noise';
+  }
+
+  String _environmentDescription({
+    required String soundProfile,
+    required double averageRms,
+    required double peakRms,
+    required double noiseFloorRms,
+    required double zcr,
+    required double variation,
+  }) {
+    final levels = 'avg ${(averageRms * 100).toStringAsFixed(1)}%, peak ${(peakRms * 100).toStringAsFixed(1)}%, floor ${(noiseFloorRms * 100).toStringAsFixed(1)}%';
+    switch (soundProfile) {
+      case 'microphone_input_too_low':
+        return 'Microphone input is too low or muted. $levels.';
+      case 'human_voice_or_conversation':
+        return 'Human voice or conversation pattern detected. $levels.';
+      case 'phone_ring_like_sound':
+        return 'Phone ring or ringtone-like sound detected. $levels.';
+      case 'notification_or_sharp_beep':
+        return 'Notification, beep, keyboard click, or sharp intermittent sound detected. $levels.';
+      case 'quiet_room':
+        return 'Quiet room learned with low background sound. $levels.';
+      case 'steady_fan_ac_generator_hum':
+        return 'Steady ambient hum learned, likely fan, AC, or generator. $levels.';
+      case 'traffic_or_open_environment_noise':
+        return 'Variable ambient noise learned, likely traffic, open window, or outdoor activity. $levels.';
+      case 'sudden_loud_environment_noise':
+        return 'Sudden loud environmental sound detected. $levels.';
+      case 'loud_allowed_ambient_noise':
+        return 'Loud but non-voice ambient noise learned. $levels.';
+      default:
+        return 'Mixed ambient room noise learned. $levels.';
+    }
+  }
+
+  String _recommendedAction({
+    required bool inputLevelOk,
+    required bool ambientAllowed,
+    required bool humanVoiceDetected,
+    required bool phoneRingDetected,
+    required bool notificationDetected,
+    required String soundProfile,
+  }) {
+    if (!inputLevelOk) return 'Unmute microphone or move closer to the device and run the sound review again.';
+    if (humanVoiceDetected) return 'Stop conversation and move to a quieter room before starting the exam.';
+    if (phoneRingDetected || notificationDetected) return 'Silence phones, notifications, TV, and radio, then run the sound review again.';
+    if (ambientAllowed) return 'Ambient room sound is acceptable. Keep the room stable until submission.';
+    return 'Repeat the sound review if this sound is not normal for the room.';
+  }
+
   String _environmentLabel({
     required double averageRms,
     required double peakRms,
@@ -272,15 +482,39 @@ class AudioSecurityCheckService {
   }
 
   String _dominantNoiseClass({
-    required double averageRms,
-    required double peakRms,
-    required bool humanVoiceDetected,
+    required String soundProfile,
     required bool inputLevelOk,
   }) {
     if (!inputLevelOk) return 'unclassified';
-    if (humanVoiceDetected) return 'human_voice';
-    if (peakRms > 0.75 || averageRms > 0.45) return 'allowed_ambient_noise';
-    if (averageRms > 0.20) return 'allowed_ambient_noise';
-    return 'quiet_room';
+    switch (soundProfile) {
+      case 'human_voice_or_conversation':
+        return 'human_voice';
+      case 'phone_ring_like_sound':
+        return 'phone_ring';
+      case 'notification_or_sharp_beep':
+        return 'notification';
+      case 'steady_fan_ac_generator_hum':
+        return 'fan_ac_generator';
+      case 'traffic_or_open_environment_noise':
+        return 'traffic_or_open_environment';
+      case 'quiet_room':
+        return 'quiet_room';
+      default:
+        return 'allowed_ambient_noise';
+    }
   }
+}
+
+class _AudioChunkFeatures {
+  const _AudioChunkFeatures({
+    this.rms = -1,
+    this.peak = -1,
+    this.zeroCrossingRate = -1,
+    this.slopeEnergy = -1,
+  });
+
+  final double rms;
+  final double peak;
+  final double zeroCrossingRate;
+  final double slopeEnergy;
 }
