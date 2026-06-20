@@ -235,7 +235,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   void _startSnapshotGazeFallback(CameraController controller) {
     _snapshotFallbackTimer?.cancel();
-    _snapshotFallbackTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    _snapshotFallbackTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (!mounted) return;
       if (_imageStreamAvailable || controller.value.isStreamingImages) return;
       if (!controller.value.isInitialized || controller.value.isTakingPicture) return;
@@ -258,18 +258,18 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             _gazeStatus = !result.ready
                 ? 'Snapshot gaze/head check learning normal position'
                 : result.headPoseShiftLikely
-                    ? 'Possible head/gaze movement detected ($_gazeRiskStreak/2)'
+                    ? 'Possible head/gaze movement detected ($_gazeRiskStreak/3)'
                     : 'Snapshot gaze/head check stable';
           });
         }
-        if (_gazeRiskStreak >= 2) {
+        if (_gazeRiskStreak >= 3) {
           _gazeRiskStreak = 0;
           unawaited(
             _raiseEvent(
               eventType: 'gaze_head_pose_deviation',
               severity: 'high',
               message:
-                  'Sustained head or gaze movement was detected by the snapshot check.',
+                  'Sustained head or gaze movement was detected for at least 3 seconds.',
               metadata: result.toJson(),
             ),
           );
