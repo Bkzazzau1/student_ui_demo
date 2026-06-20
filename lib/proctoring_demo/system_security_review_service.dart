@@ -10,10 +10,13 @@ class SystemSecurityReviewResult {
     required this.externalAudioDetected,
     required this.usbRiskDetected,
     required this.virtualizationDetected,
+    required this.virtualizationWarningDetected,
     required this.containerDetected,
     required this.virtualCameraDetected,
     required this.unknownDeviceState,
     required this.findings,
+    required this.hardFindings,
+    required this.warningFindings,
     required this.message,
   });
 
@@ -23,11 +26,16 @@ class SystemSecurityReviewResult {
   final bool externalAudioDetected;
   final bool usbRiskDetected;
   final bool virtualizationDetected;
+  final bool virtualizationWarningDetected;
   final bool containerDetected;
   final bool virtualCameraDetected;
   final bool unknownDeviceState;
   final List<String> findings;
+  final List<String> hardFindings;
+  final List<String> warningFindings;
   final String message;
+
+  bool get hasWarnings => warningFindings.isNotEmpty;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'ready': ready,
@@ -36,10 +44,13 @@ class SystemSecurityReviewResult {
     'external_audio_detected': externalAudioDetected,
     'usb_risk_detected': usbRiskDetected,
     'virtualization_detected': virtualizationDetected,
+    'virtualization_warning_detected': virtualizationWarningDetected,
     'container_detected': containerDetected,
     'virtual_camera_detected': virtualCameraDetected,
     'unknown_device_state': unknownDeviceState,
     'findings': findings,
+    'hard_findings': hardFindings,
+    'warning_findings': warningFindings,
     'message': message,
   };
 }
@@ -54,12 +65,17 @@ class SystemSecurityReviewService {
         externalAudioDetected: false,
         usbRiskDetected: false,
         virtualizationDetected: false,
+        virtualizationWarningDetected: false,
         containerDetected: false,
         virtualCameraDetected: false,
         unknownDeviceState: true,
         findings: <String>[
           'Unsupported platform. Use Windows, macOS, or Linux desktop app.',
         ],
+        hardFindings: <String>[
+          'Unsupported platform. Use Windows, macOS, or Linux desktop app.',
+        ],
+        warningFindings: <String>[],
         message:
             'Desktop system review is required before this exam can start.',
       );
@@ -77,10 +93,13 @@ class SystemSecurityReviewService {
         externalAudioDetected: false,
         usbRiskDetected: false,
         virtualizationDetected: false,
+        virtualizationWarningDetected: false,
         containerDetected: false,
         virtualCameraDetected: false,
         unknownDeviceState: true,
         findings: <String>['System devices could not be verified: $e'],
+        hardFindings: <String>['System devices could not be verified: $e'],
+        warningFindings: const <String>[],
         message:
             'System review could not verify connected devices. Contact the invigilator.',
       );
@@ -141,7 +160,7 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
   cat /sys/class/dmi/id/sys_vendor 2>/dev/null
   lsmod 2>/dev/null | grep -Ei "v4l2loopback|akvcam|virtual" || true
   v4l2-ctl --list-devices 2>/dev/null || true
-) | tr "\\n" " "
+) | tr "\n" " "
 ''',
     ]);
     return _analyseOutput(output, platformName: 'Linux');
@@ -171,7 +190,8 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
     required String platformName,
   }) {
     final text = _normalise(output);
-    final findings = <String>[];
+    final hardFindings = <String>[];
+    final warningFindings = <String>[];
 
     final bluetoothDetected = _containsAny(text, const <String>[
       'bluetooth',
@@ -217,19 +237,24 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
       'avermedia',
     ]);
 
+    final virtualizationWarningDetected = Platform.isWindows &&
+        _containsAny(text, const <String>[
+          'hypervisorpresent: true',
+          'hypervisorpresent=true',
+        ]);
+
     final virtualizationDetected = _containsAny(text, const <String>[
-      'hypervisorpresent: true',
-      'hypervisorpresent=true',
       'vmware',
       'virtualbox',
       'oracle vm',
       'qemu',
       'kvm',
       'xen',
-      'hyper-v',
       'parallels',
       'virtio',
-      'virtual machine',
+      'hyper-v virtual machine',
+      'microsoft corporation virtual machine',
+      'virtual machine platform device',
     ]);
 
     final containerDetected = _containsAny(text, const <String>[
@@ -288,43 +313,49 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
         !bluetoothDetected;
 
     if (bluetoothDetected) {
-      findings.add(
-        'Bluetooth or wireless device detected. Disconnect it before exam startup.',
+      hardFindings.add(
+        'Bluetooth or wireless device detected. Turn off Bluetooth and disconnect wireless audio before exam startup.',
       );
     }
     if (externalAudioDetected) {
-      findings.add(
-        'External audio device detected. Use only the built-in device microphone/speaker.',
+      hardFindings.add(
+        'External audio device detected. Use only the built-in microphone and speaker.',
       );
     }
     if (usbRiskDetected) {
-      findings.add(
-        'USB audio/camera/capture risk detected. Remove external exam-risk devices.',
+      hardFindings.add(
+        'USB audio, camera, or capture device risk detected. Remove external exam-risk devices.',
       );
     }
     if (virtualizationDetected) {
-      findings.add(
-        'Virtual machine or hypervisor environment detected. Use a physical desktop device.',
+      hardFindings.add(
+        'Real virtual machine environment detected. Use a physical desktop device for this exam.',
       );
     }
     if (containerDetected) {
-      findings.add(
-        'Container or sandbox environment detected. Close container runtime before this exam.',
+      hardFindings.add(
+        'Container, WSL, or sandbox environment detected. Close it before this exam.',
       );
     }
     if (virtualCameraDetected) {
-      findings.add(
+      hardFindings.add(
         'Virtual camera software detected. Disable virtual camera drivers and use a physical webcam.',
       );
     }
     if (unknownDeviceState) {
-      findings.add(
+      hardFindings.add(
         'Connected audio device state is unclear. Invigilator confirmation is required.',
       );
     }
-    if (findings.isEmpty) {
-      findings.add(
-        '$platformName device review passed. No Bluetooth, external audio, or USB risk device was detected.',
+    if (virtualizationWarningDetected && !virtualizationDetected) {
+      warningFindings.add(
+        'Windows hypervisor security feature detected. This can happen on normal Windows 11 devices using Hyper-V, WSL2, Docker Desktop, or Core Isolation. It is recorded for review but does not block by itself.',
+      );
+    }
+
+    if (hardFindings.isEmpty && warningFindings.isEmpty) {
+      hardFindings.add(
+        '$platformName device review passed. No Bluetooth, external audio, USB, virtual camera, VM, or sandbox risk was detected.',
       );
     }
 
@@ -337,6 +368,11 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
         !virtualCameraDetected &&
         !unknownDeviceState;
 
+    final findings = <String>[
+      ...hardFindings,
+      ...warningFindings,
+    ];
+
     return SystemSecurityReviewResult(
       ready: ready,
       platformSupported: true,
@@ -344,13 +380,18 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
       externalAudioDetected: externalAudioDetected,
       usbRiskDetected: usbRiskDetected,
       virtualizationDetected: virtualizationDetected,
+      virtualizationWarningDetected: virtualizationWarningDetected,
       containerDetected: containerDetected,
       virtualCameraDetected: virtualCameraDetected,
       unknownDeviceState: unknownDeviceState,
       findings: findings,
+      hardFindings: hardFindings,
+      warningFindings: warningFindings,
       message: ready
-          ? 'System review passed. Continue to the exam setup.'
-          : 'System review failed. Disconnect prohibited devices and check again.',
+          ? warningFindings.isEmpty
+              ? 'System review passed. Continue to the exam setup.'
+              : 'System review passed with review note. Continue to the exam setup.'
+          : 'System review failed. Resolve blocking issues and check again.',
     );
   }
 
