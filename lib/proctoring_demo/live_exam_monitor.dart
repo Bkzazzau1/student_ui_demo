@@ -169,10 +169,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _advancedStreamNoticeSent = true;
           unawaited(
             _raiseEvent(
-              eventType: 'advanced_camera_analysis_limited',
+              eventType: 'snapshot_camera_analysis_active',
               severity: 'info',
               message:
-                  'Camera preview is active, but advanced frame analysis is limited on this device.',
+                  'Camera preview is active. Snapshot camera checks are running on this device.',
               metadata: <String, Object?>{'error': e.toString()},
             ),
           );
@@ -200,11 +200,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _livenessStatus = 'Continuous local liveness anti-spoofing active';
           _visualStatus = 'Reflection, shadow, and object integrity scan active';
         } else {
-          _gazeStatus = 'Camera preview active; snapshot gaze/head check active';
-          _livenessStatus =
-              'Camera preview active; liveness analysis limited on this device';
-          _visualStatus =
-              'Camera preview active; reflection/object scan limited on this device';
+          _gazeStatus = '1-second snapshot gaze/head check active';
+          _livenessStatus = 'Presence check active';
+          _visualStatus = 'Short camera checks active';
         }
       });
       if (!streamReady) {
@@ -642,12 +640,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           if (!(_gazeStatus.contains('Snapshot') ||
               _gazeStatus.contains('head/gaze') ||
               _gazeStatus.contains('movement'))) {
-            _gazeStatus = 'Camera preview active; snapshot gaze/head check active';
+            _gazeStatus = '1-second snapshot gaze/head check active';
           }
-          _livenessStatus =
-              'Camera preview active; liveness analysis limited on this device';
-          _visualStatus =
-              'Camera preview active; reflection/object scan limited on this device';
+          _livenessStatus = 'Presence check active';
+          _visualStatus = 'Short camera checks active';
         }
       });
 

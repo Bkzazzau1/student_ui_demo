@@ -13,6 +13,9 @@ class SnapshotGazeFallbackResult {
     required this.shiftX,
     required this.shiftY,
     required this.shiftScore,
+    required this.asymmetry,
+    required this.baselineAsymmetry,
+    required this.asymmetryShift,
     required this.headPoseShiftLikely,
     required this.label,
   });
@@ -25,6 +28,9 @@ class SnapshotGazeFallbackResult {
   final double shiftX;
   final double shiftY;
   final double shiftScore;
+  final double asymmetry;
+  final double baselineAsymmetry;
+  final double asymmetryShift;
   final bool headPoseShiftLikely;
   final String label;
 
@@ -37,6 +43,9 @@ class SnapshotGazeFallbackResult {
         'shift_x': shiftX,
         'shift_y': shiftY,
         'shift_score': shiftScore,
+        'asymmetry': asymmetry,
+        'baseline_asymmetry': baselineAsymmetry,
+        'asymmetry_shift': asymmetryShift,
         'head_pose_shift_likely': headPoseShiftLikely,
         'label': label,
         'source': 'snapshot_fallback',
@@ -45,8 +54,8 @@ class SnapshotGazeFallbackResult {
 
 class SnapshotGazeFallbackService {
   static const int _baselineWindow = 3;
-  final List<_Point> _baselineSamples = <_Point>[];
-  _Point? _baseline;
+  final List<_HeadSignal> _baselineSamples = <_HeadSignal>[];
+  _HeadSignal? _baseline;
 
   SnapshotGazeFallbackResult? analyseJpeg(Uint8List bytes) {
     final decoded = img.decodeImage(bytes);
@@ -56,50 +65,64 @@ class SnapshotGazeFallbackService {
     final height = resized.height;
     if (width < 24 || height < 24) return null;
 
-    final center = _estimateHeadCenter(resized);
-    if (center == null) return null;
+    final signal = _estimateHeadSignal(resized);
+    if (signal == null) return null;
 
     if (_baseline == null) {
-      _baselineSamples.add(center);
+      _baselineSamples.add(signal);
       if (_baselineSamples.length >= _baselineWindow) {
-        _baseline = _Point(
+        _baseline = _HeadSignal(
           _baselineSamples.map((item) => item.x).reduce((a, b) => a + b) /
               _baselineSamples.length,
           _baselineSamples.map((item) => item.y).reduce((a, b) => a + b) /
+              _baselineSamples.length,
+          _baselineSamples
+                  .map((item) => item.asymmetry)
+                  .reduce((a, b) => a + b) /
               _baselineSamples.length,
         );
       }
       return SnapshotGazeFallbackResult(
         ready: false,
-        centerX: center.x,
-        centerY: center.y,
-        baselineX: _baseline?.x ?? center.x,
-        baselineY: _baseline?.y ?? center.y,
+        centerX: signal.x,
+        centerY: signal.y,
+        baselineX: _baseline?.x ?? signal.x,
+        baselineY: _baseline?.y ?? signal.y,
         shiftX: 0,
         shiftY: 0,
         shiftScore: 0,
+        asymmetry: signal.asymmetry,
+        baselineAsymmetry: _baseline?.asymmetry ?? signal.asymmetry,
+        asymmetryShift: 0,
         headPoseShiftLikely: false,
         label: 'learning_head_position',
       );
     }
 
     final baseline = _baseline!;
-    final shiftX = center.x - baseline.x;
-    final shiftY = center.y - baseline.y;
+    final shiftX = signal.x - baseline.x;
+    final shiftY = signal.y - baseline.y;
     final shiftScore = math.sqrt((shiftX * shiftX) + (shiftY * shiftY));
-    final headPoseShiftLikely = shiftX.abs() >= 0.16 ||
-        shiftY.abs() >= 0.13 ||
-        shiftScore >= 0.18;
+    final asymmetryShift = signal.asymmetry - baseline.asymmetry;
+    final profileTurnLikely =
+        asymmetryShift.abs() >= 0.16 || signal.asymmetry.abs() >= 0.34;
+    final headPoseShiftLikely = shiftX.abs() >= 0.12 ||
+        shiftY.abs() >= 0.12 ||
+        shiftScore >= 0.16 ||
+        profileTurnLikely;
 
     return SnapshotGazeFallbackResult(
       ready: true,
-      centerX: center.x,
-      centerY: center.y,
+      centerX: signal.x,
+      centerY: signal.y,
       baselineX: baseline.x,
       baselineY: baseline.y,
       shiftX: shiftX,
       shiftY: shiftY,
       shiftScore: shiftScore,
+      asymmetry: signal.asymmetry,
+      baselineAsymmetry: baseline.asymmetry,
+      asymmetryShift: asymmetryShift,
       headPoseShiftLikely: headPoseShiftLikely,
       label: headPoseShiftLikely
           ? 'head_or_gaze_shift_detected'
@@ -107,7 +130,7 @@ class SnapshotGazeFallbackService {
     );
   }
 
-  _Point? _estimateHeadCenter(img.Image image) {
+  _HeadSignal? _estimateHeadSignal(img.Image image) {
     final width = image.width;
     final height = image.height;
     final xStart = (width * 0.18).round();
@@ -118,6 +141,8 @@ class SnapshotGazeFallbackService {
     var weightedX = 0.0;
     var weightedY = 0.0;
     var totalWeight = 0.0;
+    var leftWeight = 0.0;
+    var rightWeight = 0.0;
 
     for (var y = yStart + 1; y < yEnd - 1; y += 2) {
       for (var x = xStart + 1; x < xEnd - 1; x += 2) {
@@ -143,13 +168,20 @@ class SnapshotGazeFallbackService {
         weightedX += (x / width) * finalWeight;
         weightedY += (y / height) * finalWeight;
         totalWeight += finalWeight;
+        if (x < width / 2) {
+          leftWeight += finalWeight;
+        } else {
+          rightWeight += finalWeight;
+        }
       }
     }
 
     if (totalWeight < 80) return null;
-    return _Point(
+    final asymmetry = ((rightWeight - leftWeight) / totalWeight).clamp(-1.0, 1.0);
+    return _HeadSignal(
       (weightedX / totalWeight).clamp(0.0, 1.0),
       (weightedY / totalWeight).clamp(0.0, 1.0),
+      asymmetry,
     );
   }
 
@@ -168,8 +200,9 @@ class SnapshotGazeFallbackService {
   }
 }
 
-class _Point {
-  const _Point(this.x, this.y);
+class _HeadSignal {
+  const _HeadSignal(this.x, this.y, this.asymmetry);
   final double x;
   final double y;
+  final double asymmetry;
 }
