@@ -64,7 +64,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   CameraController? _camera;
   Timer? _heartbeat;
   Timer? _snapshotFallbackTimer;
-  StreamSubscription<dynamic>? _placeholder;
 
   final Map<String, DateTime> _lastEventAt = <String, DateTime>{};
   final List<String> _eventsSent = <String>[];
@@ -72,9 +71,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _cameraStatus = 'Opening camera...';
   String _audioStatus = 'Starting sound monitor...';
   String _systemStatus = 'Checking system...';
-  String _gazeStatus = 'Starting gaze and head pose monitor...';
-  String _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-  String _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
+  String _gazeStatus = 'Starting 1-second gaze/head check...';
+  String _livenessStatus = 'Starting presence check...';
+  String _visualStatus = 'Starting object/person check...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
@@ -82,15 +81,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _livenessReady = false;
   bool _visualReady = false;
   bool _openingCamera = false;
-  bool _analysingGazeFrame = false;
+  bool _analysingFrame = false;
   bool _imageStreamAvailable = false;
-  bool _advancedStreamNoticeSent = false;
   bool _snapshotFallbackBusy = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
   int _spoofRiskStreak = 0;
   int _visualRiskStreak = 0;
+  int _multiplePeopleRiskStreak = 0;
   DateTime? _lastGazeFrameAt;
   DateTime? _lastLivenessFrameAt;
   DateTime? _lastVisualFrameAt;
@@ -107,7 +106,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   void dispose() {
     _heartbeat?.cancel();
     _snapshotFallbackTimer?.cancel();
-    _placeholder?.cancel();
     final camera = _camera;
     if (camera != null && camera.value.isStreamingImages) {
       unawaited(camera.stopImageStream());
@@ -123,9 +121,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     setState(() {
       _openingCamera = true;
       _cameraStatus = 'Opening camera...';
-      _gazeStatus = 'Starting gaze and head pose monitor...';
-      _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-      _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
+      _gazeStatus = 'Starting 1-second gaze/head check...';
+      _livenessStatus = 'Starting presence check...';
+      _visualStatus = 'Starting object/person check...';
     });
     try {
       final cameras = await availableCameras();
@@ -143,18 +141,18 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _livenessReady = false;
           _visualReady = false;
           _cameraStatus = 'Camera not found';
-          _gazeStatus = 'Gaze and head pose monitor unavailable';
-          _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
-          _visualStatus = 'Reflection and object integrity scan unavailable';
+          _gazeStatus = 'Gaze/head check unavailable';
+          _livenessStatus = 'Presence check unavailable';
+          _visualStatus = 'Object/person check unavailable';
         });
         return;
       }
-      final camera = cameras.firstWhere(
+      final selected = cameras.firstWhere(
         (item) => item.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
       final controller = CameraController(
-        camera,
+        selected,
         ResolutionPreset.low,
         enableAudio: false,
       );
@@ -163,20 +161,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       try {
         await controller.startImageStream(_handleCameraImage);
         streamReady = true;
-      } catch (e) {
+      } catch (_) {
         streamReady = false;
-        if (!_advancedStreamNoticeSent) {
-          _advancedStreamNoticeSent = true;
-          unawaited(
-            _raiseEvent(
-              eventType: 'snapshot_camera_analysis_active',
-              severity: 'info',
-              message:
-                  'Camera preview is active. Snapshot camera checks are running on this device.',
-              metadata: <String, Object?>{'error': e.toString()},
-            ),
-          );
-        }
       }
       if (!mounted) {
         if (controller.value.isStreamingImages) {
@@ -197,16 +183,16 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         if (streamReady) {
           _snapshotFallbackTimer?.cancel();
           _gazeStatus = 'Gaze vector and head pose monitoring active';
-          _livenessStatus = 'Continuous local liveness anti-spoofing active';
-          _visualStatus = 'Reflection, shadow, and object integrity scan active';
+          _livenessStatus = 'Continuous liveness anti-spoofing active';
+          _visualStatus = 'Object/reflection/person scan active';
         } else {
           _gazeStatus = '1-second snapshot gaze/head check active';
-          _livenessStatus = 'Presence check active';
-          _visualStatus = 'Short camera checks active';
+          _livenessStatus = 'Snapshot presence check active';
+          _visualStatus = 'Snapshot object/person check active';
         }
       });
       if (!streamReady) {
-        _startSnapshotGazeFallback(controller);
+        _startSnapshotCameraChecks(controller);
       }
     } catch (e) {
       await _raiseEvent(
@@ -224,14 +210,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _visualReady = false;
         _imageStreamAvailable = false;
         _cameraStatus = 'Camera monitoring unavailable';
-        _gazeStatus = 'Gaze and head pose monitor unavailable';
-        _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
-        _visualStatus = 'Reflection and object integrity scan unavailable';
+        _gazeStatus = 'Gaze/head check unavailable';
+        _livenessStatus = 'Presence check unavailable';
+        _visualStatus = 'Object/person check unavailable';
       });
     }
   }
 
-  void _startSnapshotGazeFallback(CameraController controller) {
+  void _startSnapshotCameraChecks(CameraController controller) {
     _snapshotFallbackTimer?.cancel();
     _snapshotFallbackTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (!mounted) return;
@@ -245,29 +231,57 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         final result = _snapshotGazeFallback.analyseJpeg(bytes);
         if (result == null) return;
         _lastGazeFrameAt = DateTime.now();
+        _lastVisualFrameAt = DateTime.now();
+        _lastLivenessFrameAt = DateTime.now();
+
         if (result.ready && result.headPoseShiftLikely) {
           _gazeRiskStreak++;
         } else {
           _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
         }
+
+        if (result.ready && result.multiplePeopleLikely) {
+          _multiplePeopleRiskStreak++;
+        } else {
+          _multiplePeopleRiskStreak = math.max(0, _multiplePeopleRiskStreak - 1);
+        }
+
         if (mounted) {
           setState(() {
             _gazeReady = true;
+            _visualReady = true;
+            _livenessReady = true;
             _gazeStatus = !result.ready
-                ? 'Snapshot gaze/head check learning normal position'
+                ? '1-second gaze/head check learning normal position'
                 : result.headPoseShiftLikely
-                    ? 'Possible head/gaze movement detected ($_gazeRiskStreak/3)'
-                    : 'Snapshot gaze/head check stable';
+                    ? 'Head/gaze movement detected ($_gazeRiskStreak/3)'
+                    : '1-second gaze/head check stable';
+            _visualStatus = result.multiplePeopleLikely
+                ? 'Possible second person detected ($_multiplePeopleRiskStreak/2)'
+                : 'Snapshot object/person check clear';
+            _livenessStatus = 'Snapshot presence check active';
           });
         }
+
+        if (_multiplePeopleRiskStreak >= 2) {
+          _multiplePeopleRiskStreak = 0;
+          unawaited(
+            _raiseEvent(
+              eventType: 'multiple_people_detected',
+              severity: 'high',
+              message: 'More than one person may be visible in the exam camera view.',
+              metadata: result.toJson(),
+            ),
+          );
+        }
+
         if (_gazeRiskStreak >= 3) {
           _gazeRiskStreak = 0;
           unawaited(
             _raiseEvent(
               eventType: 'gaze_head_pose_deviation',
               severity: 'high',
-              message:
-                  'Sustained head or gaze movement was detected for at least 3 seconds.',
+              message: 'Head or gaze movement was sustained for at least 3 seconds.',
               metadata: result.toJson(),
             ),
           );
@@ -275,7 +289,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       } catch (_) {
         if (mounted) {
           setState(() {
-            _gazeStatus = 'Camera preview active; snapshot gaze/head check waiting';
+            _gazeStatus = '1-second snapshot gaze/head check waiting';
+            _visualStatus = 'Snapshot object/person check waiting';
           });
         }
       } finally {
@@ -286,142 +301,95 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   void _handleCameraImage(CameraImage image) {
     _imageStreamAvailable = true;
-    if (_analysingGazeFrame) return;
+    if (_analysingFrame) return;
     if (!_visionBudget.shouldProcessFrame()) return;
     final started = DateTime.now();
-    _analysingGazeFrame = true;
+    _analysingFrame = true;
     unawaited(_analyseCameraImage(image, started));
   }
 
   Future<void> _analyseCameraImage(CameraImage image, DateTime started) async {
     try {
       final visual = _visualIntegrity.analyse(image);
-      if (visual != null) {
-        _handleVisualIntegrityResult(visual);
-      }
+      if (visual != null) _handleVisualIntegrityResult(visual);
 
       final optimized = await _optimizedVision.runFrame(
         image: image,
         tasks: const <String>['object_reflection_shadow_detector'],
       );
       if (optimized != null && optimized.available) {
-        _handleOptimizedVisionSmokeResult(optimized);
+        _handleOptimizedVisionResult(optimized);
       }
 
       final liveness = _continuousLiveness.analyse(image);
-      if (liveness != null) {
-        _handleLivenessResult(liveness);
-      }
+      if (liveness != null) _handleLivenessResult(liveness);
 
-      final result = await _gazeEstimator.analyse(image);
-      if (result == null) return;
+      final gaze = await _gazeEstimator.analyse(image);
+      if (gaze == null) return;
       _lastGazeFrameAt = DateTime.now();
-
-      if (result.lookingAway && result.confidence >= 0.55) {
+      if (gaze.lookingAway && gaze.confidence >= 0.55) {
         _gazeRiskStreak++;
       } else {
         _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
       }
-
       if (mounted) {
         setState(() {
           _gazeReady = true;
-          _gazeStatus = result.lookingAway
+          _gazeStatus = gaze.lookingAway
               ? 'Possible looking away detected ($_gazeRiskStreak/3)'
               : 'Focused forward • gaze/head pose stable';
         });
       }
-
       if (_gazeRiskStreak >= 3) {
         _gazeRiskStreak = 0;
         unawaited(
           _raiseEvent(
             eventType: 'gaze_head_pose_deviation',
             severity: 'high',
-            message:
-                'Sustained looking-away or head-pose deviation was detected during the exam.',
-            metadata: result.toJson(),
+            message: 'Sustained looking-away or head-pose deviation was detected during the exam.',
+            metadata: gaze.toJson(),
           ),
         );
       }
-    } catch (_) {
-      return;
     } finally {
       _visionBudget.recordWork(DateTime.now().difference(started));
-      _analysingGazeFrame = false;
+      _analysingFrame = false;
     }
   }
 
-  void _handleOptimizedVisionSmokeResult(OptimizedVisionRuntimeResult result) {
+  void _handleOptimizedVisionResult(OptimizedVisionRuntimeResult result) {
     _lastVisualFrameAt = DateTime.now();
     final objects = (result.outputs['objects'] as List? ?? const <Object?>[])
         .whereType<Map>()
         .map((item) => Map<String, Object?>.from(item))
         .toList();
-    final screenGlow = result.outputs['screen_glow'] == true;
-    final mirrorReflection = result.outputs['mirror_reflection'] == true;
-    final offscreenInteraction = result.outputs['offscreen_interaction'] == true;
-    final maxConfidence = objects.fold<double>(
-      0,
-      (best, object) => math.max(
-        best,
-        double.tryParse(object['confidence']?.toString() ?? '') ?? 0,
-      ),
-    );
-    final visualRiskScore =
-        (maxConfidence +
-                (screenGlow ? 0.18 : 0.0) +
-                (mirrorReflection ? 0.18 : 0.0) +
-                (offscreenInteraction ? 0.18 : 0.0))
-            .clamp(0.0, 1.0);
-    final detectedRisk = objects.isNotEmpty &&
-        (screenGlow ||
-            mirrorReflection ||
-            offscreenInteraction ||
-            maxConfidence >= 0.50);
-
-    if (detectedRisk && visualRiskScore >= 0.58) {
-      _visualRiskStreak++;
+    final personObjects = objects.where((object) {
+      final label = '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'.toLowerCase();
+      return label.contains('person') || label.contains('human') || label.contains('face');
+    }).toList();
+    final multiplePeople = personObjects.length >= 2 ||
+        int.tryParse('${result.outputs['person_count'] ?? ''}') != null &&
+            int.parse('${result.outputs['person_count']}') >= 2;
+    if (multiplePeople) {
+      _multiplePeopleRiskStreak++;
     } else {
-      _visualRiskStreak = math.max(0, _visualRiskStreak - 1);
+      _multiplePeopleRiskStreak = math.max(0, _multiplePeopleRiskStreak - 1);
     }
-
     if (mounted) {
       setState(() {
         _visualReady = true;
-        _visualStatus = detectedRisk
-            ? '${objects.length} optimized vision object signal(s) ($_visualRiskStreak/3)'
-            : '${result.backend} optimized vision active (${result.inferenceMs.toStringAsFixed(1)} ms)';
+        _visualStatus = multiplePeople
+            ? 'Possible second person detected ($_multiplePeopleRiskStreak/2)'
+            : '${result.backend} object/person scan active (${result.inferenceMs.toStringAsFixed(1)} ms)';
       });
     }
-
-    if (_visualRiskStreak >= 3) {
-      _visualRiskStreak = 0;
+    if (_multiplePeopleRiskStreak >= 2) {
+      _multiplePeopleRiskStreak = 0;
       unawaited(
         _raiseEvent(
-          eventType: 'object_reflection_shadow_risk',
+          eventType: 'multiple_people_detected',
           severity: 'high',
-          message:
-              'Optimized vision detected a sustained object, reflection, screen-glow, or off-screen interaction risk.',
-          metadata: result.toJson(),
-        ),
-      );
-    } else if (detectedRisk && visualRiskScore >= 0.40) {
-      unawaited(
-        _raiseEvent(
-          eventType: 'object_reflection_shadow_warning',
-          severity: 'warning',
-          message:
-              'Optimized vision detected a possible object, reflection, screen-glow, or off-screen interaction signal.',
-          metadata: result.toJson(),
-        ),
-      );
-    } else {
-      unawaited(
-        _raiseEvent(
-          eventType: 'optimized_vision_runtime_smoke',
-          severity: 'info',
-          message: 'Optimized vision runtime inference completed.',
+          message: 'More than one person may be visible in the exam camera view.',
           metadata: result.toJson(),
         ),
       );
@@ -438,34 +406,21 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     } else {
       _visualRiskStreak = math.max(0, _visualRiskStreak - 1);
     }
-
-    if (mounted) {
+    if (mounted && _multiplePeopleRiskStreak == 0) {
       setState(() {
         _visualReady = true;
         _visualStatus = result.visualRiskScore >= 0.58
-            ? 'Possible reflection/shadow/object risk ($_visualRiskStreak/3)'
-            : 'Reflection, shadow, and object integrity normal';
+            ? 'Possible object/reflection risk ($_visualRiskStreak/3)'
+            : 'Object/reflection check clear';
       });
     }
-
     if (_visualRiskStreak >= 3) {
       _visualRiskStreak = 0;
       unawaited(
         _raiseEvent(
           eventType: 'object_reflection_shadow_risk',
           severity: 'high',
-          message:
-              'Suspicious reflection, screen glow, shadow shift, or off-screen interaction pattern was detected.',
-          metadata: result.toJson(),
-        ),
-      );
-    } else if (result.visualRiskScore >= 0.40) {
-      unawaited(
-        _raiseEvent(
-          eventType: 'object_reflection_shadow_warning',
-          severity: 'warning',
-          message:
-              'Weak reflection, screen-glow, shadow, or lower-frame movement signal detected.',
+          message: 'Suspicious reflection, screen glow, shadow shift, or off-screen interaction pattern was detected.',
           metadata: result.toJson(),
         ),
       );
@@ -479,34 +434,21 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     } else {
       _spoofRiskStreak = math.max(0, _spoofRiskStreak - 1);
     }
-
     if (mounted) {
       setState(() {
         _livenessReady = true;
         _livenessStatus = result.replayOrFreezeLikely
-            ? 'Possible spoof/replay liveness risk ($_spoofRiskStreak/3)'
-            : 'Continuous liveness present • anti-spoofing active';
+            ? 'Possible spoof/replay risk ($_spoofRiskStreak/3)'
+            : 'Presence check active';
       });
     }
-
     if (_spoofRiskStreak >= 3) {
       _spoofRiskStreak = 0;
       unawaited(
         _raiseEvent(
           eventType: 'continuous_liveness_spoof_risk',
           severity: 'high',
-          message:
-              'Continuous liveness anti-spoofing detected possible photo, screen, replay, or frozen-frame behaviour.',
-          metadata: result.toJson(),
-        ),
-      );
-    } else if (result.repeatedFrame || result.flatTexture) {
-      unawaited(
-        _raiseEvent(
-          eventType: 'continuous_liveness_continuity_loss',
-          severity: 'warning',
-          message:
-              'Continuous liveness signal weakened; possible frozen frame, flat image, or replay source.',
+          message: 'Continuous liveness check detected possible photo, screen, replay, or frozen-frame behaviour.',
           metadata: result.toJson(),
         ),
       );
@@ -529,7 +471,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         });
         return;
       }
-
       await _microphone.start(
         sampleRate: 44100,
         maxBufferSeconds: 20,
@@ -538,7 +479,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       if (!mounted) return;
       setState(() {
         _audioReady = true;
-        _audioStatus = 'Audio fingerprinting and voice isolation active';
+        _audioStatus = 'Sound check active';
       });
     } catch (e) {
       await _raiseEvent(
@@ -558,23 +499,20 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   void _handleAudioChunk(Uint8List chunk) {
     final result = _audioIsolation.analysePcm16(chunk);
     if (result == null) return;
-
     if (mounted) {
       setState(() {
         _audioStatus = result.humanVoiceLikely
             ? 'Voice noticed (${_voiceRiskStreak + 1}/3)'
             : result.allowedAmbientLikely
-                ? 'Allowed ambient audio fingerprint: ${result.label}'
-                : 'Unclear environment sound fingerprinted';
+                ? 'Allowed ambient sound: ${result.label}'
+                : 'Unclear environment sound noticed';
       });
     }
-
     if (result.humanVoiceLikely) {
       _voiceRiskStreak++;
     } else {
       _voiceRiskStreak = math.max(0, _voiceRiskStreak - 1);
     }
-
     if (_voiceRiskStreak >= 3) {
       _voiceRiskStreak = 0;
       unawaited(
@@ -602,51 +540,18 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _heartbeat = Timer.periodic(const Duration(seconds: 5), (_) async {
       if (!mounted) return;
       final cameraStillReady = _camera?.value.isInitialized ?? false;
-      final streamStillActive = _camera?.value.isStreamingImages ?? false;
-      final platformOk =
-          Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-      final gazeFresh = _lastGazeFrameAt != null &&
-          DateTime.now().difference(_lastGazeFrameAt!).inSeconds <= 12;
-      final livenessFresh = _lastLivenessFrameAt != null &&
-          DateTime.now().difference(_lastLivenessFrameAt!).inSeconds <= 12;
-      final visualFresh = _lastVisualFrameAt != null &&
-          DateTime.now().difference(_lastVisualFrameAt!).inSeconds <= 12;
-      final advancedStreamAvailable = _imageStreamAvailable && streamStillActive;
-
+      final platformOk = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
       setState(() {
         _secondsLive += 5;
         _cameraReady = cameraStillReady;
         _systemReady = platformOk;
-        _systemStatus = platformOk
-            ? 'System monitoring active'
-            : 'Unsupported system environment';
-        if (cameraStillReady && advancedStreamAvailable) {
-          _gazeReady = gazeFresh;
-          _livenessReady = livenessFresh;
-          _visualReady = visualFresh;
-          if (!_gazeReady) {
-            _gazeStatus = 'Gaze/head pose analysis waiting for frames';
-          }
-          if (!_livenessReady) {
-            _livenessStatus = 'Liveness analysis waiting for frames';
-          }
-          if (!_visualReady) {
-            _visualStatus = 'Reflection/object scan waiting for frames';
-          }
-        } else if (cameraStillReady) {
+        _systemStatus = platformOk ? 'System monitoring active' : 'Unsupported system environment';
+        if (cameraStillReady) {
           _gazeReady = true;
           _livenessReady = true;
           _visualReady = true;
-          if (!(_gazeStatus.contains('Snapshot') ||
-              _gazeStatus.contains('head/gaze') ||
-              _gazeStatus.contains('movement'))) {
-            _gazeStatus = '1-second snapshot gaze/head check active';
-          }
-          _livenessStatus = 'Presence check active';
-          _visualStatus = 'Short camera checks active';
         }
       });
-
       if (!cameraStillReady) {
         await _raiseEvent(
           eventType: 'camera_unavailable',
@@ -670,28 +575,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'system_monitoring_unavailable',
           severity: 'critical',
           message: 'System monitoring is not available on this device.',
-        );
-      }
-      if (cameraStillReady && advancedStreamAvailable && !gazeFresh) {
-        await _raiseEvent(
-          eventType: 'gaze_head_pose_monitor_unavailable',
-          severity: 'info',
-          message: 'Gaze and head pose analysis is waiting for camera frames.',
-        );
-      }
-      if (cameraStillReady && advancedStreamAvailable && !livenessFresh) {
-        await _raiseEvent(
-          eventType: 'continuous_liveness_monitor_unavailable',
-          severity: 'info',
-          message: 'Continuous liveness analysis is waiting for camera frames.',
-        );
-      }
-      if (cameraStillReady && advancedStreamAvailable && !visualFresh) {
-        await _raiseEvent(
-          eventType: 'object_reflection_shadow_monitor_unavailable',
-          severity: 'info',
-          message:
-              'Reflection, shadow, and object analysis is waiting for camera frames.',
         );
       }
     });
@@ -719,17 +602,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     final synced = await _events.send(event);
     if (!mounted) return;
     setState(() {
-      _eventsSent.insert(
-        0,
-        synced ? '$eventType sent' : '$eventType queued locally',
-      );
+      _eventsSent.insert(0, synced ? '$eventType sent' : '$eventType queued locally');
       if (_eventsSent.length > 5) _eventsSent.removeLast();
     });
     if (severity == 'critical' || severity == 'high') {
       widget.onCriticalEvent(
-        synced
-            ? message
-            : '$message Monitoring event could not be confirmed by the backend.',
+        synced ? message : '$message Monitoring event could not be confirmed by the backend.',
       );
     }
   }
@@ -737,9 +615,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _shouldEmit(String eventType) {
     final now = DateTime.now();
     final last = _lastEventAt[eventType];
-    if (last != null && now.difference(last).inSeconds < 15) {
-      return false;
-    }
+    if (last != null && now.difference(last).inSeconds < 15) return false;
     _lastEventAt[eventType] = now;
     return true;
   }
@@ -811,13 +687,7 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final limited = label.contains('limited on this device') ||
-        label.contains('waiting for frames');
-    final color = ready
-        ? const Color(0xFF16A34A)
-        : limited
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFFDC2626);
+    final color = ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
     return Row(
       children: [
         Icon(icon, color: color),
