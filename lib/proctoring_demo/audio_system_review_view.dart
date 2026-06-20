@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:record/record.dart';
 
+import 'audio_security_check_service.dart';
 import 'system_security_review_service.dart';
 
 class AudioSystemReviewResult {
   const AudioSystemReviewResult({
     required this.audioReady,
     required this.systemReady,
+    this.audioReview,
     this.systemReview,
   });
 
   final bool audioReady;
   final bool systemReady;
+  final AudioSecurityCheckResult? audioReview;
   final SystemSecurityReviewResult? systemReview;
 
   bool get ready => audioReady && systemReady;
@@ -25,19 +27,20 @@ class AudioSystemReviewView extends StatefulWidget {
 }
 
 class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
-  final AudioRecorder _recorder = AudioRecorder();
+  final AudioSecurityCheckService _audioReview = AudioSecurityCheckService();
   final SystemSecurityReviewService _systemReview = SystemSecurityReviewService();
   bool _checkingAudio = false;
   bool _checkingSystem = false;
   bool _audioReady = false;
   bool _systemReady = false;
-  String _audioMessage = 'Microphone review has not started.';
+  String _audioMessage = 'Room sound learning has not started.';
   String _systemMessage = 'System review has not started.';
+  AudioSecurityCheckResult? _audioReviewResult;
   SystemSecurityReviewResult? _systemReviewResult;
 
   @override
   void dispose() {
-    _recorder.dispose();
+    _audioReview.dispose();
     super.dispose();
   }
 
@@ -45,28 +48,29 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
     setState(() {
       _checkingAudio = true;
       _audioReady = false;
-      _audioMessage = 'Checking microphone permission...';
+      _audioReviewResult = null;
+      _audioMessage = 'Learning room sound for 15 seconds. Keep quiet and avoid phone notifications.';
     });
     try {
-      final hasPermission = await _recorder.hasPermission();
-      if (!hasPermission) {
-        setState(() {
-          _checkingAudio = false;
-          _audioReady = false;
-          _audioMessage = 'Microphone permission is required before the exam can start.';
-        });
-        return;
-      }
+      final result = await _audioReview.captureBaseline(
+        duration: const Duration(seconds: 15),
+      );
+      if (!mounted) return;
       setState(() {
         _checkingAudio = false;
-        _audioReady = true;
-        _audioMessage = 'Microphone permission confirmed. External audio devices are checked under strict device review.';
+        _audioReviewResult = result;
+        _audioReady = result.microphoneAvailable &&
+            result.permissionGranted &&
+            result.inputLevelOk &&
+            result.ambientNoiseAllowed;
+        _audioMessage = result.message ?? result.environmentDescription;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _checkingAudio = false;
         _audioReady = false;
-        _audioMessage = 'Microphone review failed: $e';
+        _audioMessage = 'Room sound learning failed: $e';
       });
     }
   }
@@ -92,6 +96,7 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
       AudioSystemReviewResult(
         audioReady: _audioReady,
         systemReady: _systemReady,
+        audioReview: _audioReviewResult,
         systemReview: _systemReviewResult,
       ),
     );
@@ -100,6 +105,8 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
   @override
   Widget build(BuildContext context) {
     final ready = _audioReady && _systemReady;
+    final audioBlocking = _audioBlockingFindings(_audioReviewResult);
+    final audioWarnings = _audioWarningFindings(_audioReviewResult);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(title: const Text('Audio and system review')),
@@ -108,12 +115,15 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
           padding: const EdgeInsets.all(18),
           children: [
             _ReviewCard(
-              title: 'Microphone permission',
-              icon: Icons.mic_none_outlined,
+              title: 'Room sound learning',
+              icon: Icons.hearing_outlined,
               passed: _audioReady,
               checking: _checkingAudio,
               message: _audioMessage,
-              buttonText: _checkingAudio ? 'Checking...' : 'Check microphone',
+              audioResult: _audioReviewResult,
+              blockingFindings: audioBlocking,
+              warningFindings: audioWarnings,
+              buttonText: _checkingAudio ? 'Learning room sound...' : 'Learn room sound',
               onPressed: _checkingAudio ? null : _checkAudio,
             ),
             const SizedBox(height: 14),
@@ -147,6 +157,36 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
       ),
     );
   }
+
+  List<String> _audioBlockingFindings(AudioSecurityCheckResult? result) {
+    if (result == null) return const <String>[];
+    final findings = <String>[];
+    if (!result.microphoneAvailable || !result.permissionGranted) {
+      findings.add('Microphone permission is required before the exam can start.');
+    }
+    if (!result.inputLevelOk) {
+      findings.add('Microphone input is too low or muted. Run the sound review again.');
+    }
+    if (result.humanVoiceDetected) {
+      findings.add('Human voice or conversation detected. Move to a quiet room before starting.');
+    }
+    if (result.phoneRingDetected || result.notificationDetected) {
+      findings.add('Phone ring, notification, or sharp beep detected. Silence devices and repeat the sound review.');
+    }
+    if (result.tvOrRadioVoiceDetected) {
+      findings.add('TV or radio-like voice detected. Turn it off and repeat the sound review.');
+    }
+    return findings;
+  }
+
+  List<String> _audioWarningFindings(AudioSecurityCheckResult? result) {
+    if (result == null) return const <String>[];
+    if (!result.ambientNoiseAllowed) return const <String>[];
+    return <String>[
+      result.environmentDescription,
+      result.recommendedAction,
+    ];
+  }
 }
 
 class _ReviewCard extends StatelessWidget {
@@ -158,6 +198,7 @@ class _ReviewCard extends StatelessWidget {
     required this.message,
     required this.buttonText,
     required this.onPressed,
+    this.audioResult,
     this.blockingFindings = const <String>[],
     this.warningFindings = const <String>[],
   });
@@ -169,6 +210,7 @@ class _ReviewCard extends StatelessWidget {
   final String message;
   final String buttonText;
   final VoidCallback? onPressed;
+  final AudioSecurityCheckResult? audioResult;
   final List<String> blockingFindings;
   final List<String> warningFindings;
 
@@ -227,6 +269,10 @@ class _ReviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(message),
+          if (audioResult != null) ...[
+            const SizedBox(height: 12),
+            _AudioEnvironmentPanel(result: audioResult!),
+          ],
           if (_hasBlockingIssues) ...[
             const SizedBox(height: 12),
             const _FindingHeader(
@@ -256,7 +302,7 @@ class _ReviewCard extends StatelessWidget {
           if (warningFindings.isNotEmpty) ...[
             const SizedBox(height: 12),
             const _FindingHeader(
-              text: 'Recorded review notes',
+              text: 'Sound/environment information',
               color: Color(0xFFB45309),
               icon: Icons.info_outline,
             ),
@@ -287,6 +333,65 @@ class _ReviewCard extends StatelessWidget {
   }
 }
 
+class _AudioEnvironmentPanel extends StatelessWidget {
+  const _AudioEnvironmentPanel({required this.result});
+
+  final AudioSecurityCheckResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _MetricPill('Profile', _friendlyProfile(result.soundProfile)),
+          _MetricPill('Noise class', result.dominantNoiseClass),
+          _MetricPill('Voice', '${(result.voiceConfidence * 100).toStringAsFixed(0)}%'),
+          _MetricPill('Avg', '${(result.averageRms * 100).toStringAsFixed(1)}%'),
+          _MetricPill('Peak', '${(result.peakRms * 100).toStringAsFixed(1)}%'),
+          _MetricPill('Noise floor', '${(result.noiseFloorRms * 100).toStringAsFixed(1)}%'),
+          _MetricPill('Variation', '${(result.dynamicVariation * 100).toStringAsFixed(1)}%'),
+          _MetricPill('Learned', '${result.sampleDurationSeconds}s'),
+        ],
+      ),
+    );
+  }
+
+  String _friendlyProfile(String value) {
+    return value.replaceAll('_', ' ');
+  }
+}
+
+class _MetricPill extends StatelessWidget {
+  const _MetricPill(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({
     required this.passed,
@@ -308,7 +413,7 @@ class _StatusBadge extends StatelessWidget {
                 ? const Color(0xFFDC2626)
                 : const Color(0xFF64748B);
     final label = checking
-        ? 'Checking'
+        ? 'Learning'
         : passed
             ? 'Passed'
             : hasBlockingIssues
@@ -414,7 +519,7 @@ class _RuleNotice extends StatelessWidget {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Proctored exam rule: disconnect Bluetooth, headset, earbud, external microphone, USB audio/capture, virtual camera software, and unknown external devices before starting. Windows hypervisor security features may be recorded for review without blocking when no real virtual machine is detected.',
+              'Proctored exam rule: the room sound must be learned before startup. Fan, AC, generator, rain, and traffic may be allowed; human voice, phone ring, TV/radio voice, and notifications require correction or review.',
             ),
           ),
         ],
