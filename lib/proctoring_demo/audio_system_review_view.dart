@@ -168,13 +168,13 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
       findings.add('Microphone input is too low or muted. Run the sound review again.');
     }
     if (result.humanVoiceDetected) {
-      findings.add('Human voice or conversation detected. Move to a quiet room before starting.');
+      findings.add('Voice noticed during room sound learning. Keep the room quiet and run the sound review again.');
     }
     if (result.phoneRingDetected || result.notificationDetected) {
-      findings.add('Phone ring, notification, or sharp beep detected. Silence devices and repeat the sound review.');
+      findings.add('Phone ring, notification, or sharp beep noticed. Silence devices and repeat the sound review.');
     }
     if (result.tvOrRadioVoiceDetected) {
-      findings.add('TV or radio-like voice detected. Turn it off and repeat the sound review.');
+      findings.add('TV or radio-like voice noticed. Turn it off and repeat the sound review.');
     }
     return findings;
   }
@@ -519,7 +519,7 @@ class _RuleNotice extends StatelessWidget {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Proctored exam rule: the room sound must be learned before startup. Fan, AC, generator, rain, and traffic may be allowed; human voice, phone ring, TV/radio voice, and notifications require correction or review.',
+              'Exam rule: the room sound must be learned before startup. Fan, AC, generator, rain, and traffic may be allowed; voice, phone ring, TV/radio voice, and notifications require correction or review.',
             ),
           ),
         ],
