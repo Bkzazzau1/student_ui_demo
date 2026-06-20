@@ -20,6 +20,7 @@ class ExamStartApprovalService {
     required bool roomScanReady,
     required bool audioReady,
     required bool systemReady,
+    Map<String, Object?> audioReview = const <String, Object?>{},
     Map<String, Object?> systemReview = const <String, Object?>{},
   }) async {
     final uri = Uri.parse('$baseUrl/api/proctoring/start-approval');
@@ -37,6 +38,7 @@ class ExamStartApprovalService {
         'room_scan_ready': roomScanReady,
         'audio_ready': audioReady,
         'system_ready': systemReady,
+        'audio_review': audioReview,
         'system_review': systemReview,
         'source': 'desktop_exam_setup',
       }),
