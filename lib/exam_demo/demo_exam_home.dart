@@ -147,7 +147,7 @@ class _DemoExamHomeState extends State<DemoExamHome> {
           ),
         ),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 128),
           children: [
             Center(
               child: ConstrainedBox(
@@ -902,7 +902,13 @@ class _AssessmentCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      SizedBox(width: double.infinity, child: action),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 230),
+                          child: SizedBox(width: double.infinity, child: action),
+                        ),
+                      ),
                     ],
                   );
                 }
