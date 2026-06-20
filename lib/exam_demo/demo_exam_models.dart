@@ -41,6 +41,12 @@ class DemoAssessment {
 
   bool get isStrictExam => policy == AssessmentPolicy.strictExam;
 
+  bool get isGradedAssessment =>
+      policy == AssessmentPolicy.gradedAssessment && graded;
+
+  bool get isUngradedAssessment =>
+      policy == AssessmentPolicy.gradedAssessment && !graded;
+
   bool get sendsEventsToLecturer => policy == AssessmentPolicy.gradedAssessment;
 
   bool get attendanceOnly => policy == AssessmentPolicy.practice;
@@ -55,7 +61,7 @@ class DemoAssessment {
       case AssessmentPolicy.strictExam:
         return 'exam';
       case AssessmentPolicy.gradedAssessment:
-        return 'graded_assessment';
+        return graded ? 'graded_assessment' : 'ungraded_assessment';
       case AssessmentPolicy.practice:
         return 'practice';
     }
@@ -121,11 +127,11 @@ extension AssessmentPolicyX on AssessmentPolicy {
   String get label {
     switch (this) {
       case AssessmentPolicy.strictExam:
-        return 'Strict exam';
+        return 'Secure exam mode';
       case AssessmentPolicy.gradedAssessment:
-        return 'Graded assessment';
+        return 'Assessment';
       case AssessmentPolicy.practice:
-        return 'Practice';
+        return 'Practice questions';
     }
   }
 }
