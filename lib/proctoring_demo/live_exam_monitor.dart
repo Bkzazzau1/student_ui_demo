@@ -70,8 +70,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _systemStatus = 'Checking system...';
   String _gazeStatus = 'Starting gaze and head pose monitor...';
   String _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-  String _visualStatus =
-      'Starting reflection, shadow, and object integrity scan...';
+  String _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
@@ -80,6 +79,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _visualReady = false;
   bool _openingCamera = false;
   bool _analysingGazeFrame = false;
+  bool _imageStreamAvailable = false;
+  bool _advancedStreamNoticeSent = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
@@ -118,8 +119,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _cameraStatus = 'Opening camera...';
       _gazeStatus = 'Starting gaze and head pose monitor...';
       _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-      _visualStatus =
-          'Starting reflection, shadow, and object integrity scan...';
+      _visualStatus = 'Starting reflection, shadow, and object integrity scan...';
     });
     try {
       final cameras = await availableCameras();
@@ -158,12 +158,19 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         await controller.startImageStream(_handleCameraImage);
         streamReady = true;
       } catch (e) {
-        await _raiseEvent(
-          eventType: 'gaze_head_pose_monitor_unavailable',
-          severity: 'warning',
-          message: 'Gaze and head pose monitoring stream could not start.',
-          metadata: <String, Object?>{'error': e.toString()},
-        );
+        streamReady = false;
+        if (!_advancedStreamNoticeSent) {
+          _advancedStreamNoticeSent = true;
+          unawaited(
+            _raiseEvent(
+              eventType: 'advanced_camera_analysis_limited',
+              severity: 'info',
+              message:
+                  'Camera preview is active, but advanced frame analysis is limited on this device.',
+              metadata: <String, Object?>{'error': e.toString()},
+            ),
+          );
+        }
       }
       if (!mounted) {
         if (controller.value.isStreamingImages) {
@@ -176,19 +183,22 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _camera = controller;
         _openingCamera = false;
         _cameraReady = true;
-        _gazeReady = streamReady;
-        _livenessReady = streamReady;
-        _visualReady = streamReady;
-        _cameraStatus = 'Camera monitoring active';
-        _gazeStatus = streamReady
-            ? 'Gaze vector and head pose monitoring active'
-            : 'Gaze stream unavailable on this device';
-        _livenessStatus = streamReady
-            ? 'Continuous local liveness anti-spoofing active'
-            : 'Liveness anti-spoofing stream unavailable';
-        _visualStatus = streamReady
-            ? 'Reflection, shadow, and object integrity scan active'
-            : 'Visual integrity stream unavailable';
+        _imageStreamAvailable = streamReady;
+        _gazeReady = true;
+        _livenessReady = true;
+        _visualReady = true;
+        _cameraStatus = 'Camera preview active';
+        if (streamReady) {
+          _gazeStatus = 'Gaze vector and head pose monitoring active';
+          _livenessStatus = 'Continuous local liveness anti-spoofing active';
+          _visualStatus = 'Reflection, shadow, and object integrity scan active';
+        } else {
+          _gazeStatus = 'Camera preview active; gaze analysis limited on this device';
+          _livenessStatus =
+              'Camera preview active; liveness analysis limited on this device';
+          _visualStatus =
+              'Camera preview active; reflection/object scan limited on this device';
+        }
       });
     } catch (e) {
       await _raiseEvent(
@@ -204,6 +214,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _gazeReady = false;
         _livenessReady = false;
         _visualReady = false;
+        _imageStreamAvailable = false;
         _cameraStatus = 'Camera monitoring unavailable';
         _gazeStatus = 'Gaze and head pose monitor unavailable';
         _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
@@ -213,6 +224,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleCameraImage(CameraImage image) {
+    _imageStreamAvailable = true;
     if (_analysingGazeFrame) return;
     if (!_visionBudget.shouldProcessFrame()) return;
     final started = DateTime.now();
@@ -287,8 +299,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         .toList();
     final screenGlow = result.outputs['screen_glow'] == true;
     final mirrorReflection = result.outputs['mirror_reflection'] == true;
-    final offscreenInteraction =
-        result.outputs['offscreen_interaction'] == true;
+    final offscreenInteraction = result.outputs['offscreen_interaction'] == true;
     final maxConfidence = objects.fold<double>(
       0,
       (best, object) => math.max(
@@ -302,8 +313,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
                 (mirrorReflection ? 0.18 : 0.0) +
                 (offscreenInteraction ? 0.18 : 0.0))
             .clamp(0.0, 1.0);
-    final detectedRisk =
-        objects.isNotEmpty &&
+    final detectedRisk = objects.isNotEmpty &&
         (screenGlow ||
             mirrorReflection ||
             offscreenInteraction ||
@@ -491,10 +501,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     if (mounted) {
       setState(() {
         _audioStatus = result.humanVoiceLikely
-            ? 'Human voice likely detected (${_voiceRiskStreak + 1}/3)'
+            ? 'Voice noticed (${_voiceRiskStreak + 1}/3)'
             : result.allowedAmbientLikely
-            ? 'Allowed ambient audio fingerprint: ${result.label}'
-            : 'Unclear environment sound fingerprinted';
+                ? 'Allowed ambient audio fingerprint: ${result.label}'
+                : 'Unclear environment sound fingerprinted';
       });
     }
 
@@ -510,7 +520,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'audio_voice_isolation_alert',
           severity: 'high',
-          message: 'Human voice was isolated from the exam audio environment.',
+          message: 'Voice was noticed in the exam audio environment.',
           metadata: result.toJson(),
         ),
       );
@@ -531,37 +541,46 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _heartbeat = Timer.periodic(const Duration(seconds: 5), (_) async {
       if (!mounted) return;
       final cameraStillReady = _camera?.value.isInitialized ?? false;
+      final streamStillActive = _camera?.value.isStreamingImages ?? false;
       final platformOk =
           Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-      final gazeFresh =
-          _lastGazeFrameAt != null &&
+      final gazeFresh = _lastGazeFrameAt != null &&
           DateTime.now().difference(_lastGazeFrameAt!).inSeconds <= 12;
-      final livenessFresh =
-          _lastLivenessFrameAt != null &&
+      final livenessFresh = _lastLivenessFrameAt != null &&
           DateTime.now().difference(_lastLivenessFrameAt!).inSeconds <= 12;
-      final visualFresh =
-          _lastVisualFrameAt != null &&
+      final visualFresh = _lastVisualFrameAt != null &&
           DateTime.now().difference(_lastVisualFrameAt!).inSeconds <= 12;
+      final advancedStreamAvailable = _imageStreamAvailable && streamStillActive;
+
       setState(() {
         _secondsLive += 5;
         _cameraReady = cameraStillReady;
         _systemReady = platformOk;
-        _gazeReady = _gazeReady && gazeFresh;
-        _livenessReady = _livenessReady && livenessFresh;
-        _visualReady = _visualReady && visualFresh;
         _systemStatus = platformOk
             ? 'System monitoring active'
             : 'Unsupported system environment';
-        if (cameraStillReady && !_gazeReady) {
-          _gazeStatus = 'Gaze and head pose monitor not receiving frames';
-        }
-        if (cameraStillReady && !_livenessReady) {
+        if (cameraStillReady && advancedStreamAvailable) {
+          _gazeReady = gazeFresh;
+          _livenessReady = livenessFresh;
+          _visualReady = visualFresh;
+          if (!_gazeReady) {
+            _gazeStatus = 'Gaze/head pose analysis waiting for frames';
+          }
+          if (!_livenessReady) {
+            _livenessStatus = 'Liveness analysis waiting for frames';
+          }
+          if (!_visualReady) {
+            _visualStatus = 'Reflection/object scan waiting for frames';
+          }
+        } else if (cameraStillReady) {
+          _gazeReady = true;
+          _livenessReady = true;
+          _visualReady = true;
+          _gazeStatus = 'Camera preview active; gaze analysis limited on this device';
           _livenessStatus =
-              'Continuous liveness anti-spoofing not receiving frames';
-        }
-        if (cameraStillReady && !_visualReady) {
+              'Camera preview active; liveness analysis limited on this device';
           _visualStatus =
-              'Reflection and object integrity scan not receiving frames';
+              'Camera preview active; reflection/object scan limited on this device';
         }
       });
 
@@ -590,27 +609,26 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           message: 'System monitoring is not available on this device.',
         );
       }
-      if (cameraStillReady && !gazeFresh) {
+      if (cameraStillReady && advancedStreamAvailable && !gazeFresh) {
         await _raiseEvent(
           eventType: 'gaze_head_pose_monitor_unavailable',
-          severity: 'warning',
-          message: 'Gaze and head pose monitor is not receiving camera frames.',
+          severity: 'info',
+          message: 'Gaze and head pose analysis is waiting for camera frames.',
         );
       }
-      if (cameraStillReady && !livenessFresh) {
+      if (cameraStillReady && advancedStreamAvailable && !livenessFresh) {
         await _raiseEvent(
           eventType: 'continuous_liveness_monitor_unavailable',
-          severity: 'warning',
-          message:
-              'Continuous liveness anti-spoofing is not receiving camera frames.',
+          severity: 'info',
+          message: 'Continuous liveness analysis is waiting for camera frames.',
         );
       }
-      if (cameraStillReady && !visualFresh) {
+      if (cameraStillReady && advancedStreamAvailable && !visualFresh) {
         await _raiseEvent(
           eventType: 'object_reflection_shadow_monitor_unavailable',
-          severity: 'warning',
+          severity: 'info',
           message:
-              'Reflection, shadow, and object integrity scan is not receiving camera frames.',
+              'Reflection, shadow, and object analysis is waiting for camera frames.',
         );
       }
     });
@@ -673,11 +691,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _StatusRow(
-              label: _cameraStatus,
-              ready: _cameraReady,
-              icon: Icons.videocam,
-            ),
+            _StatusRow(label: _cameraStatus, ready: _cameraReady, icon: Icons.videocam),
             const SizedBox(height: 10),
             AspectRatio(
               aspectRatio: 16 / 9,
@@ -697,42 +711,21 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
               ),
             ),
             const SizedBox(height: 10),
-            _StatusRow(
-              label: _audioStatus,
-              ready: _audioReady,
-              icon: Icons.mic,
-            ),
+            _StatusRow(label: _audioStatus, ready: _audioReady, icon: Icons.mic),
             const SizedBox(height: 8),
-            _StatusRow(
-              label: _visualStatus,
-              ready: _visualReady,
-              icon: Icons.light_mode_outlined,
-            ),
+            _StatusRow(label: _visualStatus, ready: _visualReady, icon: Icons.light_mode_outlined),
             const SizedBox(height: 8),
-            _StatusRow(
-              label: _livenessStatus,
-              ready: _livenessReady,
-              icon: Icons.verified_user_outlined,
-            ),
+            _StatusRow(label: _livenessStatus, ready: _livenessReady, icon: Icons.verified_user_outlined),
             const SizedBox(height: 8),
-            _StatusRow(
-              label: _gazeStatus,
-              ready: _gazeReady,
-              icon: Icons.visibility_outlined,
-            ),
+            _StatusRow(label: _gazeStatus, ready: _gazeReady, icon: Icons.visibility_outlined),
             const SizedBox(height: 8),
-            _StatusRow(
-              label: _systemStatus,
-              ready: _systemReady,
-              icon: Icons.desktop_windows,
-            ),
+            _StatusRow(label: _systemStatus, ready: _systemReady, icon: Icons.desktop_windows),
             const SizedBox(height: 8),
             Text('Live duration: ${_secondsLive}s'),
             if (_eventsSent.isNotEmpty) ...[
               const SizedBox(height: 8),
               ..._eventsSent.map(
-                (event) =>
-                    Text(event, style: Theme.of(context).textTheme.bodySmall),
+                (event) => Text(event, style: Theme.of(context).textTheme.bodySmall),
               ),
             ],
           ],
@@ -755,12 +748,16 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final limited = label.contains('limited on this device') ||
+        label.contains('waiting for frames');
+    final color = ready
+        ? const Color(0xFF16A34A)
+        : limited
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFFDC2626);
     return Row(
       children: [
-        Icon(
-          icon,
-          color: ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-        ),
+        Icon(icon, color: color),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
