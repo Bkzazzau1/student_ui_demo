@@ -35,8 +35,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool _startApproved = false;
   String? _manifestPath;
   String? _startApprovalToken;
-  String _startApprovalMessage =
-      'Backend start approval has not been requested.';
+  String _startApprovalMessage = 'Backend start approval has not been requested.';
   AudioSystemReviewResult? _audioSystemReview;
   ExamStartApprovalResult? _startApprovalResult;
 
@@ -55,16 +54,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   bool get _needsChecks => widget.assessment.remoteProctored;
+
   bool get _faceOk => !widget.assessment.graded || _faceId.isComplete;
   bool get _roomOk => !_needsChecks || (_roomApproved && _manifestPath != null);
   bool get _audioOk => !_needsChecks || _audioApproved;
   bool get _systemOk => !_needsChecks || _systemApproved;
   bool get _localChecksComplete => _faceOk && _roomOk && _audioOk && _systemOk;
-  bool get _backendApprovalRequired =>
-      widget.assessment.remoteProctored || widget.assessment.graded;
-  bool get _approvalOk =>
-      !_backendApprovalRequired ||
-      (_startApproved && _startApprovalToken != null);
+  bool get _backendApprovalRequired => widget.assessment.remoteProctored || widget.assessment.graded;
+  bool get _approvalOk => !_backendApprovalRequired || (_startApproved && _startApprovalToken != null);
 
   bool _canStartOnDevice(BuildContext context) {
     final phoneSized = MediaQuery.sizeOf(context).shortestSide < 600;
@@ -72,9 +69,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   bool _canRequestStartApproval(BuildContext context) {
-    return _localChecksComplete &&
-        _canStartOnDevice(context) &&
-        !_requestingStartApproval;
+    return _localChecksComplete && _canStartOnDevice(context) && !_requestingStartApproval;
   }
 
   bool _canStart(BuildContext context) {
@@ -85,8 +80,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     _startApproved = false;
     _startApprovalToken = null;
     _startApprovalResult = null;
-    _startApprovalMessage =
-        message ?? 'Backend start approval must be requested again.';
+    _startApprovalMessage = message ?? 'Backend start approval must be requested again.';
   }
 
   @override
@@ -109,7 +103,6 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
             systemOk: _systemOk,
             approvalOk: _approvalOk,
             manifestPath: _manifestPath,
-            result: _startApprovalResult,
             needsChecks: _needsChecks,
             backendApprovalRequired: _backendApprovalRequired,
           ),
@@ -137,10 +130,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                 ),
               if (_needsChecks)
                 FilledButton.icon(
-                  onPressed: _faceId.isComplete ? _openRoomScan : null,
+                  onPressed: _openRoomScan,
                   icon: const Icon(Icons.screen_rotation_alt_outlined),
                   label: Text(
-                    _roomOk ? 'Photos and video complete' : 'Run 360 room scan',
+                    _roomOk ? '360 room scan complete' : 'Run 360 room scan',
                   ),
                 ),
               if (_needsChecks)
@@ -149,8 +142,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                   icon: const Icon(Icons.settings_voice_outlined),
                   label: Text(
                     _audioApproved && _systemApproved
-                        ? 'Sound and device complete'
-                        : 'Run sound and device check',
+                        ? 'Audio and system complete'
+                        : 'Run audio and system review',
                   ),
                 ),
               if (_backendApprovalRequired)
@@ -190,9 +183,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         builder: (_) => DemoFaceIdView(
           onComplete: () => setState(() {
             _faceId = _faceIdService.load();
-            _clearStartApproval(
-              message: 'Face ID was updated. Request start approval again.',
-            );
+            _clearStartApproval(message: 'Face ID was updated. Request backend start approval again.');
           }),
         ),
       ),
@@ -200,9 +191,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     if (!mounted) return;
     setState(() {
       _faceId = _faceIdService.load();
-      _clearStartApproval(
-        message: 'Face ID check completed. Request start approval again.',
-      );
+      _clearStartApproval(message: 'Face ID check completed. Request backend start approval again.');
     });
   }
 
@@ -210,10 +199,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     setState(() {
       _roomApproved = false;
       _manifestPath = null;
-      _clearStartApproval(
-        message:
-            'Room scan changed. Request start approval after all checks pass.',
-      );
+      _clearStartApproval(message: 'Room scan changed. Request backend start approval after all checks pass.');
     });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -226,19 +212,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               setState(() {
                 _roomApproved = false;
                 _manifestPath = null;
-                _clearStartApproval(
-                  message: 'Room scan was not approved. Run the scan again.',
-                );
+                _clearStartApproval(message: 'Room scan was not approved. Run the scan again.');
               });
               return;
             }
             setState(() {
               _roomApproved = true;
               _manifestPath = manifestPath;
-              _clearStartApproval(
-                message:
-                    'Photos and video complete. Request start approval after all checks pass.',
-              );
+              _clearStartApproval(message: 'Room scan complete. Request backend start approval after all checks pass.');
             });
             Navigator.of(context).pop();
           },
@@ -258,9 +239,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       _audioSystemReview = result;
       _audioApproved = result.audioReady;
       _systemApproved = result.systemReady;
-      _clearStartApproval(
-        message: 'Sound or device check changed. Request start approval again.',
-      );
+      _clearStartApproval(message: 'Sound or device check changed. Request start approval again.');
     });
   }
 
@@ -288,6 +267,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         roomScanReady: _roomOk,
         audioReady: _audioOk,
         systemReady: _systemOk,
+        audioReview: _audioSystemReview?.audioReview?.toJson() ??
+            const <String, Object?>{},
         systemReview:
             _audioSystemReview?.systemReview?.toJson() ??
             const <String, Object?>{},
@@ -334,9 +315,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
           attemptId: _attemptId,
-          examStartToken: _startApprovalToken ?? '',
           agentDecision: _backendApprovalRequired
-              ? 'approved_to_start'
+              ? 'backend_start_approved'
               : widget.assessment.attendanceOnly
                   ? 'attendance_only'
                   : 'local_setup_ready',
@@ -353,7 +333,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       builder: (context) => AlertDialog(
         title: const Text('Exam cannot start yet'),
         content: const Text(
-          'Complete all checks, then request backend start approval before starting the exam.',
+          'Run each required setup check, then request backend start approval before starting the exam.',
         ),
         actions: [
           FilledButton(
@@ -371,7 +351,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       builder: (context) => AlertDialog(
         title: const Text('Use a larger device'),
         content: const Text(
-          'Exam and graded assessment attempts must be completed on a laptop, tablet, Windows desktop, or Mac. Phones are only used as an extra camera when needed.',
+          'Exam and graded assessment attempts must be completed on a laptop, tablet, Windows desktop, or Mac. Phones are only used for companion camera monitoring.',
         ),
         actions: [
           FilledButton(
@@ -416,9 +396,9 @@ class _Header extends StatelessWidget {
           Text(
             assessment.title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -435,7 +415,7 @@ class _Header extends StatelessWidget {
               _DarkTag(assessment.graded ? 'Official graded' : 'Practice'),
               _DarkTag(
                 assessment.remoteProctored
-                    ? 'Full exam check required'
+                    ? 'Full proctoring required'
                     : 'Standard access',
               ),
             ],
@@ -456,7 +436,6 @@ class _Checklist extends StatelessWidget {
     required this.needsChecks,
     required this.backendApprovalRequired,
     required this.manifestPath,
-    required this.result,
   });
 
   final bool faceOk;
@@ -467,17 +446,15 @@ class _Checklist extends StatelessWidget {
   final bool needsChecks;
   final bool backendApprovalRequired;
   final String? manifestPath;
-  final ExamStartApprovalResult? result;
 
   @override
   Widget build(BuildContext context) {
     final rows = <_CheckRow>[
       _CheckRow('Face ID', faceOk),
-      if (needsChecks) _CheckRow('Photos and video', roomOk),
-      if (needsChecks) _CheckRow('Sound check', audioOk),
-      if (needsChecks) _CheckRow('Device check', systemOk),
-      if (backendApprovalRequired)
-        _CheckRow('Backend start approval', approvalOk),
+      if (needsChecks) _CheckRow('360 room scan', roomOk),
+      if (needsChecks) _CheckRow('Audio review', audioOk),
+      if (needsChecks) _CheckRow('System review', systemOk),
+      if (backendApprovalRequired) _CheckRow('Backend start approval', approvalOk),
     ];
     return Container(
       padding: const EdgeInsets.all(16),
@@ -491,39 +468,22 @@ class _Checklist extends StatelessWidget {
         children: [
           Text(
             'Startup checklist',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
           ...rows,
           if (manifestPath != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Saved record: $manifestPath',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-          if (result != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _approvalText(result!),
+              'Evidence record: $manifestPath',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ],
       ),
     );
-  }
-
-  String _approvalText(ExamStartApprovalResult result) {
-    if (result.approved && result.hasToken) {
-      return 'Backend approved start. Token received.';
-    }
-    if (result.requiresHumanReview) {
-      return 'Waiting for exam officer review.';
-    }
-    return 'Backend decision: ${result.status}';
   }
 }
 
@@ -605,7 +565,7 @@ class _StartApprovalCard extends StatelessWidget {
                 if (result != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Decision: ${result!.status} - Source: ${result!.approvalSource} - Review: ${result!.aiRecommendation}',
+                    'Decision: ${result!.status} • Source: ${result!.approvalSource} • Review: ${result!.aiRecommendation}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -637,14 +597,14 @@ class _Rules extends StatelessWidget {
         children: [
           Text(
             'Rules before you start',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(
             remote
-                ? 'Run each setup check, then request backend start approval. The exam starts only after the backend returns a signed approval token.'
+                ? 'Run each setup check separately, then request backend start approval. The exam starts only after the backend returns a signed approval token.'
                 : 'Keep your login secure and submit before the timer ends.',
           ),
         ],
