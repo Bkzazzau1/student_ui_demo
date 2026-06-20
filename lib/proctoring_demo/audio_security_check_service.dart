@@ -56,35 +56,35 @@ class AudioSecurityCheckResult {
   final String? message;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'microphone_available': microphoneAvailable,
-    'permission_granted': permissionGranted,
-    'input_level_ok': inputLevelOk,
-    'average_rms': averageRms,
-    'peak_rms': peakRms,
-    'noise_floor_rms': noiseFloorRms,
-    'zero_crossing_rate': zeroCrossingRate,
-    'dynamic_variation': dynamicVariation,
-    'voice_confidence': voiceConfidence,
-    'environment_label': environmentLabel,
-    'dominant_noise_class': dominantNoiseClass,
-    'sound_profile': soundProfile,
-    'environment_description': environmentDescription,
-    'recommended_action': recommendedAction,
-    'human_voice_detected': humanVoiceDetected,
-    'phone_ring_detected': phoneRingDetected,
-    'notification_detected': notificationDetected,
-    'tv_or_radio_voice_detected': tvOrRadioVoiceDetected,
-    'ambient_noise_allowed': ambientNoiseAllowed,
-    'sample_duration_seconds': sampleDurationSeconds,
-    'environment_learning_completed': sampleDurationSeconds >= 15,
-    if (clipPath != null) 'clip_path': clipPath,
-    if (message != null) 'message': message,
-  };
+        'microphone_available': microphoneAvailable,
+        'permission_granted': permissionGranted,
+        'input_level_ok': inputLevelOk,
+        'average_rms': averageRms,
+        'peak_rms': peakRms,
+        'noise_floor_rms': noiseFloorRms,
+        'zero_crossing_rate': zeroCrossingRate,
+        'dynamic_variation': dynamicVariation,
+        'voice_confidence': voiceConfidence,
+        'environment_label': environmentLabel,
+        'dominant_noise_class': dominantNoiseClass,
+        'sound_profile': soundProfile,
+        'environment_description': environmentDescription,
+        'recommended_action': recommendedAction,
+        'human_voice_detected': humanVoiceDetected,
+        'phone_ring_detected': phoneRingDetected,
+        'notification_detected': notificationDetected,
+        'tv_or_radio_voice_detected': tvOrRadioVoiceDetected,
+        'ambient_noise_allowed': ambientNoiseAllowed,
+        'sample_duration_seconds': sampleDurationSeconds,
+        'environment_learning_completed': sampleDurationSeconds >= 15,
+        if (clipPath != null) 'clip_path': clipPath,
+        if (message != null) 'message': message,
+      };
 }
 
 class AudioSecurityCheckService {
   AudioSecurityCheckService({MicrophoneStreamRecordingService? microphone})
-    : _microphone = microphone ?? MicrophoneStreamRecordingService();
+      : _microphone = microphone ?? MicrophoneStreamRecordingService();
 
   static Future<bool>? _nativeReady;
 
@@ -121,8 +121,10 @@ class AudioSecurityCheckService {
     }
 
     final samples = <double>[];
+    final peakSamples = <double>[];
     final zcrSamples = <double>[];
     final slopeSamples = <double>[];
+    final chunkSpeechSignals = <bool>[];
     final nativeSpeechSignals = <bool>[];
     final nativeNoiseSignals = <double>[];
     var nativeSpeechStreak = 0;
@@ -138,8 +140,14 @@ class AudioSecurityCheckService {
         onPcmChunk: (chunk) {
           final features = _chunkFeatures(chunk);
           if (features.rms >= 0) samples.add(features.rms);
-          if (features.zeroCrossingRate >= 0) zcrSamples.add(features.zeroCrossingRate);
+          if (features.peak >= 0) peakSamples.add(features.peak);
+          if (features.zeroCrossingRate >= 0) {
+            zcrSamples.add(features.zeroCrossingRate);
+          }
           if (features.slopeEnergy >= 0) slopeSamples.add(features.slopeEnergy);
+          if (features.rms >= 0 && features.peak >= 0) {
+            chunkSpeechSignals.add(_speechLikeChunk(features));
+          }
           if (nativeReady) {
             try {
               final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -148,9 +156,9 @@ class AudioSecurityCheckService {
                 lossThresholdDbfs: -50,
                 lossStreak: nativeLossStreak,
                 lossSamplesToTrigger: 10,
-                speechThresholdDbfs: -28,
+                speechThresholdDbfs: -36,
                 speechStreak: nativeSpeechStreak,
-                speechSamplesToTrigger: 4,
+                speechSamplesToTrigger: 3,
                 lastSpeechStrikeAtMs: nativeLastSpeechStrikeAtMs,
                 speechCooldownMs: 3000,
                 nowMs: nowMs,
@@ -199,38 +207,56 @@ class AudioSecurityCheckService {
 
     final average = _average(samples);
     final peak = samples.isEmpty ? 0.0 : samples.reduce(math.max);
+    final rawPeak = peakSamples.isEmpty ? peak : peakSamples.reduce(math.max);
     final sortedRms = List<double>.from(samples)..sort();
     final noiseFloor = sortedRms.isEmpty
         ? 0.0
-        : sortedRms[(sortedRms.length * 0.20).floor().clamp(0, sortedRms.length - 1)];
+        : sortedRms[(sortedRms.length * 0.20)
+            .floor()
+            .clamp(0, sortedRms.length - 1)];
     final zcr = _average(zcrSamples);
     final slope = _average(slopeSamples);
-    final inputLevelOk = peak > 0.01;
+    final inputLevelOk = rawPeak > 0.006 || peak > 0.006;
     final rmsVariation = _variation(samples);
-    final voiceConfidence = nativeSpeechSignals.isEmpty
-        ? _voiceConfidence(samples)
-        : math.max(_voiceConfidence(samples), _nativeVoiceConfidence(nativeSpeechSignals));
-    final nativeNoisePeak = nativeNoiseSignals.isEmpty
+    final nativeVoiceConfidence = _nativeVoiceConfidence(nativeSpeechSignals);
+    final chunkVoiceConfidence = _chunkSpeechConfidence(chunkSpeechSignals);
+    final nativeActivitySignal = nativeNoiseSignals.isEmpty
         ? 0.0
-        : nativeNoiseSignals.reduce(math.max);
-    final effectivePeak = math.max(peak, nativeNoisePeak);
-    final humanVoiceDetected = voiceConfidence >= 0.70;
+        : nativeNoiseSignals.reduce(math.max).clamp(0.0, 1.0);
+    final acousticVoiceConfidence = _acousticVoiceConfidence(
+      averageRms: average,
+      peakRms: rawPeak,
+      noiseFloorRms: noiseFloor,
+      zcr: zcr,
+      slope: slope,
+      variation: rmsVariation,
+      chunkSpeechConfidence: chunkVoiceConfidence,
+      nativeSpeechConfidence: nativeVoiceConfidence,
+      nativeActivitySignal: nativeActivitySignal,
+    );
+    final voiceConfidence = math.max(
+      _voiceConfidence(samples),
+      math.max(nativeVoiceConfidence, acousticVoiceConfidence),
+    );
+    final humanVoiceDetected = voiceConfidence >= 0.45;
     final phoneRingDetected = _phoneRingLikely(
-      peakRms: effectivePeak,
+      peakRms: rawPeak,
       zcr: zcr,
       variation: rmsVariation,
       slope: slope,
     );
     final notificationDetected = _notificationLikely(
-      peakRms: effectivePeak,
+      peakRms: rawPeak,
       zcr: zcr,
       variation: rmsVariation,
       slope: slope,
     );
-    final tvOrRadioVoiceDetected = humanVoiceDetected && rmsVariation < 0.065 && average > 0.05;
+    final tvOrRadioVoiceDetected = humanVoiceDetected &&
+        rmsVariation < 0.065 &&
+        (average > 0.02 || nativeActivitySignal > 0.55);
     final soundProfile = _soundProfile(
       averageRms: average,
-      peakRms: effectivePeak,
+      peakRms: rawPeak,
       noiseFloorRms: noiseFloor,
       zcr: zcr,
       slope: slope,
@@ -253,7 +279,7 @@ class AudioSecurityCheckService {
     final description = _environmentDescription(
       soundProfile: soundProfile,
       averageRms: average,
-      peakRms: effectivePeak,
+      peakRms: rawPeak,
       noiseFloorRms: noiseFloor,
       zcr: zcr,
       variation: rmsVariation,
@@ -272,14 +298,14 @@ class AudioSecurityCheckService {
       permissionGranted: true,
       inputLevelOk: inputLevelOk,
       averageRms: average,
-      peakRms: peak,
+      peakRms: rawPeak,
       noiseFloorRms: noiseFloor,
       zeroCrossingRate: zcr,
       dynamicVariation: rmsVariation,
       voiceConfidence: voiceConfidence,
       environmentLabel: _environmentLabel(
         averageRms: average,
-        peakRms: effectivePeak,
+        peakRms: rawPeak,
         voiceConfidence: voiceConfidence,
       ),
       dominantNoiseClass: dominantNoiseClass,
@@ -328,7 +354,8 @@ class AudioSecurityCheckService {
       peak = math.max(peak, absSample);
       total += sample * sample;
       if (previousSet) {
-        if ((sample >= 0 && previous < 0) || (sample < 0 && previous >= 0)) {
+        if ((sample >= 0 && previous < 0) ||
+            (sample < 0 && previous >= 0)) {
           zeroCrossings++;
         }
         final diff = sample - previous;
@@ -343,7 +370,8 @@ class AudioSecurityCheckService {
       rms: math.sqrt(total / count).clamp(0.0, 1.0),
       peak: peak.clamp(0.0, 1.0),
       zeroCrossingRate: (zeroCrossings / count).clamp(0.0, 1.0),
-      slopeEnergy: math.sqrt(slopeEnergy / math.max(1, count - 1)).clamp(0.0, 1.0),
+      slopeEnergy:
+          math.sqrt(slopeEnergy / math.max(1, count - 1)).clamp(0.0, 1.0),
     );
   }
 
@@ -354,16 +382,64 @@ class AudioSecurityCheckService {
 
   double _voiceConfidence(List<double> samples) {
     if (samples.length < 4) return 0;
-    final active = samples.where((value) => value >= 0.12).length;
-    final varied = _variation(samples) >= 0.08;
-    final ratio = active / samples.length;
-    return (ratio * (varied ? 1.2 : 0.6)).clamp(0.0, 1.0);
+    final active = samples.where((value) => value >= 0.018).length;
+    final speechLevel = samples.where((value) => value >= 0.008).length;
+    final varied = _variation(samples) >= 0.0007;
+    final ratio = (active + (speechLevel * 0.45)) / samples.length;
+    return (ratio * (varied ? 1.35 : 0.75)).clamp(0.0, 1.0);
   }
 
   double _nativeVoiceConfidence(List<bool> speechSignals) {
     if (speechSignals.isEmpty) return 0;
     final speechCount = speechSignals.where((value) => value).length;
     return (speechCount / speechSignals.length).clamp(0.0, 1.0);
+  }
+
+  double _chunkSpeechConfidence(List<bool> speechSignals) {
+    if (speechSignals.isEmpty) return 0;
+    final speechCount = speechSignals.where((value) => value).length;
+    return (speechCount / speechSignals.length).clamp(0.0, 1.0);
+  }
+
+  bool _speechLikeChunk(_AudioChunkFeatures features) {
+    final speechZcr = features.zeroCrossingRate >= 0.018 &&
+        features.zeroCrossingRate <= 0.26;
+    final speechTexture = features.slopeEnergy >= 0.0025;
+    final speechBurst = features.peak >= 0.018 && features.rms >= 0.0012;
+    final strongBurst = features.peak >= 0.035 && features.slopeEnergy >= 0.0014;
+    return speechZcr && speechTexture && (speechBurst || strongBurst);
+  }
+
+  double _acousticVoiceConfidence({
+    required double averageRms,
+    required double peakRms,
+    required double noiseFloorRms,
+    required double zcr,
+    required double slope,
+    required double variation,
+    required double chunkSpeechConfidence,
+    required double nativeSpeechConfidence,
+    required double nativeActivitySignal,
+  }) {
+    var score = 0.0;
+    final peakToAverage = peakRms / math.max(averageRms, 0.0008);
+    final peakToFloor = peakRms / math.max(noiseFloorRms, 0.0008);
+    final speechZcr = zcr >= 0.018 && zcr <= 0.26;
+    final speechTexture = slope >= 0.0025;
+
+    if (peakRms >= 0.018) score += 0.16;
+    if (peakRms >= 0.032) score += 0.10;
+    if (averageRms >= 0.0012) score += 0.08;
+    if (peakToAverage >= 5.0) score += 0.14;
+    if (peakToFloor >= 6.0) score += 0.14;
+    if (speechZcr) score += 0.14;
+    if (speechTexture) score += 0.14;
+    if (variation >= 0.0007) score += 0.08;
+    if (chunkSpeechConfidence >= 0.18) score += 0.18;
+    if (nativeSpeechConfidence >= 0.18) score += 0.18;
+    if (nativeActivitySignal >= 0.50 && speechZcr) score += 0.10;
+
+    return score.clamp(0.0, 1.0);
   }
 
   double _variation(List<double> samples) {
@@ -381,7 +457,7 @@ class AudioSecurityCheckService {
     required double variation,
     required double slope,
   }) {
-    return peakRms >= 0.55 && zcr >= 0.18 && variation >= 0.060 && slope >= 0.045;
+    return peakRms >= 0.20 && zcr >= 0.18 && variation >= 0.010 && slope >= 0.020;
   }
 
   bool _notificationLikely({
@@ -390,7 +466,7 @@ class AudioSecurityCheckService {
     required double variation,
     required double slope,
   }) {
-    return peakRms >= 0.38 && zcr >= 0.24 && variation >= 0.045 && slope >= 0.055;
+    return peakRms >= 0.14 && zcr >= 0.22 && variation >= 0.008 && slope >= 0.026;
   }
 
   String _soundProfile({
@@ -416,7 +492,9 @@ class AudioSecurityCheckService {
     if (variation >= 0.025 && variation < 0.11 && peakRms < 0.60 && zcr < 0.28) {
       return 'traffic_or_open_environment_noise';
     }
-    if (peakRms >= 0.65 && variation >= 0.060) return 'sudden_loud_environment_noise';
+    if (peakRms >= 0.65 && variation >= 0.060) {
+      return 'sudden_loud_environment_noise';
+    }
     if (averageRms >= 0.35) return 'loud_allowed_ambient_noise';
     return 'mixed_ambient_noise';
   }
@@ -429,16 +507,17 @@ class AudioSecurityCheckService {
     required double zcr,
     required double variation,
   }) {
-    final levels = 'avg ${(averageRms * 100).toStringAsFixed(1)}%, peak ${(peakRms * 100).toStringAsFixed(1)}%, floor ${(noiseFloorRms * 100).toStringAsFixed(1)}%';
+    final levels =
+        'avg ${(averageRms * 100).toStringAsFixed(1)}%, peak ${(peakRms * 100).toStringAsFixed(1)}%, floor ${(noiseFloorRms * 100).toStringAsFixed(1)}%';
     switch (soundProfile) {
       case 'microphone_input_too_low':
         return 'Microphone input is too low or muted. $levels.';
       case 'human_voice_or_conversation':
-        return 'Human voice or conversation pattern detected. $levels.';
+        return 'Voice or conversation pattern noticed. $levels.';
       case 'phone_ring_like_sound':
-        return 'Phone ring or ringtone-like sound detected. $levels.';
+        return 'Phone ring or ringtone-like sound noticed. $levels.';
       case 'notification_or_sharp_beep':
-        return 'Notification, beep, keyboard click, or sharp intermittent sound detected. $levels.';
+        return 'Notification, beep, keyboard click, or sharp intermittent sound noticed. $levels.';
       case 'quiet_room':
         return 'Quiet room learned with low background sound. $levels.';
       case 'steady_fan_ac_generator_hum':
@@ -446,7 +525,7 @@ class AudioSecurityCheckService {
       case 'traffic_or_open_environment_noise':
         return 'Variable ambient noise learned, likely traffic, open window, or outdoor activity. $levels.';
       case 'sudden_loud_environment_noise':
-        return 'Sudden loud environmental sound detected. $levels.';
+        return 'Sudden loud environmental sound noticed. $levels.';
       case 'loud_allowed_ambient_noise':
         return 'Loud but non-voice ambient noise learned. $levels.';
       default:
@@ -462,10 +541,18 @@ class AudioSecurityCheckService {
     required bool notificationDetected,
     required String soundProfile,
   }) {
-    if (!inputLevelOk) return 'Unmute microphone or move closer to the device and run the sound review again.';
-    if (humanVoiceDetected) return 'Stop conversation and move to a quieter room before starting the exam.';
-    if (phoneRingDetected || notificationDetected) return 'Silence phones, notifications, TV, and radio, then run the sound review again.';
-    if (ambientAllowed) return 'Ambient room sound is acceptable. Keep the room stable until submission.';
+    if (!inputLevelOk) {
+      return 'Unmute microphone or move closer to the device and run the sound review again.';
+    }
+    if (humanVoiceDetected) {
+      return 'Voice was noticed. Keep the room quiet and run the sound review again.';
+    }
+    if (phoneRingDetected || notificationDetected) {
+      return 'Silence phones, notifications, TV, and radio, then run the sound review again.';
+    }
+    if (ambientAllowed) {
+      return 'Ambient room sound is acceptable. Keep the room stable until submission.';
+    }
     return 'Repeat the sound review if this sound is not normal for the room.';
   }
 
@@ -474,7 +561,7 @@ class AudioSecurityCheckService {
     required double peakRms,
     required double voiceConfidence,
   }) {
-    if (voiceConfidence >= 0.70) return 'human_voice';
+    if (voiceConfidence >= 0.45) return 'human_voice';
     if (peakRms > 0.75) return 'very_noisy_environment';
     if (averageRms > 0.45) return 'noisy_environment';
     if (averageRms > 0.20) return 'moderate_environment';
