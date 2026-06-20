@@ -16,6 +16,8 @@ class SnapshotGazeFallbackResult {
     required this.asymmetry,
     required this.baselineAsymmetry,
     required this.asymmetryShift,
+    required this.personCount,
+    required this.multiplePeopleLikely,
     required this.headPoseShiftLikely,
     required this.label,
   });
@@ -31,6 +33,8 @@ class SnapshotGazeFallbackResult {
   final double asymmetry;
   final double baselineAsymmetry;
   final double asymmetryShift;
+  final int personCount;
+  final bool multiplePeopleLikely;
   final bool headPoseShiftLikely;
   final String label;
 
@@ -46,6 +50,8 @@ class SnapshotGazeFallbackResult {
         'asymmetry': asymmetry,
         'baseline_asymmetry': baselineAsymmetry,
         'asymmetry_shift': asymmetryShift,
+        'person_count': personCount,
+        'multiple_people_likely': multiplePeopleLikely,
         'head_pose_shift_likely': headPoseShiftLikely,
         'label': label,
         'source': 'snapshot_fallback',
@@ -60,10 +66,10 @@ class SnapshotGazeFallbackService {
   SnapshotGazeFallbackResult? analyseJpeg(Uint8List bytes) {
     final decoded = img.decodeImage(bytes);
     if (decoded == null) return null;
-    final resized = img.copyResize(decoded, width: 96);
+    final resized = img.copyResize(decoded, width: 128);
     final width = resized.width;
     final height = resized.height;
-    if (width < 24 || height < 24) return null;
+    if (width < 32 || height < 24) return null;
 
     final signal = _estimateHeadSignal(resized);
     if (signal == null) return null;
@@ -80,6 +86,8 @@ class SnapshotGazeFallbackService {
                   .map((item) => item.asymmetry)
                   .reduce((a, b) => a + b) /
               _baselineSamples.length,
+          personCount: 1,
+          multiplePeopleLikely: false,
         );
       }
       return SnapshotGazeFallbackResult(
@@ -94,8 +102,12 @@ class SnapshotGazeFallbackService {
         asymmetry: signal.asymmetry,
         baselineAsymmetry: _baseline?.asymmetry ?? signal.asymmetry,
         asymmetryShift: 0,
+        personCount: signal.personCount,
+        multiplePeopleLikely: signal.multiplePeopleLikely,
         headPoseShiftLikely: false,
-        label: 'learning_head_position',
+        label: signal.multiplePeopleLikely
+            ? 'multiple_people_detected'
+            : 'learning_head_position',
       );
     }
 
@@ -104,12 +116,13 @@ class SnapshotGazeFallbackService {
     final shiftY = signal.y - baseline.y;
     final shiftScore = math.sqrt((shiftX * shiftX) + (shiftY * shiftY));
     final asymmetryShift = signal.asymmetry - baseline.asymmetry;
-    final profileTurnLikely =
-        asymmetryShift.abs() >= 0.16 || signal.asymmetry.abs() >= 0.34;
-    final headPoseShiftLikely = shiftX.abs() >= 0.12 ||
-        shiftY.abs() >= 0.12 ||
-        shiftScore >= 0.16 ||
+    final profileTurnLikely = asymmetryShift.abs() >= 0.11 ||
+        signal.asymmetry.abs() >= 0.26;
+    final headPoseShiftLikely = shiftX.abs() >= 0.095 ||
+        shiftY.abs() >= 0.095 ||
+        shiftScore >= 0.125 ||
         profileTurnLikely;
+    final multiplePeopleLikely = signal.multiplePeopleLikely || signal.personCount >= 2;
 
     return SnapshotGazeFallbackResult(
       ready: true,
@@ -123,20 +136,25 @@ class SnapshotGazeFallbackService {
       asymmetry: signal.asymmetry,
       baselineAsymmetry: baseline.asymmetry,
       asymmetryShift: asymmetryShift,
+      personCount: signal.personCount,
+      multiplePeopleLikely: multiplePeopleLikely,
       headPoseShiftLikely: headPoseShiftLikely,
-      label: headPoseShiftLikely
-          ? 'head_or_gaze_shift_detected'
-          : 'head_position_stable',
+      label: multiplePeopleLikely
+          ? 'multiple_people_detected'
+          : headPoseShiftLikely
+              ? 'head_or_gaze_shift_detected'
+              : 'head_position_stable',
     );
   }
 
   _HeadSignal? _estimateHeadSignal(img.Image image) {
     final width = image.width;
     final height = image.height;
-    final xStart = (width * 0.18).round();
-    final xEnd = (width * 0.82).round();
-    final yStart = (height * 0.08).round();
-    final yEnd = (height * 0.72).round();
+    final xStart = (width * 0.05).round();
+    final xEnd = (width * 0.95).round();
+    final yStart = (height * 0.06).round();
+    final yEnd = (height * 0.78).round();
+    final bins = List<double>.filled(12, 0.0);
 
     var weightedX = 0.0;
     var weightedY = 0.0;
@@ -157,17 +175,22 @@ class SnapshotGazeFallbackService {
                 (_luma(up) - _luma(down)).abs()) /
             2.0;
         final saturation = _saturation(pixel);
-        final skinLike = saturation >= 0.10 && saturation <= 0.72 && luma >= 30 && luma <= 230;
-        final darkFeature = luma < 95 && edge > 10;
-        final edgeFeature = edge > 18;
+        final skinLike = saturation >= 0.09 && saturation <= 0.78 && luma >= 26 && luma <= 238;
+        final darkFeature = luma < 105 && edge > 8;
+        final edgeFeature = edge > 16;
         if (!skinLike && !darkFeature && !edgeFeature) continue;
 
-        final yBias = 1.0 - ((y / height) - 0.38).abs().clamp(0.0, 0.8);
-        final weight = (edge * 0.55) + (skinLike ? 18.0 : 0.0) + (darkFeature ? 12.0 : 0.0);
+        final yBias = 1.0 - ((y / height) - 0.38).abs().clamp(0.0, 0.82);
+        final weight = (edge * 0.62) +
+            (skinLike ? 20.0 : 0.0) +
+            (darkFeature ? 13.0 : 0.0) +
+            (edgeFeature ? 5.0 : 0.0);
         final finalWeight = weight * yBias;
         weightedX += (x / width) * finalWeight;
         weightedY += (y / height) * finalWeight;
         totalWeight += finalWeight;
+        final binIndex = ((x / width) * bins.length).floor().clamp(0, bins.length - 1);
+        bins[binIndex] += finalWeight;
         if (x < width / 2) {
           leftWeight += finalWeight;
         } else {
@@ -178,11 +201,45 @@ class SnapshotGazeFallbackService {
 
     if (totalWeight < 80) return null;
     final asymmetry = ((rightWeight - leftWeight) / totalWeight).clamp(-1.0, 1.0);
+    final personCount = _estimatePersonClusters(bins, totalWeight);
     return _HeadSignal(
       (weightedX / totalWeight).clamp(0.0, 1.0),
       (weightedY / totalWeight).clamp(0.0, 1.0),
       asymmetry,
+      personCount: personCount,
+      multiplePeopleLikely: personCount >= 2,
     );
+  }
+
+  int _estimatePersonClusters(List<double> bins, double totalWeight) {
+    if (bins.isEmpty || totalWeight <= 0) return 0;
+    final strongest = bins.reduce(math.max);
+    if (strongest <= 0) return 0;
+    final threshold = math.max(totalWeight * 0.055, strongest * 0.28);
+    var clusters = 0;
+    var inCluster = false;
+    var clusterWeight = 0.0;
+    var clusterWidth = 0;
+    for (final weight in bins) {
+      if (weight >= threshold) {
+        inCluster = true;
+        clusterWeight += weight;
+        clusterWidth++;
+      } else if (inCluster) {
+        if (clusterWeight >= threshold * 1.20 && clusterWidth >= 1) clusters++;
+        inCluster = false;
+        clusterWeight = 0.0;
+        clusterWidth = 0;
+      }
+    }
+    if (inCluster && clusterWeight >= threshold * 1.20 && clusterWidth >= 1) {
+      clusters++;
+    }
+    // A single very wide cluster can mean two close people in the scene.
+    final wideClusterLikely = bins.where((weight) => weight >= threshold).length >= 6 &&
+        bins.where((weight) => weight >= strongest * 0.45).length >= 4;
+    if (clusters == 1 && wideClusterLikely) return 2;
+    return clusters.clamp(0, 3);
   }
 
   double _luma(img.Pixel pixel) {
@@ -201,8 +258,17 @@ class SnapshotGazeFallbackService {
 }
 
 class _HeadSignal {
-  const _HeadSignal(this.x, this.y, this.asymmetry);
+  const _HeadSignal(
+    this.x,
+    this.y,
+    this.asymmetry, {
+    required this.personCount,
+    required this.multiplePeopleLikely,
+  });
+
   final double x;
   final double y;
   final double asymmetry;
+  final int personCount;
+  final bool multiplePeopleLikely;
 }
