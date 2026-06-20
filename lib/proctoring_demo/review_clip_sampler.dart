@@ -128,8 +128,9 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
 
   Future<void> _captureSample(int sampleNumber) async {
     final controller = _camera;
-    if (controller == null || !controller.value.isInitialized || _recording)
+    if (controller == null || !controller.value.isInitialized || _recording) {
       return;
+    }
     setState(() {
       _recording = true;
       _status = 'Capturing review clip $sampleNumber of $_sampleCount';
