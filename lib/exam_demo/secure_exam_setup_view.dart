@@ -23,6 +23,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     'KSLAS_API_BASE_URL',
     defaultValue: 'http://127.0.0.1:8080',
   );
+  static const bool _allowExamOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_EXAM_OVERRIDE',
+    defaultValue: false,
+  );
 
   final DemoFaceIdService _faceIdService = DemoFaceIdService();
   late final ExamStartApprovalService _approvalService;
@@ -35,7 +39,9 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool _startApproved = false;
   String? _manifestPath;
   String? _startToken;
-  String _approvalMessage = 'Start approval has not been requested.';
+  String _approvalMessage = _allowExamOverride
+      ? 'Testing override is active. Start exam is unlocked for development testing only.'
+      : 'Start approval has not been requested.';
   AudioSystemReviewResult? _audioSystemReview;
   ExamStartApprovalResult? _approvalResult;
 
@@ -60,7 +66,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool get _systemOk => !_needsChecks || _systemApproved;
   bool get _allChecksReady => _faceOk && _roomOk && _audioOk && _systemOk;
   bool get _approvalRequired => widget.assessment.remoteProctored || widget.assessment.graded;
-  bool get _approvalOk => !_approvalRequired || (_startApproved && _startToken != null);
+  bool get _approvalOk => _allowExamOverride || !_approvalRequired || (_startApproved && _startToken != null);
 
   bool _canStartOnDevice(BuildContext context) {
     final phoneSized = MediaQuery.sizeOf(context).shortestSide < 600;
@@ -72,14 +78,18 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   bool _canStart(BuildContext context) {
-    return _allChecksReady && _approvalOk && _canStartOnDevice(context);
+    if (!_canStartOnDevice(context)) return false;
+    if (_allowExamOverride) return true;
+    return _allChecksReady && _approvalOk;
   }
 
   void _clearApproval([String? message]) {
     _startApproved = false;
     _startToken = null;
     _approvalResult = null;
-    _approvalMessage = message ?? 'Start approval must be requested again.';
+    _approvalMessage = _allowExamOverride
+        ? 'Testing override is active. Start exam is unlocked for development testing only.'
+        : message ?? 'Start approval must be requested again.';
   }
 
   @override
@@ -92,6 +102,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         children: [
           _Header(assessment: widget.assessment, questionCount: questions.length),
           const SizedBox(height: 14),
+          if (_allowExamOverride) ...[
+            const _OverrideNotice(),
+            const SizedBox(height: 14),
+          ],
           _Checklist(
             faceOk: _faceOk,
             roomOk: _roomOk,
@@ -137,7 +151,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                         : 'Run sound and device check',
                   ),
                 ),
-              if (_approvalRequired)
+              if (_approvalRequired && !_allowExamOverride)
                 FilledButton.icon(
                   onPressed: _canRequestApproval(context) ? _requestApproval : null,
                   icon: const Icon(Icons.verified_user_outlined),
@@ -152,7 +166,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               FilledButton.icon(
                 onPressed: _canStart(context) ? _startExam : null,
                 icon: const Icon(Icons.edit_document),
-                label: Text(_startLabel),
+                label: Text(_allowExamOverride ? 'Start exam for testing' : _startLabel),
               ),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).pop(),
@@ -293,7 +307,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       await _showPhoneBlockedMessage();
       return;
     }
-    if (!_canStart(context) || (_approvalRequired && _startToken == null)) {
+    if (!_allowExamOverride && (!_canStart(context) || (_approvalRequired && _startToken == null))) {
       await _showBlockedStartMessage();
       return;
     }
@@ -303,12 +317,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
           attemptId: _attemptId,
-          examStartToken: _startToken ?? '',
-          agentDecision: _approvalRequired
-              ? 'start_approved'
-              : widget.assessment.attendanceOnly
-                  ? 'attendance_only'
-                  : 'local_setup_ready',
+          examStartToken: _startToken ?? (_allowExamOverride ? 'dev_override_$_attemptId' : ''),
+          agentDecision: _allowExamOverride
+              ? 'testing_override_start'
+              : _approvalRequired
+                  ? 'start_approved'
+                  : widget.assessment.attendanceOnly
+                      ? 'attendance_only'
+                      : 'local_setup_ready',
         ),
       ),
     );
@@ -479,6 +495,34 @@ class _ApprovalCard extends StatelessWidget {
                   ...result!.issues.map((issue) => Text('• $issue')),
                 ],
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OverrideNotice extends StatelessWidget {
+  const _OverrideNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFDBA74)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.science_outlined, color: Color(0xFFC2410C)),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Testing mode is active. This temporarily unlocks exam start so the writing, monitoring, timer, alert, and submission flow can be tested. Do not use this build for real exams.',
             ),
           ),
         ],
