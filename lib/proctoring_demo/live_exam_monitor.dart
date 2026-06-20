@@ -315,7 +315,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
       final optimized = await _optimizedVision.runFrame(
         image: image,
-        tasks: const <String>['object_reflection_shadow_detector'],
+        tasks: const <String>[
+          'person_detector',
+          'object_reflection_shadow_detector',
+        ],
       );
       if (optimized != null && optimized.available) {
         _handleOptimizedVisionResult(optimized);
@@ -367,9 +370,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       final label = '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'.toLowerCase();
       return label.contains('person') || label.contains('human') || label.contains('face');
     }).toList();
-    final multiplePeople = personObjects.length >= 2 ||
-        int.tryParse('${result.outputs['person_count'] ?? ''}') != null &&
-            int.parse('${result.outputs['person_count']}') >= 2;
+    final nativePersonCount = int.tryParse('${result.outputs['person_count'] ?? ''}') ?? 0;
+    final nativeMultiplePeople = result.outputs['multiple_people_likely'] == true;
+    final multiplePeople = nativeMultiplePeople || nativePersonCount >= 2 || personObjects.length >= 2;
     if (multiplePeople) {
       _multiplePeopleRiskStreak++;
     } else {
