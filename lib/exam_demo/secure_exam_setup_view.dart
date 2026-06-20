@@ -303,6 +303,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
           attemptId: _attemptId,
+          examStartToken: _startToken ?? '',
           agentDecision: _approvalRequired
               ? 'start_approved'
               : widget.assessment.attendanceOnly
