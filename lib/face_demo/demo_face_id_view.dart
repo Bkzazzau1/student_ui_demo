@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'demo_face_id_service.dart';
 import 'face_identity_enrollment_api.dart';
 
+part 'demo_face_id_view_widgets.dart';
+
 class DemoFaceIdView extends StatefulWidget {
   const DemoFaceIdView({super.key, this.onComplete});
 
