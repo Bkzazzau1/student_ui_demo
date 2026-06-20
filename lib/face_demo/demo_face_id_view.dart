@@ -36,28 +36,25 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     _IdentityGuide(
       code: 'front_face',
       title: 'Front face',
-      instruction:
-          'Look straight at the camera. Keep your full face inside the oval.',
+      instruction: 'Look straight at the camera and keep your face inside the guide.',
       icon: Icons.face_retouching_natural,
     ),
     _IdentityGuide(
       code: 'left_angle',
       title: 'Left angle',
-      instruction:
-          'Turn your face slightly to the left. Keep both eyes visible.',
+      instruction: 'Turn your face slightly to the left. Keep both eyes visible.',
       icon: Icons.keyboard_arrow_left,
     ),
     _IdentityGuide(
       code: 'right_angle',
       title: 'Right angle',
-      instruction:
-          'Turn your face slightly to the right. Keep your chin level.',
+      instruction: 'Turn your face slightly to the right. Keep your chin level.',
       icon: Icons.keyboard_arrow_right,
     ),
     _IdentityGuide(
       code: 'look_up',
       title: 'Look up',
-      instruction: 'Raise your face slightly upward without leaving the oval.',
+      instruction: 'Raise your face slightly upward without leaving the guide.',
       icon: Icons.keyboard_arrow_up,
     ),
     _IdentityGuide(
@@ -69,8 +66,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     _IdentityGuide(
       code: 'eyes_closed',
       title: 'Close eyes',
-      instruction:
-          'Close your eyes for this final liveness image, then capture.',
+      instruction: 'Close your eyes briefly for the final liveness image.',
       icon: Icons.visibility_off_outlined,
     ),
   ];
@@ -82,8 +78,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       defaultValue: 'http://127.0.0.1:8080',
     ),
   );
-  final List<FaceIdentityEnrollmentImage> _capturedImages =
-      <FaceIdentityEnrollmentImage>[];
+  final List<FaceIdentityEnrollmentImage> _capturedImages = <FaceIdentityEnrollmentImage>[];
 
   late DemoFaceIdSnapshot _snapshot;
   CameraController? _controller;
@@ -91,20 +86,18 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   bool _capturing = false;
   bool _submitting = false;
   bool _syncing = false;
+  bool _autoCaptureRunning = false;
+  bool _autoCaptureStarted = false;
   String? _cameraError;
-  String? _backendMessage;
+  String? _statusMessage;
 
-  _IdentityGuide get _currentGuide =>
-      _guides[math.min(_snapshot.capturedSamples, _guides.length - 1)];
+  _IdentityGuide get _currentGuide => _guides[math.min(_snapshot.capturedSamples, _guides.length - 1)];
 
   @override
   void initState() {
     super.initState();
     _snapshot = _service.load();
-    _syncBackendEnrollment();
-    if (!_snapshot.locked) {
-      _openCamera();
-    }
+    _syncSavedFaceId();
   }
 
   @override
@@ -114,11 +107,11 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     super.dispose();
   }
 
-  Future<void> _syncBackendEnrollment() async {
+  Future<void> _syncSavedFaceId() async {
     if (_syncing) return;
     setState(() {
       _syncing = true;
-      _backendMessage = 'Checking backend Face ID enrollment...';
+      _statusMessage = 'Checking your saved Face ID...';
     });
     try {
       final latest = await _identityApi.fetchLatest(studentId: DemoFaceIdService.studentId);
@@ -132,29 +125,25 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
           _controller = null;
           _syncing = false;
           _openingCamera = false;
-          _backendMessage = 'Backend Face ID downloaded and locked on this device.';
+          _statusMessage = 'Face ID is active and protected on this device.';
         });
         widget.onComplete?.call();
         return;
       }
       setState(() {
         _syncing = false;
-        _backendMessage = latest == null
-            ? 'No backend Face ID found. Capture and upload identity images once.'
-            : latest.message;
+        _statusMessage = latest == null
+            ? 'No saved Face ID found. We will capture your identity images automatically.'
+            : latest.message.replaceAll('Backend ', '').replaceAll('backend ', '');
       });
-      if (!_snapshot.locked && _controller == null) {
-        await _openCamera();
-      }
-    } catch (e) {
+      await _openCamera();
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _syncing = false;
-        _backendMessage = 'Backend Face ID sync failed: $e';
+        _statusMessage = 'We could not check your saved Face ID. Capture will continue and save when connection is available.';
       });
-      if (!_snapshot.locked && _controller == null) {
-        await _openCamera();
-      }
+      await _openCamera();
     }
   }
 
@@ -169,8 +158,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (cameras.isEmpty) {
         setState(() {
           _openingCamera = false;
-          _cameraError =
-              'No camera found. Identity image capture requires camera access.';
+          _cameraError = 'No camera found. Face ID setup requires camera access.';
         });
         return;
       }
@@ -178,45 +166,57 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(
-        selected,
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
+      final controller = CameraController(selected, ResolutionPreset.medium, enableAudio: false);
       await _controller?.dispose();
       await controller.initialize();
       if (!mounted) return;
       setState(() {
         _controller = controller;
         _openingCamera = false;
+        _statusMessage = 'Automatic capture will start. Follow the guide on screen.';
       });
+      _startAutomaticCapture();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _openingCamera = false;
-        _cameraError = 'Camera could not open for identity image capture: $e';
+        _cameraError = 'Camera could not open for Face ID setup: $e';
       });
     }
   }
 
-  Future<void> _captureSample() async {
-    if (_snapshot.locked) {
-      setState(() => _backendMessage = 'Face ID is already locked by backend and cannot be changed here.');
-      return;
+  Future<void> _startAutomaticCapture() async {
+    if (_autoCaptureRunning || _autoCaptureStarted || _snapshot.locked || _snapshot.isComplete) return;
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    _autoCaptureStarted = true;
+    _autoCaptureRunning = true;
+    while (mounted && !_snapshot.locked && _snapshot.capturedSamples < _snapshot.requiredSamples) {
+      final guide = _currentGuide;
+      setState(() {
+        _statusMessage = '${guide.title}: ${guide.instruction} Capturing automatically...';
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 1700));
+      if (!mounted || _snapshot.locked || _submitting) break;
+      await _captureSample();
+      await Future<void>.delayed(const Duration(milliseconds: 600));
     }
-    if (_capturing || _snapshot.isComplete || _submitting || _syncing) return;
+    if (mounted) {
+      setState(() => _autoCaptureRunning = false);
+    }
+  }
+
+  Future<void> _captureSample() async {
+    if (_snapshot.locked || _capturing || _snapshot.isComplete || _submitting || _syncing) return;
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
-      setState(
-        () => _cameraError =
-            'Open the camera before capturing this identity image.',
-      );
+      setState(() => _cameraError = 'Open the camera before Face ID setup can continue.');
       return;
     }
     final guide = _currentGuide;
     setState(() => _capturing = true);
+    String imagePath;
     var quality = 0.72 + math.Random().nextDouble() * 0.22;
-    String? imagePath;
     try {
       final file = await controller.takePicture();
       imagePath = file.path;
@@ -246,9 +246,9 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     setState(() {
       _snapshot = next;
       _capturing = false;
-      _backendMessage = next.capturedSamples >= next.requiredSamples
-          ? 'All images captured. Uploading and locking Face ID on backend...'
-          : null;
+      _statusMessage = next.capturedSamples >= next.requiredSamples
+          ? 'All images captured. Saving your Face ID securely...'
+          : 'Image ${next.capturedSamples} of ${next.requiredSamples} captured.';
     });
     if (next.capturedSamples >= next.requiredSamples) {
       await _submitIdentityGallery();
@@ -257,7 +257,10 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
 
   Future<void> _submitIdentityGallery() async {
     if (_submitting || _capturedImages.length < _guides.length || _snapshot.locked) return;
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _statusMessage = 'Saving your Face ID securely...';
+    });
     try {
       final response = await _identityApi.submit(
         studentId: _snapshot.studentId,
@@ -270,7 +273,10 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         _snapshot = synced;
         _controller = null;
         _submitting = false;
-        _backendMessage = response.message;
+        _statusMessage = response.message
+            .replaceAll('Backend ', '')
+            .replaceAll('backend ', '')
+            .replaceAll('locked', 'protected');
       });
       if (synced.isComplete) {
         widget.onComplete?.call();
@@ -279,17 +285,14 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _backendMessage =
-            'Backend enrollment failed. Face ID is not active yet and cannot be used for exam startup: $e';
+        _statusMessage = 'Face ID could not be saved. Check connection and try again.';
       });
     }
   }
 
   Future<void> _reset() async {
     if (_snapshot.locked) {
-      setState(() {
-        _backendMessage = 'Face ID is locked by backend. It can only be reset by an authorized officer.';
-      });
+      setState(() => _statusMessage = 'Face ID is protected. It can only be reset by an authorized officer.');
       return;
     }
     final next = await _service.resetLocalDraftOnly();
@@ -297,8 +300,11 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     setState(() {
       _snapshot = next;
       _capturedImages.clear();
-      _backendMessage = null;
+      _autoCaptureStarted = false;
+      _autoCaptureRunning = false;
+      _statusMessage = 'Local draft cleared. Automatic capture will restart.';
     });
+    await _openCamera();
   }
 
   @override
@@ -307,14 +313,14 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     final compact = MediaQuery.sizeOf(context).width < 640;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(title: const Text('Identity setup')),
+      appBar: AppBar(title: const Text('Face ID setup')),
       bottomNavigationBar: compact && !_snapshot.locked
           ? _MobileCaptureBar(
               snapshot: _snapshot,
               guide: _currentGuide,
-              capturing: _capturing || _syncing,
+              capturing: _capturing || _syncing || _autoCaptureRunning,
               submitting: _submitting,
-              onCapture: _captureSample,
+              onCapture: _startAutomaticCapture,
               onReset: _reset,
             )
           : null,
@@ -323,16 +329,12 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
           child: SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(18, 14, 18, compact ? 104 : 18),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 980),
+              constraints: const BoxConstraints(maxWidth: 1040),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Header(
-                    snapshot: _snapshot,
-                    progress: progress,
-                    compact: compact,
-                  ),
-                  const SizedBox(height: 12),
+                  _Header(snapshot: _snapshot, progress: progress, compact: compact),
+                  const SizedBox(height: 14),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final wide = constraints.maxWidth >= 760;
@@ -348,72 +350,39 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                         snapshot: _snapshot,
                         progress: progress,
                         guides: _guides,
-                        backendMessage: _backendMessage,
+                        statusMessage: _statusMessage,
                         compact: !wide,
                       );
                       if (!wide) {
-                        return Column(
-                          children: [
-                            preview,
-                            if (!compact && !_snapshot.locked) ...[
-                              const SizedBox(height: 14),
-                              _ActionBar(
-                                snapshot: _snapshot,
-                                guide: _currentGuide,
-                                capturing: _capturing || _syncing,
-                                submitting: _submitting,
-                                onCapture: _captureSample,
-                                onReset: _reset,
-                                onBack: () => Navigator.of(
-                                  context,
-                                ).pop(_snapshot.isComplete),
-                              ),
-                            ],
-                            const SizedBox(height: 14),
-                            status,
-                          ],
-                        );
+                        return Column(children: [preview, const SizedBox(height: 14), status]);
                       }
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(child: preview),
-                          const SizedBox(width: 14),
-                          Expanded(child: status),
+                          Expanded(flex: 6, child: preview),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 5, child: status),
                         ],
                       );
                     },
                   ),
-                  if (compact)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: () =>
-                            Navigator.of(context).pop(_snapshot.isComplete),
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Back'),
-                      ),
+                  const SizedBox(height: 14),
+                  if (!_snapshot.locked)
+                    _ActionBar(
+                      snapshot: _snapshot,
+                      guide: _currentGuide,
+                      capturing: _capturing || _syncing || _autoCaptureRunning,
+                      submitting: _submitting,
+                      onCapture: _startAutomaticCapture,
+                      onReset: _reset,
+                      onBack: () => Navigator.of(context).pop(_snapshot.isComplete),
                     )
-                  else ...[
-                    const SizedBox(height: 14),
-                    if (!_snapshot.locked)
-                      _ActionBar(
-                        snapshot: _snapshot,
-                        guide: _currentGuide,
-                        capturing: _capturing || _syncing,
-                        submitting: _submitting,
-                        onCapture: _captureSample,
-                        onReset: _reset,
-                        onBack: () =>
-                            Navigator.of(context).pop(_snapshot.isComplete),
-                      )
-                    else
-                      FilledButton.icon(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        icon: const Icon(Icons.lock_outline),
-                        label: const Text('Face ID active - return'),
-                      ),
-                  ],
+                  else
+                    FilledButton.icon(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      icon: const Icon(Icons.verified_user_outlined),
+                      label: const Text('Face ID active - return'),
+                    ),
                 ],
               ),
             ),
