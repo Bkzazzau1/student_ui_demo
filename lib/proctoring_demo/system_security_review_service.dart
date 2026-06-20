@@ -353,12 +353,6 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
       );
     }
 
-    if (hardFindings.isEmpty && warningFindings.isEmpty) {
-      hardFindings.add(
-        '$platformName device review passed. No Bluetooth, external audio, USB, virtual camera, VM, or sandbox risk was detected.',
-      );
-    }
-
     final ready =
         !bluetoothDetected &&
         !externalAudioDetected &&
@@ -369,6 +363,8 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
         !unknownDeviceState;
 
     final findings = <String>[
+      if (ready && warningFindings.isEmpty)
+        '$platformName device review passed. No Bluetooth, external audio, USB, virtual camera, VM, or sandbox risk was detected.',
       ...hardFindings,
       ...warningFindings,
     ];
