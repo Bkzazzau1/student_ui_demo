@@ -33,26 +33,72 @@ class DemoExamService {
         .where((assessment) => assessment.isAvailableOn(date))
         .toList();
     if (scheduled.isNotEmpty) return scheduled;
-    return <DemoAssessment>[_sampleExamForDate(date)];
+    return _sampleScheduleForDate(date);
   }
 
-  static DemoAssessment _sampleExamForDate(DateTime date) {
-    return DemoAssessment(
-      id: 'sample-exam-${date.year}-${date.month}-${date.day}',
-      course: _csc305,
-      title: 'Sample exam for today',
-      kind: 'Examination',
-      durationMinutes: 20,
-      graded: true,
-      remoteProctored: true,
-      policy: AssessmentPolicy.strictExam,
-      availableDateIso: _dateIso(date),
-      sections: const <DemoExamSection>[
-        DemoExamSection.objective,
-        DemoExamSection.fillBlank,
-        DemoExamSection.theory,
-      ],
-    );
+  static List<DemoAssessment> _sampleScheduleForDate(DateTime date) {
+    final dateIso = _dateIso(date);
+    final idDate = '${date.year}-${date.month}-${date.day}';
+    return <DemoAssessment>[
+      DemoAssessment(
+        id: 'sample-exam-$idDate',
+        course: _csc305,
+        title: 'Sample supervised exam for today',
+        kind: 'Examination',
+        durationMinutes: 20,
+        graded: true,
+        remoteProctored: true,
+        policy: AssessmentPolicy.strictExam,
+        availableDateIso: dateIso,
+        sections: const <DemoExamSection>[
+          DemoExamSection.objective,
+          DemoExamSection.fillBlank,
+          DemoExamSection.theory,
+        ],
+      ),
+      DemoAssessment(
+        id: 'sample-graded-assessment-$idDate',
+        course: _gst204,
+        title: 'Continuous assessment quiz',
+        kind: 'Graded assessment',
+        durationMinutes: 15,
+        graded: true,
+        remoteProctored: false,
+        policy: AssessmentPolicy.gradedAssessment,
+        availableDateIso: dateIso,
+        sections: const <DemoExamSection>[DemoExamSection.objective],
+      ),
+      DemoAssessment(
+        id: 'sample-ungraded-assessment-$idDate',
+        course: _csc305,
+        title: 'Readiness self-check',
+        kind: 'Ungraded assessment',
+        durationMinutes: 10,
+        graded: false,
+        remoteProctored: false,
+        policy: AssessmentPolicy.gradedAssessment,
+        availableDateIso: dateIso,
+        sections: const <DemoExamSection>[
+          DemoExamSection.objective,
+          DemoExamSection.fillBlank,
+        ],
+      ),
+      DemoAssessment(
+        id: 'sample-practice-$idDate',
+        course: _mat221,
+        title: 'Weekly practice questions',
+        kind: 'Practice',
+        durationMinutes: 20,
+        graded: false,
+        remoteProctored: false,
+        policy: AssessmentPolicy.practice,
+        availableDateIso: dateIso,
+        sections: const <DemoExamSection>[
+          DemoExamSection.objective,
+          DemoExamSection.fillBlank,
+        ],
+      ),
+    ];
   }
 
   static String _dateIso(DateTime date) =>
@@ -79,7 +125,7 @@ class DemoExamService {
       id: 'assess-gst204-ca',
       course: _gst204,
       title: 'Continuous assessment quiz',
-      kind: 'Assessment',
+      kind: 'Graded assessment',
       durationMinutes: 15,
       graded: true,
       remoteProctored: false,
@@ -88,9 +134,24 @@ class DemoExamService {
       sections: <DemoExamSection>[DemoExamSection.objective],
     ),
     DemoAssessment(
+      id: 'assess-csc305-readiness',
+      course: _csc305,
+      title: 'Readiness self-check',
+      kind: 'Ungraded assessment',
+      durationMinutes: 10,
+      graded: false,
+      remoteProctored: false,
+      policy: AssessmentPolicy.gradedAssessment,
+      availableDateIso: '2026-06-19',
+      sections: <DemoExamSection>[
+        DemoExamSection.objective,
+        DemoExamSection.fillBlank,
+      ],
+    ),
+    DemoAssessment(
       id: 'practice-mat221-matrix',
       course: _mat221,
-      title: 'Weekly matrix attendance practice',
+      title: 'Weekly matrix practice questions',
       kind: 'Practice',
       durationMinutes: 20,
       graded: false,
