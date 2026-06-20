@@ -59,7 +59,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     super.dispose();
   }
 
-  bool get _needsChecks => widget.assessment.remoteProctored;
+  bool get _needsChecks =>
+      widget.assessment.isStrictExam && widget.assessment.remoteProctored;
   bool get _faceOk => !widget.assessment.graded || _faceId.isComplete;
   bool get _roomOk => !_needsChecks || (_roomApproved && _manifestPath != null);
   bool get _audioOk => !_needsChecks || _audioApproved;
@@ -70,7 +71,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
   bool _canStartOnDevice(BuildContext context) {
     final phoneSized = MediaQuery.sizeOf(context).shortestSide < 600;
-    return !phoneSized || !widget.assessment.graded;
+    return !phoneSized || !widget.assessment.isStrictExam;
   }
 
   bool _canRequestApproval(BuildContext context) {
@@ -349,7 +350,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       builder: (context) => AlertDialog(
         title: const Text('Use a larger device'),
         content: const Text(
-          'Exam and graded assessment attempts must be completed on a laptop, tablet, Windows desktop, or Mac. Phones are only used for companion camera monitoring.',
+          'Supervised examinations must be completed on a desktop or laptop. '
+          'Graded assessments may be completed on phone, tablet, desktop, or laptop when allowed by the lecturer.',
         ),
         actions: [FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK'))],
       ),
