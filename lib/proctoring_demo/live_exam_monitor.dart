@@ -12,6 +12,7 @@ import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'optimized_vision_runtime_bridge.dart';
+import 'snapshot_gaze_fallback_service.dart';
 import 'visual_reflection_shadow_service.dart';
 import 'vision_compute_budget_service.dart';
 
@@ -56,10 +57,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       VisualReflectionShadowService();
   final OptimizedVisionRuntimeBridge _optimizedVision =
       OptimizedVisionRuntimeBridge();
+  final SnapshotGazeFallbackService _snapshotGazeFallback =
+      SnapshotGazeFallbackService();
   final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
 
   CameraController? _camera;
   Timer? _heartbeat;
+  Timer? _snapshotFallbackTimer;
   StreamSubscription<dynamic>? _placeholder;
 
   final Map<String, DateTime> _lastEventAt = <String, DateTime>{};
@@ -81,6 +85,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _analysingGazeFrame = false;
   bool _imageStreamAvailable = false;
   bool _advancedStreamNoticeSent = false;
+  bool _snapshotFallbackBusy = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
@@ -101,6 +106,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   @override
   void dispose() {
     _heartbeat?.cancel();
+    _snapshotFallbackTimer?.cancel();
     _placeholder?.cancel();
     final camera = _camera;
     if (camera != null && camera.value.isStreamingImages) {
@@ -189,17 +195,21 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _visualReady = true;
         _cameraStatus = 'Camera preview active';
         if (streamReady) {
+          _snapshotFallbackTimer?.cancel();
           _gazeStatus = 'Gaze vector and head pose monitoring active';
           _livenessStatus = 'Continuous local liveness anti-spoofing active';
           _visualStatus = 'Reflection, shadow, and object integrity scan active';
         } else {
-          _gazeStatus = 'Camera preview active; gaze analysis limited on this device';
+          _gazeStatus = 'Camera preview active; snapshot gaze/head check active';
           _livenessStatus =
               'Camera preview active; liveness analysis limited on this device';
           _visualStatus =
               'Camera preview active; reflection/object scan limited on this device';
         }
       });
+      if (!streamReady) {
+        _startSnapshotGazeFallback(controller);
+      }
     } catch (e) {
       await _raiseEvent(
         eventType: 'camera_unavailable',
@@ -221,6 +231,59 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _visualStatus = 'Reflection and object integrity scan unavailable';
       });
     }
+  }
+
+  void _startSnapshotGazeFallback(CameraController controller) {
+    _snapshotFallbackTimer?.cancel();
+    _snapshotFallbackTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (!mounted) return;
+      if (_imageStreamAvailable || controller.value.isStreamingImages) return;
+      if (!controller.value.isInitialized || controller.value.isTakingPicture) return;
+      if (_snapshotFallbackBusy) return;
+      _snapshotFallbackBusy = true;
+      try {
+        final picture = await controller.takePicture();
+        final bytes = await picture.readAsBytes();
+        final result = _snapshotGazeFallback.analyseJpeg(bytes);
+        if (result == null) return;
+        _lastGazeFrameAt = DateTime.now();
+        if (result.ready && result.headPoseShiftLikely) {
+          _gazeRiskStreak++;
+        } else {
+          _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
+        }
+        if (mounted) {
+          setState(() {
+            _gazeReady = true;
+            _gazeStatus = !result.ready
+                ? 'Snapshot gaze/head check learning normal position'
+                : result.headPoseShiftLikely
+                    ? 'Possible head/gaze movement detected ($_gazeRiskStreak/2)'
+                    : 'Snapshot gaze/head check stable';
+          });
+        }
+        if (_gazeRiskStreak >= 2) {
+          _gazeRiskStreak = 0;
+          unawaited(
+            _raiseEvent(
+              eventType: 'gaze_head_pose_deviation',
+              severity: 'high',
+              message:
+                  'Sustained head or gaze movement was detected by the snapshot check.',
+              metadata: result.toJson(),
+            ),
+          );
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _gazeStatus = 'Camera preview active; snapshot gaze/head check waiting';
+          });
+        }
+      } finally {
+        _snapshotFallbackBusy = false;
+      }
+    });
   }
 
   void _handleCameraImage(CameraImage image) {
@@ -576,7 +639,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _gazeReady = true;
           _livenessReady = true;
           _visualReady = true;
-          _gazeStatus = 'Camera preview active; gaze analysis limited on this device';
+          if (!(_gazeStatus.contains('Snapshot') ||
+              _gazeStatus.contains('head/gaze') ||
+              _gazeStatus.contains('movement'))) {
+            _gazeStatus = 'Camera preview active; snapshot gaze/head check active';
+          }
           _livenessStatus =
               'Camera preview active; liveness analysis limited on this device';
           _visualStatus =
