@@ -42,6 +42,9 @@ class AudioIsolationResult {
 
 class AudioFingerprintIsolationService {
   final List<double> _recentRms = <double>[];
+  final List<double> _recentPeak = <double>[];
+  final List<double> _recentZcr = <double>[];
+  final List<double> _recentSlope = <double>[];
   final List<String> _recentFingerprints = <String>[];
 
   AudioIsolationResult? analysePcm16(Uint8List chunk) {
@@ -77,12 +80,29 @@ class AudioFingerprintIsolationService {
     final zcr = (zeroCrossings / count).clamp(0.0, 1.0);
     final slope = math.sqrt(slopeEnergy / math.max(1, count - 1)).clamp(0.0, 1.0);
 
-    _recentRms.add(rms);
-    if (_recentRms.length > 32) {
-      _recentRms.removeRange(0, _recentRms.length - 32);
-    }
+    _pushRecent(_recentRms, rms, 32);
+    _pushRecent(_recentPeak, peak, 32);
+    _pushRecent(_recentZcr, zcr, 32);
+    _pushRecent(_recentSlope, slope, 32);
+
     final variation = _variation(_recentRms);
-    final voiceConfidence = _voiceConfidence(rms: rms, zcr: zcr, variation: variation, slope: slope);
+    final peakVariation = _variation(_recentPeak);
+    final recentPeak = _recentPeak.isEmpty ? peak : _recentPeak.reduce(math.max);
+    final avgPeak = _average(_recentPeak);
+    final avgZcr = _average(_recentZcr);
+    final avgSlope = _average(_recentSlope);
+    final voiceConfidence = _voiceConfidence(
+      rms: rms,
+      peak: peak,
+      recentPeak: recentPeak,
+      avgPeak: avgPeak,
+      zcr: zcr,
+      avgZcr: avgZcr,
+      variation: variation,
+      peakVariation: peakVariation,
+      slope: slope,
+      avgSlope: avgSlope,
+    );
     final fingerprint = _fingerprint(
       rms: rms,
       peak: peak,
@@ -96,12 +116,12 @@ class AudioFingerprintIsolationService {
       _recentFingerprints.removeRange(0, _recentFingerprints.length - 48);
     }
 
-    final steadyNoise = rms > 0.03 && variation < 0.025 && zcr < 0.24;
-    final quiet = rms < 0.025 && peak < 0.11;
-    final humanVoiceLikely = voiceConfidence >= 0.68;
+    final steadyNoise = rms > 0.006 && variation < 0.006 && zcr < 0.20 && peakVariation < 0.025;
+    final quiet = rms < 0.008 && peak < 0.050;
+    final humanVoiceLikely = voiceConfidence >= 0.45;
     final allowedAmbientLikely = !humanVoiceLikely && (quiet || steadyNoise);
     final label = humanVoiceLikely
-        ? 'human_voice_likely'
+        ? 'voice_noticed'
         : quiet
             ? 'quiet_or_low_noise'
             : steadyNoise
@@ -122,18 +142,41 @@ class AudioFingerprintIsolationService {
     );
   }
 
+  void _pushRecent(List<double> values, double value, int maxLength) {
+    values.add(value);
+    if (values.length > maxLength) {
+      values.removeRange(0, values.length - maxLength);
+    }
+  }
+
   double _voiceConfidence({
     required double rms,
+    required double peak,
+    required double recentPeak,
+    required double avgPeak,
     required double zcr,
+    required double avgZcr,
     required double variation,
+    required double peakVariation,
     required double slope,
+    required double avgSlope,
   }) {
     var score = 0.0;
-    if (rms >= 0.055 && rms <= 0.55) score += 0.32;
-    if (zcr >= 0.035 && zcr <= 0.24) score += 0.26;
-    if (variation >= 0.035 && variation <= 0.24) score += 0.26;
-    if (slope >= 0.018 && slope <= 0.32) score += 0.16;
-    if (rms > 0.65 || zcr > 0.42) score -= 0.18;
+    final peakToRms = peak / math.max(rms, 0.0008);
+    final recentPeakToAvgPeak = recentPeak / math.max(avgPeak, 0.0008);
+    final speechZcr = (zcr >= 0.018 && zcr <= 0.28) || (avgZcr >= 0.018 && avgZcr <= 0.28);
+    final speechTexture = slope >= 0.0025 || avgSlope >= 0.0025;
+
+    if (rms >= 0.0012 && rms <= 0.60) score += 0.10;
+    if (peak >= 0.018) score += 0.16;
+    if (recentPeak >= 0.030) score += 0.12;
+    if (peakToRms >= 3.0) score += 0.12;
+    if (recentPeakToAvgPeak >= 1.8) score += 0.10;
+    if (speechZcr) score += 0.18;
+    if (speechTexture) score += 0.18;
+    if (variation >= 0.0007) score += 0.08;
+    if (peakVariation >= 0.0025) score += 0.10;
+    if (rms > 0.75 || zcr > 0.50) score -= 0.16;
     return score.clamp(0.0, 1.0);
   }
 
@@ -145,11 +188,11 @@ class AudioFingerprintIsolationService {
     required double variation,
   }) {
     final parts = <int>[
-      (rms * 100).round().clamp(0, 99),
-      (peak * 100).round().clamp(0, 99),
-      (zcr * 100).round().clamp(0, 99),
-      (slope * 100).round().clamp(0, 99),
-      (variation * 100).round().clamp(0, 99),
+      (rms * 1000).round().clamp(0, 999),
+      (peak * 1000).round().clamp(0, 999),
+      (zcr * 1000).round().clamp(0, 999),
+      (slope * 1000).round().clamp(0, 999),
+      (variation * 1000).round().clamp(0, 999),
     ];
     var hash = 0xcbf29ce484222325;
     const prime = 0x100000001b3;
@@ -167,5 +210,10 @@ class AudioFingerprintIsolationService {
       total += (samples[i] - samples[i - 1]).abs();
     }
     return total / (samples.length - 1);
+  }
+
+  double _average(List<double> samples) {
+    if (samples.isEmpty) return 0;
+    return samples.fold<double>(0, (sum, value) => sum + value) / samples.length;
   }
 }
