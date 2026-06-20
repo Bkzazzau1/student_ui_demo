@@ -31,13 +31,13 @@ class DemoFaceIdSnapshot {
 
   String get statusText {
     if (isComplete) {
-      return 'Face ID is active from backend enrollment and locked for secure examination startup.';
+      return 'Face ID is active, protected, and ready for secure exam identity checks.';
     }
     if (backendSynced && !locked) {
-      return 'Backend Face ID record exists but is not locked yet. Contact the exam office.';
+      return 'A saved Face ID record exists but is not ready yet. Contact the exam office.';
     }
     final remaining = requiredSamples - capturedSamples;
-    return 'Capture $remaining more guided identity image${remaining == 1 ? '' : 's'} and upload to backend to activate exam identity check.';
+    return 'Capture $remaining more guided identity image${remaining == 1 ? '' : 's'} to activate Face ID for exam identity checks.';
   }
 }
 
