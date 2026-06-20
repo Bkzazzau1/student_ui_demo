@@ -151,7 +151,7 @@ class _DemoExamHomeState extends State<DemoExamHome> {
           children: [
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1320),
+                constraints: const BoxConstraints(maxWidth: 1220),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -180,16 +180,10 @@ class _DemoExamHomeState extends State<DemoExamHome> {
                     else if (visibleSections.isEmpty)
                       _NoFilteredSchedule(filter: _filter)
                     else
-                      for (final section in visibleSections) ...[
-                        _AssessmentSection(
-                          title: section.title,
-                          subtitle: section.subtitle,
-                          icon: section.icon,
-                          assessments: section.assessments,
-                          onStart: (assessment) => _openSetup(context, assessment),
-                        ),
-                        const SizedBox(height: 18),
-                      ],
+                      _ResponsiveSectionLayout(
+                        sections: visibleSections,
+                        onStart: (assessment) => _openSetup(context, assessment),
+                      ),
                   ],
                 ),
               ),
@@ -710,6 +704,42 @@ class _InfoStateCard extends StatelessWidget {
   }
 }
 
+class _ResponsiveSectionLayout extends StatelessWidget {
+  const _ResponsiveSectionLayout({required this.sections, required this.onStart});
+
+  final List<_AssessmentSectionData> sections;
+  final ValueChanged<DemoAssessment> onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final twoColumns = constraints.maxWidth >= 980 && sections.length > 1;
+        final itemWidth = twoColumns
+            ? (constraints.maxWidth - 16) / 2
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            for (final section in sections)
+              SizedBox(
+                width: itemWidth,
+                child: _AssessmentSection(
+                  title: section.title,
+                  subtitle: section.subtitle,
+                  icon: section.icon,
+                  assessments: section.assessments,
+                  onStart: onStart,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _AssessmentSection extends StatelessWidget {
   const _AssessmentSection({
     required this.title,
@@ -762,6 +792,8 @@ class _AssessmentSection extends StatelessWidget {
                     ),
                     Text(
                       subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Color(0xFF64748B)),
                     ),
                   ],
@@ -842,10 +874,10 @@ class _AssessmentCard extends StatelessWidget {
             child: Container(width: 5, color: accent),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 18, 18),
+            padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final compact = constraints.maxWidth < 760;
+                final compact = constraints.maxWidth < 560;
                 final details = _AssessmentDetails(
                   assessment: assessment,
                   sections: sections,
@@ -881,7 +913,7 @@ class _AssessmentCard extends StatelessWidget {
                     icon,
                     const SizedBox(width: 14),
                     Expanded(child: details),
-                    const SizedBox(width: 18),
+                    const SizedBox(width: 14),
                     action,
                   ],
                 );
@@ -925,11 +957,11 @@ class _AssessmentIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 52,
-      height: 52,
+      width: 46,
+      height: 46,
       decoration: BoxDecoration(
         color: _softFor(assessment),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Icon(_iconFor(assessment), color: _accentFor(assessment)),
     );
@@ -970,24 +1002,20 @@ class _AssessmentDetails extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                assessment.title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            _StatusPill(label: _typeLabelFor(assessment)),
-          ],
+        Text(
+          assessment.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+          ),
         ),
         const SizedBox(height: 5),
         Text(
           '${assessment.course.code} - ${assessment.course.title}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: Color(0xFF334155),
             fontWeight: FontWeight.w700,
@@ -999,15 +1027,11 @@ class _AssessmentDetails extends StatelessWidget {
           style: const TextStyle(color: Color(0xFF475569)),
         ),
         const SizedBox(height: 8),
-        Text(
-          _descriptionFor(assessment),
-          style: const TextStyle(color: Color(0xFF64748B)),
-        ),
-        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
+            _StatusPill(label: _typeLabelFor(assessment)),
             _InfoPill(
               icon: Icons.route_outlined,
               label: _reviewLabelFor(assessment),
@@ -1039,19 +1063,6 @@ class _AssessmentDetails extends StatelessWidget {
     if (assessment.isUngradedAssessment) return 'Feedback only';
     if (assessment.sendsEventsToLecturer) return 'Lecturer-marked';
     return 'Exam officer review';
-  }
-
-  static String _descriptionFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam) {
-      return 'Camera, microphone, and system checks are required before starting.';
-    }
-    if (assessment.isGradedAssessment) {
-      return 'Your submission is recorded for lecturer marking.';
-    }
-    if (assessment.isUngradedAssessment) {
-      return 'This helps you check readiness before a graded activity.';
-    }
-    return 'Practice activity for learning support and attendance.';
   }
 }
 
