@@ -13,8 +13,8 @@ import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'optimized_vision_runtime_bridge.dart';
 import 'snapshot_gaze_fallback_service.dart';
-import 'visual_reflection_shadow_service.dart';
 import 'vision_compute_budget_service.dart';
+import 'visual_reflection_shadow_service.dart';
 
 class LiveExamMonitor extends StatefulWidget {
   const LiveExamMonitor({
@@ -538,9 +538,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     if (mounted) {
       setState(() {
         _audioStatus = result.nearVoiceLikely
-            ? 'Voice close to exam area (${_voiceRiskStreak}/3)'
+            ? 'Voice close to exam area ($_voiceRiskStreak/3)'
             : result.possibleFarVoiceLikely
-                ? 'Voice may be outside or far away. Improve environment (${_farVoiceRiskStreak}/$_farVoiceWarningStreak)'
+            ? 'Voice may be outside or far away. Improve environment ($_farVoiceRiskStreak/$_farVoiceWarningStreak)'
                 : result.allowedAmbientLikely
                     ? 'Allowed ambient sound: ${result.label}'
                     : 'Unclear environment sound noticed';
