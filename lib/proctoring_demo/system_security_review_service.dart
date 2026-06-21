@@ -56,7 +56,36 @@ class SystemSecurityReviewResult {
 }
 
 class SystemSecurityReviewService {
+  static const bool _allowSystemReviewOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_SYSTEM_REVIEW_OVERRIDE',
+    defaultValue: false,
+  );
+
   Future<SystemSecurityReviewResult> check() async {
+    if (_allowSystemReviewOverride) {
+      return const SystemSecurityReviewResult(
+        ready: true,
+        platformSupported: true,
+        bluetoothDetected: false,
+        externalAudioDetected: false,
+        usbRiskDetected: false,
+        virtualizationDetected: false,
+        virtualizationWarningDetected: false,
+        containerDetected: false,
+        virtualCameraDetected: false,
+        unknownDeviceState: false,
+        findings: <String>[
+          'Testing override is active. Device review passed for development testing only.',
+        ],
+        hardFindings: <String>[],
+        warningFindings: <String>[
+          'System review override was used. Do not use this build for real exams.',
+        ],
+        message:
+            'System review override is active. Continue for development testing only.',
+      );
+    }
+
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       return const SystemSecurityReviewResult(
         ready: false,

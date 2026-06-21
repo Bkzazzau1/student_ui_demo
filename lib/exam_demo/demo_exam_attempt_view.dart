@@ -812,7 +812,7 @@ class _QuestionNumberButton extends StatelessWidget {
                   ? const Color(0xFFF0FDF4)
                   : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? const Color(0xFF2563EB) : color.withOpacity(0.25)),
+          border: Border.all(color: selected ? const Color(0xFF2563EB) : color.withValues(alpha: 0.25)),
         ),
         child: Text(
           '$number',
@@ -840,9 +840,9 @@ class _TimerPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.30)),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
