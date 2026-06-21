@@ -248,7 +248,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             _gazeStatus = !result.ready
                 ? '1-second gaze/head check learning normal position'
                 : result.headPoseShiftLikely
-                    ? 'Head/gaze movement detected ($_gazeRiskStreak/3)'
+                    ? 'Focus reminder shown ($_gazeRiskStreak/3)'
                     : '1-second gaze/head check stable';
             _visualStatus = result.multiplePeopleLikely
                 ? 'Possible second person detected ($_multiplePeopleRiskStreak/2)'
@@ -274,8 +274,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           unawaited(
             _raiseEvent(
               eventType: 'gaze_head_pose_deviation',
-              severity: 'high',
-              message: 'Head or gaze movement was sustained for at least 3 seconds.',
+              severity: 'warning',
+              message: 'Please keep your face visible and focus on the screen.',
               metadata: result.toJson(),
             ),
           );
@@ -332,7 +332,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         setState(() {
           _gazeReady = true;
           _gazeStatus = gaze.lookingAway
-              ? 'Possible looking away detected ($_gazeRiskStreak/3)'
+              ? 'Focus reminder shown ($_gazeRiskStreak/3)'
               : 'Focused forward • gaze/head pose stable';
         });
       }
@@ -341,8 +341,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         unawaited(
           _raiseEvent(
             eventType: 'gaze_head_pose_deviation',
-            severity: 'high',
-            message: 'Sustained looking-away or head-pose deviation was detected during the exam.',
+            severity: 'warning',
+            message: 'Please keep your face visible and focus on the screen.',
             metadata: gaze.toJson(),
           ),
         );
@@ -375,7 +375,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _visualReady = true;
         _visualStatus = multiplePeople
             ? 'Possible second person detected ($_multiplePeopleRiskStreak/2)'
-            : '${result.backend} object/person scan active (${result.inferenceMs.toStringAsFixed(1)} ms)';
+            : 'Object/person scan active (${result.inferenceMs.toStringAsFixed(1)} ms)';
       });
     }
     if (_multiplePeopleRiskStreak >= 2) {
@@ -598,11 +598,22 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _eventsSent.insert(0, synced ? '$eventType sent' : '$eventType queued locally');
       if (_eventsSent.length > 5) _eventsSent.removeLast();
     });
-    if (severity == 'critical' || severity == 'high') {
+    if (_shouldPauseAttempt(eventType: eventType, severity: severity)) {
       widget.onCriticalEvent(
-        synced ? message : '$message Monitoring event could not be confirmed by the backend.',
+        synced ? message : '$message Monitoring event could not be confirmed by the system.',
       );
     }
+  }
+
+  bool _shouldPauseAttempt({required String eventType, required String severity}) {
+    if (severity == 'critical') return true;
+    const hardPauseEvents = <String>{
+      'multiple_people_detected',
+      'object_reflection_shadow_risk',
+      'continuous_liveness_spoof_risk',
+      'audio_voice_isolation_alert',
+    };
+    return hardPauseEvents.contains(eventType);
   }
 
   bool _shouldEmit(String eventType) {
