@@ -45,6 +45,16 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   static const int _deviceRecoverySeconds = 30;
   static const int _deviceRetryEverySeconds = 5;
   static const int _lowLightWarningStreak = 3;
+  static const bool _allowAudioReviewOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_AUDIO_REVIEW_OVERRIDE',
+    defaultValue: false,
+  );
+  static const bool _allowExamOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_EXAM_OVERRIDE',
+    defaultValue: false,
+  );
+  static const bool _audioOverrideActive =
+      _allowAudioReviewOverride || _allowExamOverride;
 
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
@@ -662,6 +672,16 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   Future<void> _startAudio() async {
+    if (_audioOverrideActive) {
+      _clearMicrophoneRecovery();
+      if (!mounted) return;
+      setState(() {
+        _audioReady = true;
+        _audioStatus = 'Sound check override active';
+      });
+      return;
+    }
+
     try {
       final permission = await _microphone.hasPermission();
       if (!permission) {
@@ -772,7 +792,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           'Camera connection is unstable. Please keep your face visible while it reconnects.',
         );
       }
-      if (!_microphone.isRunning) {
+      if (_audioOverrideActive) {
+        _clearMicrophoneRecovery();
+        if (!_audioReady || !_audioStatus.contains('override')) {
+          setState(() {
+            _audioReady = true;
+            _audioStatus = 'Sound check override active';
+          });
+        }
+      } else if (!_microphone.isRunning) {
         _beginMicrophoneRecovery(
           'Room sound check is reconnecting. Please keep your exam area quiet.',
         );
@@ -826,6 +854,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       'object_reflection_shadow_risk',
       'continuous_liveness_spoof_risk',
       'audio_voice_isolation_alert',
+      'gaze_head_pose_deviation',
     };
     return hardPauseEvents.contains(eventType);
   }

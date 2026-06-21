@@ -86,6 +86,10 @@ class AudioSecurityCheckService {
   AudioSecurityCheckService({MicrophoneStreamRecordingService? microphone})
       : _microphone = microphone ?? MicrophoneStreamRecordingService();
 
+  static const bool _allowAudioReviewOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_AUDIO_REVIEW_OVERRIDE',
+    defaultValue: false,
+  );
   static Future<bool>? _nativeReady;
 
   final MicrophoneStreamRecordingService _microphone;
@@ -93,6 +97,35 @@ class AudioSecurityCheckService {
   Future<AudioSecurityCheckResult> captureBaseline({
     Duration duration = const Duration(seconds: 15),
   }) async {
+    if (_allowAudioReviewOverride) {
+      return const AudioSecurityCheckResult(
+        microphoneAvailable: true,
+        permissionGranted: true,
+        inputLevelOk: true,
+        averageRms: 0.02,
+        peakRms: 0.04,
+        noiseFloorRms: 0.01,
+        zeroCrossingRate: 0.04,
+        dynamicVariation: 0.01,
+        voiceConfidence: 0,
+        environmentLabel: 'testing_audio_override',
+        dominantNoiseClass: 'quiet_room',
+        soundProfile: 'testing_audio_override',
+        environmentDescription:
+            'Testing override is active. Room sound review passed for development testing only.',
+        recommendedAction:
+            'Do not use this audio override build for real exams.',
+        humanVoiceDetected: false,
+        phoneRingDetected: false,
+        notificationDetected: false,
+        tvOrRadioVoiceDetected: false,
+        ambientNoiseAllowed: true,
+        sampleDurationSeconds: 15,
+        message:
+            'Audio review override is active. Continue for development testing only.',
+      );
+    }
+
     final hasPermission = await _microphone.hasPermission();
     if (!hasPermission) {
       return const AudioSecurityCheckResult(

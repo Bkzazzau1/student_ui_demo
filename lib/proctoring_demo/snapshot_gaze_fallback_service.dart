@@ -16,6 +16,9 @@ class SnapshotGazeFallbackResult {
     required this.asymmetry,
     required this.baselineAsymmetry,
     required this.asymmetryShift,
+    required this.horizontalSpread,
+    required this.verticalSpread,
+    required this.profileScore,
     required this.personCount,
     required this.multiplePeopleLikely,
     required this.headPoseShiftLikely,
@@ -33,6 +36,9 @@ class SnapshotGazeFallbackResult {
   final double asymmetry;
   final double baselineAsymmetry;
   final double asymmetryShift;
+  final double horizontalSpread;
+  final double verticalSpread;
+  final double profileScore;
   final int personCount;
   final bool multiplePeopleLikely;
   final bool headPoseShiftLikely;
@@ -50,6 +56,9 @@ class SnapshotGazeFallbackResult {
         'asymmetry': asymmetry,
         'baseline_asymmetry': baselineAsymmetry,
         'asymmetry_shift': asymmetryShift,
+        'horizontal_spread': horizontalSpread,
+        'vertical_spread': verticalSpread,
+        'profile_score': profileScore,
         'person_count': personCount,
         'multiple_people_likely': multiplePeopleLikely,
         'head_pose_shift_likely': headPoseShiftLikely,
@@ -86,6 +95,18 @@ class SnapshotGazeFallbackService {
                   .map((item) => item.asymmetry)
                   .reduce((a, b) => a + b) /
               _baselineSamples.length,
+          horizontalSpread: _baselineSamples
+                  .map((item) => item.horizontalSpread)
+                  .reduce((a, b) => a + b) /
+              _baselineSamples.length,
+          verticalSpread: _baselineSamples
+                  .map((item) => item.verticalSpread)
+                  .reduce((a, b) => a + b) /
+              _baselineSamples.length,
+          profileScore: _baselineSamples
+                  .map((item) => item.profileScore)
+                  .reduce((a, b) => a + b) /
+              _baselineSamples.length,
           personCount: 1,
           multiplePeopleLikely: false,
         );
@@ -102,6 +123,9 @@ class SnapshotGazeFallbackService {
         asymmetry: signal.asymmetry,
         baselineAsymmetry: _baseline?.asymmetry ?? signal.asymmetry,
         asymmetryShift: 0,
+        horizontalSpread: signal.horizontalSpread,
+        verticalSpread: signal.verticalSpread,
+        profileScore: signal.profileScore,
         personCount: signal.personCount,
         multiplePeopleLikely: signal.multiplePeopleLikely,
         headPoseShiftLikely: false,
@@ -116,8 +140,11 @@ class SnapshotGazeFallbackService {
     final shiftY = signal.y - baseline.y;
     final shiftScore = math.sqrt((shiftX * shiftX) + (shiftY * shiftY));
     final asymmetryShift = signal.asymmetry - baseline.asymmetry;
+    final spreadShift = signal.horizontalSpread - baseline.horizontalSpread;
     final profileTurnLikely = asymmetryShift.abs() >= 0.11 ||
-        signal.asymmetry.abs() >= 0.26;
+        signal.asymmetry.abs() >= 0.22 ||
+        signal.profileScore >= 0.20 ||
+        spreadShift.abs() >= 0.05;
     final headPoseShiftLikely = shiftX.abs() >= 0.095 ||
         shiftY.abs() >= 0.095 ||
         shiftScore >= 0.125 ||
@@ -136,6 +163,9 @@ class SnapshotGazeFallbackService {
       asymmetry: signal.asymmetry,
       baselineAsymmetry: baseline.asymmetry,
       asymmetryShift: asymmetryShift,
+      horizontalSpread: signal.horizontalSpread,
+      verticalSpread: signal.verticalSpread,
+      profileScore: signal.profileScore,
       personCount: signal.personCount,
       multiplePeopleLikely: multiplePeopleLikely,
       headPoseShiftLikely: headPoseShiftLikely,
@@ -161,6 +191,13 @@ class SnapshotGazeFallbackService {
     var totalWeight = 0.0;
     var leftWeight = 0.0;
     var rightWeight = 0.0;
+    var weightedX2 = 0.0;
+    var weightedY2 = 0.0;
+    var skinLeft = 0.0;
+    var skinRight = 0.0;
+    var skinWeight = 0.0;
+    var darkLeft = 0.0;
+    var darkRight = 0.0;
 
     for (var y = yStart + 1; y < yEnd - 1; y += 2) {
       for (var x = xStart + 1; x < xEnd - 1; x += 2) {
@@ -177,35 +214,62 @@ class SnapshotGazeFallbackService {
         final saturation = _saturation(pixel);
         final skinLike = saturation >= 0.09 && saturation <= 0.78 && luma >= 26 && luma <= 238;
         final darkFeature = luma < 105 && edge > 8;
-        final edgeFeature = edge > 16;
-        if (!skinLike && !darkFeature && !edgeFeature) continue;
+        if (!skinLike && !darkFeature) continue;
 
         final yBias = 1.0 - ((y / height) - 0.38).abs().clamp(0.0, 0.82);
+        final xBias = 1.0 - ((x / width) - 0.5).abs().clamp(0.0, 0.5);
         final weight = (edge * 0.62) +
-            (skinLike ? 20.0 : 0.0) +
-            (darkFeature ? 13.0 : 0.0) +
-            (edgeFeature ? 5.0 : 0.0);
-        final finalWeight = weight * yBias;
-        weightedX += (x / width) * finalWeight;
-        weightedY += (y / height) * finalWeight;
+            (skinLike ? 30.0 : 0.0) +
+            (darkFeature ? 12.0 : 0.0);
+        final normalizedX = x / width;
+        final normalizedY = y / height;
+        final finalWeight = weight * yBias * xBias;
+        weightedX += normalizedX * finalWeight;
+        weightedY += normalizedY * finalWeight;
+        weightedX2 += normalizedX * normalizedX * finalWeight;
+        weightedY2 += normalizedY * normalizedY * finalWeight;
         totalWeight += finalWeight;
         final binIndex = ((x / width) * bins.length).floor().clamp(0, bins.length - 1);
         bins[binIndex] += finalWeight;
         if (x < width / 2) {
           leftWeight += finalWeight;
+          if (skinLike) skinLeft += finalWeight;
+          if (darkFeature) darkLeft += finalWeight;
         } else {
           rightWeight += finalWeight;
+          if (skinLike) skinRight += finalWeight;
+          if (darkFeature) darkRight += finalWeight;
         }
+        if (skinLike) skinWeight += finalWeight;
       }
     }
 
     if (totalWeight < 80) return null;
     final asymmetry = ((rightWeight - leftWeight) / totalWeight).clamp(-1.0, 1.0);
+    final meanX = (weightedX / totalWeight).clamp(0.0, 1.0);
+    final meanY = (weightedY / totalWeight).clamp(0.0, 1.0);
+    final horizontalSpread =
+        math.sqrt(math.max(0.0, (weightedX2 / totalWeight) - (meanX * meanX)));
+    final verticalSpread =
+        math.sqrt(math.max(0.0, (weightedY2 / totalWeight) - (meanY * meanY)));
+    final skinAsymmetry = skinWeight <= 0
+        ? 0.0
+        : ((skinRight - skinLeft) / skinWeight).clamp(-1.0, 1.0);
+    final featureAsymmetry =
+        ((darkRight - darkLeft) / math.max(1.0, darkLeft + darkRight))
+            .clamp(-1.0, 1.0);
+    final narrowFaceSignal = (0.17 - horizontalSpread).clamp(0.0, 0.17) / 0.17;
+    final profileScore =
+        ((skinAsymmetry.abs() * 0.55) + (featureAsymmetry.abs() * 0.25) + (narrowFaceSignal * 0.20))
+            .clamp(0.0, 1.0);
     final personCount = _estimateSeparatedPersonClusters(bins, totalWeight);
     return _HeadSignal(
-      (weightedX / totalWeight).clamp(0.0, 1.0),
-      (weightedY / totalWeight).clamp(0.0, 1.0),
+      meanX,
+      meanY,
       asymmetry,
+      horizontalSpread: horizontalSpread,
+      verticalSpread: verticalSpread,
+      profileScore: profileScore,
       personCount: personCount,
       multiplePeopleLikely: personCount >= 2,
     );
@@ -318,6 +382,9 @@ class _HeadSignal {
     this.x,
     this.y,
     this.asymmetry, {
+    required this.horizontalSpread,
+    required this.verticalSpread,
+    required this.profileScore,
     required this.personCount,
     required this.multiplePeopleLikely,
   });
@@ -325,6 +392,9 @@ class _HeadSignal {
   final double x;
   final double y;
   final double asymmetry;
+  final double horizontalSpread;
+  final double verticalSpread;
+  final double profileScore;
   final int personCount;
   final bool multiplePeopleLikely;
 }
