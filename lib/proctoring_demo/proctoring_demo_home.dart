@@ -123,6 +123,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   _ScanGuide get _currentGuide =>
       _guides[math.min(_currentTargetIndex, _guides.length - 1)];
   String get _currentTarget => _currentGuide.name;
+  int get _savedViews => _targets.where((target) => target.captured).length;
+  double get _progress => _targets.isEmpty ? 0 : _savedViews / _targets.length;
 
   @override
   void initState() {
@@ -383,7 +385,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     _previousSignature = List<int>.from(frame.signature);
     _acceptedSignatures[target] = List<int>.from(frame.signature);
     _frameCount++;
-
     _targets[_currentTargetIndex] = _targets[_currentTargetIndex].copyWith(
       captured: true,
       framePath: framePath,
@@ -562,8 +563,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         setState(() {
           _reviewing = false;
           _status = DemoScanStatus.pendingReview;
-          _message =
-              _verificationComplete
+          _message = _verificationComplete
               ? 'The backend could not approve the exam start. Please try again or contact support.'
               : 'Complete the photos, short video, sound check, and device check before sending.';
           _reviewEvents
@@ -821,176 +821,76 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 640;
+    final compact = MediaQuery.sizeOf(context).width < 720;
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FB),
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 8,
         title: Text(
           widget.compactExamGate ? 'Pre-exam check' : 'Exam Check',
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          if (!compact)
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: _TopProgressPill(saved: _savedViews, total: _targets.length),
+            ),
+        ],
       ),
       bottomNavigationBar: compact ? _buildMobileActionBar() : null,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(18, 14, 18, compact ? 104 : 18),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1180),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final wide = constraints.maxWidth >= 920;
-                      final camera = _buildCameraPanel(compact: !wide);
-                      final controls = _buildControls(compact: !wide);
-                      final side = _buildSidePanel(compact: !wide);
-                      if (!wide) {
-                        return Column(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(18, 14, 18, compact ? 104 : 24),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1280),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final wide = constraints.maxWidth >= 980;
+                        if (!wide) {
+                          return Column(
+                            children: [
+                              _buildCameraPanel(compact: true),
+                              const SizedBox(height: 12),
+                              _buildSidePanel(compact: true),
+                              const SizedBox(height: 12),
+                              _buildReviewPanel(compact: true),
+                            ],
+                          );
+                        }
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            camera,
-                            const SizedBox(height: 12),
-                            controls,
-                            const SizedBox(height: 12),
-                            side,
+                            Expanded(flex: 8, child: _buildCameraPanel(compact: false)),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                children: [
+                                  _buildSidePanel(compact: false),
+                                  const SizedBox(height: 14),
+                                  _buildReviewPanel(compact: false),
+                                ],
+                              ),
+                            ),
                           ],
                         );
-                      }
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 7,
-                            child: Column(
-                              children: [
-                                _buildControls(compact: false),
-                                const SizedBox(height: 14),
-                                camera,
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(flex: 5, child: side),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  _buildReviewPanel(),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildControls({required bool compact}) {
-    final progress =
-        _targets.where((target) => target.captured).length / _targets.length;
-    return _Panel(
-      padding: EdgeInsets.all(compact ? 14 : 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!compact)
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                FilledButton.icon(
-                  onPressed: _openingCamera ? null : _openCamera,
-                  icon: const Icon(Icons.videocam_outlined),
-                  label: Text(
-                    _realCameraReady ? 'Camera ready' : 'Open camera',
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: _cameraReady && !_scanning ? _startScan : null,
-                  icon: const Icon(Icons.screen_rotation_alt_outlined),
-                  label: const Text('Start automatic scan'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _scanComplete && !_reviewing
-                      ? _runSecurityReview
-                      : null,
-                  icon: const Icon(Icons.verified_user_outlined),
-                  label: const Text('Send final exam check'),
-                ),
-                TextButton.icon(
-                  onPressed: _reset,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reset'),
-                ),
-              ],
-            ),
-          if (!compact) const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  _message,
-                  style: compact
-                      ? Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        )
-                      : Theme.of(context).textTheme.titleMedium,
+                      },
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 10),
-              Text(
-                '$_frameCount/${_targets.length}',
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(value: progress),
-          const SizedBox(height: 10),
-          _MetricsGrid(
-            compact: compact,
-            metrics: [
-              _MetricData(
-                label: 'Saved',
-                value: '$_frameCount/${_targets.length}',
-              ),
-              _MetricData(
-                label: 'Light',
-                value: _lightingScore.toStringAsFixed(2),
-              ),
-              _MetricData(
-                label: 'Move',
-                value: _movementScore.toStringAsFixed(2),
-              ),
-              if (!compact)
-                _MetricData(
-                  label: 'Difference',
-                  value: _differenceScore.toStringAsFixed(2),
-                ),
-              _MetricData(
-                label: 'Video',
-                value: _verificationVideoPath == null
-                    ? (_recordingVideo ? 'recording' : 'pending')
-                    : 'captured',
-              ),
-              _MetricData(
-                label: 'Sound',
-                value: _audioResult == null
-                    ? 'pending'
-                    : _audioResult!.environmentLabel,
-              ),
-            ],
-          ),
-          if (_manifestPath != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _manifestPath!,
-              style: Theme.of(context).textTheme.bodySmall,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -998,85 +898,201 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   Widget _buildCameraPanel({required bool compact}) {
     return _Panel(
       padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: AspectRatio(
-          aspectRatio: compact ? 4 / 3 : 16 / 9,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (_realCameraReady)
-                CameraPreview(_controller!)
-              else
-                Container(
-                  color: const Color(0xFF101828),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _backupScanReady
-                        ? 'Backup scan mode ready'
-                        : 'Camera preview',
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                ),
-              Align(
-                alignment: Alignment.topCenter,
-                child: _OverlayLabel(
-                  text: _recordingVideo
-                      ? 'VERIFICATION VIDEO • keep your face visible'
-                      : _scanning
-                      ? '${_currentTarget.toUpperCase()} • ${_currentGuide.instruction}'
-                      : 'Guided 360 room scan',
-                ),
-              ),
-              Center(
-                child: Container(
-                  width: compact ? 250 : 260,
-                  height: compact ? 210 : 180,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: const Color(0xFF22C55E),
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
+      child: Column(
+        children: [
+          _ScanStatusHeader(
+            message: _message,
+            currentTarget: _currentTarget,
+            instruction: _currentGuide.instruction,
+            saved: _savedViews,
+            total: _targets.length,
+            progress: _progress,
+            scanning: _scanning,
+            complete: _scanComplete,
+            reviewing: _reviewing,
+            recordingVideo: _recordingVideo,
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: AspectRatio(
+                aspectRatio: compact ? 4 / 3 : 16 / 10,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: const Color(0xFF020617)),
+                    _CameraPreviewSurface(
+                      controller: _controller,
+                      realCameraReady: _realCameraReady,
+                      backupScanReady: _backupScanReady,
+                      openingCamera: _openingCamera,
+                    ),
+                    const _CameraGradientOverlay(),
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: _OverlayLabel(text: _cameraOverlayText()),
+                    ),
+                    Center(
+                      child: _FocusFrame(
+                        complete: _scanComplete,
+                        recording: _recordingVideo,
+                      ),
+                    ),
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 16,
+                      child: _CameraBottomBar(
+                        message: _cameraBottomText(),
+                        scanning: _scanning,
+                        complete: _scanComplete,
+                        recording: _recordingVideo,
+                      ),
+                    ),
+                    if (!_scanning && !_scanComplete && !_reviewing)
+                      Positioned.fill(
+                        child: Center(child: _StartScanCard(action: _primaryDesktopAction())),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (!compact) _buildDesktopControls(),
+        ],
       ),
     );
   }
 
+  String _cameraOverlayText() {
+    if (_recordingVideo) return 'VERIFICATION VIDEO • keep your face visible';
+    if (_reviewing) return 'FINAL CHECK IN PROGRESS';
+    if (_scanComplete) return 'ROOM SCAN COMPLETE';
+    if (_scanning) return '${_currentTarget.toUpperCase()} • automatic capture';
+    return 'Ready for automatic 360 room scan';
+  }
+
+  String _cameraBottomText() {
+    if (_recordingVideo) return 'Keep your face visible until the short video is complete.';
+    if (_reviewing) return 'Please wait while the final room check is being prepared.';
+    if (_scanComplete) return 'All room views are captured. The final check will continue automatically.';
+    if (_scanning) return _currentGuide.instruction;
+    if (_cameraReady) return 'Click Start automatic scan. The app will capture each view by itself.';
+    return 'Camera is opening. Please wait.';
+  }
+
+  Widget _buildDesktopControls() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Row(
+        children: [
+          _MetricPill(label: 'Light', value: _lightingScore.toStringAsFixed(2)),
+          const SizedBox(width: 8),
+          _MetricPill(label: 'Move', value: _movementScore.toStringAsFixed(2)),
+          const SizedBox(width: 8),
+          _MetricPill(label: 'Scene', value: _differenceScore.toStringAsFixed(2)),
+          const SizedBox(width: 8),
+          _MetricPill(
+            label: 'Video',
+            value: _verificationVideoPath == null
+                ? (_recordingVideo ? 'recording' : 'pending')
+                : 'captured',
+          ),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: _reset,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Reset'),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            onPressed: _primaryDesktopAction().onPressed,
+            icon: _primaryDesktopAction().loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(_primaryDesktopAction().icon),
+            label: Text(_primaryDesktopAction().label),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _MobileScanAction _primaryDesktopAction() => _primaryMobileAction();
+
   Widget _buildSidePanel({required bool compact}) {
+    final shownTargets = compact
+        ? _targets.asMap().entries.where((entry) {
+            final active = _scanning && !_scanComplete && entry.key == _currentTargetIndex;
+            return entry.value.captured || active;
+          }).toList()
+        : _targets.asMap().entries.toList();
+
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            compact ? '360 view checklist' : 'Required 360 views',
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.travel_explore_outlined,
+                  color: Color(0xFF2563EB),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      compact ? 'Current view' : 'Required 360 views',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    Text(
+                      'Move slowly. Capture is automatic.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: const Color(0xFF64748B),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          if (!compact) ...[
-            const SizedBox(height: 8),
-            const Text(
-              'Move the camera or device to each direction. Repeated static views are rejected.',
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: _progress.clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: const Color(0xFFE2E8F0),
+              color: _scanComplete ? const Color(0xFF22C55E) : const Color(0xFF2563EB),
             ),
-          ],
-          const SizedBox(height: 10),
-          ..._targets.asMap().entries.map((entry) {
+          ),
+          const SizedBox(height: 12),
+          ...shownTargets.map((entry) {
             final index = entry.key;
             final target = entry.value;
-            final active =
-                _scanning && !_scanComplete && index == _currentTargetIndex;
-            if (compact && !target.captured && !active) {
-              return const SizedBox.shrink();
-            }
+            final active = _scanning && !_scanComplete && index == _currentTargetIndex;
             return _ScanTargetTile(
               target: target,
               active: active,
               instruction: _currentGuide.instruction,
               compact: compact,
+              number: index + 1,
             );
           }),
         ],
@@ -1084,31 +1100,76 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     );
   }
 
-  Widget _buildReviewPanel() {
+  Widget _buildReviewPanel({required bool compact}) {
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Check status', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(
+                _reviewEvents.isEmpty ? Icons.info_outline : Icons.verified_outlined,
+                color: _reviewEvents.isEmpty ? const Color(0xFF64748B) : const Color(0xFF16A34A),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Check status',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           if (_reviewEvents.isEmpty)
-            const Text('Complete the room scan to prepare the review record.')
+            const Text(
+              'Complete the room scan to prepare the review record.',
+              style: TextStyle(color: Color(0xFF64748B)),
+            )
           else
             ..._reviewEvents.map(
-              (event) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  event.severity == 'success'
-                      ? Icons.check_circle
-                      : Icons.info_outline,
-                  color: event.severity == 'success'
-                      ? const Color(0xFF16A34A)
-                      : const Color(0xFFF59E0B),
+              (event) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      event.severity == 'success'
+                          ? Icons.check_circle
+                          : Icons.info_outline,
+                      color: event.severity == 'success'
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _safeStudentText(event.title),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          Text(_safeStudentText(event.detail)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                title: Text(_safeStudentText(event.title)),
-                subtitle: Text(_safeStudentText(event.detail)),
               ),
             ),
+          if (_manifestPath != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _manifestPath!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF64748B),
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
     );
@@ -1123,6 +1184,13 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x140F172A),
+              blurRadius: 18,
+              offset: Offset(0, -8),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -1205,44 +1273,371 @@ class _MetricData {
   final String value;
 }
 
-class _MetricsGrid extends StatelessWidget {
-  const _MetricsGrid({required this.metrics, required this.compact});
+class _ScanStatusHeader extends StatelessWidget {
+  const _ScanStatusHeader({
+    required this.message,
+    required this.currentTarget,
+    required this.instruction,
+    required this.saved,
+    required this.total,
+    required this.progress,
+    required this.scanning,
+    required this.complete,
+    required this.reviewing,
+    required this.recordingVideo,
+  });
 
-  final List<_MetricData> metrics;
-  final bool compact;
+  final String message;
+  final String currentTarget;
+  final String instruction;
+  final int saved;
+  final int total;
+  final double progress;
+  final bool scanning;
+  final bool complete;
+  final bool reviewing;
+  final bool recordingVideo;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: metrics.map((metric) {
-        return Container(
-          constraints: BoxConstraints(
-            minWidth: compact ? 96 : 0,
-            maxWidth: compact ? 150 : double.infinity,
+    final status = complete
+        ? 'Complete'
+        : reviewing
+        ? 'Checking'
+        : scanning
+        ? 'Scanning'
+        : 'Ready';
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              complete
+                  ? Icons.check_circle_outline
+                  : recordingVideo
+                  ? Icons.video_camera_front_outlined
+                  : Icons.screen_rotation_alt_outlined,
+              color: complete ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+            ),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Text.rich(
-            TextSpan(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextSpan(
-                  text: '${metric.label}: ',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _StatusChip(label: status),
+                    _StatusChip(label: '$saved/$total views'),
+                    if (scanning && !complete) _StatusChip(label: currentTarget),
+                  ],
                 ),
-                TextSpan(text: metric.value),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 9),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    minHeight: 8,
+                    backgroundColor: const Color(0xFFE2E8F0),
+                    color: complete ? const Color(0xFF22C55E) : const Color(0xFF2563EB),
+                  ),
+                ),
               ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-        );
-      }).toList(),
+        ],
+      ),
+    );
+  }
+}
+
+class _CameraPreviewSurface extends StatelessWidget {
+  const _CameraPreviewSurface({
+    required this.controller,
+    required this.realCameraReady,
+    required this.backupScanReady,
+    required this.openingCamera,
+  });
+
+  final CameraController? controller;
+  final bool realCameraReady;
+  final bool backupScanReady;
+  final bool openingCamera;
+
+  @override
+  Widget build(BuildContext context) {
+    final camera = controller;
+    if (realCameraReady && camera != null) {
+      return Center(
+        child: AspectRatio(
+          aspectRatio: camera.value.aspectRatio,
+          child: CameraPreview(camera),
+        ),
+      );
+    }
+    return Container(
+      color: const Color(0xFF020617),
+      alignment: Alignment.center,
+      child: Text(
+        backupScanReady
+            ? 'Backup scan mode ready'
+            : openingCamera
+            ? 'Opening camera...'
+            : 'Camera preview',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _CameraGradientOverlay extends StatelessWidget {
+  const _CameraGradientOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withOpacity(0.42),
+            Colors.transparent,
+            Colors.black.withOpacity(0.48),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FocusFrame extends StatelessWidget {
+  const _FocusFrame({required this.complete, required this.recording});
+
+  final bool complete;
+  final bool recording;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = complete
+        ? const Color(0xFF22C55E)
+        : recording
+        ? const Color(0xFFFBBF24)
+        : const Color(0xFF60A5FA);
+    return Container(
+      width: 330,
+      height: 220,
+      decoration: BoxDecoration(
+        border: Border.all(color: color, width: 2.2),
+        borderRadius: BorderRadius.circular(22),
+      ),
+    );
+  }
+}
+
+class _StartScanCard extends StatelessWidget {
+  const _StartScanCard({required this.action});
+
+  final _MobileScanAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.68),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.screen_rotation_alt_outlined,
+            color: Colors.white,
+            size: 38,
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Automatic room scan',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Start once, then slowly follow each direction.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFFCBD5E1)),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: action.onPressed,
+            icon: action.loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(action.icon),
+            label: Text(action.label),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CameraBottomBar extends StatelessWidget {
+  const _CameraBottomBar({
+    required this.message,
+    required this.scanning,
+    required this.complete,
+    required this.recording,
+  });
+
+  final String message;
+  final bool scanning;
+  final bool complete;
+  final bool recording;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = complete
+        ? Icons.check_circle_outline
+        : recording
+        ? Icons.videocam_outlined
+        : scanning
+        ? Icons.autorenew_rounded
+        : Icons.info_outline;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.62),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricPill extends StatelessWidget {
+  const _MetricPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            TextSpan(text: value),
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+class _TopProgressPill extends StatelessWidget {
+  const _TopProgressPill({required this.saved, required this.total});
+
+  final int saved;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Text(
+        '$saved of $total views',
+        style: const TextStyle(
+          color: Color(0xFF1D4ED8),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
@@ -1253,43 +1648,92 @@ class _ScanTargetTile extends StatelessWidget {
     required this.active,
     required this.instruction,
     required this.compact,
+    required this.number,
   });
 
   final DemoScanTarget target;
   final bool active;
   final String instruction;
   final bool compact;
+  final int number;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      minLeadingWidth: 28,
-      leading: Icon(
-        target.captured
-            ? Icons.check_circle
+    final complete = target.captured;
+    final color = complete
+        ? const Color(0xFF16A34A)
+        : active
+        ? const Color(0xFF2563EB)
+        : const Color(0xFF64748B);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: complete
+            ? const Color(0xFFF0FDF4)
             : active
-            ? Icons.camera_alt_outlined
-            : Icons.radio_button_unchecked,
-        color: target.captured
-            ? const Color(0xFF16A34A)
-            : active
-            ? const Color(0xFF0F4C81)
-            : const Color(0xFF64748B),
+            ? const Color(0xFFEFF6FF)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: complete
+              ? const Color(0xFFBBF7D0)
+              : active
+              ? const Color(0xFFBFDBFE)
+              : const Color(0xFFE2E8F0),
+        ),
       ),
-      title: Text(
-        target.name,
-        style: const TextStyle(fontWeight: FontWeight.w800),
-      ),
-      subtitle: Text(
-        target.captured
-            ? 'Saved after movement check'
-            : active
-            ? instruction
-            : 'Pending',
-        maxLines: compact ? 2 : null,
-        overflow: compact ? TextOverflow.ellipsis : null,
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: complete
+                ? Icon(Icons.check, color: color, size: 18)
+                : Text(
+                    '$number',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  target.name,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                Text(
+                  complete
+                      ? 'Captured automatically'
+                      : active
+                      ? instruction
+                      : 'Waiting',
+                  maxLines: compact ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            complete
+                ? Icons.check_circle
+                : active
+                ? Icons.autorenew_rounded
+                : Icons.radio_button_unchecked,
+            color: color,
+          ),
+        ],
       ),
     );
   }
@@ -1307,8 +1751,15 @@ class _Panel extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: child,
     );
@@ -1323,18 +1774,18 @@ class _OverlayLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.62),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.black.withOpacity(0.62),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
