@@ -57,6 +57,18 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     _startedAt = DateTime.now();
     _questions = DemoExamService.questionsFor(widget.assessment);
     _remainingSeconds = widget.assessment.durationMinutes * 60;
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _events.dispose();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || _paused) return;
       if (_remainingSeconds <= 1) {
@@ -67,13 +79,6 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     });
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _events.dispose();
-    super.dispose();
-  }
-
   void _handleCriticalMonitoringEvent(String message) {
     if (!mounted) return;
     setState(() {
@@ -82,10 +87,12 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     });
   }
 
+  int get _answeredCount =>
+      _answers.values.where((value) => value.trim().isNotEmpty).length;
+
   @override
   Widget build(BuildContext context) {
     final question = _questions[_currentIndex];
-    final answered = _answers.values.where((value) => value.trim().isNotEmpty).length;
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 820;
@@ -97,7 +104,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
             elevation: 0,
             automaticallyImplyLeading: false,
             title: Text(
-              widget.assessment.isStrictExam ? 'Secure exam attempt' : 'Assessment attempt',
+              widget.assessment.isStrictExam
+                  ? 'Secure exam attempt'
+                  : 'Assessment attempt',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
             actions: [
@@ -131,8 +140,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
             ),
             child: SafeArea(
               child: compact
-                  ? _buildCompactAttempt(question, answered)
-                  : _buildWideAttempt(question, answered),
+                  ? _buildCompactAttempt(question)
+                  : _buildWideAttempt(question),
             ),
           ),
         );
@@ -140,7 +149,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     );
   }
 
-  Widget _buildWideAttempt(DemoQuestion question, int answered) {
+  Widget _buildWideAttempt(DemoQuestion question) {
     return Row(
       children: [
         SizedBox(
@@ -157,32 +166,35 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         ),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
             children: [
-              _ExamHeader(
+              _CompactExamHeader(
                 assessment: widget.assessment,
-                answered: answered,
+                answered: _answeredCount,
                 total: _questions.length,
                 current: _currentIndex + 1,
                 remainingText: _formatTime(_remainingSeconds),
                 paused: _paused,
               ),
-              const SizedBox(height: 14),
               if (_paused) ...[
+                const SizedBox(height: 12),
                 _PauseBanner(message: _pauseMessage),
-                const SizedBox(height: 14),
               ],
-              _QuestionWorkArea(
-                question: question,
-                value: _answers[question.id] ?? '',
-                enabled: !_paused,
-                onChanged: (value) => setState(() => _answers[question.id] = value),
-                canPrevious: _currentIndex > 0,
-                canNext: _currentIndex < _questions.length - 1,
-                onPrevious: () => setState(() => _currentIndex--),
-                onNext: () => setState(() => _currentIndex++),
-                onSubmit: () => _submit(autoSubmitted: false),
-              ),
+              const SizedBox(height: 12),
+              _paused
+                  ? _PausedQuestionLockCard(message: _pauseMessage)
+                  : _QuestionWorkArea(
+                      question: question,
+                      value: _answers[question.id] ?? '',
+                      enabled: true,
+                      onChanged: (value) =>
+                          setState(() => _answers[question.id] = value),
+                      canPrevious: _currentIndex > 0,
+                      canNext: _currentIndex < _questions.length - 1,
+                      onPrevious: () => setState(() => _currentIndex--),
+                      onNext: () => setState(() => _currentIndex++),
+                      onSubmit: () => _submit(autoSubmitted: false),
+                    ),
             ],
           ),
         ),
@@ -190,7 +202,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
           SizedBox(
             width: 330,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(0, 18, 18, 18),
+              padding: const EdgeInsets.fromLTRB(0, 14, 18, 18),
               children: _buildProctoringPanels(),
             ),
           ),
@@ -198,13 +210,13 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     );
   }
 
-  Widget _buildCompactAttempt(DemoQuestion question, int answered) {
+  Widget _buildCompactAttempt(DemoQuestion question) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       children: [
-        _ExamHeader(
+        _CompactExamHeader(
           assessment: widget.assessment,
-          answered: answered,
+          answered: _answeredCount,
           total: _questions.length,
           current: _currentIndex + 1,
           remainingText: _formatTime(_remainingSeconds),
@@ -290,7 +302,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
     if (_paused) return;
     _timer?.cancel();
     if (!autoSubmitted && mounted) {
-      final unanswered = _questions.length - _answers.values.where((value) => value.trim().isNotEmpty).length;
+      final unanswered = _questions.length - _answeredCount;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -313,14 +325,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         ),
       );
       if (confirmed != true) {
-        _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-          if (!mounted || _paused) return;
-          if (_remainingSeconds <= 1) {
-            _submit(autoSubmitted: true);
-          } else {
-            setState(() => _remainingSeconds--);
-          }
-        });
+        _startTimer();
         return;
       }
     }
@@ -349,7 +354,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         assessmentType: widget.assessment.assessmentType,
         reviewAudience: widget.assessment.reviewAudience,
         metadata: <String, Object?>{
-          'answered_count': _answers.length,
+          'answered_count': _answeredCount,
           'question_count': _questions.length,
           'total_marks': result.totalMarks,
           'scored_marks': result.scoredMarks,
@@ -397,41 +402,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   }
 }
 
-class _TimerPill extends StatelessWidget {
-  const _TimerPill({required this.text, required this.warning, required this.paused});
-
-  final String text;
-  final bool warning;
-  final bool paused;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = paused
-        ? const Color(0xFFE11D48)
-        : warning
-            ? const Color(0xFFB45309)
-            : const Color(0xFF2563EB);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.30)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(paused ? Icons.pause_circle : Icons.timer_outlined, size: 18, color: color),
-          const SizedBox(width: 7),
-          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExamHeader extends StatelessWidget {
-  const _ExamHeader({
+class _CompactExamHeader extends StatelessWidget {
+  const _CompactExamHeader({
     required this.assessment,
     required this.answered,
     required this.total,
@@ -453,76 +425,94 @@ class _ExamHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = total == 0 ? 0.0 : answered / total;
     return Container(
-      padding: EdgeInsets.all(compact ? 18 : 22),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 14 : 16,
+        vertical: compact ? 12 : 13,
+      ),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: const [BoxShadow(color: Color(0x1A0F172A), blurRadius: 24, offset: Offset(0, 14))],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(color: Color(0x120F172A), blurRadius: 16, offset: Offset(0, 8)),
+        ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 680;
+          final wide = constraints.maxWidth >= 620;
           final title = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 7,
+                runSpacing: 7,
                 children: [
                   _DarkTag(assessment.course.code),
-                  _DarkTag(assessment.kind),
                   _DarkTag(paused ? 'Paused' : assessment.remoteProctored ? 'Checks active' : 'Standard access'),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 9),
               Text(
                 assessment.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: compact ? 20 : 23,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
               Text(
                 '${assessment.course.title} • Lecturer: ${assessment.course.lecturer}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Color(0xFFCBD5E1)),
+                style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
               ),
             ],
           );
           final stats = Container(
-            width: wide ? 270 : double.infinity,
-            padding: const EdgeInsets.all(15),
+            width: wide ? 220 : double.infinity,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: const Color(0x12FFFFFF),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0x24FFFFFF)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _HeaderStat(label: 'Time left', value: remainingText),
+                const SizedBox(height: 5),
+                _HeaderStat(label: 'Question', value: '$current of $total'),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Current question', value: '$current of $total'),
-                const SizedBox(height: 10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
-                    minHeight: 9,
+                    minHeight: 7,
                     backgroundColor: const Color(0x24FFFFFF),
                     color: const Color(0xFF60A5FA),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text('$answered of $total answered', style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text(
+                  '$answered of $total answered',
+                  style: const TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ],
             ),
           );
           if (!wide) {
-            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, const SizedBox(height: 16), stats]);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [title, const SizedBox(height: 12), stats],
+            );
           }
-          return Row(children: [Expanded(child: title), const SizedBox(width: 18), stats]);
+          return Row(children: [Expanded(child: title), const SizedBox(width: 14), stats]);
         },
       ),
     );
@@ -537,7 +527,12 @@ class _HeaderStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w700))),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
         Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
       ],
     );
@@ -574,9 +569,9 @@ class _QuestionWorkArea extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _QuestionCard(question: question, value: value, enabled: enabled, onChanged: onChanged),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
@@ -625,7 +620,7 @@ class _QuestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -643,7 +638,7 @@ class _QuestionCard extends StatelessWidget {
               _Pill('${question.marks} mark${question.marks == 1 ? '' : 's'}'),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 15),
           Text(
             question.prompt,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -661,12 +656,17 @@ class _QuestionCard extends StatelessWidget {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: selected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0)),
+                      border: Border.all(
+                        color: selected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                      ),
                       color: selected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                     ),
                     child: Row(
                       children: [
-                        Icon(selected ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: selected ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+                        Icon(
+                          selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          color: selected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(child: Text(option, style: const TextStyle(fontWeight: FontWeight.w700))),
                       ],
@@ -823,6 +823,39 @@ class _QuestionNumberButton extends StatelessWidget {
   }
 }
 
+class _TimerPill extends StatelessWidget {
+  const _TimerPill({required this.text, required this.warning, required this.paused});
+
+  final String text;
+  final bool warning;
+  final bool paused;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = paused
+        ? const Color(0xFFE11D48)
+        : warning
+            ? const Color(0xFFB45309)
+            : const Color(0xFF2563EB);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(paused ? Icons.pause_circle : Icons.timer_outlined, size: 18, color: color),
+          const SizedBox(width: 7),
+          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+}
+
 class _PauseBanner extends StatelessWidget {
   const _PauseBanner({required this.message});
   final String message;
@@ -839,7 +872,12 @@ class _PauseBanner extends StatelessWidget {
         children: [
           const Icon(Icons.pause_circle_filled, color: Color(0xFFE11D48)),
           const SizedBox(width: 10),
-          Expanded(child: Text('Exam paused: $message', style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w800))),
+          Expanded(
+            child: Text(
+              'Exam paused: $message',
+              style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w800),
+            ),
+          ),
         ],
       ),
     );
@@ -863,7 +901,14 @@ class _PausedQuestionLockCard extends StatelessWidget {
         children: [
           const Icon(Icons.visibility_off_outlined, color: Color(0xFFE11D48), size: 44),
           const SizedBox(height: 12),
-          Text('Questions hidden during review', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: const Color(0xFF9F1239))),
+          Text(
+            'Questions hidden during review',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF9F1239),
+                ),
+          ),
           const SizedBox(height: 8),
           const Text(
             'The exam content is temporarily hidden while the monitoring check is active. Please wait for an authorized officer to review and resume the attempt.',
@@ -872,7 +917,11 @@ class _PausedQuestionLockCard extends StatelessWidget {
           ),
           if (message.trim().isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w800)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w800),
+            ),
           ],
         ],
       ),
@@ -908,12 +957,21 @@ class _LockedNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
       child: const Row(
         children: [
           Icon(Icons.lock_outline, color: Color(0xFF64748B)),
           SizedBox(width: 8),
-          Expanded(child: Text('Question list hidden while review is active.', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w700))),
+          Expanded(
+            child: Text(
+              'Question list hidden while review is active.',
+              style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
@@ -937,7 +995,12 @@ class _PanelTitle extends StatelessWidget {
         children: [
           const Icon(Icons.health_and_safety_outlined, color: Color(0xFF2563EB)),
           const SizedBox(width: 10),
-          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900))),
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+          ),
         ],
       ),
     );
@@ -951,7 +1014,11 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFFBFDBFE))),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
       child: Text(text, style: const TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.w800)),
     );
   }
@@ -963,9 +1030,16 @@ class _DarkTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: const Color(0xFF1F2937), borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF334155))),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2937),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
+      ),
     );
   }
 }
@@ -1000,11 +1074,25 @@ class _MobileExamActionBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            IconButton.outlined(onPressed: canGoBack ? onPrevious : null, icon: const Icon(Icons.chevron_left), tooltip: 'Previous question'),
+            IconButton.outlined(
+              onPressed: canGoBack ? onPrevious : null,
+              icon: const Icon(Icons.chevron_left),
+              tooltip: 'Previous question',
+            ),
             const SizedBox(width: 8),
-            Expanded(child: FilledButton.icon(onPressed: canGoNext ? onNext : null, icon: const Icon(Icons.chevron_right), label: const Text('Next'))),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: canGoNext ? onNext : null,
+                icon: const Icon(Icons.chevron_right),
+                label: const Text('Next'),
+              ),
+            ),
             const SizedBox(width: 8),
-            IconButton.filledTonal(onPressed: canSubmit ? onSubmit : null, icon: const Icon(Icons.upload_file), tooltip: 'Submit'),
+            IconButton.filledTonal(
+              onPressed: canSubmit ? onSubmit : null,
+              icon: const Icon(Icons.upload_file),
+              tooltip: 'Submit',
+            ),
           ],
         ),
       ),
