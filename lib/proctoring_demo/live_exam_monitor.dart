@@ -42,6 +42,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   static const int _secondPersonWarningStreak = 3;
   static const int _secondPersonPauseStreak = 7;
   static const int _farVoiceWarningStreak = 3;
+  static const int _deviceRecoverySeconds = 30;
+  static const int _deviceRetryEverySeconds = 5;
+  static const int _lowLightWarningStreak = 3;
 
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
@@ -68,6 +71,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   CameraController? _camera;
   Timer? _heartbeat;
   Timer? _snapshotFallbackTimer;
+  Timer? _cameraRecoveryTimer;
+  Timer? _microphoneRecoveryTimer;
 
   final Map<String, DateTime> _lastEventAt = <String, DateTime>{};
   final List<String> _eventsSent = <String>[];
@@ -88,6 +93,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _analysingFrame = false;
   bool _imageStreamAvailable = false;
   bool _snapshotFallbackBusy = false;
+  ResolutionPreset _cameraResolution = ResolutionPreset.low;
+  bool _cameraQualityUpgraded = false;
+  int _cameraRecoveryRemaining = 0;
+  int _microphoneRecoveryRemaining = 0;
+  int _lowLightStreak = 0;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
@@ -108,6 +118,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   void dispose() {
     _heartbeat?.cancel();
     _snapshotFallbackTimer?.cancel();
+    _cameraRecoveryTimer?.cancel();
+    _microphoneRecoveryTimer?.cancel();
     final camera = _camera;
     if (camera != null && camera.value.isStreamingImages) {
       unawaited(camera.stopImageStream());
@@ -130,32 +142,30 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        await _raiseEvent(
-          eventType: 'camera_unavailable',
-          severity: 'critical',
-          message: 'Camera was not found during the exam.',
+        _beginCameraRecovery(
+          'Camera was not found. Please connect or enable your camera.',
         );
-        if (!mounted) return;
-        setState(() {
-          _openingCamera = false;
-          _cameraReady = false;
-          _gazeReady = false;
-          _livenessReady = false;
-          _visualReady = false;
-          _cameraStatus = 'Camera not found';
-          _gazeStatus = 'Gaze/head check unavailable';
-          _livenessStatus = 'Presence check unavailable';
-          _visualStatus = 'Camera view check unavailable';
-        });
         return;
       }
       final selected = cameras.firstWhere(
         (item) => item.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
+      final previousCamera = _camera;
+      if (previousCamera != null) {
+        try {
+          if (previousCamera.value.isStreamingImages) {
+            await previousCamera.stopImageStream();
+          }
+        } catch (_) {}
+        await previousCamera.dispose();
+        if (mounted && identical(_camera, previousCamera)) {
+          _camera = null;
+        }
+      }
       final controller = CameraController(
         selected,
-        ResolutionPreset.low,
+        _cameraResolution,
         enableAudio: false,
       );
       await controller.initialize();
@@ -181,7 +191,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _gazeReady = true;
         _livenessReady = true;
         _visualReady = true;
-        _cameraStatus = 'Camera preview active';
+        _cameraStatus =
+            'Camera check active (${_cameraResolution == ResolutionPreset.medium ? 'improved' : 'standard'} quality)';
         if (streamReady) {
           _snapshotFallbackTimer?.cancel();
           _gazeStatus = 'Gaze vector and head pose monitoring active';
@@ -193,30 +204,132 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _visualStatus = 'Snapshot camera view check active';
         }
       });
+      _clearCameraRecovery();
       if (!streamReady) {
         _startSnapshotCameraChecks(controller);
       }
     } catch (e) {
-      await _raiseEvent(
-        eventType: 'camera_unavailable',
-        severity: 'critical',
-        message: 'Camera monitoring stopped during the exam.',
+      _beginCameraRecovery(
+        'Camera connection is unstable. Please keep your face visible while it reconnects.',
         metadata: <String, Object?>{'error': e.toString()},
       );
-      if (!mounted) return;
-      setState(() {
-        _openingCamera = false;
-        _cameraReady = false;
-        _gazeReady = false;
-        _livenessReady = false;
-        _visualReady = false;
-        _imageStreamAvailable = false;
-        _cameraStatus = 'Camera monitoring unavailable';
-        _gazeStatus = 'Gaze/head check unavailable';
-        _livenessStatus = 'Presence check unavailable';
-        _visualStatus = 'Camera view check unavailable';
+    }
+  }
+
+  void _beginCameraRecovery(
+    String message, {
+    Map<String, Object?> metadata = const <String, Object?>{},
+  }) {
+    if (!mounted) return;
+
+    if (_cameraRecoveryRemaining <= 0) {
+      _cameraRecoveryRemaining = _deviceRecoverySeconds;
+      _cameraRecoveryTimer?.cancel();
+      _cameraRecoveryTimer = Timer.periodic(const Duration(seconds: 1), (
+        timer,
+      ) {
+        if (!mounted) return;
+
+        _cameraRecoveryRemaining--;
+
+        if (_cameraRecoveryRemaining > 0 &&
+            _cameraRecoveryRemaining % _deviceRetryEverySeconds == 0) {
+          unawaited(_startCamera());
+        }
+
+        if (_cameraRecoveryRemaining <= 0) {
+          timer.cancel();
+          unawaited(
+            _raiseEvent(
+              eventType: 'camera_reconnect_timeout',
+              severity: 'critical',
+              message:
+                  'Camera connection could not be restored. An invigilator may review this session.',
+              metadata: metadata,
+            ),
+          );
+        }
+
+        if (mounted) {
+          setState(() {
+            _cameraStatus =
+                '$message Reconnecting in $_cameraRecoveryRemaining seconds.';
+          });
+        }
       });
     }
+
+    setState(() {
+      _openingCamera = false;
+      _cameraReady = false;
+      _gazeReady = false;
+      _livenessReady = false;
+      _visualReady = false;
+      _imageStreamAvailable = false;
+      _cameraStatus = '$message Reconnecting in $_cameraRecoveryRemaining seconds.';
+    });
+  }
+
+  void _clearCameraRecovery() {
+    _cameraRecoveryTimer?.cancel();
+    _cameraRecoveryTimer = null;
+    _cameraRecoveryRemaining = 0;
+  }
+
+  void _beginMicrophoneRecovery(
+    String message, {
+    Map<String, Object?> metadata = const <String, Object?>{},
+  }) {
+    if (!mounted) return;
+
+    if (_microphoneRecoveryRemaining <= 0) {
+      _microphoneRecoveryRemaining = _deviceRecoverySeconds;
+      _microphoneRecoveryTimer?.cancel();
+      _microphoneRecoveryTimer = Timer.periodic(const Duration(seconds: 1), (
+        timer,
+      ) {
+        if (!mounted) return;
+
+        _microphoneRecoveryRemaining--;
+
+        if (_microphoneRecoveryRemaining > 0 &&
+            _microphoneRecoveryRemaining % _deviceRetryEverySeconds == 0) {
+          unawaited(_startAudio());
+        }
+
+        if (_microphoneRecoveryRemaining <= 0) {
+          timer.cancel();
+          unawaited(
+            _raiseEvent(
+              eventType: 'microphone_reconnect_timeout',
+              severity: 'critical',
+              message:
+                  'Room sound check could not be restored. An invigilator may review this session.',
+              metadata: metadata,
+            ),
+          );
+        }
+
+        if (mounted) {
+          setState(() {
+            _audioStatus =
+                '$message Reconnecting in $_microphoneRecoveryRemaining seconds.';
+          });
+        }
+      });
+    }
+
+    setState(() {
+      _audioReady = false;
+      _audioStatus =
+          '$message Reconnecting in $_microphoneRecoveryRemaining seconds.';
+    });
+  }
+
+  void _clearMicrophoneRecovery() {
+    _microphoneRecoveryTimer?.cancel();
+    _microphoneRecoveryTimer = null;
+    _microphoneRecoveryRemaining = 0;
   }
 
   void _startSnapshotCameraChecks(CameraController controller) {
@@ -318,8 +431,77 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     unawaited(_analyseCameraImage(image, started));
   }
 
+  void _handleFrameQuality(CameraImage image) {
+    if (image.planes.isEmpty) return;
+    final plane = image.planes.first;
+    final bytes = plane.bytes;
+    if (bytes.isEmpty) return;
+
+    final step = math.max(1, bytes.length ~/ 4096);
+    var count = 0;
+    var sum = 0.0;
+    var squares = 0.0;
+
+    for (var i = 0; i < bytes.length; i += step) {
+      final value = bytes[i].toDouble();
+      count++;
+      sum += value;
+      squares += value * value;
+    }
+
+    if (count == 0) return;
+
+    final mean = sum / count;
+    final variance = math.max(0.0, (squares / count) - (mean * mean));
+    final brightness = (mean / 255.0).clamp(0.0, 1.0);
+    final contrast = (math.sqrt(variance) / 255.0).clamp(0.0, 1.0);
+    final lowLight = brightness < 0.18 ||
+        (brightness < 0.24 && contrast < 0.09);
+
+    if (lowLight) {
+      _lowLightStreak++;
+    } else {
+      _lowLightStreak = math.max(0, _lowLightStreak - 1);
+    }
+
+    if (_lowLightStreak >= _lowLightWarningStreak) {
+      if (mounted && _multiplePeopleRiskStreak == 0) {
+        setState(() {
+          _visualStatus = 'Lighting is low. Please improve your lighting.';
+        });
+      }
+
+      unawaited(
+        _raiseEvent(
+          eventType: 'low_light_guidance',
+          severity: 'warning',
+          message: 'Lighting is low. Please improve your lighting.',
+          metadata: <String, Object?>{
+            'brightness': brightness,
+            'contrast': contrast,
+            'camera_resolution': _cameraResolution.name,
+          },
+        ),
+      );
+
+      if (!_cameraQualityUpgraded &&
+          _cameraResolution == ResolutionPreset.low) {
+        _cameraQualityUpgraded = true;
+        _cameraResolution = ResolutionPreset.medium;
+        if (mounted) {
+          setState(() {
+            _cameraStatus = 'Improving camera quality for better fairness...';
+          });
+        }
+        unawaited(_startCamera());
+      }
+    }
+  }
+
   Future<void> _analyseCameraImage(CameraImage image, DateTime started) async {
     try {
+      _handleFrameQuality(image);
+
       final visual = _visualIntegrity.analyse(image);
       if (visual != null) _handleVisualIntegrityResult(visual);
 
@@ -483,16 +665,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     try {
       final permission = await _microphone.hasPermission();
       if (!permission) {
-        await _raiseEvent(
-          eventType: 'microphone_unavailable',
-          severity: 'critical',
-          message: 'Microphone permission was not available during the exam.',
+        _beginMicrophoneRecovery(
+          'Room sound check is reconnecting. Please keep your exam area quiet.',
+          metadata: const <String, Object?>{'reason': 'permission_unavailable'},
         );
-        if (!mounted) return;
-        setState(() {
-          _audioReady = false;
-          _audioStatus = 'Microphone unavailable';
-        });
         return;
       }
       await _microphone.start(
@@ -500,23 +676,17 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         maxBufferSeconds: 20,
         onPcmChunk: _handleAudioChunk,
       );
+      _clearMicrophoneRecovery();
       if (!mounted) return;
       setState(() {
         _audioReady = true;
         _audioStatus = 'Sound check active';
       });
     } catch (e) {
-      await _raiseEvent(
-        eventType: 'microphone_unavailable',
-        severity: 'critical',
-        message: 'Microphone monitoring stopped during the exam.',
+      _beginMicrophoneRecovery(
+        'Room sound check is reconnecting. Please keep your exam area quiet.',
         metadata: <String, Object?>{'error': e.toString()},
       );
-      if (!mounted) return;
-      setState(() {
-        _audioReady = false;
-        _audioStatus = 'Sound monitoring unavailable';
-      });
     }
   }
 
@@ -598,21 +768,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         }
       });
       if (!cameraStillReady) {
-        await _raiseEvent(
-          eventType: 'camera_unavailable',
-          severity: 'critical',
-          message: 'Camera heartbeat failed during the exam.',
+        _beginCameraRecovery(
+          'Camera connection is unstable. Please keep your face visible while it reconnects.',
         );
       }
       if (!_microphone.isRunning) {
-        setState(() {
-          _audioReady = false;
-          _audioStatus = 'Sound monitoring unavailable';
-        });
-        await _raiseEvent(
-          eventType: 'microphone_unavailable',
-          severity: 'critical',
-          message: 'Microphone heartbeat failed during the exam.',
+        _beginMicrophoneRecovery(
+          'Room sound check is reconnecting. Please keep your exam area quiet.',
         );
       }
       if (!platformOk) {

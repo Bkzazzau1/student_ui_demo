@@ -34,7 +34,8 @@ class DemoExamAttemptView extends StatefulWidget {
   State<DemoExamAttemptView> createState() => _DemoExamAttemptViewState();
 }
 
-class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
+class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+    with WidgetsBindingObserver {
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -54,6 +55,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startedAt = DateTime.now();
     _questions = DemoExamService.questionsFor(widget.assessment);
     _remainingSeconds = widget.assessment.durationMinutes * 60;
@@ -62,9 +64,68 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _events.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!widget.assessment.remoteProctored) return;
+
+    if (state == AppLifecycleState.paused) {
+      unawaited(_sendRuntimeSessionEvent(
+        eventType: 'exam_screen_backgrounded',
+        severity: 'high',
+        message:
+            'You moved away from the exam screen. Please return to the exam screen.',
+        metadata: <String, Object?>{'state': state.name},
+      ));
+
+      if (!mounted) return;
+      setState(() {
+        _paused = true;
+        _pauseMessage =
+            'You moved away from the exam screen. Please wait for review or guidance.';
+      });
+    } else if (state == AppLifecycleState.inactive) {
+      unawaited(_sendRuntimeSessionEvent(
+        eventType: 'exam_screen_focus_changed',
+        severity: 'warning',
+        message: 'Exam screen focus changed. Please stay on the exam screen.',
+        metadata: <String, Object?>{'state': state.name},
+      ));
+    } else if (state == AppLifecycleState.resumed) {
+      unawaited(_sendRuntimeSessionEvent(
+        eventType: 'exam_screen_restored',
+        severity: 'info',
+        message: 'Exam screen restored. Runtime checks are continuing.',
+        metadata: <String, Object?>{'state': state.name},
+      ));
+    }
+  }
+
+  Future<void> _sendRuntimeSessionEvent({
+    required String eventType,
+    required String severity,
+    required String message,
+    Map<String, Object?> metadata = const <String, Object?>{},
+  }) {
+    return _events.send(
+      LiveProctoringEvent(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        eventType: eventType,
+        severity: severity,
+        message: message,
+        createdAt: DateTime.now(),
+        assessmentType: widget.assessment.assessmentType,
+        reviewAudience: widget.assessment.reviewAudience,
+        metadata: metadata,
+      ),
+    );
   }
 
   void _startTimer() {
@@ -874,7 +935,7 @@ class _PauseBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Exam paused: $message',
+              'Please wait: $message',
               style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w800),
             ),
           ),
