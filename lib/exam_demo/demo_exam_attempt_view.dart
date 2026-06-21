@@ -49,6 +49,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   Timer? _timer;
   int _currentIndex = 0;
   bool _paused = false;
+  bool _exitWarningShowing = false;
+  bool _submitting = false;
   String _pauseMessage = '';
   final Map<String, String> _answers = <String, String>{};
 
@@ -74,28 +76,24 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!widget.assessment.remoteProctored) return;
 
-    if (state == AppLifecycleState.paused) {
-      unawaited(_sendRuntimeSessionEvent(
-        eventType: 'exam_screen_backgrounded',
-        severity: 'high',
-        message:
-            'You moved away from the exam screen. Please return to the exam screen.',
-        metadata: <String, Object?>{'state': state.name},
-      ));
-
-      if (!mounted) return;
-      setState(() {
-        _paused = true;
-        _pauseMessage =
-            'You moved away from the exam screen. Please wait for review or guidance.';
-      });
-    } else if (state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.inactive) {
       unawaited(_sendRuntimeSessionEvent(
         eventType: 'exam_screen_focus_changed',
         severity: 'warning',
         message: 'Exam screen focus changed. Please stay on the exam screen.',
         metadata: <String, Object?>{'state': state.name},
       ));
+      unawaited(_showLeaveExamWarning());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(_sendRuntimeSessionEvent(
+        eventType: 'exam_screen_backgrounded',
+        severity: 'high',
+        message: 'You moved away from the exam screen. The exam will be submitted.',
+        metadata: <String, Object?>{'state': state.name},
+      ));
+      unawaited(_submit(autoSubmitted: true, force: true));
     } else if (state == AppLifecycleState.resumed) {
       unawaited(_sendRuntimeSessionEvent(
         eventType: 'exam_screen_restored',
@@ -128,6 +126,41 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     );
   }
 
+  Future<void> _showLeaveExamWarning() async {
+    if (!mounted || _exitWarningShowing || _submitting || _paused) return;
+    _exitWarningShowing = true;
+    _timer?.cancel();
+
+    final submitNow = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Stay on the exam screen'),
+        content: const Text(
+          'If you minimize, close, or move away from this exam screen, your exam will be submitted automatically.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Stay in exam'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Submit now'),
+          ),
+        ],
+      ),
+    );
+
+    _exitWarningShowing = false;
+    if (!mounted) return;
+    if (submitNow == true) {
+      await _submit(autoSubmitted: true, force: true);
+      return;
+    }
+    _startTimer();
+  }
+
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -157,7 +190,12 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 820;
-        return Scaffold(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop) unawaited(_showLeaveExamWarning());
+          },
+          child: Scaffold(
           backgroundColor: const Color(0xFFF4F7FB),
           appBar: AppBar(
             backgroundColor: Colors.white,
@@ -204,6 +242,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
                   ? _buildCompactAttempt(question)
                   : _buildWideAttempt(question),
             ),
+          ),
           ),
         );
       },
@@ -359,8 +398,13 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     ];
   }
 
-  Future<void> _submit({required bool autoSubmitted}) async {
-    if (_paused) return;
+  Future<void> _submit({
+    required bool autoSubmitted,
+    bool force = false,
+  }) async {
+    if (_submitting) return;
+    if (_paused && !force) return;
+    _submitting = true;
     _timer?.cancel();
     if (!autoSubmitted && mounted) {
       final unanswered = _questions.length - _answeredCount;
@@ -386,6 +430,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
         ),
       );
       if (confirmed != true) {
+        _submitting = false;
         _startTimer();
         return;
       }
