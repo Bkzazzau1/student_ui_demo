@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -98,7 +99,10 @@ class AudioSecurityCheckService {
     Duration duration = const Duration(seconds: 15),
   }) async {
     if (_allowAudioReviewOverride) {
-      return const AudioSecurityCheckResult(
+      final clipPath = await _writeTestingOverrideWav(
+        duration: duration.inSeconds <= 0 ? const Duration(seconds: 15) : duration,
+      );
+      return AudioSecurityCheckResult(
         microphoneAvailable: true,
         permissionGranted: true,
         inputLevelOk: true,
@@ -120,7 +124,8 @@ class AudioSecurityCheckService {
         notificationDetected: false,
         tvOrRadioVoiceDetected: false,
         ambientNoiseAllowed: true,
-        sampleDurationSeconds: 15,
+        sampleDurationSeconds: duration.inSeconds <= 0 ? 15 : duration.inSeconds,
+        clipPath: clipPath,
         message:
             'Audio review override is active. Continue for development testing only.',
       );
@@ -369,6 +374,88 @@ class AudioSecurityCheckService {
         return false;
       }
     }();
+  }
+
+  Future<String> _writeTestingOverrideWav({
+    required Duration duration,
+  }) async {
+    const sampleRate = 44100;
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    final seconds = duration.inSeconds.clamp(1, 15);
+    final sampleCount = sampleRate * seconds;
+    final pcmBytes = Uint8List(sampleCount * 2);
+    final data = ByteData.sublistView(pcmBytes);
+
+    // Quiet deterministic room tone. This is only used when the explicit
+    // development override flag is enabled.
+    var seed = 17;
+    for (var i = 0; i < sampleCount; i++) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final noise = ((seed % 240) - 120);
+      final hum = ((i % 160) - 80) ~/ 10;
+      final sample = (noise + hum).clamp(-220, 220);
+      data.setInt16(i * 2, sample, Endian.little);
+    }
+
+    final directory = Directory(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}kslas_audio_evidence',
+    );
+    await directory.create(recursive: true);
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File(
+      '${directory.path}${Platform.pathSeparator}testing_audio_override_$timestamp.wav',
+    );
+    await file.writeAsBytes(
+      _wavBytes(
+        pcmBytes: pcmBytes,
+        sampleRate: sampleRate,
+        numChannels: numChannels,
+        bitsPerSample: bitsPerSample,
+      ),
+      flush: true,
+    );
+    return file.path;
+  }
+
+  Uint8List _wavBytes({
+    required Uint8List pcmBytes,
+    required int sampleRate,
+    required int numChannels,
+    required int bitsPerSample,
+  }) {
+    final byteRate = sampleRate * numChannels * bitsPerSample ~/ 8;
+    final blockAlign = numChannels * bitsPerSample ~/ 8;
+    final dataLength = pcmBytes.length;
+    final fileLength = 36 + dataLength;
+    final bytes = BytesBuilder(copy: false)
+      ..add(_ascii('RIFF'))
+      ..add(_uint32(fileLength))
+      ..add(_ascii('WAVE'))
+      ..add(_ascii('fmt '))
+      ..add(_uint32(16))
+      ..add(_uint16(1))
+      ..add(_uint16(numChannels))
+      ..add(_uint32(sampleRate))
+      ..add(_uint32(byteRate))
+      ..add(_uint16(blockAlign))
+      ..add(_uint16(bitsPerSample))
+      ..add(_ascii('data'))
+      ..add(_uint32(dataLength))
+      ..add(pcmBytes);
+    return bytes.toBytes();
+  }
+
+  Uint8List _ascii(String value) => Uint8List.fromList(value.codeUnits);
+
+  Uint8List _uint16(int value) {
+    final data = ByteData(2)..setUint16(0, value, Endian.little);
+    return data.buffer.asUint8List();
+  }
+
+  Uint8List _uint32(int value) {
+    final data = ByteData(4)..setUint32(0, value, Endian.little);
+    return data.buffer.asUint8List();
   }
 
   _AudioChunkFeatures _chunkFeatures(Uint8List bytes) {
