@@ -106,7 +106,7 @@ class SnapshotGazeFallbackService {
         multiplePeopleLikely: signal.multiplePeopleLikely,
         headPoseShiftLikely: false,
         label: signal.multiplePeopleLikely
-            ? 'multiple_people_detected'
+            ? 'possible_multiple_people'
             : 'learning_head_position',
       );
     }
@@ -122,7 +122,7 @@ class SnapshotGazeFallbackService {
         shiftY.abs() >= 0.095 ||
         shiftScore >= 0.125 ||
         profileTurnLikely;
-    final multiplePeopleLikely = signal.multiplePeopleLikely || signal.personCount >= 2;
+    final multiplePeopleLikely = signal.multiplePeopleLikely && signal.personCount >= 2;
 
     return SnapshotGazeFallbackResult(
       ready: true,
@@ -140,7 +140,7 @@ class SnapshotGazeFallbackService {
       multiplePeopleLikely: multiplePeopleLikely,
       headPoseShiftLikely: headPoseShiftLikely,
       label: multiplePeopleLikely
-          ? 'multiple_people_detected'
+          ? 'possible_multiple_people'
           : headPoseShiftLikely
               ? 'head_or_gaze_shift_detected'
               : 'head_position_stable',
@@ -154,7 +154,7 @@ class SnapshotGazeFallbackService {
     final xEnd = (width * 0.95).round();
     final yStart = (height * 0.06).round();
     final yEnd = (height * 0.78).round();
-    final bins = List<double>.filled(12, 0.0);
+    final bins = List<double>.filled(16, 0.0);
 
     var weightedX = 0.0;
     var weightedY = 0.0;
@@ -201,7 +201,7 @@ class SnapshotGazeFallbackService {
 
     if (totalWeight < 80) return null;
     final asymmetry = ((rightWeight - leftWeight) / totalWeight).clamp(-1.0, 1.0);
-    final personCount = _estimatePersonClusters(bins, totalWeight);
+    final personCount = _estimateSeparatedPersonClusters(bins, totalWeight);
     return _HeadSignal(
       (weightedX / totalWeight).clamp(0.0, 1.0),
       (weightedY / totalWeight).clamp(0.0, 1.0),
@@ -211,35 +211,91 @@ class SnapshotGazeFallbackService {
     );
   }
 
-  int _estimatePersonClusters(List<double> bins, double totalWeight) {
-    if (bins.isEmpty || totalWeight <= 0) return 0;
+  int _estimateSeparatedPersonClusters(List<double> bins, double totalWeight) {
+    if (bins.isEmpty || totalWeight <= 0) return 1;
     final strongest = bins.reduce(math.max);
-    if (strongest <= 0) return 0;
-    final threshold = math.max(totalWeight * 0.055, strongest * 0.28);
-    var clusters = 0;
+    if (strongest <= 0) return 1;
+    final threshold = math.max(totalWeight * 0.085, strongest * 0.46);
+    final candidates = <_ClusterCandidate>[];
     var inCluster = false;
     var clusterWeight = 0.0;
+    var weightedIndex = 0.0;
     var clusterWidth = 0;
-    for (final weight in bins) {
+    var startIndex = 0;
+
+    for (var i = 0; i < bins.length; i++) {
+      final weight = bins[i];
       if (weight >= threshold) {
-        inCluster = true;
+        if (!inCluster) {
+          inCluster = true;
+          startIndex = i;
+        }
         clusterWeight += weight;
+        weightedIndex += weight * i;
         clusterWidth++;
       } else if (inCluster) {
-        if (clusterWeight >= threshold * 1.20 && clusterWidth >= 1) clusters++;
+        _addClusterCandidate(
+          candidates,
+          clusterWeight,
+          weightedIndex,
+          clusterWidth,
+          startIndex,
+          i - 1,
+          strongest,
+          threshold,
+        );
         inCluster = false;
         clusterWeight = 0.0;
+        weightedIndex = 0.0;
         clusterWidth = 0;
       }
     }
-    if (inCluster && clusterWeight >= threshold * 1.20 && clusterWidth >= 1) {
-      clusters++;
+    if (inCluster) {
+      _addClusterCandidate(
+        candidates,
+        clusterWeight,
+        weightedIndex,
+        clusterWidth,
+        startIndex,
+        bins.length - 1,
+        strongest,
+        threshold,
+      );
     }
-    // A single very wide cluster can mean two close people in the scene.
-    final wideClusterLikely = bins.where((weight) => weight >= threshold).length >= 6 &&
-        bins.where((weight) => weight >= strongest * 0.45).length >= 4;
-    if (clusters == 1 && wideClusterLikely) return 2;
-    return clusters.clamp(0, 3);
+
+    if (candidates.length < 2) return 1;
+    candidates.sort((a, b) => b.weight.compareTo(a.weight));
+    final primary = candidates.first;
+    for (final candidate in candidates.skip(1)) {
+      final separated = (candidate.center - primary.center).abs() >= 4.0;
+      final strongEnough = candidate.weight >= primary.weight * 0.62 &&
+          candidate.weight >= strongest * 0.72;
+      if (separated && strongEnough) return 2;
+    }
+    return 1;
+  }
+
+  void _addClusterCandidate(
+    List<_ClusterCandidate> candidates,
+    double clusterWeight,
+    double weightedIndex,
+    int clusterWidth,
+    int startIndex,
+    int endIndex,
+    double strongest,
+    double threshold,
+  ) {
+    if (clusterWidth < 1) return;
+    if (clusterWeight < threshold * 1.75) return;
+    if (clusterWeight < strongest * 0.70) return;
+    candidates.add(
+      _ClusterCandidate(
+        center: weightedIndex / clusterWeight,
+        weight: clusterWeight,
+        startIndex: startIndex,
+        endIndex: endIndex,
+      ),
+    );
   }
 
   double _luma(img.Pixel pixel) {
@@ -271,4 +327,18 @@ class _HeadSignal {
   final double asymmetry;
   final int personCount;
   final bool multiplePeopleLikely;
+}
+
+class _ClusterCandidate {
+  const _ClusterCandidate({
+    required this.center,
+    required this.weight,
+    required this.startIndex,
+    required this.endIndex,
+  });
+
+  final double center;
+  final double weight;
+  final int startIndex;
+  final int endIndex;
 }
