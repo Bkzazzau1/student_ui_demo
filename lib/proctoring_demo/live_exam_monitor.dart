@@ -41,6 +41,7 @@ class LiveExamMonitor extends StatefulWidget {
 class _LiveExamMonitorState extends State<LiveExamMonitor> {
   static const int _secondPersonWarningStreak = 3;
   static const int _secondPersonPauseStreak = 7;
+  static const int _farVoiceWarningStreak = 3;
 
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
@@ -90,6 +91,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
+  int _farVoiceRiskStreak = 0;
   int _spoofRiskStreak = 0;
   int _visualRiskStreak = 0;
   int _multiplePeopleRiskStreak = 0;
@@ -521,31 +523,52 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   void _handleAudioChunk(Uint8List chunk) {
     final result = _audioIsolation.analysePcm16(chunk);
     if (result == null) return;
-    if (mounted) {
-      setState(() {
-        _audioStatus = result.humanVoiceLikely
-            ? 'Voice noticed (${_voiceRiskStreak + 1}/3)'
-            : result.allowedAmbientLikely
-                ? 'Allowed ambient sound: ${result.label}'
-                : 'Unclear environment sound noticed';
-      });
-    }
-    if (result.humanVoiceLikely) {
+
+    if (result.nearVoiceLikely) {
       _voiceRiskStreak++;
+      _farVoiceRiskStreak = math.max(0, _farVoiceRiskStreak - 1);
+    } else if (result.possibleFarVoiceLikely) {
+      _farVoiceRiskStreak++;
+      _voiceRiskStreak = math.max(0, _voiceRiskStreak - 1);
     } else {
       _voiceRiskStreak = math.max(0, _voiceRiskStreak - 1);
+      _farVoiceRiskStreak = math.max(0, _farVoiceRiskStreak - 1);
     }
+
+    if (mounted) {
+      setState(() {
+        _audioStatus = result.nearVoiceLikely
+            ? 'Voice close to exam area (${_voiceRiskStreak}/3)'
+            : result.possibleFarVoiceLikely
+                ? 'Voice may be outside or far away. Improve environment (${_farVoiceRiskStreak}/$_farVoiceWarningStreak)'
+                : result.allowedAmbientLikely
+                    ? 'Allowed ambient sound: ${result.label}'
+                    : 'Unclear environment sound noticed';
+      });
+    }
+
     if (_voiceRiskStreak >= 3) {
       _voiceRiskStreak = 0;
       unawaited(
         _raiseEvent(
           eventType: 'audio_voice_isolation_alert',
           severity: 'high',
-          message: 'Voice was noticed in the exam audio environment.',
+          message: 'Voice was noticed close to the exam audio environment.',
           metadata: result.toJson(),
         ),
       );
-    } else if (result.repeatedFingerprint && !result.allowedAmbientLikely) {
+    } else if (_farVoiceRiskStreak == _farVoiceWarningStreak) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'background_voice_environment_warning',
+          severity: 'warning',
+          message: 'Voice may be coming from outside or far away. Please improve your environment.',
+          metadata: result.toJson(),
+        ),
+      );
+    } else if (result.repeatedFingerprint &&
+        !result.allowedAmbientLikely &&
+        !result.possibleFarVoiceLikely) {
       unawaited(
         _raiseEvent(
           eventType: 'audio_repeated_fingerprint_detected',
