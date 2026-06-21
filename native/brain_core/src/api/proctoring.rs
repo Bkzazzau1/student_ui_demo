@@ -76,6 +76,21 @@ pub struct ScanFrameDecision {
 
 #[frb]
 #[derive(Clone, Debug)]
+pub struct GazeHeadPoseDecision {
+    pub gaze_x: f64,
+    pub gaze_y: f64,
+    pub gaze_z: f64,
+    pub yaw_proxy: f64,
+    pub pitch_proxy: f64,
+    pub roll_proxy: f64,
+    pub confidence: f64,
+    pub stable_head_pose: bool,
+    pub looking_away: bool,
+    pub label: String,
+}
+
+#[frb]
+#[derive(Clone, Debug)]
 pub struct VisionModelStatus {
     pub loaded: bool,
     pub model_name: String,
@@ -402,6 +417,120 @@ pub fn estimate_lighting_from_luma(luma_bytes: Vec<u8>, sample_stride: u32) -> f
     }
 
     ((total as f64 / count as f64) / 255.0).clamp(0.0, 1.0)
+}
+
+#[frb(sync)]
+pub fn analyze_gaze_head_pose_frame(
+    plane0_bytes: Vec<u8>,
+    width: u32,
+    height: u32,
+    bytes_per_row: u32,
+    previous_yaw: f64,
+    previous_pitch: f64,
+    previous_roll: f64,
+) -> Option<GazeHeadPoseDecision> {
+    if plane0_bytes.is_empty() || width == 0 || height == 0 || bytes_per_row == 0 {
+        return None;
+    }
+
+    let width = width as usize;
+    let height = height as usize;
+    let row_stride = bytes_per_row as usize;
+    let step_x = (width / 36).max(1);
+    let step_y = (height / 28).max(1);
+    let center_x = width as f64 / 2.0;
+    let center_y = height as f64 / 2.0;
+    let radius_x = width as f64 * 0.38;
+    let radius_y = height as f64 * 0.42;
+
+    if radius_x <= 0.0 || radius_y <= 0.0 {
+        return None;
+    }
+
+    let mut total = 0.0;
+    let mut weighted_x = 0.0;
+    let mut weighted_y = 0.0;
+    let mut left = 0.0;
+    let mut right = 0.0;
+    let mut top = 0.0;
+    let mut bottom = 0.0;
+    let mut diagonal_a = 0.0;
+    let mut diagonal_b = 0.0;
+
+    for y in (0..height).step_by(step_y) {
+        let dy = (y as f64 - center_y) / radius_y;
+        for x in (0..width).step_by(step_x) {
+            let dx = (x as f64 - center_x) / radius_x;
+            if dx * dx + dy * dy > 1.0 {
+                continue;
+            }
+
+            let index = y.saturating_mul(row_stride).saturating_add(x);
+            let Some(byte) = plane0_bytes.get(index) else {
+                continue;
+            };
+
+            let luma = *byte as f64 / 255.0;
+            let weight = (1.0 - luma).clamp(0.0, 1.0) + 0.04;
+            total += weight;
+            weighted_x += x as f64 * weight;
+            weighted_y += y as f64 * weight;
+            if (x as f64) < center_x {
+                left += weight;
+            } else {
+                right += weight;
+            }
+            if (y as f64) < center_y {
+                top += weight;
+            } else {
+                bottom += weight;
+            }
+            if x as f64 / width as f64 > y as f64 / height as f64 {
+                diagonal_a += weight;
+            } else {
+                diagonal_b += weight;
+            }
+        }
+    }
+
+    if total <= 0.001 {
+        return None;
+    }
+
+    let gaze_x = ((weighted_x / total) - center_x) / center_x;
+    let gaze_y = ((weighted_y / total) - center_y) / center_y;
+    let yaw = ((right - left) / total).clamp(-1.0, 1.0);
+    let pitch = ((bottom - top) / total).clamp(-1.0, 1.0);
+    let roll = ((diagonal_a - diagonal_b) / total).clamp(-1.0, 1.0);
+    let movement = ((yaw - previous_yaw).abs()
+        + (pitch - previous_pitch).abs()
+        + (roll - previous_roll).abs())
+        / 3.0;
+    let gaze_magnitude = (gaze_x * gaze_x + gaze_y * gaze_y).sqrt();
+    let head_magnitude = (yaw * yaw + pitch * pitch + roll * roll).sqrt();
+    let looking_away = gaze_magnitude > 0.34 || yaw.abs() > 0.30 || pitch.abs() > 0.34;
+    let stable_head_pose = movement < 0.18 && head_magnitude < 0.68;
+    let confidence = (0.55 + (total / 220.0).min(0.40) - movement.min(0.22)).clamp(0.0, 1.0);
+    let label = if looking_away {
+        "possible_looking_away"
+    } else if stable_head_pose {
+        "focused_forward"
+    } else {
+        "head_motion_detected"
+    };
+
+    Some(GazeHeadPoseDecision {
+        gaze_x: gaze_x.clamp(-1.0, 1.0),
+        gaze_y: gaze_y.clamp(-1.0, 1.0),
+        gaze_z: 1.0,
+        yaw_proxy: yaw,
+        pitch_proxy: pitch,
+        roll_proxy: roll,
+        confidence,
+        stable_head_pose,
+        looking_away,
+        label: label.to_string(),
+    })
 }
 
 #[frb(sync)]

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
 
+import 'rust_gaze_head_pose_runtime.dart';
+
 class GazeHeadPoseResult {
   const GazeHeadPoseResult({
     required this.gazeX,
@@ -46,6 +48,7 @@ class GazeHeadPoseResult {
 }
 
 class GazeHeadPoseEstimator {
+  final RustGazeHeadPoseRuntime _rustRuntime = RustGazeHeadPoseRuntime();
   int _frameCounter = 0;
   double _lastYaw = 0;
   double _lastPitch = 0;
@@ -62,6 +65,33 @@ class GazeHeadPoseEstimator {
     final rowStride = plane.bytesPerRow;
     final bytes = plane.bytes;
     if (bytes.isEmpty || rowStride <= 0) return null;
+
+    final rustResult = _rustRuntime.analyse(
+      lumaBytes: bytes,
+      width: width,
+      height: height,
+      bytesPerRow: rowStride,
+      previousYaw: _lastYaw,
+      previousPitch: _lastPitch,
+      previousRoll: _lastRoll,
+    );
+    if (rustResult != null) {
+      _lastYaw = rustResult.yawProxy;
+      _lastPitch = rustResult.pitchProxy;
+      _lastRoll = rustResult.rollProxy;
+      return GazeHeadPoseResult(
+        gazeX: rustResult.gazeX,
+        gazeY: rustResult.gazeY,
+        gazeZ: rustResult.gazeZ,
+        yawProxy: rustResult.yawProxy,
+        pitchProxy: rustResult.pitchProxy,
+        rollProxy: rustResult.rollProxy,
+        confidence: rustResult.confidence,
+        stableHeadPose: rustResult.stableHeadPose,
+        lookingAway: rustResult.lookingAway,
+        label: rustResult.label,
+      );
+    }
 
     var total = 0.0;
     var weightedX = 0.0;
