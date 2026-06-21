@@ -32,9 +32,9 @@ class _Header extends StatelessWidget {
             width: compact ? 48 : 58,
             height: compact ? 48 : 58,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.20)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
             ),
             child: Icon(
               snapshot.isComplete ? Icons.verified_user_rounded : Icons.face_retouching_natural,
@@ -67,7 +67,7 @@ class _Header extends StatelessWidget {
                   child: LinearProgressIndicator(
                     minHeight: 7,
                     value: progress.clamp(0.0, 1.0),
-                    backgroundColor: Colors.white.withOpacity(0.16),
+                    backgroundColor: Colors.white.withValues(alpha: 0.16),
                     valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF22C55E)),
                   ),
                 ),
@@ -151,7 +151,7 @@ class _CameraPreviewPanel extends StatelessWidget {
                 margin: const EdgeInsets.all(14),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.70),
+                  color: Colors.black.withValues(alpha: 0.70),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(

@@ -105,6 +105,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   bool _capturingTarget = false;
   bool _reviewing = false;
   bool _recordingVideo = false;
+  Timer? _autoCaptureTimer;
+  bool _autoCaptureEnabled = false;
 
   static List<DemoScanTarget> _newTargets() =>
       _guides.map((guide) => DemoScanTarget(name: guide.name)).toList();
@@ -130,6 +132,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   @override
   void dispose() {
+    _stopAutoCaptureLoop();
     unawaited(_frameSource.stop(_controller));
     _controller?.dispose();
     unawaited(_audioCheck.dispose());
@@ -237,6 +240,29 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _message =
           '${_currentGuide.instruction} Static repeated views will not be accepted.';
     });
+    _startAutoCaptureLoop();
+  }
+
+  void _startAutoCaptureLoop() {
+    _autoCaptureTimer?.cancel();
+    _autoCaptureEnabled = true;
+    _autoCaptureTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!_autoCaptureEnabled) return;
+      if (!_scanning) return;
+      if (_capturingTarget) return;
+      if (_reviewing) return;
+      if (_scanComplete) {
+        _stopAutoCaptureLoop();
+        return;
+      }
+      unawaited(_captureCurrentTarget());
+    });
+  }
+
+  void _stopAutoCaptureLoop() {
+    _autoCaptureEnabled = false;
+    _autoCaptureTimer?.cancel();
+    _autoCaptureTimer = null;
   }
 
   Future<void> _captureCurrentTarget() async {
@@ -378,6 +404,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     );
 
     if (_scanComplete) {
+      _stopAutoCaptureLoop();
       final manifest = await _saveManifest('scan_complete');
       if (!mounted) return;
       setState(() {
@@ -768,6 +795,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   Future<void> _reset() async {
+    _stopAutoCaptureLoop();
     await _frameSource.stop(_controller);
     setState(() {
       _targets = _newTargets();
@@ -880,16 +908,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 FilledButton.icon(
                   onPressed: _cameraReady && !_scanning ? _startScan : null,
                   icon: const Icon(Icons.screen_rotation_alt_outlined),
-                  label: const Text('Start 360 scan'),
-                ),
-                FilledButton.icon(
-                  onPressed: _cameraReady && !_capturingTarget && !_scanComplete
-                      ? _captureCurrentTarget
-                      : null,
-                  icon: const Icon(Icons.camera_alt_outlined),
-                  label: Text(
-                    _capturingTarget ? 'Checking...' : 'Capture current view',
-                  ),
+                  label: const Text('Start automatic scan'),
                 ),
                 OutlinedButton.icon(
                   onPressed: _scanComplete && !_reviewing
@@ -1022,25 +1041,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   ),
                 ),
               ),
-              if (!compact)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: FilledButton.icon(
-                      onPressed:
-                          _cameraReady && !_capturingTarget && !_scanComplete
-                          ? _captureCurrentTarget
-                          : null,
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      label: Text(
-                        _scanComplete
-                            ? 'All views captured'
-                            : 'Capture $_currentTarget',
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -1162,19 +1162,17 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     }
     if (!_scanning && !_scanComplete) {
       return _MobileScanAction(
-        label: 'Start 360 scan',
+        label: 'Start automatic scan',
         icon: Icons.screen_rotation_alt_outlined,
         onPressed: _startScan,
       );
     }
     if (!_scanComplete) {
       return _MobileScanAction(
-        label: _capturingTarget
-            ? 'Checking view...'
-            : 'Capture $_currentTarget',
+        label: _capturingTarget ? 'Checking view...' : 'Capturing automatically',
         icon: Icons.camera_alt_outlined,
         loading: _capturingTarget,
-        onPressed: _capturingTarget ? null : _captureCurrentTarget,
+        onPressed: null,
       );
     }
     return _MobileScanAction(

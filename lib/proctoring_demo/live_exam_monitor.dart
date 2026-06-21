@@ -90,9 +90,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _spoofRiskStreak = 0;
   int _visualRiskStreak = 0;
   int _multiplePeopleRiskStreak = 0;
-  DateTime? _lastGazeFrameAt;
-  DateTime? _lastLivenessFrameAt;
-  DateTime? _lastVisualFrameAt;
 
   @override
   void initState() {
@@ -230,9 +227,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         final bytes = await picture.readAsBytes();
         final result = _snapshotGazeFallback.analyseJpeg(bytes);
         if (result == null) return;
-        _lastGazeFrameAt = DateTime.now();
-        _lastVisualFrameAt = DateTime.now();
-        _lastLivenessFrameAt = DateTime.now();
 
         if (result.ready && result.headPoseShiftLikely) {
           _gazeRiskStreak++;
@@ -329,7 +323,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
       final gaze = await _gazeEstimator.analyse(image);
       if (gaze == null) return;
-      _lastGazeFrameAt = DateTime.now();
       if (gaze.lookingAway && gaze.confidence >= 0.55) {
         _gazeRiskStreak++;
       } else {
@@ -361,7 +354,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleOptimizedVisionResult(OptimizedVisionRuntimeResult result) {
-    _lastVisualFrameAt = DateTime.now();
     final objects = (result.outputs['objects'] as List? ?? const <Object?>[])
         .whereType<Map>()
         .map((item) => Map<String, Object?>.from(item))
@@ -400,7 +392,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleVisualIntegrityResult(VisualReflectionShadowResult result) {
-    _lastVisualFrameAt = DateTime.now();
     if (result.visualRiskScore >= 0.58 ||
         result.screenGlowLikely ||
         result.mirrorOrGlassLikely ||
@@ -431,7 +422,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleLivenessResult(ContinuousLivenessResult result) {
-    _lastLivenessFrameAt = DateTime.now();
     if (result.spoofRiskScore >= 0.70 || result.replayOrFreezeLikely) {
       _spoofRiskStreak++;
     } else {
