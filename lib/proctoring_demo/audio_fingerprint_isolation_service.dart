@@ -12,6 +12,8 @@ class AudioIsolationResult {
     required this.fingerprint,
     required this.label,
     required this.humanVoiceLikely,
+    required this.nearVoiceLikely,
+    required this.possibleFarVoiceLikely,
     required this.allowedAmbientLikely,
   });
 
@@ -24,6 +26,8 @@ class AudioIsolationResult {
   final String fingerprint;
   final String label;
   final bool humanVoiceLikely;
+  final bool nearVoiceLikely;
+  final bool possibleFarVoiceLikely;
   final bool allowedAmbientLikely;
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -36,6 +40,8 @@ class AudioIsolationResult {
         'fingerprint': fingerprint,
         'label': label,
         'human_voice_likely': humanVoiceLikely,
+        'near_voice_likely': nearVoiceLikely,
+        'possible_far_voice_likely': possibleFarVoiceLikely,
         'allowed_ambient_likely': allowedAmbientLikely,
       };
 }
@@ -118,15 +124,24 @@ class AudioFingerprintIsolationService {
 
     final steadyNoise = rms > 0.006 && variation < 0.006 && zcr < 0.20 && peakVariation < 0.025;
     final quiet = rms < 0.008 && peak < 0.050;
-    final humanVoiceLikely = voiceConfidence >= 0.45;
-    final allowedAmbientLikely = !humanVoiceLikely && (quiet || steadyNoise);
-    final label = humanVoiceLikely
-        ? 'voice_noticed'
-        : quiet
-            ? 'quiet_or_low_noise'
-            : steadyNoise
-                ? 'steady_allowed_ambient_noise'
-                : 'unclear_environment_sound';
+    final voiceTexture = voiceConfidence >= 0.40;
+    final nearVoiceLikely = voiceConfidence >= 0.52 &&
+        (rms >= 0.018 || peak >= 0.075 || recentPeak >= 0.100);
+    final possibleFarVoiceLikely = !nearVoiceLikely &&
+        voiceTexture &&
+        !steadyNoise &&
+        (rms < 0.024 || peak < 0.095 || recentPeak < 0.120);
+    final humanVoiceLikely = nearVoiceLikely;
+    final allowedAmbientLikely = !nearVoiceLikely && !possibleFarVoiceLikely && (quiet || steadyNoise);
+    final label = nearVoiceLikely
+        ? 'near_voice_noticed'
+        : possibleFarVoiceLikely
+            ? 'possible_far_or_background_voice'
+            : quiet
+                ? 'quiet_or_low_noise'
+                : steadyNoise
+                    ? 'steady_allowed_ambient_noise'
+                    : 'unclear_environment_sound';
 
     return AudioIsolationResult(
       rms: rms,
@@ -138,6 +153,8 @@ class AudioFingerprintIsolationService {
       fingerprint: fingerprint,
       label: label,
       humanVoiceLikely: humanVoiceLikely,
+      nearVoiceLikely: nearVoiceLikely,
+      possibleFarVoiceLikely: possibleFarVoiceLikely,
       allowedAmbientLikely: allowedAmbientLikely,
     );
   }
