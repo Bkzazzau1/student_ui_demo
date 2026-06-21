@@ -39,6 +39,9 @@ class LiveExamMonitor extends StatefulWidget {
 }
 
 class _LiveExamMonitorState extends State<LiveExamMonitor> {
+  static const int _secondPersonWarningStreak = 3;
+  static const int _secondPersonPauseStreak = 7;
+
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -73,7 +76,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _systemStatus = 'Checking system...';
   String _gazeStatus = 'Starting 1-second gaze/head check...';
   String _livenessStatus = 'Starting presence check...';
-  String _visualStatus = 'Starting object/person check...';
+  String _visualStatus = 'Starting camera view check...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
@@ -120,7 +123,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _cameraStatus = 'Opening camera...';
       _gazeStatus = 'Starting 1-second gaze/head check...';
       _livenessStatus = 'Starting presence check...';
-      _visualStatus = 'Starting object/person check...';
+      _visualStatus = 'Starting camera view check...';
     });
     try {
       final cameras = await availableCameras();
@@ -140,7 +143,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _cameraStatus = 'Camera not found';
           _gazeStatus = 'Gaze/head check unavailable';
           _livenessStatus = 'Presence check unavailable';
-          _visualStatus = 'Object/person check unavailable';
+          _visualStatus = 'Camera view check unavailable';
         });
         return;
       }
@@ -180,12 +183,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         if (streamReady) {
           _snapshotFallbackTimer?.cancel();
           _gazeStatus = 'Gaze vector and head pose monitoring active';
-          _livenessStatus = 'Continuous liveness anti-spoofing active';
-          _visualStatus = 'Object/reflection/person scan active';
+          _livenessStatus = 'Continuous liveness check active';
+          _visualStatus = 'Camera view check active';
         } else {
           _gazeStatus = '1-second snapshot gaze/head check active';
           _livenessStatus = 'Snapshot presence check active';
-          _visualStatus = 'Snapshot object/person check active';
+          _visualStatus = 'Snapshot camera view check active';
         }
       });
       if (!streamReady) {
@@ -209,7 +212,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _cameraStatus = 'Camera monitoring unavailable';
         _gazeStatus = 'Gaze/head check unavailable';
         _livenessStatus = 'Presence check unavailable';
-        _visualStatus = 'Object/person check unavailable';
+        _visualStatus = 'Camera view check unavailable';
       });
     }
   }
@@ -251,19 +254,30 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
                     ? 'Focus reminder shown ($_gazeRiskStreak/3)'
                     : '1-second gaze/head check stable';
             _visualStatus = result.multiplePeopleLikely
-                ? 'Possible second person detected ($_multiplePeopleRiskStreak/2)'
-                : 'Snapshot object/person check clear';
+                ? 'Camera view needs review ($_multiplePeopleRiskStreak/$_secondPersonPauseStreak)'
+                : 'Snapshot camera view check clear';
             _livenessStatus = 'Snapshot presence check active';
           });
         }
 
-        if (_multiplePeopleRiskStreak >= 2) {
+        if (_multiplePeopleRiskStreak == _secondPersonWarningStreak) {
+          unawaited(
+            _raiseEvent(
+              eventType: 'camera_view_needs_review',
+              severity: 'warning',
+              message: 'Camera view may need review.',
+              metadata: result.toJson(),
+            ),
+          );
+        }
+
+        if (_multiplePeopleRiskStreak >= _secondPersonPauseStreak) {
           _multiplePeopleRiskStreak = 0;
           unawaited(
             _raiseEvent(
               eventType: 'multiple_people_detected',
               severity: 'high',
-              message: 'More than one person may be visible in the exam camera view.',
+              message: 'Camera view requires immediate review.',
               metadata: result.toJson(),
             ),
           );
@@ -284,7 +298,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         if (mounted) {
           setState(() {
             _gazeStatus = '1-second snapshot gaze/head check waiting';
-            _visualStatus = 'Snapshot object/person check waiting';
+            _visualStatus = 'Snapshot camera view check waiting';
           });
         }
       } finally {
@@ -358,13 +372,16 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         .whereType<Map>()
         .map((item) => Map<String, Object?>.from(item))
         .toList();
-    final personObjects = objects.where((object) {
+    final confidentPersonObjects = objects.where((object) {
       final label = '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'.toLowerCase();
-      return label.contains('person') || label.contains('human') || label.contains('face');
+      final confidence = double.tryParse('${object['confidence'] ?? 0}') ?? 0.0;
+      return (label.contains('person') || label.contains('human') || label.contains('face')) &&
+          confidence >= 0.66;
     }).toList();
     final nativePersonCount = int.tryParse('${result.outputs['person_count'] ?? ''}') ?? 0;
     final nativeMultiplePeople = result.outputs['multiple_people_likely'] == true;
-    final multiplePeople = nativeMultiplePeople || nativePersonCount >= 2 || personObjects.length >= 2;
+    final nativeOnlyMultiple = objects.isEmpty && nativeMultiplePeople && nativePersonCount >= 2;
+    final multiplePeople = confidentPersonObjects.length >= 2 || nativeOnlyMultiple;
     if (multiplePeople) {
       _multiplePeopleRiskStreak++;
     } else {
@@ -374,17 +391,29 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       setState(() {
         _visualReady = true;
         _visualStatus = multiplePeople
-            ? 'Possible second person detected ($_multiplePeopleRiskStreak/2)'
-            : 'Object/person scan active (${result.inferenceMs.toStringAsFixed(1)} ms)';
+            ? 'Camera view needs review ($_multiplePeopleRiskStreak/$_secondPersonPauseStreak)'
+            : 'Camera view check active (${result.inferenceMs.toStringAsFixed(1)} ms)';
       });
     }
-    if (_multiplePeopleRiskStreak >= 2) {
+
+    if (_multiplePeopleRiskStreak == _secondPersonWarningStreak) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'camera_view_needs_review',
+          severity: 'warning',
+          message: 'Camera view may need review.',
+          metadata: result.toJson(),
+        ),
+      );
+    }
+
+    if (_multiplePeopleRiskStreak >= _secondPersonPauseStreak) {
       _multiplePeopleRiskStreak = 0;
       unawaited(
         _raiseEvent(
           eventType: 'multiple_people_detected',
           severity: 'high',
-          message: 'More than one person may be visible in the exam camera view.',
+          message: 'Camera view requires immediate review.',
           metadata: result.toJson(),
         ),
       );
@@ -414,7 +443,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'object_reflection_shadow_risk',
           severity: 'high',
-          message: 'Suspicious reflection, screen glow, shadow shift, or off-screen interaction pattern was detected.',
+          message: 'Camera view object/reflection check needs immediate review.',
           metadata: result.toJson(),
         ),
       );
@@ -441,7 +470,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'continuous_liveness_spoof_risk',
           severity: 'high',
-          message: 'Continuous liveness check detected possible photo, screen, replay, or frozen-frame behaviour.',
+          message: 'Presence check needs immediate review.',
           metadata: result.toJson(),
         ),
       );
