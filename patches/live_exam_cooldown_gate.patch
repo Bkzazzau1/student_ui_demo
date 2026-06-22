@@ -1,0 +1,39 @@
+diff --git a/lib/proctoring_demo/live_exam_monitor.dart b/lib/proctoring_demo/live_exam_monitor.dart
+--- a/lib/proctoring_demo/live_exam_monitor.dart
++++ b/lib/proctoring_demo/live_exam_monitor.dart
+@@ -13,6 +13,7 @@ import 'continuous_biometric_liveness_service.dart';
+ import 'landmark_gaze_runtime_selector.dart';
+ import 'live_camera_frame_bus.dart';
++import 'live_event_cooldown_gate.dart';
+ import 'live_proctoring_event_service.dart';
+ import 'microphone_stream_recording_service.dart';
+ import 'optimized_vision_runtime_bridge.dart';
+@@ -94,7 +95,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
+   Timer? _cameraRecoveryTimer;
+   Timer? _microphoneRecoveryTimer;
+ 
+-  final Map<String, DateTime> _lastEventAt = <String, DateTime>{};
++  final LiveEventCooldownGate _eventCooldown = LiveEventCooldownGate();
+   final List<String> _eventsSent = <String>[];
+ 
+   String _cameraStatus = 'Opening camera...';
+@@ -158,6 +159,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
+       'source_component': 'live_exam_monitor',
+       'published_frame_sequence': _framesPublished,
+       ..._cameraRuntime.currentState(),
++      ..._eventCooldown.currentState(),
+       ..._frameBus.currentState(),
+     };
+@@ -221,12 +223,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
+   }
+ 
+   bool _shouldEmit(String eventType) {
+-    final now = DateTime.now();
+-    final last = _lastEventAt[eventType];
+-    if (last != null && now.difference(last).inSeconds < 15) return false;
+-    _lastEventAt[eventType] = now;
+-    return true;
++    return _eventCooldown.shouldAccept(eventType);
+   }
+ 
+   @override
