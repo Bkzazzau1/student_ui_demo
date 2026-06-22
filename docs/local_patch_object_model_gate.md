@@ -1,13 +1,13 @@
 # Local patch: wire object model frame gate into LiveExamMonitor
 
-This patch is the only part that did not land through the connector. Apply it locally in `lib/proctoring_demo/live_exam_monitor.dart`.
+This patch documents the object model frame-gate wiring for `lib/proctoring_demo/live_exam_monitor.dart`.
 
 ## Goal
 
-Start the object model frame gate from the existing live camera frame bus. It must not open a second camera controller. It should stay disabled until this asset exists:
+Start the object model frame gate from the existing live camera frame bus. It must not open a second camera controller. It should stay disabled until this DirectML/ONNX asset exists:
 
 ```text
-assets/models/kslas_object_mvp.onnx
+assets/models/optimized_vision_runtime/object_reflection_shadow_detector.int8.onnx
 ```
 
 `pubspec.yaml` already includes the whole folder:
@@ -104,10 +104,16 @@ if (_objectFramesReady > 0)
 
 ## 5. Add the model later
 
-When ready, place the object model here:
+When ready, place the Windows/DirectML INT8 model here:
 
 ```text
-assets/models/kslas_object_mvp.onnx
+assets/models/optimized_vision_runtime/object_reflection_shadow_detector.int8.onnx
+```
+
+For future Mac/CoreML-style FP16 testing, use the matching native fallback name:
+
+```text
+assets/models/optimized_vision_runtime/object_reflection_shadow_detector.fp16.onnx
 ```
 
 Then run:
@@ -118,4 +124,4 @@ flutter pub get
 flutter run -d windows
 ```
 
-The gate will automatically switch from disabled to active when the asset appears in `AssetManifest.json`.
+The gate will automatically switch from disabled to active when the INT8 asset appears in `AssetManifest.json`, matching the Windows native runtime default path.
