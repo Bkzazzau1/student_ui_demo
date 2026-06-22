@@ -84,6 +84,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   final SnapshotGazeFallbackService _snapshotGazeFallback =
       SnapshotGazeFallbackService();
   final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
+  final ObjectModelFrameGate _objectFrameGate = ObjectModelFrameGate();
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -97,12 +98,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _cameraStatus = 'Opening camera...';
   String _audioStatus = 'Starting sound monitor...';
   String _systemStatus = 'Checking system...';
+  String _objectStatus = 'Object review waiting for model file...';
   String _gazeStatus = 'Starting 1-second gaze/head check...';
   String _livenessStatus = 'Starting presence check...';
   String _visualStatus = 'Starting camera view check...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
+  bool _objectReady = false;
   bool _gazeReady = false;
   bool _livenessReady = false;
   bool _visualReady = false;
@@ -124,10 +127,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _visualRiskStreak = 0;
   int _multiplePeopleRiskStreak = 0;
   int _framesPublished = 0;
+  int _objectFramesReady = 0;
 
   @override
   void initState() {
     super.initState();
+    unawaited(_startObjectModelGate());
     unawaited(_startCamera());
     unawaited(_startAudio());
     _startHeartbeat();
@@ -144,6 +149,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       unawaited(camera.stopImageStream());
     }
     camera?.dispose();
+    unawaited(_objectFrameGate.stop());
     _releaseCameraLease();
     _microphone.dispose();
     _events.dispose();
@@ -473,17 +479,50 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   void _handleCameraImage(CameraImage image) {
     _imageStreamAvailable = true;
+    if (_analysingFrame) return;
+    if (!_visionBudget.shouldProcessFrame()) return;
+
     final frame = _frameBus.publish(
       owner: _cameraOwner,
       purpose: 'live_exam_monitoring',
       image: image,
     );
     _framesPublished = frame.sequence;
-    if (_analysingFrame) return;
-    if (!_visionBudget.shouldProcessFrame()) return;
+
     final started = DateTime.now();
     _analysingFrame = true;
     unawaited(_analyseCameraImage(image, started));
+  }
+
+  Future<void> _startObjectModelGate() async {
+    final status = await _objectFrameGate.start(
+      onFrameReady: (frame) {
+        _objectFramesReady = frame.sequence;
+        if (!mounted) return;
+        setState(() {
+          _objectReady = true;
+          _objectStatus = 'Object review frame ready: ${frame.sequence}';
+        });
+      },
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _objectReady = status.running;
+      _objectStatus = status.assetPresent
+          ? 'Object model file found • frame gate active'
+          : 'Object review disabled until model file is added';
+    });
+
+    await _raiseEvent(
+      eventType: status.assetPresent
+          ? 'object_model_frame_gate_ready'
+          : 'object_model_asset_missing',
+      severity: 'info',
+      message: status.message,
+      metadata: status.toJson(),
+    );
   }
 
   void _handleFrameQuality(CameraImage image) {
@@ -672,7 +711,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       setState(() {
         _visualReady = true;
         _visualStatus = result.visualRiskScore >= 0.58
-            ? 'Possible object/reflection risk ($_visualRiskStreak/3)'
+            ? 'Camera view needs review ($_visualRiskStreak/3)'
             : 'Object/reflection check clear';
       });
     }
@@ -699,7 +738,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       setState(() {
         _livenessReady = true;
         _livenessStatus = result.replayOrFreezeLikely
-            ? 'Possible spoof/replay risk ($_spoofRiskStreak/3)'
+            ? 'Presence check needs review ($_spoofRiskStreak/3)'
             : 'Presence check active';
       });
     }
@@ -982,9 +1021,18 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             const SizedBox(height: 8),
             _StatusRow(label: _gazeStatus, ready: _gazeReady, icon: Icons.visibility_outlined),
             const SizedBox(height: 8),
+            _StatusRow(
+              label: _objectStatus,
+              ready: _objectReady,
+              icon: Icons.center_focus_strong_outlined,
+            ),
+            const SizedBox(height: 8),
             _StatusRow(label: _systemStatus, ready: _systemReady, icon: Icons.desktop_windows),
             const SizedBox(height: 8),
             Text('Live duration: ${_secondsLive}s'),
+            Text('Camera frames shared: $_framesPublished'),
+            if (_objectFramesReady > 0)
+              Text('Object review frames ready: $_objectFramesReady'),
             if (_eventsSent.isNotEmpty) ...[
               const SizedBox(height: 8),
               ..._eventsSent.map(
