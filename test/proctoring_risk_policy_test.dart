@@ -13,14 +13,25 @@ void main() {
       expect(ProctoringRiskPolicy.levelForScore(81), 'critical');
     });
 
-    test('assigns high-value points to major exam monitoring events', () {
+    test('assigns points to major exam monitoring events', () {
+      expect(ProctoringRiskPolicy.pointsFor('camera_unavailable'), 50);
+      expect(ProctoringRiskPolicy.pointsFor('microphone_unavailable'), 35);
       expect(ProctoringRiskPolicy.pointsFor('multiple_people_detected'), 55);
       expect(ProctoringRiskPolicy.pointsFor('audio_voice_isolation_alert'), 35);
       expect(ProctoringRiskPolicy.pointsFor('gaze_head_pose_deviation'), 20);
       expect(ProctoringRiskPolicy.pointsFor('exam_screen_focus_changed'), 15);
     });
 
-    test('prepares first YOLO event policy before adding the model', () {
+    test('keeps monitor health warnings below pause level', () {
+      final decision = ProctoringRiskPolicy.decisionFor(
+        'gaze_head_pose_monitor_unavailable',
+      );
+      expect(decision.points, 10);
+      expect(decision.level, 'low');
+      expect(decision.shouldPause, isFalse);
+    });
+
+    test('prepares object detection event policy before adding the model', () {
       final decision = ProctoringRiskPolicy.decisionFor('yolo_phone_detected');
       expect(decision.points, 30);
       expect(decision.level, 'medium');
