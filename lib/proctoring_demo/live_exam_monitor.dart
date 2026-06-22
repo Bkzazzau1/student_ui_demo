@@ -11,6 +11,7 @@ import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
+import 'proctoring_risk_policy.dart';
 import 'visual_reflection_shadow_service.dart';
 import 'vision_compute_budget_service.dart';
 
@@ -62,9 +63,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _audioStatus = 'Starting sound monitor...';
   String _systemStatus = 'Checking system...';
   String _gazeStatus = 'Starting gaze and head pose monitor...';
-  String _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-  String _visualStatus =
-      'Starting reflection, shadow, and object integrity scan...';
+  String _livenessStatus = 'Starting continuous liveness check...';
+  String _visualStatus = 'Starting camera view check...';
   bool _cameraReady = false;
   bool _audioReady = false;
   bool _systemReady = false;
@@ -110,9 +110,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _openingCamera = true;
       _cameraStatus = 'Opening camera...';
       _gazeStatus = 'Starting gaze and head pose monitor...';
-      _livenessStatus = 'Starting continuous liveness anti-spoofing...';
-      _visualStatus =
-          'Starting reflection, shadow, and object integrity scan...';
+      _livenessStatus = 'Starting continuous liveness check...';
+      _visualStatus = 'Starting camera view check...';
     });
     try {
       final cameras = await availableCameras();
@@ -131,8 +130,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _visualReady = false;
           _cameraStatus = 'Camera not found';
           _gazeStatus = 'Gaze and head pose monitor unavailable';
-          _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
-          _visualStatus = 'Reflection and object integrity scan unavailable';
+          _livenessStatus = 'Continuous liveness check unavailable';
+          _visualStatus = 'Camera view check unavailable';
         });
         return;
       }
@@ -174,14 +173,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _visualReady = streamReady;
         _cameraStatus = 'Camera monitoring active';
         _gazeStatus = streamReady
-            ? 'Gaze vector and head pose monitoring active'
+            ? 'Gaze and head pose monitoring active'
             : 'Gaze stream unavailable on this device';
         _livenessStatus = streamReady
-            ? 'Continuous local liveness anti-spoofing active'
-            : 'Liveness anti-spoofing stream unavailable';
+            ? 'Continuous liveness check active'
+            : 'Liveness stream unavailable';
         _visualStatus = streamReady
-            ? 'Reflection, shadow, and object integrity scan active'
-            : 'Visual integrity stream unavailable';
+            ? 'Camera view check active'
+            : 'Camera view stream unavailable';
       });
     } catch (e) {
       await _raiseEvent(
@@ -199,8 +198,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _visualReady = false;
         _cameraStatus = 'Camera monitoring unavailable';
         _gazeStatus = 'Gaze and head pose monitor unavailable';
-        _livenessStatus = 'Continuous liveness anti-spoofing unavailable';
-        _visualStatus = 'Reflection and object integrity scan unavailable';
+        _livenessStatus = 'Continuous liveness check unavailable';
+        _visualStatus = 'Camera view check unavailable';
       });
     }
   }
@@ -239,7 +238,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         setState(() {
           _gazeReady = true;
           _gazeStatus = result.lookingAway
-              ? 'Possible looking away detected ($_gazeRiskStreak/3)'
+              ? 'Focus reminder shown ($_gazeRiskStreak/3)'
               : 'Focused forward • gaze/head pose stable';
         });
       }
@@ -250,8 +249,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _raiseEvent(
             eventType: 'gaze_head_pose_deviation',
             severity: 'high',
-            message:
-                'Sustained looking-away or head-pose deviation was detected during the exam.',
+            message: 'Please keep your face visible and focus on the screen.',
             metadata: result.toJson(),
           ),
         );
@@ -279,8 +277,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       setState(() {
         _visualReady = true;
         _visualStatus = result.visualRiskScore >= 0.58
-            ? 'Possible reflection/shadow/object risk ($_visualRiskStreak/3)'
-            : 'Reflection, shadow, and object integrity normal';
+            ? 'Camera view needs review ($_visualRiskStreak/3)'
+            : 'Camera view check normal';
       });
     }
 
@@ -290,8 +288,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'object_reflection_shadow_risk',
           severity: 'high',
-          message:
-              'Suspicious reflection, screen glow, shadow shift, or off-screen interaction pattern was detected.',
+          message: 'Camera view needs immediate review.',
           metadata: result.toJson(),
         ),
       );
@@ -300,8 +297,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'object_reflection_shadow_warning',
           severity: 'warning',
-          message:
-              'Weak reflection, screen-glow, shadow, or lower-frame movement signal detected.',
+          message: 'Camera view may need review.',
           metadata: result.toJson(),
         ),
       );
@@ -320,8 +316,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       setState(() {
         _livenessReady = true;
         _livenessStatus = result.replayOrFreezeLikely
-            ? 'Possible spoof/replay liveness risk ($_spoofRiskStreak/3)'
-            : 'Continuous liveness present • anti-spoofing active';
+            ? 'Presence check needs review ($_spoofRiskStreak/3)'
+            : 'Presence check active';
       });
     }
 
@@ -331,8 +327,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'continuous_liveness_spoof_risk',
           severity: 'high',
-          message:
-              'Continuous liveness anti-spoofing detected possible photo, screen, replay, or frozen-frame behaviour.',
+          message: 'Presence check needs immediate review.',
           metadata: result.toJson(),
         ),
       );
@@ -341,8 +336,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'continuous_liveness_continuity_loss',
           severity: 'warning',
-          message:
-              'Continuous liveness signal weakened; possible frozen frame, flat image, or replay source.',
+          message: 'Presence check signal weakened.',
           metadata: result.toJson(),
         ),
       );
@@ -374,7 +368,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       if (!mounted) return;
       setState(() {
         _audioReady = true;
-        _audioStatus = 'Audio fingerprinting and voice isolation active';
+        _audioStatus = 'Sound check active';
       });
     } catch (e) {
       await _raiseEvent(
@@ -398,10 +392,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     if (mounted) {
       setState(() {
         _audioStatus = result.humanVoiceLikely
-            ? 'Human voice likely detected (${_voiceRiskStreak + 1}/3)'
+            ? 'Voice noticed near exam area (${_voiceRiskStreak + 1}/3)'
             : result.allowedAmbientLikely
-            ? 'Allowed ambient audio fingerprint: ${result.label}'
-            : 'Unclear environment sound fingerprinted';
+            ? 'Allowed ambient sound: ${result.label}'
+            : 'Unclear environment sound noticed';
       });
     }
 
@@ -417,7 +411,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'audio_voice_isolation_alert',
           severity: 'high',
-          message: 'Human voice was isolated from the exam audio environment.',
+          message: 'Voice was noticed close to the exam audio environment.',
           metadata: result.toJson(),
         ),
       );
@@ -426,7 +420,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'audio_repeated_fingerprint_detected',
           severity: 'warning',
-          message: 'A repeated non-ambient audio fingerprint was detected.',
+          message: 'A repeated non-ambient sound pattern was noticed.',
           metadata: result.toJson(),
         ),
       );
@@ -463,12 +457,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _gazeStatus = 'Gaze and head pose monitor not receiving frames';
         }
         if (cameraStillReady && !_livenessReady) {
-          _livenessStatus =
-              'Continuous liveness anti-spoofing not receiving frames';
+          _livenessStatus = 'Continuous liveness check not receiving frames';
         }
         if (cameraStillReady && !_visualReady) {
-          _visualStatus =
-              'Reflection and object integrity scan not receiving frames';
+          _visualStatus = 'Camera view check not receiving frames';
         }
       });
 
@@ -508,16 +500,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         await _raiseEvent(
           eventType: 'continuous_liveness_monitor_unavailable',
           severity: 'warning',
-          message:
-              'Continuous liveness anti-spoofing is not receiving camera frames.',
+          message: 'Continuous liveness check is not receiving camera frames.',
         );
       }
       if (cameraStillReady && !visualFresh) {
         await _raiseEvent(
           eventType: 'object_reflection_shadow_monitor_unavailable',
           severity: 'warning',
-          message:
-              'Reflection, shadow, and object integrity scan is not receiving camera frames.',
+          message: 'Camera view check is not receiving camera frames.',
         );
       }
     });
@@ -530,30 +520,51 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     Map<String, Object?> metadata = const <String, Object?>{},
   }) async {
     if (!_shouldEmit(eventType)) return;
+
+    final riskDecision = ProctoringRiskPolicy.decisionFor(eventType);
+    final effectiveSeverity = riskDecision.points > 0
+        ? ProctoringRiskPolicy.severityForPoints(riskDecision.points)
+        : severity;
+    final enrichedMetadata = <String, Object?>{
+      ...metadata,
+      'risk_policy_version': ProctoringRiskPolicy.version,
+      'risk_points': riskDecision.points,
+      'risk_level': riskDecision.level,
+      'should_pause': riskDecision.shouldPause,
+      'original_severity': severity,
+      'effective_severity': effectiveSeverity,
+    };
+
     final event = LiveProctoringEvent(
       studentId: widget.studentId,
       examId: widget.examId,
       attemptId: widget.attemptId,
       eventType: eventType,
-      severity: severity,
+      severity: effectiveSeverity,
       message: message,
       createdAt: DateTime.now(),
-      metadata: metadata,
+      metadata: enrichedMetadata,
     );
     final synced = await _events.send(event);
     if (!mounted) return;
     setState(() {
       _eventsSent.insert(
         0,
-        synced ? '$eventType sent' : '$eventType queued locally',
+        synced
+            ? '$eventType sent • ${riskDecision.level}'
+            : '$eventType queued locally • ${riskDecision.level}',
       );
       if (_eventsSent.length > 5) _eventsSent.removeLast();
     });
-    if (severity == 'critical' || severity == 'high') {
+
+    final shouldPause = riskDecision.shouldPause ||
+        (riskDecision.points == 0 &&
+            (effectiveSeverity == 'critical' || effectiveSeverity == 'high'));
+    if (shouldPause) {
       widget.onCriticalEvent(
         synced
             ? message
-            : '$message Monitoring event could not be confirmed by the backend.',
+            : '$message Monitoring event could not be confirmed by the system.',
       );
     }
   }
