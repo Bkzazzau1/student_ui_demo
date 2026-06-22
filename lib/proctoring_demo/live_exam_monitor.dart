@@ -10,6 +10,7 @@ import 'audio_fingerprint_isolation_service.dart';
 import 'camera_runtime_coordinator.dart';
 import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
+import 'live_camera_frame_bus.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'proctoring_risk_policy.dart';
@@ -45,6 +46,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   );
   final CameraRuntimeCoordinator _cameraRuntime =
       CameraRuntimeCoordinator.instance;
+  final LiveCameraFrameBus _frameBus = LiveCameraFrameBus.instance;
   final MicrophoneStreamRecordingService _microphone =
       MicrophoneStreamRecordingService();
   final LandmarkGazeRuntimeSelector _gazeEstimator =
@@ -80,6 +82,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _analysingGazeFrame = false;
   bool _ownsCameraLease = false;
   int _secondsLive = 0;
+  int _framesPublished = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
   int _spoofRiskStreak = 0;
@@ -252,21 +255,31 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   void _handleCameraImage(CameraImage image) {
     if (_analysingGazeFrame) return;
     if (!_visionBudget.shouldProcessFrame()) return;
+    final frame = _frameBus.publish(
+      owner: _cameraOwner,
+      purpose: 'live_exam_monitoring',
+      image: image,
+    );
+    _framesPublished = frame.sequence;
     final started = DateTime.now();
     _analysingGazeFrame = true;
-    unawaited(_analyseCameraImage(image, started));
+    unawaited(_analyseCameraImage(image, started, frame.toMetadata()));
   }
 
-  Future<void> _analyseCameraImage(CameraImage image, DateTime started) async {
+  Future<void> _analyseCameraImage(
+    CameraImage image,
+    DateTime started,
+    Map<String, Object?> frameMetadata,
+  ) async {
     try {
       final visual = _visualIntegrity.analyse(image);
       if (visual != null) {
-        _handleVisualIntegrityResult(visual);
+        _handleVisualIntegrityResult(visual, frameMetadata);
       }
 
       final liveness = _continuousLiveness.analyse(image);
       if (liveness != null) {
-        _handleLivenessResult(liveness);
+        _handleLivenessResult(liveness, frameMetadata);
       }
 
       final result = await _gazeEstimator.analyse(image);
@@ -295,7 +308,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             eventType: 'gaze_head_pose_deviation',
             severity: 'high',
             message: 'Please keep your face visible and focus on the screen.',
-            metadata: result.toJson(),
+            metadata: <String, Object?>{
+              ...result.toJson(),
+              ...frameMetadata,
+            },
           ),
         );
       }
@@ -307,7 +323,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     }
   }
 
-  void _handleVisualIntegrityResult(VisualReflectionShadowResult result) {
+  void _handleVisualIntegrityResult(
+    VisualReflectionShadowResult result,
+    Map<String, Object?> frameMetadata,
+  ) {
     _lastVisualFrameAt = DateTime.now();
     if (result.visualRiskScore >= 0.58 ||
         result.screenGlowLikely ||
@@ -334,7 +353,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'object_reflection_shadow_risk',
           severity: 'high',
           message: 'Camera view needs immediate review.',
-          metadata: result.toJson(),
+          metadata: <String, Object?>{
+            ...result.toJson(),
+            ...frameMetadata,
+          },
         ),
       );
     } else if (result.visualRiskScore >= 0.40) {
@@ -343,13 +365,19 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'object_reflection_shadow_warning',
           severity: 'warning',
           message: 'Camera view may need review.',
-          metadata: result.toJson(),
+          metadata: <String, Object?>{
+            ...result.toJson(),
+            ...frameMetadata,
+          },
         ),
       );
     }
   }
 
-  void _handleLivenessResult(ContinuousLivenessResult result) {
+  void _handleLivenessResult(
+    ContinuousLivenessResult result,
+    Map<String, Object?> frameMetadata,
+  ) {
     _lastLivenessFrameAt = DateTime.now();
     if (result.spoofRiskScore >= 0.70 || result.replayOrFreezeLikely) {
       _spoofRiskStreak++;
@@ -373,7 +401,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'continuous_liveness_spoof_risk',
           severity: 'high',
           message: 'Presence check needs immediate review.',
-          metadata: result.toJson(),
+          metadata: <String, Object?>{
+            ...result.toJson(),
+            ...frameMetadata,
+          },
         ),
       );
     } else if (result.repeatedFrame || result.flatTexture) {
@@ -382,7 +413,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'continuous_liveness_continuity_loss',
           severity: 'warning',
           message: 'Presence check signal weakened.',
-          metadata: result.toJson(),
+          metadata: <String, Object?>{
+            ...result.toJson(),
+            ...frameMetadata,
+          },
         ),
       );
     }
@@ -514,6 +548,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'camera_unavailable',
           severity: 'critical',
           message: 'Camera heartbeat failed during the exam.',
+          metadata: _frameBus.currentState(),
         );
       }
       if (!_microphone.isRunning) {
@@ -539,6 +574,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'gaze_head_pose_monitor_unavailable',
           severity: 'warning',
           message: 'Gaze and head pose monitor is not receiving camera frames.',
+          metadata: _frameBus.currentState(),
         );
       }
       if (cameraStillReady && !livenessFresh) {
@@ -546,6 +582,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'continuous_liveness_monitor_unavailable',
           severity: 'warning',
           message: 'Continuous liveness check is not receiving camera frames.',
+          metadata: _frameBus.currentState(),
         );
       }
       if (cameraStillReady && !visualFresh) {
@@ -553,6 +590,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'object_reflection_shadow_monitor_unavailable',
           severity: 'warning',
           message: 'Camera view check is not receiving camera frames.',
+          metadata: _frameBus.currentState(),
         );
       }
     });
@@ -696,6 +734,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             ),
             const SizedBox(height: 8),
             Text('Live duration: ${_secondsLive}s'),
+            Text('Camera frames shared: $_framesPublished'),
             if (_eventsSent.isNotEmpty) ...[
               const SizedBox(height: 8),
               ..._eventsSent.map(
