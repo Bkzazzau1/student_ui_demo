@@ -1,0 +1,41 @@
+diff --git a/lib/proctoring_demo/live_exam_monitor.dart b/lib/proctoring_demo/live_exam_monitor.dart
+--- a/lib/proctoring_demo/live_exam_monitor.dart
++++ b/lib/proctoring_demo/live_exam_monitor.dart
+@@ -16,6 +16,7 @@ import 'live_camera_frame_bus.dart';
+ import 'live_proctoring_event_service.dart';
+ import 'microphone_stream_recording_service.dart';
++import 'optimized_vision_object_event_adapter.dart';
+ import 'optimized_vision_runtime_bridge.dart';
+ import 'proctoring_risk_policy.dart';
+ import 'snapshot_gaze_fallback_service.dart';
+@@ -84,6 +85,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
+        VisualReflectionShadowService();
+    final OptimizedVisionRuntimeBridge _optimizedVision =
+        OptimizedVisionRuntimeBridge();
++  final OptimizedVisionObjectEventAdapter _objectEventAdapter =
++      const OptimizedVisionObjectEventAdapter();
+    final SnapshotGazeFallbackService _snapshotGazeFallback =
+        SnapshotGazeFallbackService();
+    final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
+@@ -293,6 +296,21 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
+          .whereType<Map>()
+          .map((item) => Map<String, Object?>.from(item))
+          .toList();
++    final objectEvents = _objectEventAdapter.mapResult(result);
++    for (final decision in objectEvents) {
++      unawaited(
++        _raiseEvent(
++          eventType: decision.eventType,
++          severity: decision.severity,
++          message: decision.message,
++          metadata: <String, Object?>{
++            ...decision.metadata,
++            'optimized_vision': result.toJson(),
++          },
++        ),
++      );
++    }
++
+      final confidentPersonObjects = objects.where((object) {
+        final label = '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'.toLowerCase();
+        final confidence = double.tryParse('${object['confidence'] ?? 0}') ?? 0.0;
