@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 
 import '../proctoring_demo/companion_cam_panel.dart';
 import '../proctoring_demo/live_exam_monitor.dart';
+import '../proctoring_demo/live_proctoring_event_service.dart';
 import '../proctoring_demo/live_status_panel.dart';
 import '../proctoring_demo/live_system_security_monitor.dart';
+import '../proctoring_demo/proctoring_risk_policy.dart';
 import '../proctoring_demo/review_clip_sampler.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
@@ -31,7 +33,16 @@ class DemoExamAttemptView extends StatefulWidget {
   State<DemoExamAttemptView> createState() => _DemoExamAttemptViewState();
 }
 
-class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
+class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+    with WidgetsBindingObserver {
+  final LiveProctoringEventService _events = LiveProctoringEventService(
+    baseUrl: const String.fromEnvironment(
+      'KSLAS_API_BASE_URL',
+      defaultValue: 'http://127.0.0.1:8080',
+    ),
+  );
+  final Map<String, DateTime> _lastAttemptEventAt = <String, DateTime>{};
+
   late final DateTime _startedAt;
   late final List<DemoQuestion> _questions;
   late int _remainingSeconds;
@@ -44,6 +55,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startedAt = DateTime.now();
     _questions = DemoExamService.questionsFor(widget.assessment);
     _remainingSeconds = widget.assessment.durationMinutes * 60;
@@ -55,12 +67,55 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
         setState(() => _remainingSeconds--);
       }
     });
+
+    if (widget.assessment.remoteProctored) {
+      unawaited(
+        _sendAttemptEvent(
+          eventType: 'exam_started',
+          severity: 'info',
+          message: 'Exam attempt started with live monitoring active.',
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _events.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!widget.assessment.remoteProctored || !mounted) return;
+    final stateName = state.toString().split('.').last;
+
+    if (state == AppLifecycleState.inactive) {
+      unawaited(
+        _sendAttemptEvent(
+          eventType: 'exam_screen_focus_changed',
+          severity: 'warning',
+          message: 'Exam window focus changed. Keep the exam window open and active.',
+          metadata: <String, Object?>{'lifecycle_state': stateName},
+        ),
+      );
+      return;
+    }
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(
+        _sendAttemptEvent(
+          eventType: 'exam_screen_backgrounded',
+          severity: 'high',
+          message: 'Exam window moved away from active view.',
+          metadata: <String, Object?>{'lifecycle_state': stateName},
+          pauseIfPolicyRequires: true,
+        ),
+      );
+    }
   }
 
   void _handleCriticalMonitoringEvent(String message) {
@@ -255,9 +310,79 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView> {
       }
     }
 
+    if (widget.assessment.remoteProctored) {
+      await _sendAttemptEvent(
+        eventType: autoSubmitted ? 'exam_auto_submitted' : 'exam_submitted',
+        severity: 'info',
+        message: autoSubmitted
+            ? 'Exam was submitted automatically when time ended.'
+            : 'Exam was submitted by the student.',
+        metadata: <String, Object?>{
+          'answered_questions': _answers.length,
+          'total_questions': _questions.length,
+          'remaining_seconds': _remainingSeconds,
+        },
+      );
+    }
+
     final result = _score();
     if (!mounted) return;
     Navigator.of(context).pop(result);
+  }
+
+  Future<void> _sendAttemptEvent({
+    required String eventType,
+    required String severity,
+    required String message,
+    Map<String, Object?> metadata = const <String, Object?>{},
+    bool pauseIfPolicyRequires = false,
+  }) async {
+    if (!_shouldSendAttemptEvent(eventType)) return;
+
+    final riskDecision = ProctoringRiskPolicy.decisionFor(eventType);
+    final effectiveSeverity = riskDecision.points > 0
+        ? ProctoringRiskPolicy.severityForPoints(riskDecision.points)
+        : severity;
+    final enrichedMetadata = <String, Object?>{
+      ...metadata,
+      'risk_policy_version': ProctoringRiskPolicy.version,
+      'risk_points': riskDecision.points,
+      'risk_level': riskDecision.level,
+      'should_pause': riskDecision.shouldPause,
+      'original_severity': severity,
+      'effective_severity': effectiveSeverity,
+      'source_component': 'demo_exam_attempt_view',
+    };
+
+    await _events.send(
+      LiveProctoringEvent(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        eventType: eventType,
+        severity: effectiveSeverity,
+        message: message,
+        createdAt: DateTime.now(),
+        metadata: enrichedMetadata,
+      ),
+    );
+
+    if (!mounted) return;
+    if (pauseIfPolicyRequires && riskDecision.shouldPause) {
+      _handleCriticalMonitoringEvent(
+        'Exam window is not active. Keep the exam window open and visible.',
+      );
+    }
+  }
+
+  bool _shouldSendAttemptEvent(String eventType) {
+    final now = DateTime.now();
+    final last = _lastAttemptEventAt[eventType];
+    if (last != null && now.difference(last).inSeconds < 15) {
+      return false;
+    }
+    _lastAttemptEventAt[eventType] = now;
+    return true;
   }
 
   DemoExamResult _score() {
@@ -418,27 +543,24 @@ class _QuestionNavigator extends StatelessWidget {
               ),
               itemBuilder: (context, index) {
                 final selected = index == currentIndex;
-                final answered =
-                    answers[questions[index].id]?.isNotEmpty ?? false;
+                final answered = answers.containsKey(questions[index].id);
                 return InkWell(
                   onTap: enabled ? () => onSelect(index) : null,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   child: Container(
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: selected
-                          ? const Color(0xFF1D4ED8)
+                          ? const Color(0xFF1E3A8A)
                           : answered
                           ? const Color(0xFFDCFCE7)
                           : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '${index + 1}',
                       style: TextStyle(
-                        color: selected
-                            ? Colors.white
-                            : const Color(0xFF0F172A),
+                        color: selected ? Colors.white : const Color(0xFF0F172A),
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -468,107 +590,58 @@ class _QuestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${question.section.label} - ${question.marks} mark${question.marks == 1 ? '' : 's'}',
-            style: const TextStyle(
-              color: Color(0xFF1D4ED8),
-              fontWeight: FontWeight.w900,
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              question.prompt,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            question.prompt,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 16),
-          if (question.options.isNotEmpty)
-            ...question.options.map(
-              (option) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: InkWell(
-                  onTap: enabled ? () => onChanged(option) : null,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: value == option
-                            ? const Color(0xFF1D4ED8)
-                            : const Color(0xFFE2E8F0),
-                      ),
-                      color: value == option
-                          ? const Color(0xFFEFF6FF)
-                          : Colors.white,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          value == option
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          color: value == option
-                              ? const Color(0xFF1D4ED8)
-                              : const Color(0xFF64748B),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(option)),
-                      ],
-                    ),
-                  ),
+            const SizedBox(height: 16),
+            if (question.options.isNotEmpty)
+              ...question.options.map(
+                (option) => RadioListTile<String>(
+                  value: option,
+                  groupValue: value,
+                  onChanged: enabled ? (value) => onChanged(value ?? '') : null,
+                  title: Text(option),
+                ),
+              )
+            else
+              TextField(
+                enabled: enabled,
+                minLines: 6,
+                maxLines: 10,
+                onChanged: onChanged,
+                decoration: const InputDecoration(
+                  hintText: 'Type your answer here...',
+                  border: OutlineInputBorder(),
                 ),
               ),
-            )
-          else
-            TextField(
-              enabled: enabled,
-              controller: TextEditingController(text: value)
-                ..selection = TextSelection.collapsed(offset: value.length),
-              onChanged: onChanged,
-              minLines: question.section == DemoExamSection.theory ? 7 : 1,
-              maxLines: question.section == DemoExamSection.theory ? 10 : 2,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Type your answer',
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill(this.text);
+  const _Pill(this.label);
 
-  final String text;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontWeight: FontWeight.w800,
-        ),
+    return Chip(
+      label: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w800),
       ),
     );
   }
