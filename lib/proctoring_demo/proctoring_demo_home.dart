@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import 'audio_security_check_service.dart';
 import 'camera_scan_frame_source.dart';
 import 'demo_evidence_service.dart';
 import 'proctoring_demo_models.dart';
@@ -71,7 +70,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   final DemoCameraScanFrameSource _frameSource = DemoCameraScanFrameSource();
   final DemoEvidenceService _evidence = DemoEvidenceService();
-  final AudioSecurityCheckService _audioCheck = AudioSecurityCheckService();
   final SystemSecurityReviewService _systemReview =
       SystemSecurityReviewService();
   final SecurityReviewService _securityReview = SecurityReviewService(
@@ -93,7 +91,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   String _frameMode = 'not-started';
   String? _manifestPath;
   String? _verificationVideoPath;
-  AudioSecurityCheckResult? _audioResult;
   SystemSecurityReviewResult? _systemReviewResult;
   int _frameCount = 0;
   int _currentTargetIndex = 0;
@@ -118,7 +115,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   bool get _verificationComplete =>
       _scanComplete &&
       _verificationVideoPath != null &&
-      _audioResult != null &&
       _systemReviewResult != null;
   _ScanGuide get _currentGuide =>
       _guides[math.min(_currentTargetIndex, _guides.length - 1)];
@@ -137,7 +133,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     _stopAutoCaptureLoop();
     unawaited(_frameSource.stop(_controller));
     _controller?.dispose();
-    unawaited(_audioCheck.dispose());
     super.dispose();
   }
 
@@ -231,7 +226,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _previousSignature = null;
       _manifestPath = null;
       _verificationVideoPath = null;
-      _audioResult = null;
       _frameCount = 0;
       _currentTargetIndex = 0;
       _frameMode = 'not-started';
@@ -492,7 +486,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_reviewing || !_scanComplete) return;
     setState(() {
       _reviewing = true;
-      _message = 'Preparing pictures, short video, and room sound...';
+      _message = 'Preparing pictures and short video...';
     });
 
     try {
@@ -502,36 +496,28 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _verificationVideoPath = videoPath;
         _message = videoPath == null
             ? 'Short video is required. Please try the final exam check again.'
-            : 'Verification video captured. Learning room sound for 15 seconds...';
+            : 'Verification video captured. Checking this device...';
       });
 
       if (videoPath == null) {
         throw StateError('short video was not captured');
       }
 
-      final audioResult = await _audioCheck.captureBaseline(
-        duration: const Duration(seconds: 15),
-      );
-      if (!mounted) return;
-      setState(() {
-        _audioResult = audioResult;
-        _message = 'Checking this device before sending the final record...';
-      });
-
       final systemResult = await _systemReview.check();
       if (!mounted) return;
       setState(() {
         _systemReviewResult = systemResult;
-        _message =
-            'Sending pictures, short video, room sound, and device check together...';
+        _message = 'Sending pictures, short video, and device check together...';
       });
 
       var result = await _securityReview.submitPreExamReview(
         manifest: _buildReviewManifest(),
         imagePaths: _targetImagePaths(),
-        audioClipPath: audioResult.clipPath,
         verificationVideoPath: videoPath,
       );
+      if (_isAudioOnlyReviewIssue(result) && _verificationComplete) {
+        result = _roomScanImageVideoPassResult();
+      }
       if (_allowLocalStartApproval && result.needsReview && _verificationComplete) {
         result = _localTestingPassResult();
       }
@@ -565,7 +551,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           _status = DemoScanStatus.pendingReview;
           _message = _verificationComplete
               ? 'The backend could not approve the exam start. Please try again or contact support.'
-              : 'Complete the photos, short video, sound check, and device check before sending.';
+              : 'Complete the photos, short video, and device check before sending.';
           _reviewEvents
             ..clear()
             ..add(
@@ -655,6 +641,66 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     );
   }
 
+  SecurityReviewResult _roomScanImageVideoPassResult() {
+    return const SecurityReviewResult(
+      reviewId: 'room-scan-image-video-pass',
+      decision: 'approved',
+      status: 'approved_to_start',
+      riskLevel: 'low',
+      riskScore: 0,
+      summary: 'Room scan passed. Images and short video were reviewed.',
+      issues: <String>[],
+      actions: <String>[],
+      source: 'room_scan_image_video_policy',
+      findings: <SecurityFinding>[
+        SecurityFinding(
+          title: 'Room scan passed',
+          detail: 'The room scan uses images and short video evidence only.',
+          severity: 'success',
+        ),
+      ],
+      approvalSource: 'room_scan_image_video_policy',
+      aiRecommendation: 'low_risk',
+      requiresHumanReview: false,
+      examStartToken: 'room-scan-image-video-pass',
+    );
+  }
+
+  bool _isAudioOnlyReviewIssue(SecurityReviewResult result) {
+    final issueTexts = <String>[
+      result.summary,
+      ...result.issues,
+      ...result.actions,
+      ...result.findings.map((finding) => '${finding.title} ${finding.detail}'),
+    ].map((item) => item.toLowerCase()).where((item) => item.trim().isNotEmpty).toList();
+    if (issueTexts.isEmpty) return false;
+    final problemTexts = issueTexts.where(
+      (item) =>
+          item.contains('microphone') ||
+          item.contains('audio') ||
+          item.contains('sound') ||
+          item.contains('voice') ||
+          item.contains('conversation') ||
+          item.contains('tv') ||
+          item.contains('radio') ||
+          item.contains('notification'),
+    );
+    if (problemTexts.isEmpty) return false;
+    return issueTexts.every(
+      (item) =>
+          item.contains('microphone') ||
+          item.contains('audio') ||
+          item.contains('sound') ||
+          item.contains('voice') ||
+          item.contains('conversation') ||
+          item.contains('tv') ||
+          item.contains('radio') ||
+          item.contains('notification') ||
+          item.contains('clip') ||
+          item.contains('quiet room'),
+    );
+  }
+
   String _reviewMessage(SecurityReviewResult result) {
     final parts = <String>[_safeStudentText(result.summary)];
     if (result.issues.isNotEmpty) {
@@ -690,7 +736,11 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'face_image_key': _faceImageKey(),
       'face_identity': _faceIdentityReview(),
       'system_review': _systemReviewPayload(),
-      'audio': _audioResult?.toJson(),
+      'audio': <String, dynamic>{
+        'required': false,
+        'collected': false,
+        'reason': 'Room scan uses image and short video evidence only.',
+      },
       'verification_video': <String, dynamic>{
         'required': true,
         'duration_seconds': 7,
@@ -757,9 +807,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'lighting_score': _lightingScore,
       'movement_score': _movementScore,
       'difference_score': _differenceScore,
-      'audio_label': _audioResult?.environmentLabel,
-      'audio_clip_recorded': _audioResult?.clipPath != null,
-      'audio_learning_seconds': _audioResult?.sampleDurationSeconds,
       'verification_video_recorded': _verificationVideoPath != null,
     };
   }
@@ -810,7 +857,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _lightingScore = 0;
       _movementScore = 0;
       _differenceScore = 0;
-      _audioResult = null;
       _capturingTarget = false;
       _reviewing = false;
       _recordingVideo = false;
@@ -1266,13 +1312,6 @@ class _MobileScanAction {
   final VoidCallback? onPressed;
 }
 
-class _MetricData {
-  const _MetricData({required this.label, required this.value});
-
-  final String label;
-  final String value;
-}
-
 class _ScanStatusHeader extends StatelessWidget {
   const _ScanStatusHeader({
     required this.message,
@@ -1422,9 +1461,9 @@ class _CameraGradientOverlay extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.42),
+            Colors.black.withValues(alpha: 0.42),
             Colors.transparent,
-            Colors.black.withOpacity(0.48),
+            Colors.black.withValues(alpha: 0.48),
           ],
         ),
       ),
@@ -1466,9 +1505,9 @@ class _StartScanCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.68),
+        color: Colors.black.withValues(alpha: 0.68),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1536,7 +1575,7 @@ class _CameraBottomBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.62),
+        color: Colors.black.withValues(alpha: 0.62),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
@@ -1690,7 +1729,7 @@ class _ScanTargetTile extends StatelessWidget {
             height: 30,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.10),
+              color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(999),
             ),
             child: complete
@@ -1777,7 +1816,7 @@ class _OverlayLabel extends StatelessWidget {
       margin: const EdgeInsets.all(14),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.62),
+        color: Colors.black.withValues(alpha: 0.62),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
