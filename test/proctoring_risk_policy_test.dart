@@ -56,10 +56,32 @@ void main() {
     });
 
     test('prepares object detection event policy before adding the model', () {
-      final decision = ProctoringRiskPolicy.decisionFor('yolo_phone_detected');
-      expect(decision.points, 30);
-      expect(decision.level, 'medium');
-      expect(decision.shouldPause, isTrue);
+      final phone = ProctoringRiskPolicy.decisionFor('yolo_phone_detected');
+      final extraScreen = ProctoringRiskPolicy.decisionFor(
+        'yolo_extra_screen_detected',
+      );
+      final bookOrPaper = ProctoringRiskPolicy.decisionFor(
+        'yolo_book_or_paper_detected',
+      );
+      final calculator = ProctoringRiskPolicy.decisionFor(
+        'yolo_calculator_detected',
+      );
+
+      expect(phone.points, 30);
+      expect(phone.level, 'medium');
+      expect(phone.shouldPause, isTrue);
+
+      expect(extraScreen.points, 35);
+      expect(extraScreen.level, 'medium');
+      expect(extraScreen.shouldPause, isTrue);
+
+      expect(bookOrPaper.points, 25);
+      expect(bookOrPaper.level, 'medium');
+      expect(bookOrPaper.shouldPause, isFalse);
+
+      expect(calculator.points, 20);
+      expect(calculator.level, 'low');
+      expect(calculator.shouldPause, isFalse);
     });
   });
 }
