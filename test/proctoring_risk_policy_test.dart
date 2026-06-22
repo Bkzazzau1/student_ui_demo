@@ -42,6 +42,19 @@ void main() {
       expect(deferred.shouldPause, isFalse);
     });
 
+    test('keeps model gate status events informational only', () {
+      final missing = ProctoringRiskPolicy.decisionFor(
+        'object_model_asset_missing',
+      );
+      final ready = ProctoringRiskPolicy.decisionFor(
+        'object_model_frame_gate_ready',
+      );
+      expect(missing.points, 0);
+      expect(missing.shouldPause, isFalse);
+      expect(ready.points, 0);
+      expect(ready.shouldPause, isFalse);
+    });
+
     test('prepares object detection event policy before adding the model', () {
       final decision = ProctoringRiskPolicy.decisionFor('yolo_phone_detected');
       expect(decision.points, 30);
