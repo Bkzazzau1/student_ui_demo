@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'live_proctoring_event_service.dart';
+import 'proctoring_risk_policy.dart';
 
 class ReviewClipSampler extends StatefulWidget {
   const ReviewClipSampler({
@@ -123,7 +124,9 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
 
   Future<void> _captureSample(int sampleNumber) async {
     final controller = _camera;
-    if (controller == null || !controller.value.isInitialized || _recording) return;
+    if (controller == null || !controller.value.isInitialized || _recording) {
+      return;
+    }
     setState(() {
       _recording = true;
       _status = 'Capturing review clip $sampleNumber of $_sampleCount';
@@ -137,7 +140,7 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
       await _sendEvent(
         eventType: 'review_clip_captured',
         severity: 'info',
-        message: 'A 10-second review clip was captured for invigilator review.',
+        message: 'A 10-second review clip was captured for review.',
         metadata: <String, Object?>{
           'sample_number': sampleNumber,
           'total_samples': _sampleCount,
@@ -147,7 +150,9 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
         },
       );
       if (!mounted) return;
-      setState(() => _status = 'Review clips captured: ${_captured.length}/$_sampleCount');
+      setState(
+        () => _status = 'Review clips captured: ${_captured.length}/$_sampleCount',
+      );
     } catch (e) {
       try {
         if (controller.value.isRecordingVideo) {
@@ -176,16 +181,31 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
     required String message,
     Map<String, Object?> metadata = const <String, Object?>{},
   }) {
+    final riskDecision = ProctoringRiskPolicy.decisionFor(eventType);
+    final effectiveSeverity = riskDecision.points > 0
+        ? ProctoringRiskPolicy.severityForPoints(riskDecision.points)
+        : severity;
+    final enrichedMetadata = <String, Object?>{
+      ...metadata,
+      'risk_policy_version': ProctoringRiskPolicy.version,
+      'risk_points': riskDecision.points,
+      'risk_level': riskDecision.level,
+      'should_pause': riskDecision.shouldPause,
+      'original_severity': severity,
+      'effective_severity': effectiveSeverity,
+      'source_component': 'review_clip_sampler',
+    };
+
     return _events.send(
       LiveProctoringEvent(
         studentId: widget.studentId,
         examId: widget.examId,
         attemptId: widget.attemptId,
         eventType: eventType,
-        severity: severity,
+        severity: effectiveSeverity,
         message: message,
         createdAt: DateTime.now(),
-        metadata: metadata,
+        metadata: enrichedMetadata,
       ),
     );
   }
