@@ -1,0 +1,172 @@
+diff --git a/lib/exam_demo/demo_exam_attempt_view.dart b/lib/exam_demo/demo_exam_attempt_view.dart
+--- a/lib/exam_demo/demo_exam_attempt_view.dart
++++ b/lib/exam_demo/demo_exam_attempt_view.dart
+@@ -13,6 +13,7 @@ import '../proctoring_demo/proctoring_risk_policy.dart';
+ import '../proctoring_demo/review_clip_sampler.dart';
+ import 'assessment_device_gate.dart';
++import 'assessment_monitoring_profile.dart';
+ import 'demo_exam_models.dart';
+ import 'demo_exam_service.dart';
+@@ -48,6 +49,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+   final Map<String, DateTime> _lastAttemptEventAt = <String, DateTime>{};
+ 
+   late final DateTime _startedAt;
++  late final AssessmentMonitoringProfile _monitoringProfile;
+   late final List<DemoQuestion> _questions;
+   late int _remainingSeconds;
+@@ -64,6 +66,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+     WidgetsBinding.instance.addObserver(this);
+     _startedAt = DateTime.now();
++    _monitoringProfile = AssessmentMonitoringProfile.forAssessment(widget.assessment);
+     _questions = DemoExamService.questionsFor(widget.assessment);
+     _remainingSeconds = widget.assessment.durationMinutes * 60;
+     _startTimer();
+@@ -80,7 +83,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+   @override
+   void didChangeAppLifecycleState(AppLifecycleState state) {
+-    if (!widget.assessment.remoteProctored) return;
++    if (!_monitoringProfile.showsLiveMonitor) return;
+ 
+     if (state == AppLifecycleState.inactive) {
+@@ -91,13 +94,20 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+       unawaited(_showLeaveExamWarning());
+     } else if (state == AppLifecycleState.paused ||
+         state == AppLifecycleState.hidden ||
+         state == AppLifecycleState.detached) {
++      final message = _monitoringProfile.autoSubmitWhenBackgrounded
++          ? 'You moved away from the exam screen. The exam will be submitted.'
++          : 'You moved away from the assessment screen. This activity may be saved for review.';
+       unawaited(_sendRuntimeSessionEvent(
+         eventType: 'exam_screen_backgrounded',
+-        severity: 'high',
+-        message: 'You moved away from the exam screen. The exam will be submitted.',
++        severity: _monitoringProfile.autoSubmitWhenBackgrounded ? 'high' : 'warning',
++        message: message,
+         metadata: <String, Object?>{'state': state.name},
+       ));
+-      unawaited(_submit(autoSubmitted: true, force: true));
++      if (_monitoringProfile.autoSubmitWhenBackgrounded) {
++        unawaited(_submit(autoSubmitted: true, force: true));
++      }
+     } else if (state == AppLifecycleState.resumed) {
+@@ -206,6 +216,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+ 
+   void _handleCriticalMonitoringEvent(String message) {
+     if (!mounted) return;
++    if (!_monitoringProfile.pauseOnCriticalMonitoringEvent) return;
+     setState(() {
+       _paused = true;
+       _pauseMessage = message;
+@@ -327,7 +338,7 @@ class _CompactExamHeader extends StatelessWidget {
+                 children: [
+                   _DarkTag(assessment.course.code),
+-                  _DarkTag(paused ? 'Paused' : assessment.remoteProctored ? 'Checks active' : 'Standard access'),
++                  _DarkTag(paused ? 'Paused' : AssessmentMonitoringProfile.forAssessment(assessment).label),
+                 ],
+               ),
+@@ -128,45 +139,54 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+   List<Widget> _buildProctoringPanels({bool compact = false}) {
+-    return [
+-      _PanelTitle(title: 'Live exam checks', compact: compact),
+-      SizedBox(height: compact ? 10 : 12),
+-      LiveExamMonitor(
+-        studentId: widget.studentId,
+-        examId: widget.assessment.id,
+-        attemptId: widget.attemptId,
+-        onCriticalEvent: _handleCriticalMonitoringEvent,
+-        assessmentType: widget.assessment.assessmentType,
+-        reviewAudience: widget.assessment.reviewAudience,
+-      ),
+-      SizedBox(height: compact ? 10 : 12),
+-      LiveSystemSecurityMonitor(
+-        studentId: widget.studentId,
+-        examId: widget.assessment.id,
+-        attemptId: widget.attemptId,
+-        onCriticalEvent: _handleCriticalMonitoringEvent,
+-        assessmentType: widget.assessment.assessmentType,
+-        reviewAudience: widget.assessment.reviewAudience,
+-      ),
+-      SizedBox(height: compact ? 10 : 12),
+-      ReviewClipSampler(
+-        studentId: widget.studentId,
+-        examId: widget.assessment.id,
+-        attemptId: widget.attemptId,
+-        examDurationSeconds: widget.assessment.durationMinutes * 60,
+-        assessmentType: widget.assessment.assessmentType,
+-        reviewAudience: widget.assessment.reviewAudience,
+-      ),
+-      SizedBox(height: compact ? 10 : 12),
+-      CompanionCamPanel(
+-        studentId: widget.studentId,
+-        examId: widget.assessment.id,
+-        attemptId: widget.attemptId,
+-        onCompanionLost: _handleCriticalMonitoringEvent,
+-        assessmentType: widget.assessment.assessmentType,
+-        reviewAudience: widget.assessment.reviewAudience,
+-      ),
+-      SizedBox(height: compact ? 10 : 12),
+-      const LiveStatusPanel(),
+-    ];
++    if (!_monitoringProfile.showsLiveMonitor) return const <Widget>[];
++
++    final widgets = <Widget>[
++      _PanelTitle(title: _monitoringProfile.panelTitle, compact: compact),
++      SizedBox(height: compact ? 10 : 12),
++      LiveExamMonitor(
++        studentId: widget.studentId,
++        examId: widget.assessment.id,
++        attemptId: widget.attemptId,
++        onCriticalEvent: _handleCriticalMonitoringEvent,
++        assessmentType: widget.assessment.assessmentType,
++        reviewAudience: _monitoringProfile.reviewAudience,
++      ),
++    ];
++
++    if (_monitoringProfile.usesSystemSecurityPanel) {
++      widgets.addAll([
++        SizedBox(height: compact ? 10 : 12),
++        LiveSystemSecurityMonitor(
++          studentId: widget.studentId,
++          examId: widget.assessment.id,
++          attemptId: widget.attemptId,
++          onCriticalEvent: _handleCriticalMonitoringEvent,
++          assessmentType: widget.assessment.assessmentType,
++          reviewAudience: _monitoringProfile.reviewAudience,
++        ),
++      ]);
++    }
++
++    if (_monitoringProfile.usesReviewClipSampler) {
++      widgets.addAll([
++        SizedBox(height: compact ? 10 : 12),
++        ReviewClipSampler(
++          studentId: widget.studentId,
++          examId: widget.assessment.id,
++          attemptId: widget.attemptId,
++          examDurationSeconds: widget.assessment.durationMinutes * 60,
++          assessmentType: widget.assessment.assessmentType,
++          reviewAudience: _monitoringProfile.reviewAudience,
++        ),
++      ]);
++    }
++
++    if (_monitoringProfile.usesCompanionCamera) {
++      widgets.addAll([
++        SizedBox(height: compact ? 10 : 12),
++        CompanionCamPanel(
++          studentId: widget.studentId,
++          examId: widget.assessment.id,
++          attemptId: widget.attemptId,
++          onCompanionLost: _handleCriticalMonitoringEvent,
++          assessmentType: widget.assessment.assessmentType,
++          reviewAudience: _monitoringProfile.reviewAudience,
++        ),
++      ]);
++    }
++
++    widgets.addAll([
++      SizedBox(height: compact ? 10 : 12),
++      const LiveStatusPanel(),
++    ]);
++    return widgets;
+   }
