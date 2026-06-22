@@ -4,7 +4,9 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import 'camera_runtime_coordinator.dart';
 import 'live_proctoring_event_service.dart';
+import 'proctoring_risk_policy.dart';
 
 class ReviewClipSampler extends StatefulWidget {
   const ReviewClipSampler({
@@ -31,6 +33,7 @@ class ReviewClipSampler extends StatefulWidget {
 class _ReviewClipSamplerState extends State<ReviewClipSampler> {
   static const int _sampleCount = 5;
   static const int _clipSeconds = 10;
+  static const String _cameraOwner = 'review_clip_sampler';
 
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
@@ -38,6 +41,8 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
       defaultValue: 'http://127.0.0.1:8080',
     ),
   );
+  final CameraRuntimeCoordinator _cameraRuntime =
+      CameraRuntimeCoordinator.instance;
   final List<Timer> _timers = <Timer>[];
   final List<String> _captured = <String>[];
   final math.Random _random = math.Random();
@@ -45,6 +50,7 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
   CameraController? _camera;
   bool _ready = false;
   bool _recording = false;
+  bool _ownsCameraLease = false;
   String _status = 'Scheduling quality review clips...';
 
   @override
@@ -59,11 +65,34 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
       timer.cancel();
     }
     _camera?.dispose();
+    if (_ownsCameraLease) {
+      _cameraRuntime.release(_cameraOwner);
+    }
     _events.dispose();
     super.dispose();
   }
 
   Future<void> _prepareCameraAndSchedule() async {
+    final lease = _cameraRuntime.tryAcquire(
+      owner: _cameraOwner,
+      purpose: 'random_review_clip_capture',
+    );
+    if (lease == null) {
+      await _sendEvent(
+        eventType: 'review_clip_deferred_to_live_camera',
+        severity: 'info',
+        message: 'Review clip camera access deferred to the live monitoring camera.',
+        metadata: _cameraRuntime.currentState(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _ready = true;
+        _status = 'Review clips deferred to main live camera feed';
+      });
+      return;
+    }
+    _ownsCameraLease = true;
+
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
@@ -71,9 +100,11 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
           eventType: 'review_clip_camera_unavailable',
           severity: 'warning',
           message: 'Camera was unavailable for random review clip capture.',
+          metadata: lease.toJson(),
         );
         if (!mounted) return;
         setState(() => _status = 'Review clip camera unavailable');
+        _releaseCameraLease();
         return;
       }
       final camera = cameras.firstWhere(
@@ -88,6 +119,7 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
+        _releaseCameraLease();
         return;
       }
       setState(() {
@@ -101,10 +133,14 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
         eventType: 'review_clip_setup_failed',
         severity: 'warning',
         message: 'Random review clip setup failed.',
-        metadata: <String, Object?>{'error': e.toString()},
+        metadata: <String, Object?>{
+          'error': e.toString(),
+          ..._cameraRuntime.currentState(),
+        },
       );
       if (!mounted) return;
       setState(() => _status = 'Review clip setup unavailable');
+      _releaseCameraLease();
     }
   }
 
@@ -129,6 +165,15 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
   Future<void> _captureSample(int sampleNumber) async {
     final controller = _camera;
     if (controller == null || !controller.value.isInitialized || _recording) {
+      await _sendEvent(
+        eventType: 'review_clip_camera_busy',
+        severity: 'info',
+        message: 'Scheduled review clip did not open a second camera controller.',
+        metadata: <String, Object?>{
+          'sample_number': sampleNumber,
+          ..._cameraRuntime.currentState(),
+        },
+      );
       return;
     }
     setState(() {
@@ -144,7 +189,7 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
       await _sendEvent(
         eventType: 'review_clip_captured',
         severity: 'info',
-        message: 'A 10-second review clip was captured for invigilator review.',
+        message: 'A 10-second review clip was captured for review.',
         metadata: <String, Object?>{
           'sample_number': sampleNumber,
           'total_samples': _sampleCount,
@@ -171,6 +216,7 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
         metadata: <String, Object?>{
           'sample_number': sampleNumber,
           'error': e.toString(),
+          ..._cameraRuntime.currentState(),
         },
       );
       if (!mounted) return;
@@ -186,20 +232,41 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
     required String message,
     Map<String, Object?> metadata = const <String, Object?>{},
   }) {
+    final riskDecision = ProctoringRiskPolicy.decisionFor(eventType);
+    final effectiveSeverity = riskDecision.points > 0
+        ? ProctoringRiskPolicy.severityForPoints(riskDecision.points)
+        : severity;
+    final enrichedMetadata = <String, Object?>{
+      ...metadata,
+      'risk_policy_version': ProctoringRiskPolicy.version,
+      'risk_points': riskDecision.points,
+      'risk_level': riskDecision.level,
+      'should_pause': riskDecision.shouldPause,
+      'original_severity': severity,
+      'effective_severity': effectiveSeverity,
+      'source_component': 'review_clip_sampler',
+    };
+
     return _events.send(
       LiveProctoringEvent(
         studentId: widget.studentId,
         examId: widget.examId,
         attemptId: widget.attemptId,
         eventType: eventType,
-        severity: severity,
+        severity: effectiveSeverity,
         message: message,
         createdAt: DateTime.now(),
-        metadata: metadata,
+        metadata: enrichedMetadata,
         assessmentType: widget.assessmentType,
         reviewAudience: widget.reviewAudience,
       ),
     );
+  }
+
+  void _releaseCameraLease() {
+    if (!_ownsCameraLease) return;
+    _ownsCameraLease = false;
+    _cameraRuntime.release(_cameraOwner);
   }
 
   @override

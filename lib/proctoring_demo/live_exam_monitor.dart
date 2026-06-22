@@ -7,11 +7,14 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'audio_fingerprint_isolation_service.dart';
+import 'camera_runtime_coordinator.dart';
 import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
+import 'live_camera_frame_bus.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'optimized_vision_runtime_bridge.dart';
+import 'proctoring_risk_policy.dart';
 import 'snapshot_gaze_fallback_service.dart';
 import 'vision_compute_budget_service.dart';
 import 'visual_reflection_shadow_service.dart';
@@ -39,6 +42,7 @@ class LiveExamMonitor extends StatefulWidget {
 }
 
 class _LiveExamMonitorState extends State<LiveExamMonitor> {
+  static const String _cameraOwner = 'live_exam_monitor';
   static const int _secondPersonWarningStreak = 3;
   static const int _secondPersonPauseStreak = 7;
   static const int _farVoiceWarningStreak = 3;
@@ -62,6 +66,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       defaultValue: 'http://127.0.0.1:8080',
     ),
   );
+  final CameraRuntimeCoordinator _cameraRuntime =
+      CameraRuntimeCoordinator.instance;
+  final LiveCameraFrameBus _frameBus = LiveCameraFrameBus.instance;
   final MicrophoneStreamRecordingService _microphone =
       MicrophoneStreamRecordingService();
   final LandmarkGazeRuntimeSelector _gazeEstimator =
@@ -101,6 +108,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _visualReady = false;
   bool _openingCamera = false;
   bool _analysingFrame = false;
+  bool _ownsCameraLease = false;
   bool _imageStreamAvailable = false;
   bool _snapshotFallbackBusy = false;
   ResolutionPreset _cameraResolution = ResolutionPreset.low;
@@ -115,6 +123,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _spoofRiskStreak = 0;
   int _visualRiskStreak = 0;
   int _multiplePeopleRiskStreak = 0;
+  int _framesPublished = 0;
 
   @override
   void initState() {
@@ -135,6 +144,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       unawaited(camera.stopImageStream());
     }
     camera?.dispose();
+    _releaseCameraLease();
     _microphone.dispose();
     _events.dispose();
     super.dispose();
@@ -142,6 +152,35 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   Future<void> _startCamera() async {
     if (_openingCamera) return;
+    if (!_ownsCameraLease) {
+      final lease = _cameraRuntime.tryAcquire(
+        owner: _cameraOwner,
+        purpose: 'live_exam_monitoring',
+      );
+      if (lease == null) {
+        await _raiseEvent(
+          eventType: 'camera_runtime_busy',
+          severity: 'warning',
+          message: 'Camera is already in use by another exam monitoring task.',
+          metadata: _cameraRuntime.currentState(),
+        );
+        if (!mounted) return;
+        setState(() {
+          _openingCamera = false;
+          _cameraReady = false;
+          _gazeReady = false;
+          _livenessReady = false;
+          _visualReady = false;
+          _cameraStatus = 'Camera busy';
+          _gazeStatus = '1-second gaze/head check waiting for camera';
+          _livenessStatus = 'Presence check waiting for camera';
+          _visualStatus = 'Camera view check waiting for camera';
+        });
+        return;
+      }
+      _ownsCameraLease = true;
+    }
+
     setState(() {
       _openingCamera = true;
       _cameraStatus = 'Opening camera...';
@@ -434,6 +473,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   void _handleCameraImage(CameraImage image) {
     _imageStreamAvailable = true;
+    final frame = _frameBus.publish(
+      owner: _cameraOwner,
+      purpose: 'live_exam_monitoring',
+      image: image,
+    );
+    _framesPublished = frame.sequence;
     if (_analysingFrame) return;
     if (!_visionBudget.shouldProcessFrame()) return;
     final started = DateTime.now();
@@ -822,15 +867,32 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     Map<String, Object?> metadata = const <String, Object?>{},
   }) async {
     if (!_shouldEmit(eventType)) return;
+    final riskDecision = ProctoringRiskPolicy.decisionFor(eventType);
+    final effectiveSeverity = riskDecision.points > 0
+        ? ProctoringRiskPolicy.severityForPoints(riskDecision.points)
+        : severity;
+    final enrichedMetadata = <String, Object?>{
+      ...metadata,
+      'risk_policy_version': ProctoringRiskPolicy.version,
+      'risk_points': riskDecision.points,
+      'risk_level': riskDecision.level,
+      'should_pause': riskDecision.shouldPause,
+      'original_severity': severity,
+      'effective_severity': effectiveSeverity,
+      'source_component': 'live_exam_monitor',
+      'published_frame_sequence': _framesPublished,
+      ..._cameraRuntime.currentState(),
+      ..._frameBus.currentState(),
+    };
     final event = LiveProctoringEvent(
       studentId: widget.studentId,
       examId: widget.examId,
       attemptId: widget.attemptId,
       eventType: eventType,
-      severity: severity,
+      severity: effectiveSeverity,
       message: message,
       createdAt: DateTime.now(),
-      metadata: metadata,
+      metadata: enrichedMetadata,
       assessmentType: widget.assessmentType,
       reviewAudience: widget.reviewAudience,
     );
@@ -840,14 +902,23 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _eventsSent.insert(0, synced ? '$eventType sent' : '$eventType queued locally');
       if (_eventsSent.length > 5) _eventsSent.removeLast();
     });
-    if (_shouldPauseAttempt(eventType: eventType, severity: severity)) {
+    if (_shouldPauseAttempt(
+      eventType: eventType,
+      severity: effectiveSeverity,
+      riskDecision: riskDecision,
+    )) {
       widget.onCriticalEvent(
         synced ? message : '$message Monitoring event could not be confirmed by the system.',
       );
     }
   }
 
-  bool _shouldPauseAttempt({required String eventType, required String severity}) {
+  bool _shouldPauseAttempt({
+    required String eventType,
+    required String severity,
+    required ProctoringRiskDecision riskDecision,
+  }) {
+    if (riskDecision.shouldPause) return true;
     if (severity == 'critical') return true;
     const hardPauseEvents = <String>{
       'multiple_people_detected',
@@ -857,6 +928,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       'gaze_head_pose_deviation',
     };
     return hardPauseEvents.contains(eventType);
+  }
+
+  void _releaseCameraLease() {
+    if (!_ownsCameraLease) return;
+    _ownsCameraLease = false;
+    _cameraRuntime.release(_cameraOwner);
   }
 
   bool _shouldEmit(String eventType) {

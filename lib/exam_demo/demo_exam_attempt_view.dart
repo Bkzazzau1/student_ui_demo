@@ -8,6 +8,7 @@ import '../proctoring_demo/live_exam_monitor.dart';
 import '../proctoring_demo/live_proctoring_event_service.dart';
 import '../proctoring_demo/live_status_panel.dart';
 import '../proctoring_demo/live_system_security_monitor.dart';
+import '../proctoring_demo/proctoring_risk_policy.dart';
 import '../proctoring_demo/review_clip_sampler.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
@@ -42,6 +43,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       defaultValue: 'http://127.0.0.1:8080',
     ),
   );
+  final Map<String, DateTime> _lastAttemptEventAt = <String, DateTime>{};
 
   late final DateTime _startedAt;
   late final List<DemoQuestion> _questions;
@@ -109,21 +111,47 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     required String severity,
     required String message,
     Map<String, Object?> metadata = const <String, Object?>{},
-  }) {
-    return _events.send(
+  }) async {
+    if (!_shouldSendAttemptEvent(eventType)) return;
+    final riskDecision = ProctoringRiskPolicy.decisionFor(eventType);
+    final effectiveSeverity = riskDecision.points > 0
+        ? ProctoringRiskPolicy.severityForPoints(riskDecision.points)
+        : severity;
+    final enrichedMetadata = <String, Object?>{
+      ...metadata,
+      'risk_policy_version': ProctoringRiskPolicy.version,
+      'risk_points': riskDecision.points,
+      'risk_level': riskDecision.level,
+      'should_pause': riskDecision.shouldPause,
+      'original_severity': severity,
+      'effective_severity': effectiveSeverity,
+      'source_component': 'demo_exam_attempt_view',
+    };
+
+    await _events.send(
       LiveProctoringEvent(
         studentId: widget.studentId,
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
         eventType: eventType,
-        severity: severity,
+        severity: effectiveSeverity,
         message: message,
         createdAt: DateTime.now(),
         assessmentType: widget.assessment.assessmentType,
         reviewAudience: widget.assessment.reviewAudience,
-        metadata: metadata,
+        metadata: enrichedMetadata,
       ),
     );
+  }
+
+  bool _shouldSendAttemptEvent(String eventType) {
+    final now = DateTime.now();
+    final last = _lastAttemptEventAt[eventType];
+    if (last != null && now.difference(last).inSeconds < 15) {
+      return false;
+    }
+    _lastAttemptEventAt[eventType] = now;
+    return true;
   }
 
   Future<void> _showLeaveExamWarning() async {
