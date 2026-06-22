@@ -27,7 +27,7 @@ class ProctoringRiskDecision {
 class ProctoringRiskPolicy {
   const ProctoringRiskPolicy._();
 
-  static const String version = '2026.06.pre-yolo.3';
+  static const String version = '2026.06.pre-yolo.4';
 
   static String levelForScore(int score) {
     if (score >= 81) return 'critical';
@@ -53,6 +53,7 @@ class ProctoringRiskPolicy {
       case 'exam_submitted':
       case 'exam_auto_submitted':
       case 'review_clip_captured':
+      case 'review_clip_deferred_to_live_camera':
       case 'companion_cam_qr_generated':
       case 'companion_cam_connected':
         return 0;
@@ -60,6 +61,9 @@ class ProctoringRiskPolicy {
         return 15;
       case 'exam_screen_backgrounded':
         return 35;
+      case 'camera_runtime_busy':
+      case 'review_clip_camera_busy':
+        return 10;
       case 'camera_unavailable':
       case 'camera_reconnect_timeout':
         return 50;
