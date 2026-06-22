@@ -1,0 +1,27 @@
+diff --git a/lib/exam_demo/demo_exam_attempt_view.dart b/lib/exam_demo/demo_exam_attempt_view.dart
+--- a/lib/exam_demo/demo_exam_attempt_view.dart
++++ b/lib/exam_demo/demo_exam_attempt_view.dart
+@@ -12,6 +12,7 @@ import '../proctoring_demo/live_system_security_monitor.dart';
+ import '../proctoring_demo/proctoring_risk_policy.dart';
+ import '../proctoring_demo/review_clip_sampler.dart';
++import 'assessment_device_gate.dart';
+ import 'demo_exam_models.dart';
+ import 'demo_exam_service.dart';
+@@ -220,6 +221,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+       builder: (context, constraints) {
+         final compact = constraints.maxWidth < 820;
+-        return PopScope(
++        return AssessmentDeviceGate(
++          assessment: widget.assessment,
++          child: PopScope(
+           canPop: false,
+           onPopInvokedWithResult: (didPop, result) {
+             if (!didPop) unawaited(_showLeaveExamWarning());
+@@ -278,6 +281,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
+             ),
+           ),
+           ),
++          ),
+         );
+       },
+     );
