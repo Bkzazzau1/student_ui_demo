@@ -83,7 +83,8 @@ class LiveCameraFrameBus {
 
 class ObjectModelRuntimeConfig {
   const ObjectModelRuntimeConfig({
-    this.assetPath = 'assets/models/kslas_object_mvp.onnx',
+    this.assetPath =
+        'assets/models/optimized_vision_runtime/object_reflection_shadow_detector.int8.onnx',
     this.minimumFrameGap = 2,
   });
 
