@@ -27,7 +27,7 @@ class ProctoringRiskDecision {
 class ProctoringRiskPolicy {
   const ProctoringRiskPolicy._();
 
-  static const String version = '2026.06.pre-yolo.2';
+  static const String version = '2026.06.pre-yolo.3';
 
   static String levelForScore(int score) {
     if (score >= 81) return 'critical';
@@ -49,6 +49,13 @@ class ProctoringRiskPolicy {
 
   static int pointsFor(String eventType) {
     switch (eventType) {
+      case 'exam_started':
+      case 'exam_submitted':
+      case 'exam_auto_submitted':
+      case 'review_clip_captured':
+      case 'companion_cam_qr_generated':
+      case 'companion_cam_connected':
+        return 0;
       case 'exam_screen_focus_changed':
         return 15;
       case 'exam_screen_backgrounded':
@@ -64,6 +71,10 @@ class ProctoringRiskPolicy {
       case 'gaze_head_pose_monitor_unavailable':
       case 'continuous_liveness_monitor_unavailable':
       case 'object_reflection_shadow_monitor_unavailable':
+      case 'review_clip_camera_unavailable':
+      case 'review_clip_setup_failed':
+      case 'review_clip_capture_failed':
+      case 'companion_cam_server_failed':
         return 10;
       case 'camera_view_needs_review':
         return 20;
@@ -89,8 +100,6 @@ class ProctoringRiskPolicy {
         return 30;
       case 'companion_cam_disconnected':
         return 15;
-      case 'review_clip_capture_failed':
-        return 10;
       case 'yolo_phone_detected':
         return 30;
       case 'yolo_book_or_paper_detected':
@@ -114,6 +123,8 @@ class ProctoringRiskPolicy {
       'camera_reconnect_timeout',
       'microphone_unavailable',
       'microphone_reconnect_timeout',
+      'exam_screen_backgrounded',
+      'companion_cam_feed_stale',
       'multiple_people_detected',
       'object_reflection_shadow_risk',
       'continuous_liveness_spoof_risk',
