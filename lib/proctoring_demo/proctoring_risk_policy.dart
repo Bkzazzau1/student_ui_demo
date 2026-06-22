@@ -27,6 +27,8 @@ class ProctoringRiskDecision {
 class ProctoringRiskPolicy {
   const ProctoringRiskPolicy._();
 
+  static const String version = '2026.06.pre-yolo.2';
+
   static String levelForScore(int score) {
     if (score >= 81) return 'critical';
     if (score >= 51) return 'high';
@@ -51,18 +53,28 @@ class ProctoringRiskPolicy {
         return 15;
       case 'exam_screen_backgrounded':
         return 35;
+      case 'camera_unavailable':
       case 'camera_reconnect_timeout':
-        return 30;
+        return 50;
+      case 'microphone_unavailable':
       case 'microphone_reconnect_timeout':
-        return 25;
+        return 35;
       case 'system_monitoring_unavailable':
         return 50;
+      case 'gaze_head_pose_monitor_unavailable':
+      case 'continuous_liveness_monitor_unavailable':
+      case 'object_reflection_shadow_monitor_unavailable':
+        return 10;
       case 'camera_view_needs_review':
         return 20;
       case 'multiple_people_detected':
         return 55;
+      case 'object_reflection_shadow_warning':
+        return 10;
       case 'object_reflection_shadow_risk':
         return 35;
+      case 'continuous_liveness_continuity_loss':
+        return 15;
       case 'continuous_liveness_spoof_risk':
         return 50;
       case 'audio_voice_isolation_alert':
@@ -98,7 +110,9 @@ class ProctoringRiskPolicy {
   }) {
     if (level == 'critical') return true;
     const hardPauseEvents = <String>{
+      'camera_unavailable',
       'camera_reconnect_timeout',
+      'microphone_unavailable',
       'microphone_reconnect_timeout',
       'multiple_people_detected',
       'object_reflection_shadow_risk',
