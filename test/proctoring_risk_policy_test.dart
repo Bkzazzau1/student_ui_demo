@@ -31,6 +31,17 @@ void main() {
       expect(decision.shouldPause, isFalse);
     });
 
+    test('scores camera runtime coordination without pausing the exam', () {
+      final busy = ProctoringRiskPolicy.decisionFor('camera_runtime_busy');
+      final deferred = ProctoringRiskPolicy.decisionFor(
+        'review_clip_deferred_to_live_camera',
+      );
+      expect(busy.points, 10);
+      expect(busy.shouldPause, isFalse);
+      expect(deferred.points, 0);
+      expect(deferred.shouldPause, isFalse);
+    });
+
     test('prepares object detection event policy before adding the model', () {
       final decision = ProctoringRiskPolicy.decisionFor('yolo_phone_detected');
       expect(decision.points, 30);
