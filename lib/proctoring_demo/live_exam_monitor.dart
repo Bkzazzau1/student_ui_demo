@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'audio_fingerprint_isolation_service.dart';
+import 'camera_runtime_coordinator.dart';
 import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_proctoring_event_service.dart';
@@ -34,12 +35,16 @@ class LiveExamMonitor extends StatefulWidget {
 }
 
 class _LiveExamMonitorState extends State<LiveExamMonitor> {
+  static const String _cameraOwner = 'live_exam_monitor';
+
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
       defaultValue: 'http://127.0.0.1:8080',
     ),
   );
+  final CameraRuntimeCoordinator _cameraRuntime =
+      CameraRuntimeCoordinator.instance;
   final MicrophoneStreamRecordingService _microphone =
       MicrophoneStreamRecordingService();
   final LandmarkGazeRuntimeSelector _gazeEstimator =
@@ -73,6 +78,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _visualReady = false;
   bool _openingCamera = false;
   bool _analysingGazeFrame = false;
+  bool _ownsCameraLease = false;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
   int _voiceRiskStreak = 0;
@@ -99,6 +105,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       unawaited(camera.stopImageStream());
     }
     camera?.dispose();
+    _releaseCameraLease();
     _microphone.dispose();
     _events.dispose();
     super.dispose();
@@ -106,6 +113,34 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   Future<void> _startCamera() async {
     if (_openingCamera) return;
+
+    final lease = _cameraRuntime.tryAcquire(
+      owner: _cameraOwner,
+      purpose: 'live_exam_monitoring',
+    );
+    if (lease == null) {
+      await _raiseEvent(
+        eventType: 'camera_runtime_busy',
+        severity: 'warning',
+        message: 'Camera is already in use by another exam monitoring task.',
+        metadata: _cameraRuntime.currentState(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _openingCamera = false;
+        _cameraReady = false;
+        _gazeReady = false;
+        _livenessReady = false;
+        _visualReady = false;
+        _cameraStatus = 'Camera busy';
+        _gazeStatus = 'Gaze and head pose monitor waiting for camera';
+        _livenessStatus = 'Presence check waiting for camera';
+        _visualStatus = 'Camera view check waiting for camera';
+      });
+      return;
+    }
+    _ownsCameraLease = true;
+
     setState(() {
       _openingCamera = true;
       _cameraStatus = 'Opening camera...';
@@ -120,6 +155,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'camera_unavailable',
           severity: 'critical',
           message: 'Camera was not found during the exam.',
+          metadata: lease.toJson(),
         );
         if (!mounted) return;
         setState(() {
@@ -133,6 +169,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _livenessStatus = 'Continuous liveness check unavailable';
           _visualStatus = 'Camera view check unavailable';
         });
+        _releaseCameraLease();
         return;
       }
       final camera = cameras.firstWhere(
@@ -154,7 +191,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           eventType: 'gaze_head_pose_monitor_unavailable',
           severity: 'warning',
           message: 'Gaze and head pose monitoring stream could not start.',
-          metadata: <String, Object?>{'error': e.toString()},
+          metadata: <String, Object?>{
+            'error': e.toString(),
+            ...lease.toJson(),
+          },
         );
       }
       if (!mounted) {
@@ -162,6 +202,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           await controller.stopImageStream();
         }
         await controller.dispose();
+        _releaseCameraLease();
         return;
       }
       setState(() {
@@ -187,7 +228,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         eventType: 'camera_unavailable',
         severity: 'critical',
         message: 'Camera monitoring stopped during the exam.',
-        metadata: <String, Object?>{'error': e.toString()},
+        metadata: <String, Object?>{
+          'error': e.toString(),
+          ..._cameraRuntime.currentState(),
+        },
       );
       if (!mounted) return;
       setState(() {
@@ -201,6 +245,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _livenessStatus = 'Continuous liveness check unavailable';
         _visualStatus = 'Camera view check unavailable';
       });
+      _releaseCameraLease();
     }
   }
 
@@ -533,6 +578,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       'should_pause': riskDecision.shouldPause,
       'original_severity': severity,
       'effective_severity': effectiveSeverity,
+      'source_component': 'live_exam_monitor',
     };
 
     final event = LiveProctoringEvent(
@@ -577,6 +623,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     }
     _lastEventAt[eventType] = now;
     return true;
+  }
+
+  void _releaseCameraLease() {
+    if (!_ownsCameraLease) return;
+    _ownsCameraLease = false;
+    _cameraRuntime.release(_cameraOwner);
   }
 
   @override
