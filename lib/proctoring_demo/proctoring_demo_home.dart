@@ -674,7 +674,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       ...result.findings.map((finding) => '${finding.title} ${finding.detail}'),
     ].map((item) => item.toLowerCase()).where((item) => item.trim().isNotEmpty).toList();
     if (issueTexts.isEmpty) return false;
-    final problemTexts = issueTexts.where(
+    final hasAudioIssue = issueTexts.any(
       (item) =>
           item.contains('microphone') ||
           item.contains('audio') ||
@@ -685,20 +685,31 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           item.contains('radio') ||
           item.contains('notification'),
     );
-    if (problemTexts.isEmpty) return false;
-    return issueTexts.every(
+    if (!hasAudioIssue) return false;
+    final hasRoomScanOrDeviceIssue = issueTexts.any(
       (item) =>
-          item.contains('microphone') ||
-          item.contains('audio') ||
-          item.contains('sound') ||
-          item.contains('voice') ||
-          item.contains('conversation') ||
-          item.contains('tv') ||
-          item.contains('radio') ||
-          item.contains('notification') ||
-          item.contains('clip') ||
-          item.contains('quiet room'),
+          item.contains('image') ||
+          item.contains('photo') ||
+          item.contains('picture') ||
+          item.contains('video') ||
+          item.contains('camera') ||
+          item.contains('room scan') ||
+          item.contains('room view') ||
+          item.contains('room image') ||
+          item.contains('room picture') ||
+          item.contains('captured view') ||
+          item.contains('required views') ||
+          item.contains('lighting') ||
+          item.contains('face') ||
+          item.contains('person') ||
+          item.contains('system') ||
+          item.contains('device') ||
+          item.contains('bluetooth') ||
+          item.contains('usb') ||
+          item.contains('virtual') ||
+          item.contains('container'),
     );
+    return !hasRoomScanOrDeviceIssue;
   }
 
   String _reviewMessage(SecurityReviewResult result) {
@@ -736,11 +747,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'face_image_key': _faceImageKey(),
       'face_identity': _faceIdentityReview(),
       'system_review': _systemReviewPayload(),
-      'audio': <String, dynamic>{
-        'required': false,
-        'collected': false,
-        'reason': 'Room scan uses image and short video evidence only.',
-      },
       'verification_video': <String, dynamic>{
         'required': true,
         'duration_seconds': 7,
