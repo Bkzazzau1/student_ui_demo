@@ -1,0 +1,31 @@
+diff --git a/lib/exam_demo/demo_exam_home.dart b/lib/exam_demo/demo_exam_home.dart
+--- a/lib/exam_demo/demo_exam_home.dart
++++ b/lib/exam_demo/demo_exam_home.dart
+@@ -8,6 +8,7 @@ import 'demo_exam_models.dart';
+ import 'demo_exam_result_view.dart';
+ import 'demo_exam_service.dart';
+ import 'secure_exam_setup_view.dart';
++import 'student_assessment_hub_extras.dart';
+@@ -51,6 +52,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
+     final practice = assessments.where((item) => item.attendanceOnly).toList();
++    final assignments = DemoStudentHubExtras.assignmentsForDate(today);
++    final feedbackItems = DemoStudentHubExtras.feedbackForDate(today);
+ 
+     final sections = <_AssessmentSectionData>[
+@@ -185,10 +188,18 @@ class _DemoExamHomeState extends State<DemoExamHome> {
+                       _NoFilteredSchedule(filter: _filter)
+                     else
+                       _ResponsiveSectionLayout(
+                         sections: visibleSections,
+                         onStart: (assessment) => _openSetup(context, assessment),
+                       ),
++                    if (_filter == _AssessmentFilter.all) ...[
++                      const SizedBox(height: 18),
++                      StudentAssessmentHubExtrasPanel(
++                        assignments: assignments,
++                        feedbackItems: feedbackItems,
++                      ),
++                    ],
+                   ],
+                 ),
+               ),
