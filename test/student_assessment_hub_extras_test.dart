@@ -25,12 +25,23 @@ void main() {
 
   testWidgets('extras panel renders assignments and feedback', (tester) async {
     final date = DateTime(2026, 6, 23);
+    DemoAssignmentItem? openedAssignment;
+    DemoFeedbackItem? openedFeedback;
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: StudentAssessmentHubExtrasPanel(
-            assignments: DemoStudentHubExtras.assignmentsForDate(date),
-            feedbackItems: DemoStudentHubExtras.feedbackForDate(date),
+          body: SingleChildScrollView(
+            child: StudentAssessmentHubExtrasPanel(
+              assignments: DemoStudentHubExtras.assignmentsForDate(date),
+              feedbackItems: DemoStudentHubExtras.feedbackForDate(date),
+              onOpenAssignment: (assignment) {
+                openedAssignment = assignment;
+              },
+              onOpenFeedback: (feedbackItem) {
+                openedFeedback = feedbackItem;
+              },
+            ),
           ),
         ),
       ),
@@ -40,5 +51,12 @@ void main() {
     expect(find.text('Feedback'), findsOneWidget);
     expect(find.text('Open assignment'), findsWidgets);
     expect(find.text('View feedback'), findsWidgets);
+
+    await tester.tap(find.text('Open assignment').first);
+    expect(openedAssignment, isNotNull);
+
+    await tester.ensureVisible(find.text('View feedback').first);
+    await tester.tap(find.text('View feedback').first);
+    expect(openedFeedback, isNotNull);
   });
 }
