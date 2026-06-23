@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../face_demo/demo_face_id_view.dart';
 import '../proctoring_demo/proctoring_demo_home.dart';
+import 'assignment_submission_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_result_view.dart';
 import 'demo_exam_service.dart';
+import 'feedback_detail_view.dart';
 import 'secure_exam_setup_view.dart';
+import 'student_assessment_hub_extras.dart';
 
 enum _AssessmentFilter { all, exams, graded, ungraded, practice }
 
@@ -40,6 +43,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
   Widget build(BuildContext context) {
     final today = DateTime.now();
     final assessments = DemoExamService.assessmentsForDate(today);
+    final assignments = DemoStudentHubExtras.assignmentsForDate(today);
+    final feedbackItems = DemoStudentHubExtras.feedbackForDate(today);
     final exams = assessments.where((item) => item.isStrictExam).toList();
     final graded = assessments.where((item) => item.isGradedAssessment).toList();
     final ungraded = assessments
@@ -184,6 +189,15 @@ class _DemoExamHomeState extends State<DemoExamHome> {
                         sections: visibleSections,
                         onStart: (assessment) => _openSetup(context, assessment),
                       ),
+                    const SizedBox(height: 22),
+                    StudentAssessmentHubExtrasPanel(
+                      assignments: assignments,
+                      feedbackItems: feedbackItems,
+                      onOpenAssignment: (assignment) =>
+                          _openAssignment(context, assignment),
+                      onOpenFeedback: (feedbackItem) =>
+                          _openFeedback(context, feedbackItem),
+                    ),
                   ],
                 ),
               ),
@@ -207,6 +221,34 @@ class _DemoExamHomeState extends State<DemoExamHome> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => DemoExamResultView(result: result),
+      ),
+    );
+  }
+
+  Future<void> _openAssignment(
+    BuildContext context,
+    DemoAssignmentItem assignment,
+  ) async {
+    final result = await Navigator.of(context).push<AssignmentSubmissionResult>(
+      MaterialPageRoute<AssignmentSubmissionResult>(
+        builder: (_) => AssignmentSubmissionView(assignment: assignment),
+      ),
+    );
+    if (result == null || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${result.assignment.course.code} assignment submitted.'),
+      ),
+    );
+  }
+
+  void _openFeedback(
+    BuildContext context,
+    DemoFeedbackItem feedbackItem,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FeedbackDetailView(feedbackItem: feedbackItem),
       ),
     );
   }

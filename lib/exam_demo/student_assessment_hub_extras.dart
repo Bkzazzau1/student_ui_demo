@@ -131,10 +131,14 @@ class StudentAssessmentHubExtrasPanel extends StatelessWidget {
     super.key,
     required this.assignments,
     required this.feedbackItems,
+    required this.onOpenAssignment,
+    required this.onOpenFeedback,
   });
 
   final List<DemoAssignmentItem> assignments;
   final List<DemoFeedbackItem> feedbackItems;
+  final ValueChanged<DemoAssignmentItem> onOpenAssignment;
+  final ValueChanged<DemoFeedbackItem> onOpenFeedback;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +166,10 @@ class StudentAssessmentHubExtrasPanel extends StatelessWidget {
                   count: assignments.length,
                   children: [
                     for (final item in assignments)
-                      _AssignmentCard(item: item),
+                      _AssignmentCard(
+                        item: item,
+                        onOpen: () => onOpenAssignment(item),
+                      ),
                   ],
                 ),
               ),
@@ -176,7 +183,10 @@ class StudentAssessmentHubExtrasPanel extends StatelessWidget {
                   count: feedbackItems.length,
                   children: [
                     for (final item in feedbackItems)
-                      _FeedbackCard(item: item),
+                      _FeedbackCard(
+                        item: item,
+                        onOpen: () => onOpenFeedback(item),
+                      ),
                   ],
                 ),
               ),
@@ -261,9 +271,10 @@ class _HubExtraSection extends StatelessWidget {
 }
 
 class _AssignmentCard extends StatelessWidget {
-  const _AssignmentCard({required this.item});
+  const _AssignmentCard({required this.item, required this.onOpen});
 
   final DemoAssignmentItem item;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -280,14 +291,16 @@ class _AssignmentCard extends StatelessWidget {
         item.submissionMode,
       ],
       actionLabel: 'Open assignment',
+      onPressed: onOpen,
     );
   }
 }
 
 class _FeedbackCard extends StatelessWidget {
-  const _FeedbackCard({required this.item});
+  const _FeedbackCard({required this.item, required this.onOpen});
 
   final DemoFeedbackItem item;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -303,6 +316,7 @@ class _FeedbackCard extends StatelessWidget {
         'Lecturer feedback',
       ],
       actionLabel: 'View feedback',
+      onPressed: onOpen,
     );
   }
 }
@@ -316,6 +330,7 @@ class _ExtraItemCard extends StatelessWidget {
     required this.body,
     required this.chips,
     required this.actionLabel,
+    required this.onPressed,
   });
 
   final Color accent;
@@ -325,6 +340,7 @@ class _ExtraItemCard extends StatelessWidget {
   final String body;
   final List<String> chips;
   final String actionLabel;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -408,7 +424,7 @@ class _ExtraItemCard extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: onPressed,
                     icon: const Icon(Icons.open_in_new_rounded, size: 17),
                     label: Text(actionLabel),
                   ),
