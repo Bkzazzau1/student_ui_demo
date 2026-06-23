@@ -1,0 +1,116 @@
+diff --git a/lib/exam_demo/student_assessment_hub_extras.dart b/lib/exam_demo/student_assessment_hub_extras.dart
+--- a/lib/exam_demo/student_assessment_hub_extras.dart
++++ b/lib/exam_demo/student_assessment_hub_extras.dart
+@@ -132,11 +132,13 @@ class StudentAssessmentHubExtrasPanel extends StatelessWidget {
+   const StudentAssessmentHubExtrasPanel({
+     super.key,
+     required this.assignments,
+     required this.feedbackItems,
++    required this.onOpenAssignment,
+   });
+ 
+   final List<DemoAssignmentItem> assignments;
+   final List<DemoFeedbackItem> feedbackItems;
++  final ValueChanged<DemoAssignmentItem> onOpenAssignment;
+@@ -165,7 +167,10 @@ class StudentAssessmentHubExtrasPanel extends StatelessWidget {
+                   count: assignments.length,
+                   children: [
+                     for (final item in assignments)
+-                      _AssignmentCard(item: item),
++                      _AssignmentCard(
++                        item: item,
++                        onOpen: () => onOpenAssignment(item),
++                      ),
+                   ],
+                 ),
+               ),
+@@ -270,9 +275,10 @@ class _HubExtraSection extends StatelessWidget {
+ }
+ 
+ class _AssignmentCard extends StatelessWidget {
+-  const _AssignmentCard({required this.item});
++  const _AssignmentCard({required this.item, required this.onOpen});
+ 
+   final DemoAssignmentItem item;
++  final VoidCallback onOpen;
+@@ -295,6 +301,7 @@ class _AssignmentCard extends StatelessWidget {
+         item.submissionMode,
+       ],
+       actionLabel: 'Open assignment',
++      onAction: onOpen,
+     );
+   }
+ }
+@@ -322,6 +329,7 @@ class _FeedbackCard extends StatelessWidget {
+         'Lecturer feedback',
+       ],
+       actionLabel: 'View feedback',
++      onAction: () {},
+     );
+   }
+ }
+@@ -338,6 +346,7 @@ class _ExtraItemCard extends StatelessWidget {
+     required this.body,
+     required this.chips,
+     required this.actionLabel,
++    required this.onAction,
+   });
+@@ -349,6 +358,7 @@ class _ExtraItemCard extends StatelessWidget {
+   final String body;
+   final List<String> chips;
+   final String actionLabel;
++  final VoidCallback onAction;
+@@ -435,7 +445,7 @@ class _ExtraItemCard extends StatelessWidget {
+                 Align(
+                   alignment: Alignment.centerRight,
+                   child: OutlinedButton.icon(
+-                    onPressed: () {},
++                    onPressed: onAction,
+                     icon: const Icon(Icons.open_in_new_rounded, size: 17),
+                     label: Text(actionLabel),
+                   ),
+diff --git a/lib/exam_demo/demo_exam_home.dart b/lib/exam_demo/demo_exam_home.dart
+--- a/lib/exam_demo/demo_exam_home.dart
++++ b/lib/exam_demo/demo_exam_home.dart
+@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
+ import '../face_demo/demo_face_id_view.dart';
+ import '../proctoring_demo/proctoring_demo_home.dart';
++import 'assignment_submission_view.dart';
+ import 'demo_exam_models.dart';
+ import 'demo_exam_result_view.dart';
+ import 'demo_exam_service.dart';
+@@ -192,6 +193,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
+                       StudentAssessmentHubExtrasPanel(
+                         assignments: assignments,
+                         feedbackItems: feedbackItems,
++                        onOpenAssignment: (assignment) =>
++                            _openAssignment(context, assignment),
+                       ),
+                     ],
+@@ -214,6 +217,37 @@ class _DemoExamHomeState extends State<DemoExamHome> {
+       ),
+     );
+   }
++
++  Future<void> _openAssignment(
++    BuildContext context,
++    DemoAssignmentItem assignment,
++  ) async {
++    final result = await Navigator.of(context).push<AssignmentSubmissionResult>(
++      MaterialPageRoute<AssignmentSubmissionResult>(
++        builder: (_) => AssignmentSubmissionView(assignment: assignment),
++      ),
++    );
++    if (result == null || !context.mounted) return;
++
++    ScaffoldMessenger.of(context).showSnackBar(
++      SnackBar(
++        content: Text(
++          result.hasAttachment
++              ? 'Assignment submitted with attachment.'
++              : 'Assignment submitted successfully.',
++        ),
++      ),
++    );
++  }
+ }
