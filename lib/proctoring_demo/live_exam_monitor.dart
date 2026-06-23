@@ -11,8 +11,11 @@ import 'camera_runtime_coordinator.dart';
 import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_camera_frame_bus.dart';
+import 'live_event_cooldown_gate.dart';
+import 'live_monitoring_profile.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
+import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
 import 'proctoring_risk_policy.dart';
 import 'snapshot_gaze_fallback_service.dart';
@@ -81,6 +84,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       VisualReflectionShadowService();
   final OptimizedVisionRuntimeBridge _optimizedVision =
       OptimizedVisionRuntimeBridge();
+  final OptimizedVisionObjectEventAdapter _objectEventAdapter =
+      const OptimizedVisionObjectEventAdapter();
   final SnapshotGazeFallbackService _snapshotGazeFallback =
       SnapshotGazeFallbackService();
   final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
@@ -92,8 +97,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   Timer? _cameraRecoveryTimer;
   Timer? _microphoneRecoveryTimer;
 
-  final Map<String, DateTime> _lastEventAt = <String, DateTime>{};
+  final LiveEventCooldownGate _eventCooldown = LiveEventCooldownGate();
   final List<String> _eventsSent = <String>[];
+  late final LiveMonitoringProfile _monitoringProfile;
 
   String _cameraStatus = 'Opening camera...';
   String _audioStatus = 'Starting sound monitor...';
@@ -132,6 +138,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   @override
   void initState() {
     super.initState();
+    _monitoringProfile = LiveMonitoringProfile.forAssessmentType(
+      widget.assessmentType,
+      reviewAudience: widget.reviewAudience,
+    );
     unawaited(_startObjectModelGate());
     unawaited(_startCamera());
     unawaited(_startAudio());
@@ -650,6 +660,21 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         .whereType<Map>()
         .map((item) => Map<String, Object?>.from(item))
         .toList();
+    final objectEvents = _objectEventAdapter.mapResult(result);
+    for (final decision in objectEvents) {
+      unawaited(
+        _raiseEvent(
+          eventType: decision.eventType,
+          severity: decision.severity,
+          message: decision.message,
+          metadata: <String, Object?>{
+            ...decision.metadata,
+            'optimized_vision': result.toJson(),
+          },
+        ),
+      );
+    }
+
     final confidentPersonObjects = objects.where((object) {
       final label = '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'.toLowerCase();
       final confidence = double.tryParse('${object['confidence'] ?? 0}') ?? 0.0;
@@ -920,7 +945,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       'effective_severity': effectiveSeverity,
       'source_component': 'live_exam_monitor',
       'published_frame_sequence': _framesPublished,
+      'live_monitoring_profile': _monitoringProfile.toJson(),
       ..._cameraRuntime.currentState(),
+      ..._eventCooldown.currentState(),
       ..._frameBus.currentState(),
     };
     final event = LiveProctoringEvent(
@@ -957,6 +984,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     required String severity,
     required ProctoringRiskDecision riskDecision,
   }) {
+    if (!_monitoringProfile.shouldPauseForEventType(eventType)) return false;
     if (riskDecision.shouldPause) return true;
     if (severity == 'critical') return true;
     const hardPauseEvents = <String>{
@@ -976,11 +1004,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   bool _shouldEmit(String eventType) {
-    final now = DateTime.now();
-    final last = _lastEventAt[eventType];
-    if (last != null && now.difference(last).inSeconds < 15) return false;
-    _lastEventAt[eventType] = now;
-    return true;
+    return _eventCooldown.shouldAccept(eventType);
   }
 
   @override

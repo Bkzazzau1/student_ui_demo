@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 
 import '../rust/api/proctoring.dart' as native_proctoring;
