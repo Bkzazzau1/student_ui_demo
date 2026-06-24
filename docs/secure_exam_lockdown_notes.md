@@ -35,6 +35,21 @@ Adds a combined monitor that joins the existing `SystemSecurityReviewService` wi
 
 The existing system security monitor now delegates to `LiveSystemLockdownMonitor`. This means the current strict exam attempt UI receives the secure lockdown checks through its existing system-monitor panel without rewriting `demo_exam_attempt_view.dart`.
 
+## New recovery work added
+
+### `lib/exam_demo/secure_attempt_autosave_service.dart`
+
+Adds a secure attempt autosave service for exam recovery. It stores local attempt snapshots with:
+
+- student ID, exam ID, and attempt ID;
+- answer map;
+- current question index;
+- remaining exam seconds;
+- start/update timestamps;
+- SHA-256 checksum for tamper-evident recovery validation.
+
+This is a recovery MVP. It is not full encrypted secure storage yet. The next step is to wire it into `DemoExamAttemptView`, then replace local plain storage with OS secure storage or a Rust-backed encrypted store.
+
 ## Current behavior
 
 When a strict exam uses the system security panel, the UI now runs both:
@@ -46,8 +61,8 @@ If either review fails, the monitor sends a live proctoring event and calls the 
 
 ## Next phase
 
+- Wire `SecureAttemptAutosaveService` into `DemoExamAttemptView`.
 - Add true full-screen desktop shell control.
-- Add encrypted answer autosave.
 - Add screen evidence capture or periodic screenshots.
 - Add final integrity report after submission.
 - Move deeper OS-level operations into Rust/FFI where Flutter/Dart cannot enforce them reliably.
