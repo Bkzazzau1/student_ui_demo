@@ -2,6 +2,10 @@
 
 This branch is the working branch for the student proctoring UI: `codex/onnx-directml-smoke-inference`.
 
+## Product Standard
+
+This branch is targeting a pilot-ready institutional exam monitoring product, not a small MVP. The goal is to support a serious university demonstration and a credible first controlled pilot.
+
 ## What is already strong
 
 - Strict exam setup uses Face ID, room scan, audio review, system review, and backend start approval.
@@ -48,7 +52,7 @@ Adds a secure attempt autosave service for exam recovery. It stores local attemp
 - start/update timestamps;
 - SHA-256 checksum for tamper-evident recovery validation.
 
-This is a recovery MVP. It is not full encrypted secure storage yet. The next step is to wire it into `DemoExamAttemptView`, then replace local plain storage with OS secure storage or a Rust-backed encrypted store.
+This is the first recovery layer for the pilot-ready product. The next improvement is to wire it into `DemoExamAttemptView`, then replace local plain storage with OS secure storage or a Rust-backed encrypted store.
 
 ## Current behavior
 
