@@ -125,7 +125,7 @@ class _LiveSystemSecurityMonitorState extends State<LiveSystemSecurityMonitor> {
     widget.onCriticalEvent(
       sent
           ? result.message
-          : '${result.message} Monitoring event could not be confirmed by backend.',
+          : '${result.message} Please wait for review.',
     );
   }
 

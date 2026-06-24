@@ -85,38 +85,44 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     if (!_monitoringProfile.showsLiveMonitor) return;
 
     if (state == AppLifecycleState.inactive) {
-      unawaited(_sendRuntimeSessionEvent(
-        eventType: 'exam_screen_focus_changed',
-        severity: 'warning',
-        message: 'Exam screen focus changed. Please stay on the exam screen.',
-        metadata: <String, Object?>{'state': state.name},
-      ));
+      unawaited(
+        _sendRuntimeSessionEvent(
+          eventType: 'exam_screen_focus_changed',
+          severity: 'warning',
+          message: 'Exam screen focus changed. Please stay on the exam screen.',
+          metadata: <String, Object?>{'state': state.name},
+        ),
+      );
       unawaited(_showLeaveExamWarning());
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       final autoSubmit = _monitoringProfile.autoSubmitWhenBackgrounded;
-      unawaited(_sendRuntimeSessionEvent(
-        eventType: 'exam_screen_backgrounded',
-        severity: autoSubmit ? 'high' : 'warning',
-        message: autoSubmit
-            ? 'You moved away from the exam screen. The exam will be submitted.'
-            : 'Assessment screen moved away from active view. Please return to continue.',
-        metadata: <String, Object?>{
-          'state': state.name,
-          'auto_submit_when_backgrounded': autoSubmit,
-        },
-      ));
+      unawaited(
+        _sendRuntimeSessionEvent(
+          eventType: 'exam_screen_backgrounded',
+          severity: autoSubmit ? 'high' : 'warning',
+          message: autoSubmit
+              ? 'You moved away from the exam screen. The exam will be submitted.'
+              : 'Assessment screen moved away from active view. Please return to continue.',
+          metadata: <String, Object?>{
+            'state': state.name,
+            'auto_submit_when_backgrounded': autoSubmit,
+          },
+        ),
+      );
       if (autoSubmit) {
         unawaited(_submit(autoSubmitted: true, force: true));
       }
     } else if (state == AppLifecycleState.resumed) {
-      unawaited(_sendRuntimeSessionEvent(
-        eventType: 'exam_screen_restored',
-        severity: 'info',
-        message: 'Exam screen restored. Runtime checks are continuing.',
-        metadata: <String, Object?>{'state': state.name},
-      ));
+      unawaited(
+        _sendRuntimeSessionEvent(
+          eventType: 'exam_screen_restored',
+          severity: 'info',
+          message: 'Exam screen restored. Runtime checks are continuing.',
+          metadata: <String, Object?>{'state': state.name},
+        ),
+      );
     }
   }
 
@@ -243,54 +249,55 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
               if (!didPop) unawaited(_showLeaveExamWarning());
             },
             child: Scaffold(
-          backgroundColor: const Color(0xFFF4F7FB),
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            automaticallyImplyLeading: false,
-            title: Text(
-              widget.assessment.isStrictExam
-                  ? 'Secure exam attempt'
-                  : 'Assessment attempt',
-              style: const TextStyle(fontWeight: FontWeight.w900),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: _TimerPill(
-                  text: _paused ? 'Paused' : _formatTime(_remainingSeconds),
-                  warning: _remainingSeconds <= 300,
-                  paused: _paused,
+              backgroundColor: const Color(0xFFF4F7FB),
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                automaticallyImplyLeading: false,
+                title: Text(
+                  widget.assessment.isStrictExam
+                      ? 'Secure exam attempt'
+                      : 'Assessment attempt',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: _TimerPill(
+                      text: _paused ? 'Paused' : _formatTime(_remainingSeconds),
+                      warning: _remainingSeconds <= 300,
+                      paused: _paused,
+                    ),
+                  ),
+                ],
+              ),
+              bottomNavigationBar: compact
+                  ? _MobileExamActionBar(
+                      canGoBack: _currentIndex > 0 && !_paused,
+                      canGoNext:
+                          _currentIndex < _questions.length - 1 && !_paused,
+                      canSubmit: !_paused,
+                      onPrevious: () => setState(() => _currentIndex--),
+                      onNext: () => setState(() => _currentIndex++),
+                      onSubmit: () => _submit(autoSubmitted: false),
+                    )
+                  : null,
+              body: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+                  ),
+                ),
+                child: SafeArea(
+                  child: compact
+                      ? _buildCompactAttempt(question)
+                      : _buildWideAttempt(question),
                 ),
               ),
-            ],
-          ),
-          bottomNavigationBar: compact
-              ? _MobileExamActionBar(
-                  canGoBack: _currentIndex > 0 && !_paused,
-                  canGoNext: _currentIndex < _questions.length - 1 && !_paused,
-                  canSubmit: !_paused,
-                  onPrevious: () => setState(() => _currentIndex--),
-                  onNext: () => setState(() => _currentIndex++),
-                  onSubmit: () => _submit(autoSubmitted: false),
-                )
-              : null,
-          body: DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
-              ),
             ),
-            child: SafeArea(
-              child: compact
-                  ? _buildCompactAttempt(question)
-                  : _buildWideAttempt(question),
-            ),
-          ),
-          ),
           ),
         );
       },
@@ -394,7 +401,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
                 question: question,
                 value: _answers[question.id] ?? '',
                 enabled: true,
-                onChanged: (value) => setState(() => _answers[question.id] = value),
+                onChanged: (value) =>
+                    setState(() => _answers[question.id] = value),
               ),
         if (_monitoringProfile.showsLiveMonitor) ...[
           const SizedBox(height: 12),
@@ -511,7 +519,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
         studentId: widget.studentId,
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
-        eventType: autoSubmitted ? 'assessment_auto_submitted' : 'assessment_submitted',
+        eventType: autoSubmitted
+            ? 'assessment_auto_submitted'
+            : 'assessment_submitted',
         severity: 'info',
         message: widget.assessment.sendsEventsToLecturer
             ? 'Graded assessment submitted for lecturer review.'
@@ -542,7 +552,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       if (answer.isEmpty) continue;
       if (question.section == DemoExamSection.objective ||
           question.section == DemoExamSection.fillBlank) {
-        if (answer == question.answer?.trim().toLowerCase()) scored += question.marks;
+        if (answer == question.answer?.trim().toLowerCase()) {
+          scored += question.marks;
+        }
       } else {
         final hits = question.keywords
             .where((keyword) => answer.contains(keyword.toLowerCase()))
@@ -601,7 +613,11 @@ class _CompactExamHeader extends StatelessWidget {
         color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(color: Color(0x120F172A), blurRadius: 16, offset: Offset(0, 8)),
+          BoxShadow(
+            color: Color(0x120F172A),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: LayoutBuilder(
@@ -680,7 +696,13 @@ class _CompactExamHeader extends StatelessWidget {
               children: [title, const SizedBox(height: 12), stats],
             );
           }
-          return Row(children: [Expanded(child: title), const SizedBox(width: 14), stats]);
+          return Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 14),
+              stats,
+            ],
+          );
         },
       ),
     );
@@ -698,10 +720,20 @@ class _HeaderStat extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     );
   }
@@ -736,7 +768,12 @@ class _QuestionWorkArea extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _QuestionCard(question: question, value: value, enabled: enabled, onChanged: onChanged),
+        _QuestionCard(
+          question: question,
+          value: value,
+          enabled: enabled,
+          onChanged: onChanged,
+        ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(12),
@@ -793,7 +830,13 @@ class _QuestionCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 8))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -809,7 +852,9 @@ class _QuestionCard extends StatelessWidget {
           const SizedBox(height: 15),
           Text(
             question.prompt,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 18),
           if (question.options.isNotEmpty)
@@ -825,18 +870,31 @@ class _QuestionCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: selected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                        color: selected
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFFE2E8F0),
                       ),
-                      color: selected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                      color: selected
+                          ? const Color(0xFFEFF6FF)
+                          : const Color(0xFFF8FAFC),
                     ),
                     child: Row(
                       children: [
                         Icon(
-                          selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                          color: selected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                          selected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: selected
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFF64748B),
                         ),
                         const SizedBox(width: 10),
-                        Expanded(child: Text(option, style: const TextStyle(fontWeight: FontWeight.w700))),
+                        Expanded(
+                          child: Text(
+                            option,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -854,7 +912,9 @@ class _QuestionCard extends StatelessWidget {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 hintText: question.section == DemoExamSection.theory
                     ? 'Write your explanation here'
                     : 'Type your answer',
@@ -890,9 +950,20 @@ class _QuestionNavigator extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Questions', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+            Text(
+              'Questions',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
             const Spacer(),
-            Text('${currentIndex + 1}/${questions.length}', style: const TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w900)),
+            Text(
+              '${currentIndex + 1}/${questions.length}',
+              style: const TextStyle(
+                color: Color(0xFF475569),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -906,7 +977,9 @@ class _QuestionNavigator extends StatelessWidget {
                   itemBuilder: (context, index) => _QuestionNumberButton(
                     number: index + 1,
                     selected: index == currentIndex,
-                    answered: answers[questions[index].id]?.trim().isNotEmpty ?? false,
+                    answered:
+                        answers[questions[index].id]?.trim().isNotEmpty ??
+                        false,
                     enabled: enabled,
                     onTap: () => onSelect(index),
                   ),
@@ -923,7 +996,9 @@ class _QuestionNavigator extends StatelessWidget {
                   itemBuilder: (context, index) => _QuestionNumberButton(
                     number: index + 1,
                     selected: index == currentIndex,
-                    answered: answers[questions[index].id]?.trim().isNotEmpty ?? false,
+                    answered:
+                        answers[questions[index].id]?.trim().isNotEmpty ??
+                        false,
                     enabled: enabled,
                     onTap: () => onSelect(index),
                   ),
@@ -964,8 +1039,8 @@ class _QuestionNumberButton extends StatelessWidget {
     final color = selected
         ? const Color(0xFF2563EB)
         : answered
-            ? const Color(0xFF16A34A)
-            : const Color(0xFF64748B);
+        ? const Color(0xFF16A34A)
+        : const Color(0xFF64748B);
     return InkWell(
       onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(14),
@@ -977,14 +1052,21 @@ class _QuestionNumberButton extends StatelessWidget {
           color: selected
               ? const Color(0xFF2563EB)
               : answered
-                  ? const Color(0xFFF0FDF4)
-                  : const Color(0xFFF8FAFC),
+              ? const Color(0xFFF0FDF4)
+              : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? const Color(0xFF2563EB) : color.withValues(alpha: 0.25)),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFF2563EB)
+                : color.withValues(alpha: 0.25),
+          ),
         ),
         child: Text(
           '$number',
-          style: TextStyle(color: selected ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF0F172A),
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
     );
@@ -992,7 +1074,11 @@ class _QuestionNumberButton extends StatelessWidget {
 }
 
 class _TimerPill extends StatelessWidget {
-  const _TimerPill({required this.text, required this.warning, required this.paused});
+  const _TimerPill({
+    required this.text,
+    required this.warning,
+    required this.paused,
+  });
 
   final String text;
   final bool warning;
@@ -1003,8 +1089,8 @@ class _TimerPill extends StatelessWidget {
     final color = paused
         ? const Color(0xFFE11D48)
         : warning
-            ? const Color(0xFFB45309)
-            : const Color(0xFF2563EB);
+        ? const Color(0xFFB45309)
+        : const Color(0xFF2563EB);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -1015,9 +1101,16 @@ class _TimerPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(paused ? Icons.pause_circle : Icons.timer_outlined, size: 18, color: color),
+          Icon(
+            paused ? Icons.pause_circle : Icons.timer_outlined,
+            size: 18,
+            color: color,
+          ),
           const SizedBox(width: 7),
-          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
+          Text(
+            text,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          ),
         ],
       ),
     );
@@ -1041,9 +1134,27 @@ class _PauseBanner extends StatelessWidget {
           const Icon(Icons.pause_circle_filled, color: Color(0xFFE11D48)),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              'Please wait: $message',
-              style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w800),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Exam sent for review. Stay seated and do not leave. The invigilator will decide whether you should continue or whether the exam should be ended. This should not take more than 5 minutes.',
+                  style: TextStyle(
+                    color: Color(0xFF9F1239),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (message.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      color: Color(0xFF9F1239),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -1067,28 +1178,47 @@ class _PausedQuestionLockCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.visibility_off_outlined, color: Color(0xFFE11D48), size: 44),
+          const Icon(
+            Icons.visibility_off_outlined,
+            color: Color(0xFFE11D48),
+            size: 44,
+          ),
           const SizedBox(height: 12),
           Text(
             'Questions hidden during review',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF9F1239),
-                ),
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF9F1239),
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
-            'The exam content is temporarily hidden while the monitoring check is active. Please wait for an authorized officer to review and resume the attempt.',
+            'Your exam has been sent for invigilator review. Stay seated and do not move away. The invigilator will decide whether you should continue or whether the exam should be ended.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Color(0xFF475569),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'This should not take more than 5 minutes. Keep your screen open because the exam may continue immediately after review.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF9F1239),
+              fontWeight: FontWeight.w800,
+            ),
           ),
           if (message.trim().isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF9F1239), fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: Color(0xFF9F1239),
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ],
@@ -1110,7 +1240,10 @@ class _QuestionListLockedCard extends StatelessWidget {
         mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('Questions', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          Text(
+            'Questions',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+          ),
           SizedBox(height: 12),
           _LockedNotice(),
         ],
@@ -1137,7 +1270,10 @@ class _LockedNotice extends StatelessWidget {
           Expanded(
             child: Text(
               'Question list hidden while review is active.',
-              style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: Color(0xFF475569),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -1161,12 +1297,17 @@ class _PanelTitle extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.health_and_safety_outlined, color: Color(0xFF2563EB)),
+          const Icon(
+            Icons.health_and_safety_outlined,
+            color: Color(0xFF2563EB),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
             ),
           ),
         ],
@@ -1187,7 +1328,13 @@ class _Pill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
-      child: Text(text, style: const TextStyle(color: Color(0xFF1E3A8A), fontWeight: FontWeight.w800)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF1E3A8A),
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
@@ -1206,7 +1353,11 @@ class _DarkTag extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -1238,7 +1389,13 @@ class _MobileExamActionBar extends StatelessWidget {
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-          boxShadow: [BoxShadow(color: Color(0x140F172A), blurRadius: 18, offset: Offset(0, -8))],
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x140F172A),
+              blurRadius: 18,
+              offset: Offset(0, -8),
+            ),
+          ],
         ),
         child: Row(
           children: [

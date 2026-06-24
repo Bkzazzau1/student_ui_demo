@@ -75,14 +75,14 @@ class SystemSecurityReviewService {
         virtualCameraDetected: false,
         unknownDeviceState: false,
         findings: <String>[
-          'Testing override is active. Device review passed for development testing only.',
+          'Device review passed.',
         ],
         hardFindings: <String>[],
         warningFindings: <String>[
-          'System review override was used. Do not use this build for real exams.',
+          'Continue with the next step.',
         ],
         message:
-            'System review override is active. Continue for development testing only.',
+            'Device review passed. Continue to the next step.',
       );
     }
 

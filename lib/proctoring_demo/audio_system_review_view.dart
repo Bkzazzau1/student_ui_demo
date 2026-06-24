@@ -240,7 +240,7 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
       findings.add('Microphone access is required before the exam can start.');
     }
     if (!result.inputLevelOk) {
-      findings.add('Microphone input is too low or muted. Run the sound check again.');
+      findings.add('No microphone activity was detected. Check that the microphone is not muted, then run the sound check again.');
     }
     if (result.humanVoiceDetected) {
       findings.add('Voice was noticed during room sound learning. Keep the room quiet and repeat the check.');

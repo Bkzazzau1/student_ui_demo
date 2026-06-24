@@ -1,8 +1,4 @@
-enum LiveMonitoringMode {
-  strictExam,
-  gradedAssessmentLight,
-  standard,
-}
+enum LiveMonitoringMode { strictExam, gradedAssessmentLight, standard }
 
 class LiveMonitoringProfile {
   const LiveMonitoringProfile({
@@ -37,17 +33,17 @@ class LiveMonitoringProfile {
       systemIssuePausesAttempt;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'mode': mode.name,
-        'student_label': studentLabel,
-        'review_audience': reviewAudience,
-        'camera_issue_pauses_attempt': cameraIssuePausesAttempt,
-        'audio_issue_pauses_attempt': audioIssuePausesAttempt,
-        'object_issue_pauses_attempt': objectIssuePausesAttempt,
-        'gaze_issue_pauses_attempt': gazeIssuePausesAttempt,
-        'system_issue_pauses_attempt': systemIssuePausesAttempt,
-        'needs_system_checks': needsSystemChecks,
-        'object_frame_cooldown_ms': objectFrameCooldown.inMilliseconds,
-      };
+    'mode': mode.name,
+    'student_label': studentLabel,
+    'review_audience': reviewAudience,
+    'camera_issue_pauses_attempt': cameraIssuePausesAttempt,
+    'audio_issue_pauses_attempt': audioIssuePausesAttempt,
+    'object_issue_pauses_attempt': objectIssuePausesAttempt,
+    'gaze_issue_pauses_attempt': gazeIssuePausesAttempt,
+    'system_issue_pauses_attempt': systemIssuePausesAttempt,
+    'needs_system_checks': needsSystemChecks,
+    'object_frame_cooldown_ms': objectFrameCooldown.inMilliseconds,
+  };
 
   static LiveMonitoringProfile forAssessmentType(
     String assessmentType, {
@@ -80,7 +76,9 @@ class LiveMonitoringProfile {
     );
   }
 
-  factory LiveMonitoringProfile.gradedAssessmentLight({String? reviewAudience}) {
+  factory LiveMonitoringProfile.gradedAssessmentLight({
+    String? reviewAudience,
+  }) {
     return LiveMonitoringProfile(
       mode: LiveMonitoringMode.gradedAssessmentLight,
       studentLabel: 'Light assessment monitoring',
@@ -130,9 +128,12 @@ class LiveMonitoringProfile {
       case 'object_reflection_shadow_risk':
       case 'object_reflection_shadow_warning':
         return objectIssuePausesAttempt;
-      case 'gaze_head_pose_deviation':
       case 'continuous_liveness_spoof_risk':
       case 'continuous_liveness_continuity_loss':
+        return gazeIssuePausesAttempt;
+      case 'gaze_head_pose_deviation':
+        return false;
+      case 'sustained_gaze_head_pose_deviation':
         return gazeIssuePausesAttempt;
       case 'system_monitoring_unavailable':
         return systemIssuePausesAttempt;

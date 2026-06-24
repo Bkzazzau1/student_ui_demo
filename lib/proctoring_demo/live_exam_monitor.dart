@@ -48,6 +48,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   static const String _cameraOwner = 'live_exam_monitor';
   static const int _secondPersonWarningStreak = 3;
   static const int _secondPersonPauseStreak = 7;
+  static const int _gazeReviewStreak = 5;
+  static const int _gazePauseStreak = 8;
+  static const double _gazeConfidenceThreshold = 0.72;
   static const int _farVoiceWarningStreak = 3;
   static const int _deviceRecoverySeconds = 30;
   static const int _deviceRetryEverySeconds = 5;
@@ -104,7 +107,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   String _cameraStatus = 'Opening camera...';
   String _audioStatus = 'Starting sound monitor...';
   String _systemStatus = 'Checking system...';
-  String _objectStatus = 'Object review waiting for model file...';
+  String _objectStatus = 'Object review not required right now';
   String _gazeStatus = 'Starting 1-second gaze/head check...';
   String _livenessStatus = 'Starting presence check...';
   String _visualStatus = 'Starting camera view check...';
@@ -331,7 +334,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _livenessReady = false;
       _visualReady = false;
       _imageStreamAvailable = false;
-      _cameraStatus = '$message Reconnecting in $_cameraRecoveryRemaining seconds.';
+      _cameraStatus =
+          '$message Reconnecting in $_cameraRecoveryRemaining seconds.';
     });
   }
 
@@ -399,10 +403,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
   void _startSnapshotCameraChecks(CameraController controller) {
     _snapshotFallbackTimer?.cancel();
-    _snapshotFallbackTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+    _snapshotFallbackTimer = Timer.periodic(const Duration(seconds: 1), (
+      _,
+    ) async {
       if (!mounted) return;
       if (_imageStreamAvailable || controller.value.isStreamingImages) return;
-      if (!controller.value.isInitialized || controller.value.isTakingPicture) return;
+      if (!controller.value.isInitialized || controller.value.isTakingPicture) {
+        return;
+      }
       if (_snapshotFallbackBusy) return;
       _snapshotFallbackBusy = true;
       try {
@@ -420,7 +428,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         if (result.ready && result.multiplePeopleLikely) {
           _multiplePeopleRiskStreak++;
         } else {
-          _multiplePeopleRiskStreak = math.max(0, _multiplePeopleRiskStreak - 1);
+          _multiplePeopleRiskStreak = math.max(
+            0,
+            _multiplePeopleRiskStreak - 1,
+          );
         }
 
         if (mounted) {
@@ -431,8 +442,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             _gazeStatus = !result.ready
                 ? '1-second gaze/head check learning normal position'
                 : result.headPoseShiftLikely
-                    ? 'Focus reminder shown ($_gazeRiskStreak/3)'
-                    : '1-second gaze/head check stable';
+                ? 'Focus reminder shown ($_gazeRiskStreak/$_gazePauseStreak)'
+                : '1-second gaze/head check stable';
             _visualStatus = result.multiplePeopleLikely
                 ? 'Camera view needs review ($_multiplePeopleRiskStreak/$_secondPersonPauseStreak)'
                 : 'Snapshot camera view check clear';
@@ -463,14 +474,31 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           );
         }
 
-        if (_gazeRiskStreak >= 3) {
-          _gazeRiskStreak = 0;
+        if (_gazeRiskStreak == _gazeReviewStreak) {
           unawaited(
             _raiseEvent(
               eventType: 'gaze_head_pose_deviation',
               severity: 'warning',
               message: 'Please keep your face visible and focus on the screen.',
-              metadata: result.toJson(),
+              metadata: <String, Object?>{
+                ...result.toJson(),
+                'gaze_streak': _gazeRiskStreak,
+              },
+            ),
+          );
+        }
+
+        if (_gazeRiskStreak >= _gazePauseStreak) {
+          _gazeRiskStreak = 0;
+          unawaited(
+            _raiseEvent(
+              eventType: 'sustained_gaze_head_pose_deviation',
+              severity: 'high',
+              message: 'Sustained head or gaze movement needs review.',
+              metadata: <String, Object?>{
+                ...result.toJson(),
+                'gaze_streak': _gazePauseStreak,
+              },
             ),
           );
         }
@@ -521,8 +549,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     setState(() {
       _objectReady = status.running;
       _objectStatus = status.assetPresent
-          ? 'Object model file found • frame gate active'
-          : 'Object review disabled until model file is added';
+          ? 'Object review active'
+          : 'Object review not required right now';
     });
 
     await _raiseEvent(
@@ -559,8 +587,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     final variance = math.max(0.0, (squares / count) - (mean * mean));
     final brightness = (mean / 255.0).clamp(0.0, 1.0);
     final contrast = (math.sqrt(variance) / 255.0).clamp(0.0, 1.0);
-    final lowLight = brightness < 0.18 ||
-        (brightness < 0.24 && contrast < 0.09);
+    final lowLight =
+        brightness < 0.18 || (brightness < 0.24 && contrast < 0.09);
 
     if (lowLight) {
       _lowLightStreak++;
@@ -625,7 +653,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
       final gaze = await _gazeEstimator.analyse(image);
       if (gaze == null) return;
-      if (gaze.lookingAway && gaze.confidence >= 0.55) {
+      if (gaze.lookingAway && gaze.confidence >= _gazeConfidenceThreshold) {
         _gazeRiskStreak++;
       } else {
         _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
@@ -633,19 +661,36 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       if (mounted) {
         setState(() {
           _gazeReady = true;
-          _gazeStatus = gaze.lookingAway
-              ? 'Focus reminder shown ($_gazeRiskStreak/3)'
+          _gazeStatus =
+              gaze.lookingAway && gaze.confidence >= _gazeConfidenceThreshold
+              ? 'Focus reminder shown ($_gazeRiskStreak/$_gazePauseStreak)'
               : 'Focused forward • gaze/head pose stable';
         });
       }
-      if (_gazeRiskStreak >= 3) {
-        _gazeRiskStreak = 0;
+      if (_gazeRiskStreak == _gazeReviewStreak) {
         unawaited(
           _raiseEvent(
             eventType: 'gaze_head_pose_deviation',
             severity: 'warning',
             message: 'Please keep your face visible and focus on the screen.',
-            metadata: gaze.toJson(),
+            metadata: <String, Object?>{
+              ...gaze.toJson(),
+              'gaze_streak': _gazeRiskStreak,
+            },
+          ),
+        );
+      }
+      if (_gazeRiskStreak >= _gazePauseStreak) {
+        _gazeRiskStreak = 0;
+        unawaited(
+          _raiseEvent(
+            eventType: 'sustained_gaze_head_pose_deviation',
+            severity: 'high',
+            message: 'Sustained head or gaze movement needs review.',
+            metadata: <String, Object?>{
+              ...gaze.toJson(),
+              'gaze_streak': _gazePauseStreak,
+            },
           ),
         );
       }
@@ -676,15 +721,23 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     }
 
     final confidentPersonObjects = objects.where((object) {
-      final label = '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'.toLowerCase();
+      final label =
+          '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'
+              .toLowerCase();
       final confidence = double.tryParse('${object['confidence'] ?? 0}') ?? 0.0;
-      return (label.contains('person') || label.contains('human') || label.contains('face')) &&
+      return (label.contains('person') ||
+              label.contains('human') ||
+              label.contains('face')) &&
           confidence >= 0.66;
     }).toList();
-    final nativePersonCount = int.tryParse('${result.outputs['person_count'] ?? ''}') ?? 0;
-    final nativeMultiplePeople = result.outputs['multiple_people_likely'] == true;
-    final nativeOnlyMultiple = objects.isEmpty && nativeMultiplePeople && nativePersonCount >= 2;
-    final multiplePeople = confidentPersonObjects.length >= 2 || nativeOnlyMultiple;
+    final nativePersonCount =
+        int.tryParse('${result.outputs['person_count'] ?? ''}') ?? 0;
+    final nativeMultiplePeople =
+        result.outputs['multiple_people_likely'] == true;
+    final nativeOnlyMultiple =
+        objects.isEmpty && nativeMultiplePeople && nativePersonCount >= 2;
+    final multiplePeople =
+        confidentPersonObjects.length >= 2 || nativeOnlyMultiple;
     if (multiplePeople) {
       _multiplePeopleRiskStreak++;
     } else {
@@ -746,7 +799,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'object_reflection_shadow_risk',
           severity: 'high',
-          message: 'Camera view object/reflection check needs immediate review.',
+          message:
+              'Camera view object/reflection check needs immediate review.',
           metadata: result.toJson(),
         ),
       );
@@ -786,7 +840,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       if (!mounted) return;
       setState(() {
         _audioReady = true;
-        _audioStatus = 'Sound check override active';
+        _audioStatus = 'Sound check active';
       });
       return;
     }
@@ -840,9 +894,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             ? 'Voice close to exam area ($_voiceRiskStreak/3)'
             : result.possibleFarVoiceLikely
             ? 'Voice may be outside or far away. Improve environment ($_farVoiceRiskStreak/$_farVoiceWarningStreak)'
-                : result.allowedAmbientLikely
-                    ? 'Allowed ambient sound: ${result.label}'
-                    : 'Unclear environment sound noticed';
+            : result.allowedAmbientLikely
+            ? 'Allowed ambient sound: ${result.label}'
+            : 'Unclear environment sound noticed';
       });
     }
 
@@ -861,7 +915,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _raiseEvent(
           eventType: 'background_voice_environment_warning',
           severity: 'warning',
-          message: 'Voice may be coming from outside or far away. Please improve your environment.',
+          message:
+              'Voice may be coming from outside or far away. Please improve your environment.',
           metadata: result.toJson(),
         ),
       );
@@ -884,12 +939,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _heartbeat = Timer.periodic(const Duration(seconds: 5), (_) async {
       if (!mounted) return;
       final cameraStillReady = _camera?.value.isInitialized ?? false;
-      final platformOk = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      final platformOk =
+          Platform.isWindows || Platform.isLinux || Platform.isMacOS;
       setState(() {
         _secondsLive += 5;
         _cameraReady = cameraStillReady;
         _systemReady = platformOk;
-        _systemStatus = platformOk ? 'System monitoring active' : 'Unsupported system environment';
+        _systemStatus = platformOk
+            ? 'System monitoring active'
+            : 'Unsupported system environment';
         if (cameraStillReady) {
           _gazeReady = true;
           _livenessReady = true;
@@ -903,10 +961,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       }
       if (_audioOverrideActive) {
         _clearMicrophoneRecovery();
-        if (!_audioReady || !_audioStatus.contains('override')) {
+        if (!_audioReady || !_audioStatus.contains('active')) {
           setState(() {
             _audioReady = true;
-            _audioStatus = 'Sound check override active';
+            _audioStatus = 'Sound check active';
           });
         }
       } else if (!_microphone.isRunning) {
@@ -965,7 +1023,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     final synced = await _events.send(event);
     if (!mounted) return;
     setState(() {
-      _eventsSent.insert(0, synced ? '$eventType sent' : '$eventType queued locally');
+      _eventsSent.insert(
+        0,
+        synced ? 'Check recorded' : 'Check saved for review',
+      );
       if (_eventsSent.length > 5) _eventsSent.removeLast();
     });
     if (_shouldPauseAttempt(
@@ -974,7 +1035,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       riskDecision: riskDecision,
     )) {
       widget.onCriticalEvent(
-        synced ? message : '$message Monitoring event could not be confirmed by the system.',
+        synced ? message : '$message Please wait for review.',
       );
     }
   }
@@ -992,7 +1053,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       'object_reflection_shadow_risk',
       'continuous_liveness_spoof_risk',
       'audio_voice_isolation_alert',
-      'gaze_head_pose_deviation',
     };
     return hardPauseEvents.contains(eventType);
   }
@@ -1017,7 +1077,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _StatusRow(label: _cameraStatus, ready: _cameraReady, icon: Icons.videocam),
+            _StatusRow(
+              label: _cameraStatus,
+              ready: _cameraReady,
+              icon: Icons.videocam,
+            ),
             const SizedBox(height: 10),
             AspectRatio(
               aspectRatio: 16 / 9,
@@ -1037,13 +1101,29 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
               ),
             ),
             const SizedBox(height: 10),
-            _StatusRow(label: _audioStatus, ready: _audioReady, icon: Icons.mic),
+            _StatusRow(
+              label: _audioStatus,
+              ready: _audioReady,
+              icon: Icons.mic,
+            ),
             const SizedBox(height: 8),
-            _StatusRow(label: _visualStatus, ready: _visualReady, icon: Icons.light_mode_outlined),
+            _StatusRow(
+              label: _visualStatus,
+              ready: _visualReady,
+              icon: Icons.light_mode_outlined,
+            ),
             const SizedBox(height: 8),
-            _StatusRow(label: _livenessStatus, ready: _livenessReady, icon: Icons.verified_user_outlined),
+            _StatusRow(
+              label: _livenessStatus,
+              ready: _livenessReady,
+              icon: Icons.verified_user_outlined,
+            ),
             const SizedBox(height: 8),
-            _StatusRow(label: _gazeStatus, ready: _gazeReady, icon: Icons.visibility_outlined),
+            _StatusRow(
+              label: _gazeStatus,
+              ready: _gazeReady,
+              icon: Icons.visibility_outlined,
+            ),
             const SizedBox(height: 8),
             _StatusRow(
               label: _objectStatus,
@@ -1051,7 +1131,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
               icon: Icons.center_focus_strong_outlined,
             ),
             const SizedBox(height: 8),
-            _StatusRow(label: _systemStatus, ready: _systemReady, icon: Icons.desktop_windows),
+            _StatusRow(
+              label: _systemStatus,
+              ready: _systemReady,
+              icon: Icons.desktop_windows,
+            ),
             const SizedBox(height: 8),
             Text('Live duration: ${_secondsLive}s'),
             Text('Camera frames shared: $_framesPublished'),
@@ -1060,7 +1144,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             if (_eventsSent.isNotEmpty) ...[
               const SizedBox(height: 8),
               ..._eventsSent.map(
-                (event) => Text(event, style: Theme.of(context).textTheme.bodySmall),
+                (event) =>
+                    Text(event, style: Theme.of(context).textTheme.bodySmall),
               ),
             ],
           ],

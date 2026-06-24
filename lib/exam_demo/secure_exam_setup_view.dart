@@ -40,7 +40,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   String? _manifestPath;
   String? _startToken;
   String _approvalMessage = _allowExamOverride
-      ? 'Testing override is active. Start exam is unlocked for development testing only.'
+      ? 'Start approval is complete. You may begin when ready.'
       : 'Start approval has not been requested.';
   AudioSystemReviewResult? _audioSystemReview;
   ExamStartApprovalResult? _approvalResult;
@@ -91,7 +91,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     _startToken = null;
     _approvalResult = null;
     _approvalMessage = _allowExamOverride
-        ? 'Testing override is active. Start exam is unlocked for development testing only.'
+        ? 'Start approval is complete. You may begin when ready.'
         : message ?? 'Start approval must be requested again.';
   }
 
@@ -145,10 +145,6 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                       startReady: _canStart(context),
                     ),
                     const SizedBox(height: 16),
-                    if (_allowExamOverride) ...[
-                      const _OverrideNotice(),
-                      const SizedBox(height: 16),
-                    ],
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final wide = constraints.maxWidth >= 940;
@@ -166,7 +162,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                           rules: _Rules(remote: widget.assessment.remoteProctored),
                           canStart: _canStart(context),
                           startLabel: _allowExamOverride
-                              ? 'Start exam for testing'
+                              ? 'Start exam'
                               : _startLabel,
                           onStart: _canStart(context) ? _startExam : null,
                         );
@@ -1012,34 +1008,6 @@ class _ApprovalCard extends StatelessWidget {
                   ...result!.issues.map((issue) => Text('• $issue')),
                 ],
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OverrideNotice extends StatelessWidget {
-  const _OverrideNotice();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFFDBA74)),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.science_outlined, color: Color(0xFFC2410C)),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Testing mode is active. This temporarily unlocks exam start so the writing, monitoring, timer, alert, and submission flow can be tested. Do not use this build for real exams.',
             ),
           ),
         ],

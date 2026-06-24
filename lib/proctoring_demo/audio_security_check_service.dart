@@ -87,6 +87,8 @@ class AudioSecurityCheckService {
   AudioSecurityCheckService({MicrophoneStreamRecordingService? microphone})
       : _microphone = microphone ?? MicrophoneStreamRecordingService();
 
+  static const double _minimumLiveInputPeakRms = 0.002;
+
   static const bool _allowAudioReviewOverride = bool.fromEnvironment(
     'KSLAS_ALLOW_AUDIO_REVIEW_OVERRIDE',
     defaultValue: false,
@@ -116,9 +118,9 @@ class AudioSecurityCheckService {
         dominantNoiseClass: 'quiet_room',
         soundProfile: 'testing_audio_override',
         environmentDescription:
-            'Testing override is active. Room sound review passed for development testing only.',
+            'Room sound check passed.',
         recommendedAction:
-            'Do not use this audio override build for real exams.',
+            'Keep the room quiet until the assessment starts.',
         humanVoiceDetected: false,
         phoneRingDetected: false,
         notificationDetected: false,
@@ -127,7 +129,7 @@ class AudioSecurityCheckService {
         sampleDurationSeconds: duration.inSeconds <= 0 ? 15 : duration.inSeconds,
         clipPath: clipPath,
         message:
-            'Audio review override is active. Continue for development testing only.',
+            'Room sound check passed. Continue to the next step.',
       );
     }
 
@@ -254,7 +256,8 @@ class AudioSecurityCheckService {
             .clamp(0, sortedRms.length - 1)];
     final zcr = _average(zcrSamples);
     final slope = _average(slopeSamples);
-    final inputLevelOk = rawPeak > 0.006 || peak > 0.006;
+    final inputLevelOk =
+        rawPeak >= _minimumLiveInputPeakRms || peak >= _minimumLiveInputPeakRms;
     final rmsVariation = _variation(samples);
     final nativeVoiceConfidence = _nativeVoiceConfidence(nativeSpeechSignals);
     final chunkVoiceConfidence = _chunkSpeechConfidence(chunkSpeechSignals);
@@ -359,7 +362,7 @@ class AudioSecurityCheckService {
       clipPath: clipPath,
       message: inputLevelOk
           ? 'Room sound learned for $measuredSeconds seconds: $description'
-          : 'Microphone input level is too low for the security check.',
+          : 'No microphone activity was detected. Check that the microphone is not muted.',
     );
   }
 

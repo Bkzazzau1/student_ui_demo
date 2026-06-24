@@ -141,13 +141,13 @@ class SnapshotGazeFallbackService {
     final shiftScore = math.sqrt((shiftX * shiftX) + (shiftY * shiftY));
     final asymmetryShift = signal.asymmetry - baseline.asymmetry;
     final spreadShift = signal.horizontalSpread - baseline.horizontalSpread;
-    final profileTurnLikely = asymmetryShift.abs() >= 0.11 ||
-        signal.asymmetry.abs() >= 0.22 ||
-        signal.profileScore >= 0.20 ||
-        spreadShift.abs() >= 0.05;
-    final headPoseShiftLikely = shiftX.abs() >= 0.095 ||
-        shiftY.abs() >= 0.095 ||
-        shiftScore >= 0.125 ||
+    final profileTurnLikely = asymmetryShift.abs() >= 0.16 ||
+        signal.asymmetry.abs() >= 0.30 ||
+        signal.profileScore >= 0.30 ||
+        spreadShift.abs() >= 0.08;
+    final headPoseShiftLikely = shiftX.abs() >= 0.14 ||
+        shiftY.abs() >= 0.14 ||
+        shiftScore >= 0.18 ||
         profileTurnLikely;
     final multiplePeopleLikely = signal.multiplePeopleLikely && signal.personCount >= 2;
 

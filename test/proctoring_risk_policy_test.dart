@@ -19,7 +19,23 @@ void main() {
       expect(ProctoringRiskPolicy.pointsFor('multiple_people_detected'), 55);
       expect(ProctoringRiskPolicy.pointsFor('audio_voice_isolation_alert'), 35);
       expect(ProctoringRiskPolicy.pointsFor('gaze_head_pose_deviation'), 20);
+      expect(
+        ProctoringRiskPolicy.pointsFor('sustained_gaze_head_pose_deviation'),
+        50,
+      );
       expect(ProctoringRiskPolicy.pointsFor('exam_screen_focus_changed'), 15);
+      expect(
+        ProctoringRiskPolicy.decisionFor(
+          'gaze_head_pose_deviation',
+        ).shouldPause,
+        isFalse,
+      );
+      expect(
+        ProctoringRiskPolicy.decisionFor(
+          'sustained_gaze_head_pose_deviation',
+        ).shouldPause,
+        isTrue,
+      );
     });
 
     test('keeps monitor health warnings below pause level', () {

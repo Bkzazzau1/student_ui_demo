@@ -12,11 +12,11 @@ class ProctoringRiskDecision {
   final bool shouldPause;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'event_type': eventType,
-        'points': points,
-        'level': level,
-        'should_pause': shouldPause,
-      };
+    'event_type': eventType,
+    'points': points,
+    'level': level,
+    'should_pause': shouldPause,
+  };
 }
 
 /// Official local scoring policy for the student app.
@@ -102,6 +102,8 @@ class ProctoringRiskPolicy {
         return 15;
       case 'gaze_head_pose_deviation':
         return 20;
+      case 'sustained_gaze_head_pose_deviation':
+        return 50;
       case 'companion_cam_feed_stale':
         return 30;
       case 'companion_cam_disconnected':
@@ -119,10 +121,7 @@ class ProctoringRiskPolicy {
     }
   }
 
-  static bool shouldPause({
-    required String eventType,
-    required String level,
-  }) {
+  static bool shouldPause({required String eventType, required String level}) {
     if (level == 'critical') return true;
     const hardPauseEvents = <String>{
       'camera_unavailable',
@@ -134,8 +133,8 @@ class ProctoringRiskPolicy {
       'multiple_people_detected',
       'object_reflection_shadow_risk',
       'continuous_liveness_spoof_risk',
+      'sustained_gaze_head_pose_deviation',
       'audio_voice_isolation_alert',
-      'gaze_head_pose_deviation',
       'system_monitoring_unavailable',
       'yolo_phone_detected',
       'yolo_extra_screen_detected',

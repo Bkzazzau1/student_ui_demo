@@ -550,17 +550,17 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           _reviewing = false;
           _status = DemoScanStatus.pendingReview;
           _message = _verificationComplete
-              ? 'The backend could not approve the exam start. Please try again or contact support.'
+              ? 'Start approval could not be completed. Please try again or contact support.'
               : 'Complete the photos, short video, and device check before sending.';
           _reviewEvents
             ..clear()
             ..add(
               AgenticReviewEvent(
                 title: _verificationComplete
-                    ? 'Backend approval needed'
+                    ? 'Start approval needed'
                     : 'Check not complete',
                 detail: _verificationComplete
-                    ? 'The exam can only start after backend approval.'
+                    ? 'The exam can only start after approval is granted.'
                     : 'The full exam check was not completed. Please run it again.',
                 severity: 'warning',
               ),

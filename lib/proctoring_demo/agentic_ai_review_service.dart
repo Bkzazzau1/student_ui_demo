@@ -85,7 +85,7 @@ class MockAgenticAiReviewService implements AgenticAiReviewService {
           ? 'Decision: ready'
           : 'Decision: pending review',
       detail: missing.isEmpty && lowLight.isEmpty
-          ? 'Backend response is required before exam startup.'
+          ? 'Start approval is required before the exam can begin.'
           : 'The student must fix issues or request human review.',
       severity: missing.isEmpty && lowLight.isEmpty ? 'success' : 'warning',
     );
