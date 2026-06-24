@@ -29,28 +29,20 @@ Adds a standalone panel for strict exams. It starts the secure session, repeats 
 
 ### `lib/proctoring_demo/live_system_lockdown_monitor.dart`
 
-Adds a combined monitor that joins the existing `SystemSecurityReviewService` with the new secure lockdown session. This is intended to replace or sit beside `LiveSystemSecurityMonitor` inside strict exams.
+Adds a combined monitor that joins the existing `SystemSecurityReviewService` with the new secure lockdown session. It checks system devices and secure exam state together, then sends review events when the session is not ready.
 
-## Recommended next wiring
+### `lib/proctoring_demo/live_system_security_monitor.dart`
 
-In `lib/exam_demo/demo_exam_attempt_view.dart`, replace the strict exam system monitor panel with `LiveSystemLockdownMonitor`:
+The existing system security monitor now delegates to `LiveSystemLockdownMonitor`. This means the current strict exam attempt UI receives the secure lockdown checks through its existing system-monitor panel without rewriting `demo_exam_attempt_view.dart`.
 
-```dart
-LiveSystemLockdownMonitor(
-  studentId: widget.studentId,
-  examId: widget.assessment.id,
-  attemptId: widget.attemptId,
-  onReviewRequired: _handleCriticalMonitoringEvent,
-  assessmentType: widget.assessment.assessmentType,
-  reviewAudience: _monitoringProfile.reviewAudience,
-),
-```
+## Current behavior
 
-Then import:
+When a strict exam uses the system security panel, the UI now runs both:
 
-```dart
-import '../proctoring_demo/live_system_lockdown_monitor.dart';
-```
+- the existing system device review; and
+- the new secure exam session review.
+
+If either review fails, the monitor sends a live proctoring event and calls the exam attempt's review handler so the exam can pause or enter invigilator review according to the existing risk policy.
 
 ## Next phase
 
