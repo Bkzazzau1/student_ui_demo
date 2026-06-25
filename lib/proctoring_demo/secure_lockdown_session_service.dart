@@ -132,6 +132,26 @@ class SecureLockdownSessionService {
   Future<SecureLockdownSnapshot> collectSnapshot() async {
     final nativeSnapshot = await _nativeBridge.check();
     if (nativeSnapshot != null) {
+      final nativeFindings = nativeSnapshot.findings
+          .map(
+            (finding) => SecureLockdownFinding(
+              code: finding.code,
+              message: finding.message,
+              severity: finding.severity,
+            ),
+          )
+          .toList(growable: true);
+      if (!_clipboardCleared) {
+        nativeFindings.add(
+          const SecureLockdownFinding(
+            code: 'clipboard_clear_unconfirmed',
+            severity: 'warning',
+            message:
+                'Clipboard clearing could not be confirmed on this device.',
+          ),
+        );
+      }
+
       return SecureLockdownSnapshot(
         lockdownActive: _active,
         platformSupported: nativeSnapshot.platformSupported,
@@ -139,15 +159,7 @@ class SecureLockdownSessionService {
         displayCount: nativeSnapshot.displayCount,
         prohibitedProcesses: nativeSnapshot.prohibitedProcesses,
         clipboardCleared: _clipboardCleared,
-        findings: nativeSnapshot.findings
-            .map(
-              (finding) => SecureLockdownFinding(
-                code: finding.code,
-                message: finding.message,
-                severity: finding.severity,
-              ),
-            )
-            .toList(growable: false),
+        findings: nativeFindings,
         capturedAt: DateTime.now(),
       );
     }
