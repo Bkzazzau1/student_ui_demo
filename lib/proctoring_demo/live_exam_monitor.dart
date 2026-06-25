@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'audio_evidence_capture_service.dart';
 import 'audio_event_evidence_policy.dart';
 import 'audio_fingerprint_isolation_service.dart';
+import 'camera_evidence_capture_service.dart';
+import 'camera_event_evidence_policy.dart';
 import 'camera_runtime_coordinator.dart';
 import 'continuous_biometric_liveness_service.dart';
 import 'landmark_gaze_runtime_selector.dart';
@@ -87,6 +89,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       const AudioEvidenceCaptureService();
   final AudioEventEvidencePolicy _audioEvidencePolicy =
       const AudioEventEvidencePolicy();
+  final CameraEvidenceCaptureService _cameraEvidence =
+      const CameraEvidenceCaptureService();
+  final CameraEventEvidencePolicy _cameraEvidencePolicy =
+      const CameraEventEvidencePolicy();
   final ContinuousBiometricLivenessService _continuousLiveness =
       ContinuousBiometricLivenessService();
   final VisualReflectionShadowService _visualIntegrity =
@@ -1029,6 +1035,24 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       );
       if (audioRecord != null) {
         enrichedMetadata['local_audio_record'] = audioRecord;
+      }
+    }
+    if (_cameraEvidencePolicy.shouldCapture(
+      eventType: eventType,
+      severity: effectiveSeverity,
+    )) {
+      final cameraRecord = await _cameraEvidence.saveRecentCameraEvidence(
+        studentId: widget.studentId,
+        examId: widget.examId,
+        attemptId: widget.attemptId,
+        eventType: eventType,
+        reviewReason: message,
+        controller: _camera,
+        frameBus: _frameBus,
+        metadata: enrichedMetadata,
+      );
+      if (cameraRecord != null) {
+        enrichedMetadata['local_camera_record'] = cameraRecord;
       }
     }
     final event = LiveProctoringEvent(
