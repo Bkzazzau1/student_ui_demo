@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'live_event_local_record_service.dart';
 import 'live_proctoring_event_service.dart';
 import 'secure_lockdown_session_service.dart';
 import 'system_security_review_service.dart';
@@ -31,6 +32,7 @@ class LiveSystemLockdownMonitor extends StatefulWidget {
 class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
   final SystemSecurityReviewService _systemReview = SystemSecurityReviewService();
   final SecureLockdownSessionService _secureSession = SecureLockdownSessionService();
+  final LiveEventLocalRecordService _localRecords = const LiveEventLocalRecordService();
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -118,19 +120,38 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
     SecureLockdownSnapshot secure,
   ) async {
     final message = _studentMessage(system, secure);
+    final eventType = secure.ready ? 'system_device_check_failed' : 'secure_exam_mode_check_failed';
+    final metadata = <String, Object?>{
+      'system_review': system.toJson(),
+      'secure_exam_mode': secure.toJson(),
+    };
+    final event = LiveProctoringEvent(
+      studentId: widget.studentId,
+      examId: widget.examId,
+      attemptId: widget.attemptId,
+      eventType: eventType,
+      severity: 'critical',
+      message: message,
+      createdAt: DateTime.now(),
+      metadata: metadata,
+      assessmentType: widget.assessmentType,
+      reviewAudience: widget.reviewAudience,
+    );
+    final localRecord = await _localRecords.saveEvent(event);
+    if (localRecord != null) {
+      metadata['local_record'] = localRecord;
+    }
+
     final synced = await _events.send(
       LiveProctoringEvent(
         studentId: widget.studentId,
         examId: widget.examId,
         attemptId: widget.attemptId,
-        eventType: secure.ready ? 'system_device_check_failed' : 'secure_exam_mode_check_failed',
+        eventType: eventType,
         severity: 'critical',
         message: message,
-        createdAt: DateTime.now(),
-        metadata: <String, Object?>{
-          'system_review': system.toJson(),
-          'secure_exam_mode': secure.toJson(),
-        },
+        createdAt: event.createdAt,
+        metadata: metadata,
         assessmentType: widget.assessmentType,
         reviewAudience: widget.reviewAudience,
       ),
