@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/evidence_vault.dart';
+import 'api/lockdown.dart';
 import 'api/proctoring.dart';
 import 'api/system_security.dart';
 import 'dart:async';
@@ -68,7 +69,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1467171838;
+  int get rustContentHash => 1810599016;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -149,6 +150,12 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String pixelFormat,
   });
 
+  NativeSecureLockdownReviewResult crateApiLockdownAnalyzeSecureLockdownReport({
+    required String platformName,
+    required String processReport,
+    int? displayCount,
+  });
+
   NativeSystemSecurityReviewResult
   crateApiSystemSecurityAnalyzeSystemSecurityReport({
     required String report,
@@ -156,6 +163,14 @@ abstract class BrainCoreApiApi extends BaseApi {
   });
 
   void crateApiProctoringClearVisionModel();
+
+  Future<int?> crateApiLockdownCollectLockdownDisplayCount({
+    required String platformName,
+  });
+
+  Future<String> crateApiLockdownCollectLockdownProcessReport({
+    required String platformName,
+  });
 
   Future<String> crateApiSystemSecurityCollectSystemSecurityReport({
     required String platformName,
@@ -188,6 +203,9 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String examId,
     required String attemptId,
   });
+
+  Future<NativeSecureLockdownReviewResult>
+  crateApiLockdownRunSecureLockdownReview({required String platformName});
 
   Future<NativeSystemSecurityReviewResult>
   crateApiSystemSecurityRunSystemSecurityReview({required String platformName});
@@ -596,6 +614,38 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  NativeSecureLockdownReviewResult crateApiLockdownAnalyzeSecureLockdownReport({
+    required String platformName,
+    required String processReport,
+    int? displayCount,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(platformName, serializer);
+          sse_encode_String(processReport, serializer);
+          sse_encode_opt_box_autoadd_i_32(displayCount, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_secure_lockdown_review_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiLockdownAnalyzeSecureLockdownReportConstMeta,
+        argValues: [platformName, processReport, displayCount],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLockdownAnalyzeSecureLockdownReportConstMeta =>
+      const TaskConstMeta(
+        debugName: "analyze_secure_lockdown_report",
+        argNames: ["platformName", "processReport", "displayCount"],
+      );
+
+  @override
   NativeSystemSecurityReviewResult
   crateApiSystemSecurityAnalyzeSystemSecurityReport({
     required String report,
@@ -607,7 +657,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(report, serializer);
           sse_encode_String(platformName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_system_security_review_result,
@@ -633,7 +683,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -650,6 +700,72 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       const TaskConstMeta(debugName: "clear_vision_model", argNames: []);
 
   @override
+  Future<int?> crateApiLockdownCollectLockdownDisplayCount({
+    required String platformName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(platformName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_i_32,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiLockdownCollectLockdownDisplayCountConstMeta,
+        argValues: [platformName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLockdownCollectLockdownDisplayCountConstMeta =>
+      const TaskConstMeta(
+        debugName: "collect_lockdown_display_count",
+        argNames: ["platformName"],
+      );
+
+  @override
+  Future<String> crateApiLockdownCollectLockdownProcessReport({
+    required String platformName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(platformName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiLockdownCollectLockdownProcessReportConstMeta,
+        argValues: [platformName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLockdownCollectLockdownProcessReportConstMeta =>
+      const TaskConstMeta(
+        debugName: "collect_lockdown_process_report",
+        argNames: ["platformName"],
+      );
+
+  @override
   Future<String> crateApiSystemSecurityCollectSystemSecurityReport({
     required String platformName,
   }) {
@@ -661,7 +777,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 12,
             port: port_,
           );
         },
@@ -689,7 +805,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -719,7 +835,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(lumaBytes, serializer);
           sse_encode_u_32(sampleStride, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_64,
@@ -745,7 +861,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -775,7 +891,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -809,7 +925,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lossThresholdDbfs, serializer);
           sse_encode_u_32(lossStreak, serializer);
           sse_encode_u_32(lossSamplesToTrigger, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_acoustic_sample_decision,
@@ -848,7 +964,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(studentId, serializer);
           sse_encode_String(examId, serializer);
           sse_encode_String(attemptId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -868,6 +984,38 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  Future<NativeSecureLockdownReviewResult>
+  crateApiLockdownRunSecureLockdownReview({required String platformName}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(platformName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_secure_lockdown_review_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiLockdownRunSecureLockdownReviewConstMeta,
+        argValues: [platformName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLockdownRunSecureLockdownReviewConstMeta =>
+      const TaskConstMeta(
+        debugName: "run_secure_lockdown_review",
+        argNames: ["platformName"],
+      );
+
+  @override
   Future<NativeSystemSecurityReviewResult>
   crateApiSystemSecurityRunSystemSecurityReview({
     required String platformName,
@@ -880,7 +1028,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 20,
             port: port_,
           );
         },
@@ -926,7 +1074,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -988,7 +1136,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -1076,6 +1224,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_i_64(raw);
@@ -1136,6 +1290,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dcoDecodeI64(raw);
@@ -1145,6 +1305,16 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<NativeLockdownFinding> dco_decode_list_native_lockdown_finding(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_lockdown_finding)
+        .toList();
   }
 
   @protected
@@ -1172,6 +1342,36 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       updatedLastViolationAtMs: dco_decode_i_64(arr[3]),
       updatedWindowStartMs: dco_decode_i_64(arr[4]),
       updatedBurstCount: dco_decode_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  NativeLockdownFinding dco_decode_native_lockdown_finding(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeLockdownFinding(
+      code: dco_decode_String(arr[0]),
+      message: dco_decode_String(arr[1]),
+      severity: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  NativeSecureLockdownReviewResult
+  dco_decode_native_secure_lockdown_review_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeSecureLockdownReviewResult(
+      ready: dco_decode_bool(arr[0]),
+      platformSupported: dco_decode_bool(arr[1]),
+      platformName: dco_decode_String(arr[2]),
+      displayCount: dco_decode_opt_box_autoadd_i_32(arr[3]),
+      prohibitedProcesses: dco_decode_list_String(arr[4]),
+      findings: dco_decode_list_native_lockdown_finding(arr[5]),
     );
   }
 
@@ -1208,6 +1408,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     return raw == null
         ? null
         : dco_decode_box_autoadd_gaze_head_pose_decision(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
   }
 
   @protected
@@ -1339,6 +1545,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_64(deserializer));
@@ -1416,6 +1628,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getPlatformInt64();
@@ -1429,6 +1647,20 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeLockdownFinding> sse_decode_list_native_lockdown_finding(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeLockdownFinding>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_lockdown_finding(deserializer));
     }
     return ans_;
   }
@@ -1465,6 +1697,43 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       updatedLastViolationAtMs: var_updatedLastViolationAtMs,
       updatedWindowStartMs: var_updatedWindowStartMs,
       updatedBurstCount: var_updatedBurstCount,
+    );
+  }
+
+  @protected
+  NativeLockdownFinding sse_decode_native_lockdown_finding(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_code = sse_decode_String(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    var var_severity = sse_decode_String(deserializer);
+    return NativeLockdownFinding(
+      code: var_code,
+      message: var_message,
+      severity: var_severity,
+    );
+  }
+
+  @protected
+  NativeSecureLockdownReviewResult
+  sse_decode_native_secure_lockdown_review_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_ready = sse_decode_bool(deserializer);
+    var var_platformSupported = sse_decode_bool(deserializer);
+    var var_platformName = sse_decode_String(deserializer);
+    var var_displayCount = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_prohibitedProcesses = sse_decode_list_String(deserializer);
+    var var_findings = sse_decode_list_native_lockdown_finding(deserializer);
+    return NativeSecureLockdownReviewResult(
+      ready: var_ready,
+      platformSupported: var_platformSupported,
+      platformName: var_platformName,
+      displayCount: var_displayCount,
+      prohibitedProcesses: var_prohibitedProcesses,
+      findings: var_findings,
     );
   }
 
@@ -1514,6 +1783,17 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_gaze_head_pose_decision(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_32(deserializer));
     } else {
       return null;
     }
@@ -1605,12 +1885,6 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
-  }
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
@@ -1655,6 +1929,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_gaze_head_pose_decision(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self, serializer);
   }
 
   @protected
@@ -1718,6 +1998,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putPlatformInt64(self);
@@ -1729,6 +2015,18 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_lockdown_finding(
+    List<NativeLockdownFinding> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_lockdown_finding(item, serializer);
     }
   }
 
@@ -1769,6 +2067,31 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_native_lockdown_finding(
+    NativeLockdownFinding self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.code, serializer);
+    sse_encode_String(self.message, serializer);
+    sse_encode_String(self.severity, serializer);
+  }
+
+  @protected
+  void sse_encode_native_secure_lockdown_review_result(
+    NativeSecureLockdownReviewResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.ready, serializer);
+    sse_encode_bool(self.platformSupported, serializer);
+    sse_encode_String(self.platformName, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.displayCount, serializer);
+    sse_encode_list_String(self.prohibitedProcesses, serializer);
+    sse_encode_list_native_lockdown_finding(self.findings, serializer);
+  }
+
+  @protected
   void sse_encode_native_system_security_review_result(
     NativeSystemSecurityReviewResult self,
     SseSerializer serializer,
@@ -1800,6 +2123,16 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_gaze_head_pose_decision(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_32(self, serializer);
     }
   }
 
@@ -1870,11 +2203,5 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_f_64(self.confidenceThreshold, serializer);
     sse_encode_u_32(self.labelCount, serializer);
     sse_encode_String(self.message, serializer);
-  }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
   }
 }

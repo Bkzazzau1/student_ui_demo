@@ -214,8 +214,8 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
     } on TimeoutException {
       throw StateError('device report timed out after 7 seconds');
     }
-    final stdout = result.stdout?.toString() ?? '';
-    final stderr = result.stderr?.toString() ?? '';
+    final stdout = result.stdout.toString();
+    final stderr = result.stderr.toString();
     final combined = '$stdout\n$stderr'.trim();
     if (combined.isEmpty) {
       throw StateError('empty device report');

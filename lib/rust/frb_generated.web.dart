@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/evidence_vault.dart';
+import 'api/lockdown.dart';
 import 'api/proctoring.dart';
 import 'api/system_security.dart';
 import 'dart:async';
@@ -41,6 +42,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
@@ -56,10 +60,18 @@ abstract class BrainCoreApiApiImplPlatform
   GazeHeadPoseDecision dco_decode_gaze_head_pose_decision(dynamic raw);
 
   @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<NativeLockdownFinding> dco_decode_list_native_lockdown_finding(
+    dynamic raw,
+  );
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -71,6 +83,13 @@ abstract class BrainCoreApiApiImplPlatform
   MotionAnalysisDecision dco_decode_motion_analysis_decision(dynamic raw);
 
   @protected
+  NativeLockdownFinding dco_decode_native_lockdown_finding(dynamic raw);
+
+  @protected
+  NativeSecureLockdownReviewResult
+  dco_decode_native_secure_lockdown_review_result(dynamic raw);
+
+  @protected
   NativeSystemSecurityReviewResult
   dco_decode_native_system_security_review_result(dynamic raw);
 
@@ -78,6 +97,9 @@ abstract class BrainCoreApiApiImplPlatform
   GazeHeadPoseDecision? dco_decode_opt_box_autoadd_gaze_head_pose_decision(
     dynamic raw,
   );
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
 
   @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
@@ -122,6 +144,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
@@ -143,10 +168,18 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<NativeLockdownFinding> sse_decode_list_native_lockdown_finding(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -160,6 +193,15 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  NativeLockdownFinding sse_decode_native_lockdown_finding(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSecureLockdownReviewResult
+  sse_decode_native_secure_lockdown_review_result(SseDeserializer deserializer);
+
+  @protected
   NativeSystemSecurityReviewResult
   sse_decode_native_system_security_review_result(SseDeserializer deserializer);
 
@@ -167,6 +209,9 @@ abstract class BrainCoreApiApiImplPlatform
   GazeHeadPoseDecision? sse_decode_opt_box_autoadd_gaze_head_pose_decision(
     SseDeserializer deserializer,
   );
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
@@ -196,9 +241,6 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
@@ -221,6 +263,9 @@ abstract class BrainCoreApiApiImplPlatform
     GazeHeadPoseDecision self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_i_64(
@@ -250,10 +295,19 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_native_lockdown_finding(
+    List<NativeLockdownFinding> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -271,6 +325,18 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_native_lockdown_finding(
+    NativeLockdownFinding self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_secure_lockdown_review_result(
+    NativeSecureLockdownReviewResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_system_security_review_result(
     NativeSystemSecurityReviewResult self,
     SseSerializer serializer,
@@ -281,6 +347,9 @@ abstract class BrainCoreApiApiImplPlatform
     GazeHeadPoseDecision? self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_i_64(
@@ -314,9 +383,6 @@ abstract class BrainCoreApiApiImplPlatform
     VisionModelStatus self,
     SseSerializer serializer,
   );
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class

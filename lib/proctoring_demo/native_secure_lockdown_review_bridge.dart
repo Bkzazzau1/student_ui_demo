@@ -1,3 +1,6 @@
+import '../rust/api/lockdown.dart' as native_lockdown;
+import '../rust/frb_generated.dart';
+
 class NativeLockdownFindingSnapshot {
   const NativeLockdownFindingSnapshot({
     required this.code,
@@ -55,20 +58,48 @@ class DisabledNativeSecureLockdownReviewBridge
   Future<NativeSecureLockdownReviewSnapshot?> check() async => null;
 }
 
-/// Temporary non-breaking adapter while flutter_rust_bridge Dart bindings are
-/// regenerated for `native/brain_core/src/api/lockdown.rs`.
-///
-/// After codegen, this should call:
-///
-/// `await runSecureLockdownReview(platformName: 'auto')`
-///
-/// and map the generated native result into [NativeSecureLockdownReviewSnapshot].
 class GeneratedNativeSecureLockdownReviewBridge
     implements NativeSecureLockdownReviewBridge {
   const GeneratedNativeSecureLockdownReviewBridge();
 
+  static Future<bool>? _nativeReady;
+
   @override
   Future<NativeSecureLockdownReviewSnapshot?> check() async {
-    return null;
+    if (!await _ensureNativeReady()) return null;
+    try {
+      final result = await native_lockdown.runSecureLockdownReview(
+        platformName: 'auto',
+      );
+      return NativeSecureLockdownReviewSnapshot(
+        ready: result.ready,
+        platformSupported: result.platformSupported,
+        platformName: result.platformName,
+        displayCount: result.displayCount,
+        prohibitedProcesses: result.prohibitedProcesses,
+        findings: result.findings
+            .map(
+              (finding) => NativeLockdownFindingSnapshot(
+                code: finding.code,
+                message: finding.message,
+                severity: finding.severity,
+              ),
+            )
+            .toList(growable: false),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> _ensureNativeReady() {
+    return _nativeReady ??= () async {
+      try {
+        await BrainCoreApi.init();
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }();
   }
 }

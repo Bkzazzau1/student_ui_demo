@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import 'native_secure_lockdown_review_bridge.dart';
+
 class SecureLockdownFinding {
   const SecureLockdownFinding({
     required this.code,
@@ -66,9 +68,12 @@ class SecureLockdownSnapshot {
 class SecureLockdownSessionService {
   SecureLockdownSessionService({
     this.commandTimeout = const Duration(seconds: 5),
-  });
+    NativeSecureLockdownReviewBridge nativeBridge =
+        const GeneratedNativeSecureLockdownReviewBridge(),
+  }) : _nativeBridge = nativeBridge;
 
   final Duration commandTimeout;
+  final NativeSecureLockdownReviewBridge _nativeBridge;
   bool _active = false;
   bool _clipboardCleared = false;
 
@@ -125,6 +130,28 @@ class SecureLockdownSessionService {
   }
 
   Future<SecureLockdownSnapshot> collectSnapshot() async {
+    final nativeSnapshot = await _nativeBridge.check();
+    if (nativeSnapshot != null) {
+      return SecureLockdownSnapshot(
+        lockdownActive: _active,
+        platformSupported: nativeSnapshot.platformSupported,
+        platformName: nativeSnapshot.platformName,
+        displayCount: nativeSnapshot.displayCount,
+        prohibitedProcesses: nativeSnapshot.prohibitedProcesses,
+        clipboardCleared: _clipboardCleared,
+        findings: nativeSnapshot.findings
+            .map(
+              (finding) => SecureLockdownFinding(
+                code: finding.code,
+                message: finding.message,
+                severity: finding.severity,
+              ),
+            )
+            .toList(growable: false),
+        capturedAt: DateTime.now(),
+      );
+    }
+
     final findings = <SecureLockdownFinding>[];
     final platformName = _platformName();
     final platformSupported =
@@ -255,8 +282,8 @@ class SecureLockdownSessionService {
       executable,
       arguments,
     ).timeout(commandTimeout);
-    final stdoutText = result.stdout?.toString() ?? '';
-    final stderrText = result.stderr?.toString() ?? '';
+    final stdoutText = result.stdout.toString();
+    final stderrText = result.stderr.toString();
     final combined = '$stdoutText\n$stderrText'.trim();
     return combined;
   }
