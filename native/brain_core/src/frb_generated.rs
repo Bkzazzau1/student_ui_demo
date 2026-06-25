@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -353497892;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1495641733;
 
 // Section: executor
 
@@ -437,6 +437,38 @@ fn wire__crate__api__system_security__analyze_system_security_report_impl(
                         api_report,
                         api_platform_name,
                     ),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__attempt_recovery__attempt_checksum_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "attempt_checksum",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_payload_json = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::attempt_recovery::attempt_checksum(api_payload_json),
                 )?;
                 Ok(output_ok)
             })())
@@ -950,6 +982,43 @@ fn wire__crate__api__proctoring__update_rotation_progress_impl(
         },
     )
 }
+fn wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "verify_attempt_snapshot",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_payload_json = <String>::sse_decode(&mut deserializer);
+            let api_checksum = <String>::sse_decode(&mut deserializer);
+            let api_recovered_from = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::attempt_recovery::verify_attempt_snapshot(
+                        api_payload_json,
+                        api_checksum,
+                        api_recovered_from,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 
 // Section: dart2rust
 
@@ -1139,6 +1208,22 @@ impl SseDecode for crate::api::proctoring::MotionAnalysisDecision {
             updated_last_violation_at_ms: var_updatedLastViolationAtMs,
             updated_window_start_ms: var_updatedWindowStartMs,
             updated_burst_count: var_updatedBurstCount,
+        };
+    }
+}
+
+impl SseDecode for crate::api::attempt_recovery::NativeAttemptRecoveryCheck {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_checksum = <String>::sse_decode(deserializer);
+        let mut var_checksumValid = <bool>::sse_decode(deserializer);
+        let mut var_payloadJson = <String>::sse_decode(deserializer);
+        let mut var_recoveredFrom = <String>::sse_decode(deserializer);
+        return crate::api::attempt_recovery::NativeAttemptRecoveryCheck {
+            checksum: var_checksum,
+            checksum_valid: var_checksumValid,
+            payload_json: var_payloadJson,
+            recovered_from: var_recoveredFrom,
         };
     }
 }
@@ -1389,31 +1474,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        11 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        12 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        13 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__system_security__collect_system_security_report_impl(
+        14 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        21 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__system_security__run_system_security_review_impl(
+        22 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -1460,33 +1545,41 @@ fn pde_ffi_dispatcher_sync_impl(
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        10 => {
+            wire__crate__api__attempt_recovery__attempt_checksum_impl(ptr, rust_vec_len, data_len)
+        }
+        11 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__proctoring__current_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+        16 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => {
+        17 => {
             wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
         }
-        17 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        18 => {
+        18 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        19 => {
             wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
         }
-        19 => {
+        20 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        22 => {
+        23 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        23 => {
+        24 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
+        25 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         _ => unreachable!(),
     }
 }
@@ -1648,6 +1741,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::MotionAnalysisDec
     for crate::api::proctoring::MotionAnalysisDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::MotionAnalysisDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::attempt_recovery::NativeAttemptRecoveryCheck {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.checksum.into_into_dart().into_dart(),
+            self.checksum_valid.into_into_dart().into_dart(),
+            self.payload_json.into_into_dart().into_dart(),
+            self.recovered_from.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::attempt_recovery::NativeAttemptRecoveryCheck
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::attempt_recovery::NativeAttemptRecoveryCheck>
+    for crate::api::attempt_recovery::NativeAttemptRecoveryCheck
+{
+    fn into_into_dart(self) -> crate::api::attempt_recovery::NativeAttemptRecoveryCheck {
         self
     }
 }
@@ -1975,6 +2091,16 @@ impl SseEncode for crate::api::proctoring::MotionAnalysisDecision {
         <i64>::sse_encode(self.updated_last_violation_at_ms, serializer);
         <i64>::sse_encode(self.updated_window_start_ms, serializer);
         <u32>::sse_encode(self.updated_burst_count, serializer);
+    }
+}
+
+impl SseEncode for crate::api::attempt_recovery::NativeAttemptRecoveryCheck {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.checksum, serializer);
+        <bool>::sse_encode(self.checksum_valid, serializer);
+        <String>::sse_encode(self.payload_json, serializer);
+        <String>::sse_encode(self.recovered_from, serializer);
     }
 }
 

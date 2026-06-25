@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'native_attempt_recovery_bridge.dart';
+
 class SecureAttemptAutosaveSnapshot {
   const SecureAttemptAutosaveSnapshot({
     required this.studentId,
@@ -33,28 +35,34 @@ class SecureAttemptAutosaveSnapshot {
   bool get hasAnswers => answers.values.any((value) => value.trim().isNotEmpty);
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'student_id': studentId,
-        'exam_id': examId,
-        'attempt_id': attemptId,
-        'answers': answers,
-        'current_index': currentIndex,
-        'remaining_seconds': remainingSeconds,
-        'started_at': startedAt.toUtc().toIso8601String(),
-        'updated_at': updatedAt.toUtc().toIso8601String(),
-        'checksum': checksum,
-        'checksum_valid': checksumValid,
-        'recovered_from': recoveredFrom,
-      };
+    'student_id': studentId,
+    'exam_id': examId,
+    'attempt_id': attemptId,
+    'answers': answers,
+    'current_index': currentIndex,
+    'remaining_seconds': remainingSeconds,
+    'started_at': startedAt.toUtc().toIso8601String(),
+    'updated_at': updatedAt.toUtc().toIso8601String(),
+    'checksum': checksum,
+    'checksum_valid': checksumValid,
+    'recovered_from': recoveredFrom,
+  };
 }
 
 class SecureAttemptAutosaveService {
-  SecureAttemptAutosaveService({GetStorage? storage}) : _storage = storage ?? GetStorage();
+  SecureAttemptAutosaveService({
+    GetStorage? storage,
+    NativeAttemptRecoveryBridge nativeBridge =
+        const GeneratedNativeAttemptRecoveryBridge(),
+  }) : _storage = storage ?? GetStorage(),
+       _nativeBridge = nativeBridge;
 
   static const int schemaVersion = 2;
   static const String _prefix = 'kslas_secure_attempt_autosave_v2';
   static const String _legacyPrefix = 'kslas_secure_attempt_autosave_v1';
 
   final GetStorage _storage;
+  final NativeAttemptRecoveryBridge _nativeBridge;
 
   Future<void> save({
     required String studentId,
@@ -80,10 +88,14 @@ class SecureAttemptAutosaveService {
       startedAt: startedAt,
       updatedAt: DateTime.now(),
     );
+    final payloadJson = _payloadJson(payload);
+    final checksum =
+        await _nativeBridge.checksum(payloadJson) ??
+        _checksumPayloadJson(payloadJson);
     final record = <String, Object?>{
       ...payload,
       'schema_version': schemaVersion,
-      'checksum': _checksum(payload),
+      'checksum': checksum,
     };
     await _storage.write(_primaryKey(attemptId), jsonEncode(record));
   }
@@ -132,7 +144,15 @@ class SecureAttemptAutosaveService {
         ..remove('schema_version')
         ..remove('checksum');
       final checksum = (record['checksum'] ?? '').toString();
-      final checksumValid = checksum == _checksum(payload);
+      final payloadJson = _payloadJson(payload);
+      final nativeCheck = _nativeBridge.verifySnapshot(
+        payloadJson: payloadJson,
+        checksum: checksum,
+        recoveredFrom: recoveredFrom,
+      );
+      final checksumValid =
+          nativeCheck?.checksumValid ??
+          checksum == _checksumPayloadJson(payloadJson);
       final answers = <String, String>{};
       final decodedAnswers = record['answers'];
       if (decodedAnswers is Map) {
@@ -146,10 +166,16 @@ class SecureAttemptAutosaveService {
         examId: (record['exam_id'] ?? '').toString(),
         attemptId: (record['attempt_id'] ?? attemptId).toString(),
         answers: answers,
-        currentIndex: int.tryParse((record['current_index'] ?? '0').toString()) ?? 0,
-        remainingSeconds: int.tryParse((record['remaining_seconds'] ?? '0').toString()) ?? 0,
-        startedAt: DateTime.tryParse((record['started_at'] ?? '').toString()) ?? DateTime.now(),
-        updatedAt: DateTime.tryParse((record['updated_at'] ?? '').toString()) ?? DateTime.now(),
+        currentIndex:
+            int.tryParse((record['current_index'] ?? '0').toString()) ?? 0,
+        remainingSeconds:
+            int.tryParse((record['remaining_seconds'] ?? '0').toString()) ?? 0,
+        startedAt:
+            DateTime.tryParse((record['started_at'] ?? '').toString()) ??
+            DateTime.now(),
+        updatedAt:
+            DateTime.tryParse((record['updated_at'] ?? '').toString()) ??
+            DateTime.now(),
         checksum: checksum,
         checksumValid: checksumValid,
         recoveredFrom: recoveredFrom,
@@ -170,7 +196,8 @@ class SecureAttemptAutosaveService {
     required DateTime updatedAt,
   }) {
     final sortedAnswers = Map<String, String>.fromEntries(
-      answers.entries.toList()..sort((left, right) => left.key.compareTo(right.key)),
+      answers.entries.toList()
+        ..sort((left, right) => left.key.compareTo(right.key)),
     );
     return <String, Object?>{
       'student_id': studentId,
@@ -184,10 +211,10 @@ class SecureAttemptAutosaveService {
     };
   }
 
-  String _checksum(Map<String, Object?> payload) {
-    final canonical = jsonEncode(payload);
-    return sha256.convert(utf8.encode(canonical)).toString();
-  }
+  String _payloadJson(Map<String, Object?> payload) => jsonEncode(payload);
+
+  String _checksumPayloadJson(String payloadJson) =>
+      sha256.convert(utf8.encode(payloadJson)).toString();
 
   String _primaryKey(String attemptId) => '$_prefix:$attemptId:primary';
   String _backupKey(String attemptId) => '$_prefix:$attemptId:backup';

@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/lockdown.dart';
@@ -70,7 +71,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -353497892;
+  int get rustContentHash => 1495641733;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -169,6 +170,8 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String platformName,
   });
 
+  String crateApiAttemptRecoveryAttemptChecksum({required String payloadJson});
+
   void crateApiProctoringClearVisionModel();
 
   Future<int?> crateApiLockdownCollectLockdownDisplayCount({
@@ -238,6 +241,12 @@ abstract class BrainCoreApiApi extends BaseApi {
     required double deltaScale,
     required double minDelta,
     required double targetAccumulated,
+  });
+
+  NativeAttemptRecoveryCheck crateApiAttemptRecoveryVerifyAttemptSnapshot({
+    required String payloadJson,
+    required String checksum,
+    required String recoveredFrom,
   });
 }
 
@@ -718,12 +727,38 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  String crateApiAttemptRecoveryAttemptChecksum({required String payloadJson}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(payloadJson, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAttemptRecoveryAttemptChecksumConstMeta,
+        argValues: [payloadJson],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAttemptRecoveryAttemptChecksumConstMeta =>
+      const TaskConstMeta(
+        debugName: "attempt_checksum",
+        argNames: ["payloadJson"],
+      );
+
+  @override
   void crateApiProctoringClearVisionModel() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -751,7 +786,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -784,7 +819,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 13,
             port: port_,
           );
         },
@@ -817,7 +852,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 14,
             port: port_,
           );
         },
@@ -845,7 +880,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -875,7 +910,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(lumaBytes, serializer);
           sse_encode_u_32(sampleStride, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_64,
@@ -901,7 +936,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -931,7 +966,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -965,7 +1000,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lossThresholdDbfs, serializer);
           sse_encode_u_32(lossStreak, serializer);
           sse_encode_u_32(lossSamplesToTrigger, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_acoustic_sample_decision,
@@ -1004,7 +1039,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(studentId, serializer);
           sse_encode_String(examId, serializer);
           sse_encode_String(attemptId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1034,7 +1069,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -1068,7 +1103,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -1114,7 +1149,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1176,7 +1211,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -1211,6 +1246,38 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           "minDelta",
           "targetAccumulated",
         ],
+      );
+
+  @override
+  NativeAttemptRecoveryCheck crateApiAttemptRecoveryVerifyAttemptSnapshot({
+    required String payloadJson,
+    required String checksum,
+    required String recoveredFrom,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(payloadJson, serializer);
+          sse_encode_String(checksum, serializer);
+          sse_encode_String(recoveredFrom, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_attempt_recovery_check,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAttemptRecoveryVerifyAttemptSnapshotConstMeta,
+        argValues: [payloadJson, checksum, recoveredFrom],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAttemptRecoveryVerifyAttemptSnapshotConstMeta =>
+      const TaskConstMeta(
+        debugName: "verify_attempt_snapshot",
+        argNames: ["payloadJson", "checksum", "recoveredFrom"],
       );
 
   @protected
@@ -1389,6 +1456,22 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       updatedLastViolationAtMs: dco_decode_i_64(arr[3]),
       updatedWindowStartMs: dco_decode_i_64(arr[4]),
       updatedBurstCount: dco_decode_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  NativeAttemptRecoveryCheck dco_decode_native_attempt_recovery_check(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeAttemptRecoveryCheck(
+      checksum: dco_decode_String(arr[0]),
+      checksumValid: dco_decode_bool(arr[1]),
+      payloadJson: dco_decode_String(arr[2]),
+      recoveredFrom: dco_decode_String(arr[3]),
     );
   }
 
@@ -1792,6 +1875,23 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       updatedLastViolationAtMs: var_updatedLastViolationAtMs,
       updatedWindowStartMs: var_updatedWindowStartMs,
       updatedBurstCount: var_updatedBurstCount,
+    );
+  }
+
+  @protected
+  NativeAttemptRecoveryCheck sse_decode_native_attempt_recovery_check(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_checksum = sse_decode_String(deserializer);
+    var var_checksumValid = sse_decode_bool(deserializer);
+    var var_payloadJson = sse_decode_String(deserializer);
+    var var_recoveredFrom = sse_decode_String(deserializer);
+    return NativeAttemptRecoveryCheck(
+      checksum: var_checksum,
+      checksumValid: var_checksumValid,
+      payloadJson: var_payloadJson,
+      recoveredFrom: var_recoveredFrom,
     );
   }
 
@@ -2228,6 +2328,18 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_i_64(self.updatedLastViolationAtMs, serializer);
     sse_encode_i_64(self.updatedWindowStartMs, serializer);
     sse_encode_u_32(self.updatedBurstCount, serializer);
+  }
+
+  @protected
+  void sse_encode_native_attempt_recovery_check(
+    NativeAttemptRecoveryCheck self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.checksum, serializer);
+    sse_encode_bool(self.checksumValid, serializer);
+    sse_encode_String(self.payloadJson, serializer);
+    sse_encode_String(self.recoveredFrom, serializer);
   }
 
   @protected

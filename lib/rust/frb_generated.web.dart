@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/lockdown.dart';
@@ -86,6 +87,11 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   MotionAnalysisDecision dco_decode_motion_analysis_decision(dynamic raw);
+
+  @protected
+  NativeAttemptRecoveryCheck dco_decode_native_attempt_recovery_check(
+    dynamic raw,
+  );
 
   @protected
   NativeAudioIntelligenceResult dco_decode_native_audio_intelligence_result(
@@ -212,6 +218,11 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   MotionAnalysisDecision sse_decode_motion_analysis_decision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeAttemptRecoveryCheck sse_decode_native_attempt_recovery_check(
     SseDeserializer deserializer,
   );
 
@@ -364,6 +375,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_motion_analysis_decision(
     MotionAnalysisDecision self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_attempt_recovery_check(
+    NativeAttemptRecoveryCheck self,
     SseSerializer serializer,
   );
 
