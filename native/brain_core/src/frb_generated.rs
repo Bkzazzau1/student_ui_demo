@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1810599016;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -353497892;
 
 // Section: executor
 
@@ -90,6 +90,43 @@ fn wire__crate__api__proctoring__analyze_acoustic_chunk_impl(
                         api_last_speech_strike_at_ms,
                         api_speech_cooldown_ms,
                         api_now_ms,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__audio_intelligence__analyze_audio_pcm16_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_audio_pcm16",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_sample_rate = <i32>::sse_decode(&mut deserializer);
+            let api_previous_fingerprint = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::audio_intelligence::analyze_audio_pcm16(
+                        api_bytes,
+                        api_sample_rate,
+                        api_previous_fingerprint,
                     ))?;
                 Ok(output_ok)
             })())
@@ -1106,6 +1143,38 @@ impl SseDecode for crate::api::proctoring::MotionAnalysisDecision {
     }
 }
 
+impl SseDecode for crate::api::audio_intelligence::NativeAudioIntelligenceResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_ready = <bool>::sse_decode(deserializer);
+        let mut var_label = <String>::sse_decode(deserializer);
+        let mut var_rms = <f64>::sse_decode(deserializer);
+        let mut var_peak = <f64>::sse_decode(deserializer);
+        let mut var_zeroCrossingRate = <f64>::sse_decode(deserializer);
+        let mut var_dynamicVariation = <f64>::sse_decode(deserializer);
+        let mut var_voiceConfidence = <f64>::sse_decode(deserializer);
+        let mut var_nearVoiceLikely = <bool>::sse_decode(deserializer);
+        let mut var_possibleFarVoiceLikely = <bool>::sse_decode(deserializer);
+        let mut var_allowedAmbientLikely = <bool>::sse_decode(deserializer);
+        let mut var_repeatedFingerprint = <bool>::sse_decode(deserializer);
+        let mut var_fingerprint = <String>::sse_decode(deserializer);
+        return crate::api::audio_intelligence::NativeAudioIntelligenceResult {
+            ready: var_ready,
+            label: var_label,
+            rms: var_rms,
+            peak: var_peak,
+            zero_crossing_rate: var_zeroCrossingRate,
+            dynamic_variation: var_dynamicVariation,
+            voice_confidence: var_voiceConfidence,
+            near_voice_likely: var_nearVoiceLikely,
+            possible_far_voice_likely: var_possibleFarVoiceLikely,
+            allowed_ambient_likely: var_allowedAmbientLikely,
+            repeated_fingerprint: var_repeatedFingerprint,
+            fingerprint: var_fingerprint,
+        };
+    }
+}
+
 impl SseDecode for crate::api::lockdown::NativeLockdownFinding {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1177,6 +1246,17 @@ impl SseDecode for crate::api::system_security::NativeSystemSecurityReviewResult
     }
 }
 
+impl SseDecode for Option<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::proctoring::GazeHeadPoseDecision> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1206,6 +1286,21 @@ impl SseDecode for Option<i64> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<i64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::audio_intelligence::NativeAudioIntelligenceResult> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(
+                <crate::api::audio_intelligence::NativeAudioIntelligenceResult>::sse_decode(
+                    deserializer,
+                ),
+            );
         } else {
             return None;
         }
@@ -1294,31 +1389,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        10 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        11 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        12 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__system_security__collect_system_security_report_impl(
+        13 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        20 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__system_security__run_system_security_review_impl(
+        21 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -1337,54 +1432,59 @@ fn pde_ffi_dispatcher_sync_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         1 => wire__crate__api__proctoring__analyze_acoustic_chunk_impl(ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__proctoring__analyze_environment_frame_impl(
+        2 => wire__crate__api__audio_intelligence__analyze_audio_pcm16_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        3 => wire__crate__api__proctoring__analyze_face_state_impl(ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
+        3 => wire__crate__api__proctoring__analyze_environment_frame_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
+        4 => wire__crate__api__proctoring__analyze_face_state_impl(ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__api__system_security__analyze_system_security_report_impl(
+        6 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        9 => wire__crate__api__system_security__analyze_system_security_report_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+        10 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__proctoring__current_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => {
+        15 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        16 => {
             wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
         }
-        16 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        17 => {
+        17 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        18 => {
             wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
         }
-        18 => {
+        19 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        21 => {
+        22 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        22 => {
+        23 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -1548,6 +1648,40 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::MotionAnalysisDec
     for crate::api::proctoring::MotionAnalysisDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::MotionAnalysisDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart
+    for crate::api::audio_intelligence::NativeAudioIntelligenceResult
+{
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.ready.into_into_dart().into_dart(),
+            self.label.into_into_dart().into_dart(),
+            self.rms.into_into_dart().into_dart(),
+            self.peak.into_into_dart().into_dart(),
+            self.zero_crossing_rate.into_into_dart().into_dart(),
+            self.dynamic_variation.into_into_dart().into_dart(),
+            self.voice_confidence.into_into_dart().into_dart(),
+            self.near_voice_likely.into_into_dart().into_dart(),
+            self.possible_far_voice_likely.into_into_dart().into_dart(),
+            self.allowed_ambient_likely.into_into_dart().into_dart(),
+            self.repeated_fingerprint.into_into_dart().into_dart(),
+            self.fingerprint.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::audio_intelligence::NativeAudioIntelligenceResult
+{
+}
+impl
+    flutter_rust_bridge::IntoIntoDart<crate::api::audio_intelligence::NativeAudioIntelligenceResult>
+    for crate::api::audio_intelligence::NativeAudioIntelligenceResult
+{
+    fn into_into_dart(self) -> crate::api::audio_intelligence::NativeAudioIntelligenceResult {
         self
     }
 }
@@ -1844,6 +1978,24 @@ impl SseEncode for crate::api::proctoring::MotionAnalysisDecision {
     }
 }
 
+impl SseEncode for crate::api::audio_intelligence::NativeAudioIntelligenceResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.ready, serializer);
+        <String>::sse_encode(self.label, serializer);
+        <f64>::sse_encode(self.rms, serializer);
+        <f64>::sse_encode(self.peak, serializer);
+        <f64>::sse_encode(self.zero_crossing_rate, serializer);
+        <f64>::sse_encode(self.dynamic_variation, serializer);
+        <f64>::sse_encode(self.voice_confidence, serializer);
+        <bool>::sse_encode(self.near_voice_likely, serializer);
+        <bool>::sse_encode(self.possible_far_voice_likely, serializer);
+        <bool>::sse_encode(self.allowed_ambient_likely, serializer);
+        <bool>::sse_encode(self.repeated_fingerprint, serializer);
+        <String>::sse_encode(self.fingerprint, serializer);
+    }
+}
+
 impl SseEncode for crate::api::lockdown::NativeLockdownFinding {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1885,6 +2037,16 @@ impl SseEncode for crate::api::system_security::NativeSystemSecurityReviewResult
     }
 }
 
+impl SseEncode for Option<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::proctoring::GazeHeadPoseDecision> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1911,6 +2073,18 @@ impl SseEncode for Option<i64> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <i64>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::audio_intelligence::NativeAudioIntelligenceResult> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::audio_intelligence::NativeAudioIntelligenceResult>::sse_encode(
+                value, serializer,
+            );
         }
     }
 }

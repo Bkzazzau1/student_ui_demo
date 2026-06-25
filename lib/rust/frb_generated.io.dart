@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/lockdown.dart';
 import 'api/proctoring.dart';
@@ -46,6 +47,10 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
+  NativeAudioIntelligenceResult
+  dco_decode_box_autoadd_native_audio_intelligence_result(dynamic raw);
+
+  @protected
   EnvironmentFrameDecision dco_decode_environment_frame_decision(dynamic raw);
 
   @protected
@@ -81,6 +86,11 @@ abstract class BrainCoreApiApiImplPlatform
   MotionAnalysisDecision dco_decode_motion_analysis_decision(dynamic raw);
 
   @protected
+  NativeAudioIntelligenceResult dco_decode_native_audio_intelligence_result(
+    dynamic raw,
+  );
+
+  @protected
   NativeLockdownFinding dco_decode_native_lockdown_finding(dynamic raw);
 
   @protected
@@ -92,6 +102,9 @@ abstract class BrainCoreApiApiImplPlatform
   dco_decode_native_system_security_review_result(dynamic raw);
 
   @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
   GazeHeadPoseDecision? dco_decode_opt_box_autoadd_gaze_head_pose_decision(
     dynamic raw,
   );
@@ -101,6 +114,10 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  NativeAudioIntelligenceResult?
+  dco_decode_opt_box_autoadd_native_audio_intelligence_result(dynamic raw);
 
   @protected
   RotationAnalysisDecision dco_decode_rotation_analysis_decision(dynamic raw);
@@ -148,6 +165,12 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
+  NativeAudioIntelligenceResult
+  sse_decode_box_autoadd_native_audio_intelligence_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   EnvironmentFrameDecision sse_decode_environment_frame_decision(
     SseDeserializer deserializer,
   );
@@ -191,6 +214,11 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  NativeAudioIntelligenceResult sse_decode_native_audio_intelligence_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeLockdownFinding sse_decode_native_lockdown_finding(
     SseDeserializer deserializer,
   );
@@ -204,6 +232,9 @@ abstract class BrainCoreApiApiImplPlatform
   sse_decode_native_system_security_review_result(SseDeserializer deserializer);
 
   @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
   GazeHeadPoseDecision? sse_decode_opt_box_autoadd_gaze_head_pose_decision(
     SseDeserializer deserializer,
   );
@@ -213,6 +244,12 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  NativeAudioIntelligenceResult?
+  sse_decode_opt_box_autoadd_native_audio_intelligence_result(
+    SseDeserializer deserializer,
+  );
 
   @protected
   RotationAnalysisDecision sse_decode_rotation_analysis_decision(
@@ -272,6 +309,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_box_autoadd_native_audio_intelligence_result(
+    NativeAudioIntelligenceResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_environment_frame_decision(
     EnvironmentFrameDecision self,
     SseSerializer serializer,
@@ -323,6 +366,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_native_audio_intelligence_result(
+    NativeAudioIntelligenceResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_lockdown_finding(
     NativeLockdownFinding self,
     SseSerializer serializer,
@@ -341,6 +390,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_gaze_head_pose_decision(
     GazeHeadPoseDecision? self,
     SseSerializer serializer,
@@ -352,6 +404,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_opt_box_autoadd_i_64(
     PlatformInt64? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_audio_intelligence_result(
+    NativeAudioIntelligenceResult? self,
     SseSerializer serializer,
   );
 

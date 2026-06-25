@@ -33,19 +33,19 @@ class AudioIsolationResult {
   final bool allowedAmbientLikely;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'rms': rms,
-        'peak': peak,
-        'zero_crossing_rate': zeroCrossingRate,
-        'dynamic_variation': dynamicVariation,
-        'voice_confidence': voiceConfidence,
-        'repeated_fingerprint': repeatedFingerprint,
-        'fingerprint': fingerprint,
-        'label': label,
-        'human_voice_likely': humanVoiceLikely,
-        'near_voice_likely': nearVoiceLikely,
-        'possible_far_voice_likely': possibleFarVoiceLikely,
-        'allowed_ambient_likely': allowedAmbientLikely,
-      };
+    'rms': rms,
+    'peak': peak,
+    'zero_crossing_rate': zeroCrossingRate,
+    'dynamic_variation': dynamicVariation,
+    'voice_confidence': voiceConfidence,
+    'repeated_fingerprint': repeatedFingerprint,
+    'fingerprint': fingerprint,
+    'label': label,
+    'human_voice_likely': humanVoiceLikely,
+    'near_voice_likely': nearVoiceLikely,
+    'possible_far_voice_likely': possibleFarVoiceLikely,
+    'allowed_ambient_likely': allowedAmbientLikely,
+  };
 }
 
 class AudioFingerprintIsolationService {
@@ -107,7 +107,9 @@ class AudioFingerprintIsolationService {
     if (count == 0) return null;
     final rms = math.sqrt(totalSquares / count).clamp(0.0, 1.0);
     final zcr = (zeroCrossings / count).clamp(0.0, 1.0);
-    final slope = math.sqrt(slopeEnergy / math.max(1, count - 1)).clamp(0.0, 1.0);
+    final slope = math
+        .sqrt(slopeEnergy / math.max(1, count - 1))
+        .clamp(0.0, 1.0);
 
     _pushRecent(_recentRms, rms, 32);
     _pushRecent(_recentPeak, peak, 32);
@@ -116,7 +118,9 @@ class AudioFingerprintIsolationService {
 
     final variation = _variation(_recentRms);
     final peakVariation = _variation(_recentPeak);
-    final recentPeak = _recentPeak.isEmpty ? peak : _recentPeak.reduce(math.max);
+    final recentPeak = _recentPeak.isEmpty
+        ? peak
+        : _recentPeak.reduce(math.max);
     final avgPeak = _average(_recentPeak);
     final avgZcr = _average(_recentZcr);
     final avgSlope = _average(_recentSlope);
@@ -145,26 +149,30 @@ class AudioFingerprintIsolationService {
       _recentFingerprints.removeRange(0, _recentFingerprints.length - 48);
     }
 
-    final steadyNoise = rms > 0.006 && variation < 0.006 && zcr < 0.20 && peakVariation < 0.025;
+    final steadyNoise =
+        rms > 0.006 && variation < 0.006 && zcr < 0.20 && peakVariation < 0.025;
     final quiet = rms < 0.008 && peak < 0.050;
     final voiceTexture = voiceConfidence >= 0.40;
-    final nearVoiceLikely = voiceConfidence >= 0.52 &&
+    final nearVoiceLikely =
+        voiceConfidence >= 0.52 &&
         (rms >= 0.018 || peak >= 0.075 || recentPeak >= 0.100);
-    final possibleFarVoiceLikely = !nearVoiceLikely &&
+    final possibleFarVoiceLikely =
+        !nearVoiceLikely &&
         voiceTexture &&
         !steadyNoise &&
         (rms < 0.024 || peak < 0.095 || recentPeak < 0.120);
     final humanVoiceLikely = nearVoiceLikely;
-    final allowedAmbientLikely = !nearVoiceLikely && !possibleFarVoiceLikely && (quiet || steadyNoise);
+    final allowedAmbientLikely =
+        !nearVoiceLikely && !possibleFarVoiceLikely && (quiet || steadyNoise);
     final label = nearVoiceLikely
         ? 'near_voice_noticed'
         : possibleFarVoiceLikely
-            ? 'possible_far_or_background_voice'
-            : quiet
-                ? 'quiet_or_low_noise'
-                : steadyNoise
-                    ? 'steady_allowed_ambient_noise'
-                    : 'unclear_environment_sound';
+        ? 'possible_far_or_background_voice'
+        : quiet
+        ? 'quiet_or_low_noise'
+        : steadyNoise
+        ? 'steady_allowed_ambient_noise'
+        : 'unclear_environment_sound';
 
     return AudioIsolationResult(
       rms: rms,
@@ -189,10 +197,10 @@ class AudioFingerprintIsolationService {
     final label = nearVoiceLikely
         ? 'near_voice_noticed'
         : possibleFarVoiceLikely
-            ? 'possible_far_or_background_voice'
-            : allowedAmbientLikely
-                ? 'steady_allowed_ambient_noise'
-                : native.label;
+        ? 'possible_far_or_background_voice'
+        : allowedAmbientLikely
+        ? 'steady_allowed_ambient_noise'
+        : native.label;
 
     return AudioIsolationResult(
       rms: native.rms,
@@ -232,7 +240,8 @@ class AudioFingerprintIsolationService {
     var score = 0.0;
     final peakToRms = peak / math.max(rms, 0.0008);
     final recentPeakToAvgPeak = recentPeak / math.max(avgPeak, 0.0008);
-    final speechZcr = (zcr >= 0.018 && zcr <= 0.28) || (avgZcr >= 0.018 && avgZcr <= 0.28);
+    final speechZcr =
+        (zcr >= 0.018 && zcr <= 0.28) || (avgZcr >= 0.018 && avgZcr <= 0.28);
     final speechTexture = slope >= 0.0025 || avgSlope >= 0.0025;
 
     if (rms >= 0.0012 && rms <= 0.60) score += 0.10;
@@ -282,6 +291,7 @@ class AudioFingerprintIsolationService {
 
   double _average(List<double> samples) {
     if (samples.isEmpty) return 0;
-    return samples.fold<double>(0, (sum, value) => sum + value) / samples.length;
+    return samples.fold<double>(0, (sum, value) => sum + value) /
+        samples.length;
   }
 }
