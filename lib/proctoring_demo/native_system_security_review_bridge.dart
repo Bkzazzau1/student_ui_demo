@@ -104,7 +104,7 @@ class GeneratedNativeSystemSecurityReviewBridge
   Future<NativeSystemSecurityReviewSnapshot?> check() async {
     if (!await _ensureNativeReady()) return null;
     try {
-      final result = native_system_security.runSystemSecurityReview(
+      final result = await native_system_security.runSystemSecurityReview(
         platformName: 'auto',
       );
       return NativeSystemSecurityReviewSnapshot(

@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use flutter_rust_bridge::frb;
@@ -30,7 +30,6 @@ pub fn analyze_system_security_report(
     analyse_output(&report, &platform_name)
 }
 
-#[frb(sync)]
 pub fn collect_system_security_report(platform_name: String) -> Result<String, String> {
     let platform = normalized_platform(&platform_name);
     if platform == "windows" {
@@ -96,7 +95,6 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
     }
 }
 
-#[frb(sync)]
 pub fn run_system_security_review(platform_name: String) -> NativeSystemSecurityReviewResult {
     let platform = normalized_platform(&platform_name);
     if !is_supported_platform(&platform) {
@@ -191,7 +189,11 @@ fn analyse_output(output: &str, platform_name: &str) -> NativeSystemSecurityRevi
     let virtualization_warning_detected = platform == "windows"
         && contains_any(
             &text,
-            &["hypervisorpresent: true", "hypervisorpresent=true"],
+            &[
+                "hypervisorpresent: true",
+                "hypervisorpresent=true",
+                "hypervisorpresent true",
+            ],
         );
 
     let virtualization_detected = contains_any(
@@ -406,6 +408,8 @@ fn normalise(output: &str) -> String {
 fn run_command(executable: &str, arguments: &[&str]) -> Result<String, String> {
     let mut child = Command::new(executable)
         .args(arguments)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|error| error.to_string())?;
     let started = Instant::now();

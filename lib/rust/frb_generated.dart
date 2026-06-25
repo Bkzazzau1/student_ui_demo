@@ -157,7 +157,7 @@ abstract class BrainCoreApiApi extends BaseApi {
 
   void crateApiProctoringClearVisionModel();
 
-  String crateApiSystemSecurityCollectSystemSecurityReport({
+  Future<String> crateApiSystemSecurityCollectSystemSecurityReport({
     required String platformName,
   });
 
@@ -189,7 +189,7 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String attemptId,
   });
 
-  NativeSystemSecurityReviewResult
+  Future<NativeSystemSecurityReviewResult>
   crateApiSystemSecurityRunSystemSecurityReview({required String platformName});
 
   String crateApiEvidenceVaultSaveEvidenceBytes({
@@ -650,15 +650,20 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       const TaskConstMeta(debugName: "clear_vision_model", argNames: []);
 
   @override
-  String crateApiSystemSecurityCollectSystemSecurityReport({
+  Future<String> crateApiSystemSecurityCollectSystemSecurityReport({
     required String platformName,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(platformName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -863,16 +868,21 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
-  NativeSystemSecurityReviewResult
+  Future<NativeSystemSecurityReviewResult>
   crateApiSystemSecurityRunSystemSecurityReview({
     required String platformName,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(platformName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_system_security_review_result,

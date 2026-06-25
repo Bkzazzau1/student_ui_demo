@@ -18,12 +18,12 @@ NativeSystemSecurityReviewResult analyzeSystemSecurityReport({
       platformName: platformName,
     );
 
-String collectSystemSecurityReport({required String platformName}) =>
+Future<String> collectSystemSecurityReport({required String platformName}) =>
     BrainCoreApi.instance.api.crateApiSystemSecurityCollectSystemSecurityReport(
       platformName: platformName,
     );
 
-NativeSystemSecurityReviewResult runSystemSecurityReview({
+Future<NativeSystemSecurityReviewResult> runSystemSecurityReview({
   required String platformName,
 }) => BrainCoreApi.instance.api.crateApiSystemSecurityRunSystemSecurityReview(
   platformName: platformName,
