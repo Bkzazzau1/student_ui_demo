@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'native_audio_intelligence_bridge.dart';
+
 class AudioIsolationResult {
   const AudioIsolationResult({
     required this.rms,
@@ -47,14 +49,35 @@ class AudioIsolationResult {
 }
 
 class AudioFingerprintIsolationService {
+  AudioFingerprintIsolationService({
+    NativeAudioIntelligenceBridge nativeBridge =
+        const GeneratedNativeAudioIntelligenceBridge(),
+    this.sampleRate = 44100,
+  }) : _nativeBridge = nativeBridge;
+
+  final NativeAudioIntelligenceBridge _nativeBridge;
+  final int sampleRate;
+
   final List<double> _recentRms = <double>[];
   final List<double> _recentPeak = <double>[];
   final List<double> _recentZcr = <double>[];
   final List<double> _recentSlope = <double>[];
   final List<String> _recentFingerprints = <String>[];
+  String? _lastNativeFingerprint;
 
   AudioIsolationResult? analysePcm16(Uint8List chunk) {
     if (chunk.length < 128) return null;
+
+    final nativeResult = _nativeBridge.analysePcm16(
+      bytes: chunk,
+      sampleRate: sampleRate,
+      previousFingerprint: _lastNativeFingerprint,
+    );
+    if (nativeResult != null && nativeResult.ready) {
+      _lastNativeFingerprint = nativeResult.fingerprint;
+      return _fromNative(nativeResult);
+    }
+
     final data = ByteData.sublistView(chunk);
     var totalSquares = 0.0;
     var peak = 0.0;
@@ -153,6 +176,34 @@ class AudioFingerprintIsolationService {
       fingerprint: fingerprint,
       label: label,
       humanVoiceLikely: humanVoiceLikely,
+      nearVoiceLikely: nearVoiceLikely,
+      possibleFarVoiceLikely: possibleFarVoiceLikely,
+      allowedAmbientLikely: allowedAmbientLikely,
+    );
+  }
+
+  AudioIsolationResult _fromNative(NativeAudioIntelligenceSnapshot native) {
+    final nearVoiceLikely = native.nearVoiceLikely;
+    final possibleFarVoiceLikely = native.possibleFarVoiceLikely;
+    final allowedAmbientLikely = native.allowedAmbientLikely;
+    final label = nearVoiceLikely
+        ? 'near_voice_noticed'
+        : possibleFarVoiceLikely
+            ? 'possible_far_or_background_voice'
+            : allowedAmbientLikely
+                ? 'steady_allowed_ambient_noise'
+                : native.label;
+
+    return AudioIsolationResult(
+      rms: native.rms,
+      peak: native.peak,
+      zeroCrossingRate: native.zeroCrossingRate,
+      dynamicVariation: native.dynamicVariation,
+      voiceConfidence: native.voiceConfidence,
+      repeatedFingerprint: native.repeatedFingerprint,
+      fingerprint: native.fingerprint,
+      label: label,
+      humanVoiceLikely: nearVoiceLikely,
       nearVoiceLikely: nearVoiceLikely,
       possibleFarVoiceLikely: possibleFarVoiceLikely,
       allowedAmbientLikely: allowedAmbientLikely,
