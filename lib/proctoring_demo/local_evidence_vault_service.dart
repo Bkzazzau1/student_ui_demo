@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
+import 'native_evidence_vault_bridge.dart';
+
 class LocalEvidenceFileRecord {
   const LocalEvidenceFileRecord({
     required this.id,
@@ -77,10 +79,14 @@ class LocalEvidenceBundle {
 }
 
 class LocalEvidenceVaultService {
-  const LocalEvidenceVaultService({String? baseDirectoryPath})
-      : _baseDirectoryPath = baseDirectoryPath;
+  const LocalEvidenceVaultService({
+    String? baseDirectoryPath,
+    NativeEvidenceVaultBridge nativeBridge = const GeneratedNativeEvidenceVaultBridge(),
+  })  : _baseDirectoryPath = baseDirectoryPath,
+        _nativeBridge = nativeBridge;
 
   final String? _baseDirectoryPath;
+  final NativeEvidenceVaultBridge _nativeBridge;
 
   Future<LocalEvidenceFileRecord> saveJsonEvidence({
     required String studentId,
@@ -135,6 +141,34 @@ class LocalEvidenceVaultService {
     required Uint8List bytes,
     Map<String, Object?> metadata = const <String, Object?>{},
   }) async {
+    final root = _evidenceRoot();
+    final nativeManifestJson = await _nativeBridge.saveBytes(
+      baseDir: root,
+      studentId: studentId,
+      examId: examId,
+      attemptId: attemptId,
+      eventType: eventType,
+      fileType: fileType,
+      reviewReason: reviewReason,
+      bytes: bytes,
+      metadataJson: _encodeJson(metadata),
+    );
+    final nativeBundle = _bundleFromManifestJson(
+      nativeManifestJson,
+      fallbackStudentId: studentId,
+      fallbackExamId: examId,
+      fallbackAttemptId: attemptId,
+      fallbackDirectoryPath: _bundleDirectoryPath(
+        root: root,
+        studentId: studentId,
+        examId: examId,
+        attemptId: attemptId,
+      ),
+    );
+    if (nativeBundle != null && nativeBundle.records.isNotEmpty) {
+      return nativeBundle.records.last;
+    }
+
     final now = DateTime.now();
     final directory = await _bundleDirectory(
       studentId: studentId,
@@ -174,6 +208,27 @@ class LocalEvidenceVaultService {
     required String examId,
     required String attemptId,
   }) async {
+    final root = _evidenceRoot();
+    final nativeManifestJson = await _nativeBridge.readBundle(
+      baseDir: root,
+      studentId: studentId,
+      examId: examId,
+      attemptId: attemptId,
+    );
+    final nativeBundle = _bundleFromManifestJson(
+      nativeManifestJson,
+      fallbackStudentId: studentId,
+      fallbackExamId: examId,
+      fallbackAttemptId: attemptId,
+      fallbackDirectoryPath: _bundleDirectoryPath(
+        root: root,
+        studentId: studentId,
+        examId: examId,
+        attemptId: attemptId,
+      ),
+    );
+    if (nativeBundle != null) return nativeBundle;
+
     final directory = await _bundleDirectory(
       studentId: studentId,
       examId: examId,
@@ -192,21 +247,12 @@ class LocalEvidenceVaultService {
     }
 
     final json = jsonDecode(await manifest.readAsString()) as Map<String, dynamic>;
-    final recordsJson = json['records'];
-    final records = <LocalEvidenceFileRecord>[];
-    if (recordsJson is List) {
-      for (final item in recordsJson) {
-        if (item is Map) records.add(_recordFromJson(Map<String, dynamic>.from(item)));
-      }
-    }
-
-    return LocalEvidenceBundle(
-      studentId: studentId,
-      examId: examId,
-      attemptId: attemptId,
-      directoryPath: directory.path,
-      records: records,
-      updatedAt: DateTime.tryParse((json['updated_at'] ?? '').toString()) ?? DateTime.now(),
+    return _bundleFromJson(
+      json,
+      fallbackStudentId: studentId,
+      fallbackExamId: examId,
+      fallbackAttemptId: attemptId,
+      fallbackDirectoryPath: directory.path,
     );
   }
 
@@ -240,6 +286,54 @@ class LocalEvidenceVaultService {
     await manifest.writeAsString(const JsonEncoder.withIndent('  ').convert(bundle), flush: true);
   }
 
+  LocalEvidenceBundle? _bundleFromManifestJson(
+    String? manifestJson, {
+    required String fallbackStudentId,
+    required String fallbackExamId,
+    required String fallbackAttemptId,
+    required String fallbackDirectoryPath,
+  }) {
+    if (manifestJson == null || manifestJson.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(manifestJson);
+      if (decoded is! Map) return null;
+      return _bundleFromJson(
+        Map<String, dynamic>.from(decoded),
+        fallbackStudentId: fallbackStudentId,
+        fallbackExamId: fallbackExamId,
+        fallbackAttemptId: fallbackAttemptId,
+        fallbackDirectoryPath: fallbackDirectoryPath,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  LocalEvidenceBundle _bundleFromJson(
+    Map<String, dynamic> json, {
+    required String fallbackStudentId,
+    required String fallbackExamId,
+    required String fallbackAttemptId,
+    required String fallbackDirectoryPath,
+  }) {
+    final recordsJson = json['records'];
+    final records = <LocalEvidenceFileRecord>[];
+    if (recordsJson is List) {
+      for (final item in recordsJson) {
+        if (item is Map) records.add(_recordFromJson(Map<String, dynamic>.from(item)));
+      }
+    }
+
+    return LocalEvidenceBundle(
+      studentId: (json['student_id'] ?? fallbackStudentId).toString(),
+      examId: (json['exam_id'] ?? fallbackExamId).toString(),
+      attemptId: (json['attempt_id'] ?? fallbackAttemptId).toString(),
+      directoryPath: (json['directory_path'] ?? fallbackDirectoryPath).toString(),
+      records: records,
+      updatedAt: _dateFromJson(json['updated_at'], json['updated_at_ms']),
+    );
+  }
+
   LocalEvidenceFileRecord _recordFromJson(Map<String, dynamic> json) {
     return LocalEvidenceFileRecord(
       id: (json['id'] ?? '').toString(),
@@ -251,12 +345,38 @@ class LocalEvidenceVaultService {
       filePath: (json['file_path'] ?? '').toString(),
       sha256Digest: (json['sha256'] ?? '').toString(),
       sizeBytes: int.tryParse((json['size_bytes'] ?? '0').toString()) ?? 0,
-      createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()) ?? DateTime.now(),
+      createdAt: _dateFromJson(json['created_at'], json['created_at_ms']),
       reviewReason: (json['review_reason'] ?? '').toString(),
-      metadata: json['metadata'] is Map
-          ? Map<String, Object?>.from(json['metadata'] as Map)
-          : const <String, Object?>{},
+      metadata: _metadataFromJson(json),
     );
+  }
+
+  Map<String, Object?> _metadataFromJson(Map<String, dynamic> json) {
+    final metadata = json['metadata'];
+    if (metadata is Map) return Map<String, Object?>.from(metadata);
+    final metadataJson = json['metadata_json'];
+    if (metadataJson is String && metadataJson.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(metadataJson);
+        if (decoded is Map) return Map<String, Object?>.from(decoded);
+      } catch (_) {
+        return <String, Object?>{'metadata_json': metadataJson};
+      }
+    }
+    return const <String, Object?>{};
+  }
+
+  DateTime _dateFromJson(Object? isoValue, Object? millisValue) {
+    final iso = isoValue?.toString();
+    if (iso != null && iso.trim().isNotEmpty) {
+      final parsed = DateTime.tryParse(iso);
+      if (parsed != null) return parsed;
+    }
+    final millis = int.tryParse(millisValue?.toString() ?? '');
+    if (millis != null && millis > 0) {
+      return DateTime.fromMillisecondsSinceEpoch(millis, isUtc: true);
+    }
+    return DateTime.now();
   }
 
   Future<Directory> _bundleDirectory({
@@ -264,16 +384,31 @@ class LocalEvidenceVaultService {
     required String examId,
     required String attemptId,
   }) async {
-    final root = _baseDirectoryPath ?? _defaultEvidenceRoot();
     return Directory(
-      [
-        root,
-        _safeName(studentId),
-        _safeName(examId),
-        _safeName(attemptId),
-      ].join(Platform.pathSeparator),
+      _bundleDirectoryPath(
+        root: _evidenceRoot(),
+        studentId: studentId,
+        examId: examId,
+        attemptId: attemptId,
+      ),
     );
   }
+
+  String _bundleDirectoryPath({
+    required String root,
+    required String studentId,
+    required String examId,
+    required String attemptId,
+  }) {
+    return [
+      root,
+      _safeName(studentId),
+      _safeName(examId),
+      _safeName(attemptId),
+    ].join(Platform.pathSeparator);
+  }
+
+  String _evidenceRoot() => _baseDirectoryPath ?? _defaultEvidenceRoot();
 
   String _defaultEvidenceRoot() {
     if (Platform.isWindows) {
@@ -292,5 +427,13 @@ class LocalEvidenceVaultService {
         .replaceAll(RegExp(r'[^a-zA-Z0-9._-]+'), '_')
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
+  }
+
+  String _encodeJson(Object? value) {
+    try {
+      return const JsonEncoder.withIndent('  ').convert(value ?? const <String, Object?>{});
+    } catch (_) {
+      return '{}';
+    }
   }
 }
