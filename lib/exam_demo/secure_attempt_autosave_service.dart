@@ -15,6 +15,7 @@ class SecureAttemptAutosaveSnapshot {
     required this.updatedAt,
     required this.checksum,
     required this.checksumValid,
+    this.recoveredFrom = 'primary',
   });
 
   final String studentId;
@@ -27,6 +28,7 @@ class SecureAttemptAutosaveSnapshot {
   final DateTime updatedAt;
   final String checksum;
   final bool checksumValid;
+  final String recoveredFrom;
 
   bool get hasAnswers => answers.values.any((value) => value.trim().isNotEmpty);
 
@@ -41,14 +43,16 @@ class SecureAttemptAutosaveSnapshot {
         'updated_at': updatedAt.toUtc().toIso8601String(),
         'checksum': checksum,
         'checksum_valid': checksumValid,
+        'recovered_from': recoveredFrom,
       };
 }
 
 class SecureAttemptAutosaveService {
   SecureAttemptAutosaveService({GetStorage? storage}) : _storage = storage ?? GetStorage();
 
-  static const int schemaVersion = 1;
-  static const String _prefix = 'kslas_secure_attempt_autosave_v1';
+  static const int schemaVersion = 2;
+  static const String _prefix = 'kslas_secure_attempt_autosave_v2';
+  static const String _legacyPrefix = 'kslas_secure_attempt_autosave_v1';
 
   final GetStorage _storage;
 
@@ -61,6 +65,11 @@ class SecureAttemptAutosaveService {
     required int remainingSeconds,
     required DateTime startedAt,
   }) async {
+    final previousPrimary = _storage.read<String>(_primaryKey(attemptId));
+    if (previousPrimary != null && previousPrimary.trim().isNotEmpty) {
+      await _storage.write(_backupKey(attemptId), previousPrimary);
+    }
+
     final payload = _payload(
       studentId: studentId,
       examId: examId,
@@ -76,11 +85,45 @@ class SecureAttemptAutosaveService {
       'schema_version': schemaVersion,
       'checksum': _checksum(payload),
     };
-    await _storage.write(_key(attemptId), jsonEncode(record));
+    await _storage.write(_primaryKey(attemptId), jsonEncode(record));
   }
 
   SecureAttemptAutosaveSnapshot? load(String attemptId) {
-    final raw = _storage.read<String>(_key(attemptId));
+    final primary = _decodeSnapshot(
+      raw: _storage.read<String>(_primaryKey(attemptId)),
+      attemptId: attemptId,
+      recoveredFrom: 'primary',
+    );
+    if (primary != null && primary.checksumValid) return primary;
+
+    final backup = _decodeSnapshot(
+      raw: _storage.read<String>(_backupKey(attemptId)),
+      attemptId: attemptId,
+      recoveredFrom: 'backup',
+    );
+    if (backup != null && backup.checksumValid) return backup;
+
+    final legacy = _decodeSnapshot(
+      raw: _storage.read<String>(_legacyKey(attemptId)),
+      attemptId: attemptId,
+      recoveredFrom: 'legacy',
+    );
+    if (legacy != null && legacy.checksumValid) return legacy;
+
+    return primary ?? backup ?? legacy;
+  }
+
+  Future<void> clear(String attemptId) async {
+    await _storage.remove(_primaryKey(attemptId));
+    await _storage.remove(_backupKey(attemptId));
+    await _storage.remove(_legacyKey(attemptId));
+  }
+
+  SecureAttemptAutosaveSnapshot? _decodeSnapshot({
+    required String? raw,
+    required String attemptId,
+    required String recoveredFrom,
+  }) {
     if (raw == null || raw.trim().isEmpty) return null;
 
     try {
@@ -109,13 +152,12 @@ class SecureAttemptAutosaveService {
         updatedAt: DateTime.tryParse((record['updated_at'] ?? '').toString()) ?? DateTime.now(),
         checksum: checksum,
         checksumValid: checksumValid,
+        recoveredFrom: recoveredFrom,
       );
     } catch (_) {
       return null;
     }
   }
-
-  Future<void> clear(String attemptId) => _storage.remove(_key(attemptId));
 
   Map<String, Object?> _payload({
     required String studentId,
@@ -147,5 +189,7 @@ class SecureAttemptAutosaveService {
     return sha256.convert(utf8.encode(canonical)).toString();
   }
 
-  String _key(String attemptId) => '$_prefix:$attemptId';
+  String _primaryKey(String attemptId) => '$_prefix:$attemptId:primary';
+  String _backupKey(String attemptId) => '$_prefix:$attemptId:backup';
+  String _legacyKey(String attemptId) => '$_legacyPrefix:$attemptId';
 }
