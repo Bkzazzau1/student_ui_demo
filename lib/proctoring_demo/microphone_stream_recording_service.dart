@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:record/record.dart';
@@ -17,6 +18,9 @@ class MicrophoneStreamRecordingService {
   bool _running = false;
 
   bool get isRunning => _running;
+  int get sampleRate => _sampleRate;
+  int get bufferedBytes => _chunks.fold<int>(0, (sum, item) => sum + item.length);
+  double get bufferedSeconds => bufferedBytes / math.max(1, _sampleRate * 2);
 
   Future<bool> hasPermission() => _recorder.hasPermission();
 
@@ -56,6 +60,47 @@ class MicrophoneStreamRecordingService {
     _running = true;
   }
 
+  Uint8List? snapshotPcmBytes({int? maxSeconds}) {
+    if (_chunks.isEmpty) return null;
+    final joined = _joinChunks();
+    if (maxSeconds == null || maxSeconds <= 0) return joined;
+
+    final maxBytes = _sampleRate * 2 * maxSeconds;
+    if (joined.length <= maxBytes) return joined;
+    return Uint8List.fromList(joined.sublist(joined.length - maxBytes));
+  }
+
+  Uint8List? snapshotWavBytes({int? maxSeconds}) {
+    final pcmBytes = snapshotPcmBytes(maxSeconds: maxSeconds);
+    if (pcmBytes == null || pcmBytes.isEmpty) return null;
+    return _wavBytes(
+      pcmBytes: pcmBytes,
+      sampleRate: _sampleRate,
+      numChannels: 1,
+      bitsPerSample: 16,
+    );
+  }
+
+  Future<String?> saveBufferedWavFile({
+    String filePrefix = 'microphone_snapshot',
+    int? maxSeconds,
+  }) async {
+    final wavBytes = snapshotWavBytes(maxSeconds: maxSeconds);
+    if (wavBytes == null || wavBytes.isEmpty) return null;
+
+    final directory = Directory(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}kslas_audio_evidence',
+    );
+    await directory.create(recursive: true);
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File(
+      '${directory.path}${Platform.pathSeparator}${filePrefix}_$timestamp.wav',
+    );
+    await file.writeAsBytes(wavBytes, flush: true);
+    return file.path;
+  }
+
   Future<String?> stopAndSaveWav({
     String filePrefix = 'microphone_clip',
   }) async {
@@ -71,26 +116,7 @@ class MicrophoneStreamRecordingService {
       // Best effort shutdown.
     }
 
-    if (_chunks.isEmpty) return null;
-
-    final pcmBytes = _joinChunks();
-    final wavBytes = _wavBytes(
-      pcmBytes: pcmBytes,
-      sampleRate: _sampleRate,
-      numChannels: 1,
-      bitsPerSample: 16,
-    );
-    final directory = Directory(
-      '${Directory.systemTemp.path}${Platform.pathSeparator}kslas_audio_evidence',
-    );
-    await directory.create(recursive: true);
-
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final file = File(
-      '${directory.path}${Platform.pathSeparator}${filePrefix}_$timestamp.wav',
-    );
-    await file.writeAsBytes(wavBytes, flush: true);
-    return file.path;
+    return saveBufferedWavFile(filePrefix: filePrefix);
   }
 
   Future<void> dispose() async {
