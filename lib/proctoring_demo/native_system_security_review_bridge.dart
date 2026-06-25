@@ -1,3 +1,5 @@
+import '../rust/api/system_security.dart' as native_system_security;
+import '../rust/frb_generated.dart';
 import 'system_security_review_service.dart';
 
 class NativeSystemSecurityReviewSnapshot {
@@ -52,7 +54,9 @@ class NativeSystemSecurityReviewSnapshot {
     );
   }
 
-  factory NativeSystemSecurityReviewSnapshot.fromJson(Map<String, Object?> json) {
+  factory NativeSystemSecurityReviewSnapshot.fromJson(
+    Map<String, Object?> json,
+  ) {
     return NativeSystemSecurityReviewSnapshot(
       ready: json['ready'] == true,
       platformSupported: json['platform_supported'] == true,
@@ -60,7 +64,8 @@ class NativeSystemSecurityReviewSnapshot {
       externalAudioDetected: json['external_audio_detected'] == true,
       usbRiskDetected: json['usb_risk_detected'] == true,
       virtualizationDetected: json['virtualization_detected'] == true,
-      virtualizationWarningDetected: json['virtualization_warning_detected'] == true,
+      virtualizationWarningDetected:
+          json['virtualization_warning_detected'] == true,
       containerDetected: json['container_detected'] == true,
       virtualCameraDetected: json['virtual_camera_detected'] == true,
       unknownDeviceState: json['unknown_device_state'] == true,
@@ -81,24 +86,56 @@ abstract class NativeSystemSecurityReviewBridge {
   Future<NativeSystemSecurityReviewSnapshot?> check();
 }
 
-class DisabledNativeSystemSecurityReviewBridge implements NativeSystemSecurityReviewBridge {
+class DisabledNativeSystemSecurityReviewBridge
+    implements NativeSystemSecurityReviewBridge {
   const DisabledNativeSystemSecurityReviewBridge();
 
   @override
   Future<NativeSystemSecurityReviewSnapshot?> check() async => null;
 }
 
-/// Temporary bridge adapter while flutter_rust_bridge Dart bindings are regenerated.
-///
-/// When codegen exposes `runSystemSecurityReview` from
-/// `native/brain_core/src/api/system_security.rs`, replace the body of [check]
-/// with a direct call to the generated Rust API and convert the returned native
-/// result with [NativeSystemSecurityReviewSnapshot].
-class GeneratedNativeSystemSecurityReviewBridge implements NativeSystemSecurityReviewBridge {
+class GeneratedNativeSystemSecurityReviewBridge
+    implements NativeSystemSecurityReviewBridge {
   const GeneratedNativeSystemSecurityReviewBridge();
+
+  static Future<bool>? _nativeReady;
 
   @override
   Future<NativeSystemSecurityReviewSnapshot?> check() async {
-    return null;
+    if (!await _ensureNativeReady()) return null;
+    try {
+      final result = native_system_security.runSystemSecurityReview(
+        platformName: 'auto',
+      );
+      return NativeSystemSecurityReviewSnapshot(
+        ready: result.ready,
+        platformSupported: result.platformSupported,
+        bluetoothDetected: result.bluetoothDetected,
+        externalAudioDetected: result.externalAudioDetected,
+        usbRiskDetected: result.usbRiskDetected,
+        virtualizationDetected: result.virtualizationDetected,
+        virtualizationWarningDetected: result.virtualizationWarningDetected,
+        containerDetected: result.containerDetected,
+        virtualCameraDetected: result.virtualCameraDetected,
+        unknownDeviceState: result.unknownDeviceState,
+        findings: result.findings,
+        hardFindings: result.hardFindings,
+        warningFindings: result.warningFindings,
+        message: result.message,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> _ensureNativeReady() {
+    return _nativeReady ??= () async {
+      try {
+        await BrainCoreApi.init();
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }();
   }
 }

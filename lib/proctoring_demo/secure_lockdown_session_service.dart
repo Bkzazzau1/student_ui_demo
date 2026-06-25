@@ -16,10 +16,10 @@ class SecureLockdownFinding {
   final String severity;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'code': code,
-        'message': message,
-        'severity': severity,
-      };
+    'code': code,
+    'message': message,
+    'severity': severity,
+  };
 }
 
 class SecureLockdownSnapshot {
@@ -51,16 +51,16 @@ class SecureLockdownSnapshot {
       !findings.any((finding) => finding.severity == 'critical');
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'lockdown_active': lockdownActive,
-        'ready': ready,
-        'platform_supported': platformSupported,
-        'platform_name': platformName,
-        'display_count': displayCount,
-        'prohibited_processes': prohibitedProcesses,
-        'clipboard_cleared': clipboardCleared,
-        'findings': findings.map((finding) => finding.toJson()).toList(),
-        'captured_at': capturedAt.toUtc().toIso8601String(),
-      };
+    'lockdown_active': lockdownActive,
+    'ready': ready,
+    'platform_supported': platformSupported,
+    'platform_name': platformName,
+    'display_count': displayCount,
+    'prohibited_processes': prohibitedProcesses,
+    'clipboard_cleared': clipboardCleared,
+    'findings': findings.map((finding) => finding.toJson()).toList(),
+    'captured_at': capturedAt.toUtc().toIso8601String(),
+  };
 }
 
 class SecureLockdownSessionService {
@@ -127,14 +127,16 @@ class SecureLockdownSessionService {
   Future<SecureLockdownSnapshot> collectSnapshot() async {
     final findings = <SecureLockdownFinding>[];
     final platformName = _platformName();
-    final platformSupported = Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+    final platformSupported =
+        Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
     if (!platformSupported) {
       findings.add(
         const SecureLockdownFinding(
           code: 'unsupported_platform',
           severity: 'critical',
-          message: 'Secure lockdown requires the desktop app on Windows, macOS, or Linux.',
+          message:
+              'Secure lockdown requires the desktop app on Windows, macOS, or Linux.',
         ),
       );
     }
@@ -146,7 +148,8 @@ class SecureLockdownSessionService {
         SecureLockdownFinding(
           code: 'prohibited_process_detected',
           severity: 'critical',
-          message: 'Close prohibited apps before continuing: ${prohibitedProcesses.take(4).join(', ')}.',
+          message:
+              'Close prohibited apps before continuing: ${prohibitedProcesses.take(4).join(', ')}.',
         ),
       );
     }
@@ -231,14 +234,14 @@ class SecureLockdownSessionService {
               r"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::AllScreens.Count",
             ])
           : Platform.isMacOS
-              ? await _run('sh', <String>[
-                  '-c',
-                  "system_profiler SPDisplaysDataType 2>/dev/null | grep -c 'Resolution:'",
-                ])
-              : await _run('sh', <String>[
-                  '-c',
-                  "xrandr --listmonitors 2>/dev/null | awk '/Monitors:/ {print $2}'",
-                ]);
+          ? await _run('sh', <String>[
+              '-c',
+              "system_profiler SPDisplaysDataType 2>/dev/null | grep -c 'Resolution:'",
+            ])
+          : await _run('sh', <String>[
+              '-c',
+              "xrandr --listmonitors 2>/dev/null | awk '/Monitors:/ {print \$2}'",
+            ]);
       final number = int.tryParse(output.trim().split(RegExp(r'\\s+')).first);
       if (number == null || number <= 0) return null;
       return number;
@@ -248,7 +251,10 @@ class SecureLockdownSessionService {
   }
 
   Future<String> _run(String executable, List<String> arguments) async {
-    final result = await Process.run(executable, arguments).timeout(commandTimeout);
+    final result = await Process.run(
+      executable,
+      arguments,
+    ).timeout(commandTimeout);
     final stdoutText = result.stdout?.toString() ?? '';
     final stderrText = result.stderr?.toString() ?? '';
     final combined = '$stdoutText\n$stderrText'.trim();

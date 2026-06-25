@@ -106,7 +106,10 @@ pub fn read_evidence_bundle(
     fs::read_to_string(manifest_path).map_err(|error| error.to_string())
 }
 
-fn append_manifest(directory: &Path, record: EvidenceVaultRecord) -> Result<String, Box<dyn std::error::Error>> {
+fn append_manifest(
+    directory: &Path,
+    record: EvidenceVaultRecord,
+) -> Result<String, Box<dyn std::error::Error>> {
     let manifest_path = directory.join("manifest.json");
     let mut bundle = if manifest_path.exists() {
         let raw = fs::read_to_string(&manifest_path)?;
@@ -134,7 +137,12 @@ fn empty_bundle(directory: &Path, record: &EvidenceVaultRecord) -> EvidenceVault
     }
 }
 
-fn evidence_directory(base_dir: &str, student_id: &str, exam_id: &str, attempt_id: &str) -> PathBuf {
+fn evidence_directory(
+    base_dir: &str,
+    student_id: &str,
+    exam_id: &str,
+    attempt_id: &str,
+) -> PathBuf {
     Path::new(base_dir)
         .join(safe_name(student_id))
         .join(safe_name(exam_id))

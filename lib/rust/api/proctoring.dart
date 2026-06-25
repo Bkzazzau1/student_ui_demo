@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `clamp_dbfs`, `detect_rectangular_device_labels`, `extract_luma_buffer`, `is_background_label`, `load_vision_model_inner`, `normalize_label`, `normalize_signal_from_dbfs`, `pcm16le_rms_dbfs`, `resize_luma_nn`, `run_vision_model`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `VisionModelManifest`, `VisionRuntime`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 AcousticSampleDecision processAcousticSample({
   required double dbfs,
@@ -144,6 +144,24 @@ double estimateLightingFromLuma({
 }) => BrainCoreApi.instance.api.crateApiProctoringEstimateLightingFromLuma(
   lumaBytes: lumaBytes,
   sampleStride: sampleStride,
+);
+
+GazeHeadPoseDecision? analyzeGazeHeadPoseFrame({
+  required List<int> plane0Bytes,
+  required int width,
+  required int height,
+  required int bytesPerRow,
+  required double previousYaw,
+  required double previousPitch,
+  required double previousRoll,
+}) => BrainCoreApi.instance.api.crateApiProctoringAnalyzeGazeHeadPoseFrame(
+  plane0Bytes: plane0Bytes,
+  width: width,
+  height: height,
+  bytesPerRow: bytesPerRow,
+  previousYaw: previousYaw,
+  previousPitch: previousPitch,
+  previousRoll: previousRoll,
 );
 
 VisionModelStatus loadVisionModel({
@@ -305,6 +323,61 @@ class FaceAnalysisDecision {
               other.updatedLastMultiFaceStrikeAtMs &&
           updatedLastGazeWarningAtMs == other.updatedLastGazeWarningAtMs &&
           updatedGazeAwayStartedAtMs == other.updatedGazeAwayStartedAtMs;
+}
+
+class GazeHeadPoseDecision {
+  final double gazeX;
+  final double gazeY;
+  final double gazeZ;
+  final double yawProxy;
+  final double pitchProxy;
+  final double rollProxy;
+  final double confidence;
+  final bool stableHeadPose;
+  final bool lookingAway;
+  final String label;
+
+  const GazeHeadPoseDecision({
+    required this.gazeX,
+    required this.gazeY,
+    required this.gazeZ,
+    required this.yawProxy,
+    required this.pitchProxy,
+    required this.rollProxy,
+    required this.confidence,
+    required this.stableHeadPose,
+    required this.lookingAway,
+    required this.label,
+  });
+
+  @override
+  int get hashCode =>
+      gazeX.hashCode ^
+      gazeY.hashCode ^
+      gazeZ.hashCode ^
+      yawProxy.hashCode ^
+      pitchProxy.hashCode ^
+      rollProxy.hashCode ^
+      confidence.hashCode ^
+      stableHeadPose.hashCode ^
+      lookingAway.hashCode ^
+      label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GazeHeadPoseDecision &&
+          runtimeType == other.runtimeType &&
+          gazeX == other.gazeX &&
+          gazeY == other.gazeY &&
+          gazeZ == other.gazeZ &&
+          yawProxy == other.yawProxy &&
+          pitchProxy == other.pitchProxy &&
+          rollProxy == other.rollProxy &&
+          confidence == other.confidence &&
+          stableHeadPose == other.stableHeadPose &&
+          lookingAway == other.lookingAway &&
+          label == other.label;
 }
 
 class MotionAnalysisDecision {

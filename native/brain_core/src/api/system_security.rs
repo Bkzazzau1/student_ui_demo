@@ -1,5 +1,5 @@
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use flutter_rust_bridge::frb;
 
@@ -66,7 +66,10 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
     } else if platform == "macos" {
         run_command(
             "sh",
-            &["-c", "system_profiler SPBluetoothDataType SPAudioDataType SPUSBDataType SPCameraDataType 2>/dev/null"],
+            &[
+                "-c",
+                "system_profiler SPBluetoothDataType SPAudioDataType SPUSBDataType SPCameraDataType 2>/dev/null",
+            ],
         )
     } else if platform == "linux" {
         run_command(
@@ -116,7 +119,8 @@ pub fn run_system_security_review(platform_name: String) -> NativeSystemSecurity
             findings: vec![format!("System devices could not be verified: {error}")],
             hard_findings: vec![format!("System devices could not be verified: {error}")],
             warning_findings: Vec::new(),
-            message: "System review could not verify connected devices. Contact the invigilator.".to_string(),
+            message: "System review could not verify connected devices. Contact the invigilator."
+                .to_string(),
         },
     }
 }
@@ -185,7 +189,10 @@ fn analyse_output(output: &str, platform_name: &str) -> NativeSystemSecurityRevi
     );
 
     let virtualization_warning_detected = platform == "windows"
-        && contains_any(&text, &["hypervisorpresent: true", "hypervisorpresent=true"]);
+        && contains_any(
+            &text,
+            &["hypervisorpresent: true", "hypervisorpresent=true"],
+        );
 
     let virtualization_detected = contains_any(
         &text,
@@ -253,7 +260,10 @@ fn analyse_output(output: &str, platform_name: &str) -> NativeSystemSecurityRevi
         ],
     );
 
-    let audio_mentioned = contains_any(&text, &["microphone", " mic ", "audio", "source", "capture"]);
+    let audio_mentioned = contains_any(
+        &text,
+        &["microphone", " mic ", "audio", "source", "capture"],
+    );
     let unknown_device_state = audio_mentioned
         && !known_safe_audio
         && !external_audio_detected
@@ -264,7 +274,10 @@ fn analyse_output(output: &str, platform_name: &str) -> NativeSystemSecurityRevi
         hard_findings.push("Bluetooth or wireless device detected. Turn off Bluetooth and disconnect wireless audio before exam startup.".to_string());
     }
     if external_audio_detected {
-        hard_findings.push("External audio device detected. Use only the built-in microphone and speaker.".to_string());
+        hard_findings.push(
+            "External audio device detected. Use only the built-in microphone and speaker."
+                .to_string(),
+        );
     }
     if usb_risk_detected {
         hard_findings.push("USB audio, camera, or capture device risk detected. Remove external exam-risk devices.".to_string());
@@ -273,13 +286,19 @@ fn analyse_output(output: &str, platform_name: &str) -> NativeSystemSecurityRevi
         hard_findings.push("Real virtual machine environment detected. Use a physical desktop device for this exam.".to_string());
     }
     if container_detected {
-        hard_findings.push("Container, WSL, or sandbox environment detected. Close it before this exam.".to_string());
+        hard_findings.push(
+            "Container, WSL, or sandbox environment detected. Close it before this exam."
+                .to_string(),
+        );
     }
     if virtual_camera_detected {
         hard_findings.push("Virtual camera software detected. Disable virtual camera drivers and use a physical webcam.".to_string());
     }
     if unknown_device_state {
-        hard_findings.push("Connected audio device state is unclear. Invigilator confirmation is required.".to_string());
+        hard_findings.push(
+            "Connected audio device state is unclear. Invigilator confirmation is required."
+                .to_string(),
+        );
     }
     if virtualization_warning_detected && !virtualization_detected {
         warning_findings.push("Windows hypervisor security feature detected. This can happen on normal Windows 11 devices using Hyper-V, WSL2, Docker Desktop, or Core Isolation. It is recorded for review but does not block by itself.".to_string());
@@ -333,8 +352,12 @@ fn unsupported_result() -> NativeSystemSecurityReviewResult {
         container_detected: false,
         virtual_camera_detected: false,
         unknown_device_state: true,
-        findings: vec!["Unsupported platform. Use Windows, macOS, or Linux desktop app.".to_string()],
-        hard_findings: vec!["Unsupported platform. Use Windows, macOS, or Linux desktop app.".to_string()],
+        findings: vec![
+            "Unsupported platform. Use Windows, macOS, or Linux desktop app.".to_string(),
+        ],
+        hard_findings: vec![
+            "Unsupported platform. Use Windows, macOS, or Linux desktop app.".to_string(),
+        ],
         warning_findings: Vec::new(),
         message: "Desktop system review is required before this exam can start.".to_string(),
     }
@@ -381,9 +404,29 @@ fn normalise(output: &str) -> String {
 }
 
 fn run_command(executable: &str, arguments: &[&str]) -> Result<String, String> {
-    let output = Command::new(executable)
+    let mut child = Command::new(executable)
         .args(arguments)
-        .output()
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    let started = Instant::now();
+
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) => {
+                if started.elapsed() >= command_timeout_hint() {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err("device report timed out after 7 seconds".to_string());
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+
+    let output = child
+        .wait_with_output()
         .map_err(|error| error.to_string())?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);

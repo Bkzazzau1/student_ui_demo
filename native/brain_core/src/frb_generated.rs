@@ -26,7 +26,7 @@
 // Section: imports
 
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
-use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
 
 // Section: boilerplate
@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1717603779;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1467171838;
 
 // Section: executor
 
@@ -191,6 +191,51 @@ fn wire__crate__api__proctoring__analyze_face_state_impl(
         },
     )
 }
+fn wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_gaze_head_pose_frame",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_plane0_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_width = <u32>::sse_decode(&mut deserializer);
+            let api_height = <u32>::sse_decode(&mut deserializer);
+            let api_bytes_per_row = <u32>::sse_decode(&mut deserializer);
+            let api_previous_yaw = <f64>::sse_decode(&mut deserializer);
+            let api_previous_pitch = <f64>::sse_decode(&mut deserializer);
+            let api_previous_roll = <f64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::proctoring::analyze_gaze_head_pose_frame(
+                        api_plane0_bytes,
+                        api_width,
+                        api_height,
+                        api_bytes_per_row,
+                        api_previous_yaw,
+                        api_previous_pitch,
+                        api_previous_roll,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__proctoring__analyze_motion_sample_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -288,6 +333,42 @@ fn wire__crate__api__proctoring__analyze_scan_frame_impl(
         },
     )
 }
+fn wire__crate__api__system_security__analyze_system_security_report_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_system_security_report",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_report = <String>::sse_decode(&mut deserializer);
+            let api_platform_name = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::system_security::analyze_system_security_report(
+                        api_report,
+                        api_platform_name,
+                    ),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__proctoring__clear_vision_model_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -314,6 +395,37 @@ fn wire__crate__api__proctoring__clear_vision_model_impl(
                 let output_ok = Result::<_, ()>::Ok({
                     crate::api::proctoring::clear_vision_model();
                 })?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__system_security__collect_system_security_report_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "collect_system_security_report",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_platform_name = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok =
+                    crate::api::system_security::collect_system_security_report(api_platform_name)?;
                 Ok(output_ok)
             })())
         },
@@ -379,6 +491,38 @@ fn wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
                         api_luma_bytes,
                         api_sample_stride,
                     ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__evidence_vault__evidence_sha256_hex_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "evidence_sha256_hex",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::evidence_vault::evidence_sha256_hex(api_bytes),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -452,6 +596,124 @@ fn wire__crate__api__proctoring__process_acoustic_sample_impl(
                         api_loss_streak,
                         api_loss_samples_to_trigger,
                     ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__evidence_vault__read_evidence_bundle_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "read_evidence_bundle",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_base_dir = <String>::sse_decode(&mut deserializer);
+            let api_student_id = <String>::sse_decode(&mut deserializer);
+            let api_exam_id = <String>::sse_decode(&mut deserializer);
+            let api_attempt_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::evidence_vault::read_evidence_bundle(
+                    api_base_dir,
+                    api_student_id,
+                    api_exam_id,
+                    api_attempt_id,
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__system_security__run_system_security_review_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "run_system_security_review",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_platform_name = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::system_security::run_system_security_review(api_platform_name),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__evidence_vault__save_evidence_bytes_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "save_evidence_bytes",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_base_dir = <String>::sse_decode(&mut deserializer);
+            let api_student_id = <String>::sse_decode(&mut deserializer);
+            let api_exam_id = <String>::sse_decode(&mut deserializer);
+            let api_attempt_id = <String>::sse_decode(&mut deserializer);
+            let api_event_type = <String>::sse_decode(&mut deserializer);
+            let api_file_type = <String>::sse_decode(&mut deserializer);
+            let api_review_reason = <String>::sse_decode(&mut deserializer);
+            let api_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_metadata_json = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::evidence_vault::save_evidence_bytes(
+                    api_base_dir,
+                    api_student_id,
+                    api_exam_id,
+                    api_attempt_id,
+                    api_event_type,
+                    api_file_type,
+                    api_review_reason,
+                    api_bytes,
+                    api_metadata_json,
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -597,6 +859,34 @@ impl SseDecode for crate::api::proctoring::FaceAnalysisDecision {
     }
 }
 
+impl SseDecode for crate::api::proctoring::GazeHeadPoseDecision {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_gazeX = <f64>::sse_decode(deserializer);
+        let mut var_gazeY = <f64>::sse_decode(deserializer);
+        let mut var_gazeZ = <f64>::sse_decode(deserializer);
+        let mut var_yawProxy = <f64>::sse_decode(deserializer);
+        let mut var_pitchProxy = <f64>::sse_decode(deserializer);
+        let mut var_rollProxy = <f64>::sse_decode(deserializer);
+        let mut var_confidence = <f64>::sse_decode(deserializer);
+        let mut var_stableHeadPose = <bool>::sse_decode(deserializer);
+        let mut var_lookingAway = <bool>::sse_decode(deserializer);
+        let mut var_label = <String>::sse_decode(deserializer);
+        return crate::api::proctoring::GazeHeadPoseDecision {
+            gaze_x: var_gazeX,
+            gaze_y: var_gazeY,
+            gaze_z: var_gazeZ,
+            yaw_proxy: var_yawProxy,
+            pitch_proxy: var_pitchProxy,
+            roll_proxy: var_rollProxy,
+            confidence: var_confidence,
+            stable_head_pose: var_stableHeadPose,
+            looking_away: var_lookingAway,
+            label: var_label,
+        };
+    }
+}
+
 impl SseDecode for i64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -645,6 +935,55 @@ impl SseDecode for crate::api::proctoring::MotionAnalysisDecision {
             updated_window_start_ms: var_updatedWindowStartMs,
             updated_burst_count: var_updatedBurstCount,
         };
+    }
+}
+
+impl SseDecode for crate::api::system_security::NativeSystemSecurityReviewResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_ready = <bool>::sse_decode(deserializer);
+        let mut var_platformSupported = <bool>::sse_decode(deserializer);
+        let mut var_bluetoothDetected = <bool>::sse_decode(deserializer);
+        let mut var_externalAudioDetected = <bool>::sse_decode(deserializer);
+        let mut var_usbRiskDetected = <bool>::sse_decode(deserializer);
+        let mut var_virtualizationDetected = <bool>::sse_decode(deserializer);
+        let mut var_virtualizationWarningDetected = <bool>::sse_decode(deserializer);
+        let mut var_containerDetected = <bool>::sse_decode(deserializer);
+        let mut var_virtualCameraDetected = <bool>::sse_decode(deserializer);
+        let mut var_unknownDeviceState = <bool>::sse_decode(deserializer);
+        let mut var_findings = <Vec<String>>::sse_decode(deserializer);
+        let mut var_hardFindings = <Vec<String>>::sse_decode(deserializer);
+        let mut var_warningFindings = <Vec<String>>::sse_decode(deserializer);
+        let mut var_message = <String>::sse_decode(deserializer);
+        return crate::api::system_security::NativeSystemSecurityReviewResult {
+            ready: var_ready,
+            platform_supported: var_platformSupported,
+            bluetooth_detected: var_bluetoothDetected,
+            external_audio_detected: var_externalAudioDetected,
+            usb_risk_detected: var_usbRiskDetected,
+            virtualization_detected: var_virtualizationDetected,
+            virtualization_warning_detected: var_virtualizationWarningDetected,
+            container_detected: var_containerDetected,
+            virtual_camera_detected: var_virtualCameraDetected,
+            unknown_device_state: var_unknownDeviceState,
+            findings: var_findings,
+            hard_findings: var_hardFindings,
+            warning_findings: var_warningFindings,
+            message: var_message,
+        };
+    }
+}
+
+impl SseDecode for Option<crate::api::proctoring::GazeHeadPoseDecision> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::proctoring::GazeHeadPoseDecision>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
     }
 }
 
@@ -767,24 +1106,53 @@ fn pde_ffi_dispatcher_sync_impl(
             data_len,
         ),
         3 => wire__crate__api__proctoring__analyze_face_state_impl(ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        4 => wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+        5 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__system_security__analyze_system_security_report_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        10 => {
+        8 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__system_security__collect_system_security_report_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        10 => wire__crate__api__proctoring__current_vision_model_status_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        11 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        12 => {
+            wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
+        }
+        13 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        14 => {
             wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
         }
-        11 => {
+        15 => {
+            wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
+        }
+        16 => wire__crate__api__system_security__run_system_security_review_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        17 => {
+            wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
+        }
+        18 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -896,6 +1264,35 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::FaceAnalysisDecis
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::proctoring::GazeHeadPoseDecision {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.gaze_x.into_into_dart().into_dart(),
+            self.gaze_y.into_into_dart().into_dart(),
+            self.gaze_z.into_into_dart().into_dart(),
+            self.yaw_proxy.into_into_dart().into_dart(),
+            self.pitch_proxy.into_into_dart().into_dart(),
+            self.roll_proxy.into_into_dart().into_dart(),
+            self.confidence.into_into_dart().into_dart(),
+            self.stable_head_pose.into_into_dart().into_dart(),
+            self.looking_away.into_into_dart().into_dart(),
+            self.label.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::proctoring::GazeHeadPoseDecision
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::GazeHeadPoseDecision>
+    for crate::api::proctoring::GazeHeadPoseDecision
+{
+    fn into_into_dart(self) -> crate::api::proctoring::GazeHeadPoseDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::proctoring::MotionAnalysisDecision {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -919,6 +1316,44 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::MotionAnalysisDec
     for crate::api::proctoring::MotionAnalysisDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::MotionAnalysisDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart
+    for crate::api::system_security::NativeSystemSecurityReviewResult
+{
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.ready.into_into_dart().into_dart(),
+            self.platform_supported.into_into_dart().into_dart(),
+            self.bluetooth_detected.into_into_dart().into_dart(),
+            self.external_audio_detected.into_into_dart().into_dart(),
+            self.usb_risk_detected.into_into_dart().into_dart(),
+            self.virtualization_detected.into_into_dart().into_dart(),
+            self.virtualization_warning_detected
+                .into_into_dart()
+                .into_dart(),
+            self.container_detected.into_into_dart().into_dart(),
+            self.virtual_camera_detected.into_into_dart().into_dart(),
+            self.unknown_device_state.into_into_dart().into_dart(),
+            self.findings.into_into_dart().into_dart(),
+            self.hard_findings.into_into_dart().into_dart(),
+            self.warning_findings.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::system_security::NativeSystemSecurityReviewResult
+{
+}
+impl
+    flutter_rust_bridge::IntoIntoDart<crate::api::system_security::NativeSystemSecurityReviewResult>
+    for crate::api::system_security::NativeSystemSecurityReviewResult
+{
+    fn into_into_dart(self) -> crate::api::system_security::NativeSystemSecurityReviewResult {
         self
     }
 }
@@ -1058,6 +1493,22 @@ impl SseEncode for crate::api::proctoring::FaceAnalysisDecision {
     }
 }
 
+impl SseEncode for crate::api::proctoring::GazeHeadPoseDecision {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.gaze_x, serializer);
+        <f64>::sse_encode(self.gaze_y, serializer);
+        <f64>::sse_encode(self.gaze_z, serializer);
+        <f64>::sse_encode(self.yaw_proxy, serializer);
+        <f64>::sse_encode(self.pitch_proxy, serializer);
+        <f64>::sse_encode(self.roll_proxy, serializer);
+        <f64>::sse_encode(self.confidence, serializer);
+        <bool>::sse_encode(self.stable_head_pose, serializer);
+        <bool>::sse_encode(self.looking_away, serializer);
+        <String>::sse_encode(self.label, serializer);
+    }
+}
+
 impl SseEncode for i64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1094,6 +1545,36 @@ impl SseEncode for crate::api::proctoring::MotionAnalysisDecision {
         <i64>::sse_encode(self.updated_last_violation_at_ms, serializer);
         <i64>::sse_encode(self.updated_window_start_ms, serializer);
         <u32>::sse_encode(self.updated_burst_count, serializer);
+    }
+}
+
+impl SseEncode for crate::api::system_security::NativeSystemSecurityReviewResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.ready, serializer);
+        <bool>::sse_encode(self.platform_supported, serializer);
+        <bool>::sse_encode(self.bluetooth_detected, serializer);
+        <bool>::sse_encode(self.external_audio_detected, serializer);
+        <bool>::sse_encode(self.usb_risk_detected, serializer);
+        <bool>::sse_encode(self.virtualization_detected, serializer);
+        <bool>::sse_encode(self.virtualization_warning_detected, serializer);
+        <bool>::sse_encode(self.container_detected, serializer);
+        <bool>::sse_encode(self.virtual_camera_detected, serializer);
+        <bool>::sse_encode(self.unknown_device_state, serializer);
+        <Vec<String>>::sse_encode(self.findings, serializer);
+        <Vec<String>>::sse_encode(self.hard_findings, serializer);
+        <Vec<String>>::sse_encode(self.warning_findings, serializer);
+        <String>::sse_encode(self.message, serializer);
+    }
+}
+
+impl SseEncode for Option<crate::api::proctoring::GazeHeadPoseDecision> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::proctoring::GazeHeadPoseDecision>::sse_encode(value, serializer);
+        }
     }
 }
 
@@ -1177,7 +1658,7 @@ mod io {
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
-    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate
@@ -1201,7 +1682,7 @@ mod web {
     };
     use flutter_rust_bridge::for_generated::wasm_bindgen;
     use flutter_rust_bridge::for_generated::wasm_bindgen::prelude::*;
-    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate

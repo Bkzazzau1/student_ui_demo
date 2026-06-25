@@ -1,14 +1,18 @@
 use std::path::Path;
 
 use brain_core::api::{
-    evidence_sha256_hex, read_evidence_bundle, save_evidence_bytes, EvidenceVaultBundle,
+    EvidenceVaultBundle, evidence_sha256_hex, read_evidence_bundle, save_evidence_bytes,
 };
 
 #[test]
 fn hashes_evidence_bytes() {
     let digest = evidence_sha256_hex(b"kslas".to_vec());
     assert_eq!(digest.len(), 64);
-    assert!(digest.chars().all(|character| character.is_ascii_hexdigit()));
+    assert!(
+        digest
+            .chars()
+            .all(|character| character.is_ascii_hexdigit())
+    );
 }
 
 #[test]
@@ -31,8 +35,8 @@ fn saves_evidence_and_reads_manifest() {
     )
     .expect("evidence should save");
 
-    let bundle: EvidenceVaultBundle = serde_json::from_str(&manifest_json)
-        .expect("manifest should decode");
+    let bundle: EvidenceVaultBundle =
+        serde_json::from_str(&manifest_json).expect("manifest should decode");
     assert_eq!(bundle.records.len(), 1);
     assert_eq!(bundle.records[0].student_id, "KASU/STU/2026/001");
     assert_eq!(bundle.records[0].event_type, "voice noticed");
@@ -45,7 +49,7 @@ fn saves_evidence_and_reads_manifest() {
         "attempt 1".to_string(),
     )
     .expect("bundle should load");
-    let loaded: EvidenceVaultBundle = serde_json::from_str(&loaded_json)
-        .expect("loaded manifest should decode");
+    let loaded: EvidenceVaultBundle =
+        serde_json::from_str(&loaded_json).expect("loaded manifest should decode");
     assert_eq!(loaded.records.len(), 1);
 }

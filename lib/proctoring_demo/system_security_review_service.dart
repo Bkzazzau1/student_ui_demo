@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'native_system_security_review_bridge.dart';
+
 class SystemSecurityReviewResult {
   const SystemSecurityReviewResult({
     required this.ready,
@@ -56,10 +58,17 @@ class SystemSecurityReviewResult {
 }
 
 class SystemSecurityReviewService {
+  SystemSecurityReviewService({
+    NativeSystemSecurityReviewBridge nativeBridge =
+        const GeneratedNativeSystemSecurityReviewBridge(),
+  }) : _nativeBridge = nativeBridge;
+
   static const bool _allowSystemReviewOverride = bool.fromEnvironment(
     'KSLAS_ALLOW_SYSTEM_REVIEW_OVERRIDE',
     defaultValue: false,
   );
+
+  final NativeSystemSecurityReviewBridge _nativeBridge;
 
   Future<SystemSecurityReviewResult> check() async {
     if (_allowSystemReviewOverride) {
@@ -74,16 +83,16 @@ class SystemSecurityReviewService {
         containerDetected: false,
         virtualCameraDetected: false,
         unknownDeviceState: false,
-        findings: <String>[
-          'Device review passed.',
-        ],
+        findings: <String>['Device review passed.'],
         hardFindings: <String>[],
-        warningFindings: <String>[
-          'Continue with the next step.',
-        ],
-        message:
-            'Device review passed. Continue to the next step.',
+        warningFindings: <String>['Continue with the next step.'],
+        message: 'Device review passed. Continue to the next step.',
       );
+    }
+
+    final nativeResult = await _nativeBridge.check();
+    if (nativeResult != null) {
+      return nativeResult.toSystemSecurityReviewResult();
     }
 
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
@@ -266,7 +275,8 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
       'avermedia',
     ]);
 
-    final virtualizationWarningDetected = Platform.isWindows &&
+    final virtualizationWarningDetected =
+        Platform.isWindows &&
         _containsAny(text, const <String>[
           'hypervisorpresent: true',
           'hypervisorpresent=true',
@@ -414,8 +424,8 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
       warningFindings: warningFindings,
       message: ready
           ? warningFindings.isEmpty
-              ? 'System review passed. Continue to the exam setup.'
-              : 'System review passed with review note. Continue to the exam setup.'
+                ? 'System review passed. Continue to the exam setup.'
+                : 'System review passed with review note. Continue to the exam setup.'
           : 'System review failed. Resolve blocking issues and check again.',
     );
   }
