@@ -45,4 +45,5 @@ flutter {
 
 dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
+    implementation("com.google.mediapipe:tasks-vision:0.10.35")
 }
