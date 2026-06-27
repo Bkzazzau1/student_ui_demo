@@ -7,6 +7,7 @@ import 'demo_exam_models.dart';
 import 'demo_exam_result_view.dart';
 import 'demo_exam_service.dart';
 import 'feedback_detail_view.dart';
+import 'grade_book_view.dart';
 import 'secure_exam_setup_view.dart';
 import 'student_assessment_hub_extras.dart';
 
@@ -46,7 +47,9 @@ class _DemoExamHomeState extends State<DemoExamHome> {
     final assignments = DemoStudentHubExtras.assignmentsForDate(today);
     final feedbackItems = DemoStudentHubExtras.feedbackForDate(today);
     final exams = assessments.where((item) => item.isStrictExam).toList();
-    final graded = assessments.where((item) => item.isGradedAssessment).toList();
+    final graded = assessments
+        .where((item) => item.isGradedAssessment)
+        .toList();
     final ungraded = assessments
         .where((item) => item.isUngradedAssessment)
         .toList();
@@ -116,12 +119,19 @@ class _DemoExamHomeState extends State<DemoExamHome> {
             ),
             const SizedBox(width: 10),
             const Text(
-              'K-SLAS Student Portal',
+              'KASU DLI Assessment Portal',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ],
         ),
         actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const GradeBookView()),
+            ),
+            icon: const Icon(Icons.workspace_premium_outlined),
+            label: const Text('Grade Book'),
+          ),
           TextButton.icon(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const DemoFaceIdView()),
@@ -187,7 +197,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
                     else
                       _ResponsiveSectionLayout(
                         sections: visibleSections,
-                        onStart: (assessment) => _openSetup(context, assessment),
+                        onStart: (assessment) =>
+                            _openSetup(context, assessment),
                       ),
                     const SizedBox(height: 22),
                     StudentAssessmentHubExtrasPanel(
@@ -242,10 +253,7 @@ class _DemoExamHomeState extends State<DemoExamHome> {
     );
   }
 
-  void _openFeedback(
-    BuildContext context,
-    DemoFeedbackItem feedbackItem,
-  ) {
+  void _openFeedback(BuildContext context, DemoFeedbackItem feedbackItem) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => FeedbackDetailView(feedbackItem: feedbackItem),
@@ -323,7 +331,7 @@ class _Header extends StatelessWidget {
                   color: Colors.white,
                   fontSize: 32,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.4,
+                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 8),
@@ -471,8 +479,8 @@ class _SummaryCards extends StatelessWidget {
         final cardWidth = width >= 980
             ? (width - 36) / 4
             : width >= 560
-                ? (width - 12) / 2
-                : width;
+            ? (width - 12) / 2
+            : width;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -588,8 +596,8 @@ class _SummaryCard extends StatelessWidget {
                       Text(
                         value,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                       Text(
                         title,
@@ -670,7 +678,8 @@ class _EmptySchedule extends StatelessWidget {
     return _InfoStateCard(
       icon: Icons.event_available_outlined,
       title: 'Nothing scheduled today',
-      message: 'No exam, assessment, or practice activity is scheduled for today.',
+      message:
+          'No exam, assessment, or practice activity is scheduled for today.',
     );
   }
 }
@@ -729,14 +738,11 @@ class _InfoStateCard extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: const TextStyle(color: Color(0xFF64748B)),
-                ),
+                Text(message, style: const TextStyle(color: Color(0xFF64748B))),
               ],
             ),
           ),
@@ -747,7 +753,10 @@ class _InfoStateCard extends StatelessWidget {
 }
 
 class _ResponsiveSectionLayout extends StatelessWidget {
-  const _ResponsiveSectionLayout({required this.sections, required this.onStart});
+  const _ResponsiveSectionLayout({
+    required this.sections,
+    required this.onStart,
+  });
 
   final List<_AssessmentSectionData> sections;
   final ValueChanged<DemoAssessment> onStart;
@@ -827,7 +836,8 @@ class _AssessmentSection extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.2,
                           ),
@@ -948,7 +958,10 @@ class _AssessmentCard extends StatelessWidget {
                         alignment: Alignment.centerRight,
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 230),
-                          child: SizedBox(width: double.infinity, child: action),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: action,
+                          ),
                         ),
                       ),
                     ],
@@ -990,7 +1003,9 @@ class _AssessmentCard extends StatelessWidget {
   }
 
   static String _buttonLabelFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam || assessment.remoteProctored) return 'Start checks';
+    if (assessment.isStrictExam || assessment.remoteProctored) {
+      return 'Start checks';
+    }
     if (assessment.isGradedAssessment) return 'Open assessment';
     if (assessment.isUngradedAssessment) return 'Start self-check';
     return 'Practice now';
@@ -1054,10 +1069,7 @@ class _AssessmentDetails extends StatelessWidget {
           assessment.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 17,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
         ),
         const SizedBox(height: 5),
         Text(

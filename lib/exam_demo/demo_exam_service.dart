@@ -32,30 +32,42 @@ class DemoExamService {
     final scheduled = allAssessments()
         .where((assessment) => assessment.isAvailableOn(date))
         .toList();
-    if (scheduled.isNotEmpty) return scheduled;
+    if (scheduled.isNotEmpty) {
+      final sampleExam = _sampleExamForDate(date);
+      return <DemoAssessment>[
+        sampleExam,
+        ...scheduled.where((assessment) => assessment.id != sampleExam.id),
+      ];
+    }
     return _sampleScheduleForDate(date);
+  }
+
+  static DemoAssessment _sampleExamForDate(DateTime date) {
+    final dateIso = _dateIso(date);
+    final idDate = '${date.year}-${date.month}-${date.day}';
+    return DemoAssessment(
+      id: 'sample-exam-$idDate',
+      course: _csc305,
+      title: 'Sample supervised exam for today',
+      kind: 'Examination',
+      durationMinutes: 20,
+      graded: true,
+      remoteProctored: true,
+      policy: AssessmentPolicy.strictExam,
+      availableDateIso: dateIso,
+      sections: const <DemoExamSection>[
+        DemoExamSection.objective,
+        DemoExamSection.fillBlank,
+        DemoExamSection.theory,
+      ],
+    );
   }
 
   static List<DemoAssessment> _sampleScheduleForDate(DateTime date) {
     final dateIso = _dateIso(date);
     final idDate = '${date.year}-${date.month}-${date.day}';
     return <DemoAssessment>[
-      DemoAssessment(
-        id: 'sample-exam-$idDate',
-        course: _csc305,
-        title: 'Sample supervised exam for today',
-        kind: 'Examination',
-        durationMinutes: 20,
-        graded: true,
-        remoteProctored: true,
-        policy: AssessmentPolicy.strictExam,
-        availableDateIso: dateIso,
-        sections: const <DemoExamSection>[
-          DemoExamSection.objective,
-          DemoExamSection.fillBlank,
-          DemoExamSection.theory,
-        ],
-      ),
+      _sampleExamForDate(date),
       DemoAssessment(
         id: 'sample-graded-assessment-$idDate',
         course: _gst204,
@@ -233,14 +245,7 @@ class DemoExamService {
         prompt:
             'Explain three things a student should do to prepare for an online test.',
         marks: 5,
-        keywords: <String>[
-          'read',
-          'time',
-          'quiet',
-          'id',
-          'internet',
-          'submit',
-        ],
+        keywords: <String>['read', 'time', 'quiet', 'id', 'internet', 'submit'],
       ),
     ];
 

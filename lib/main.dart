@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 
-import 'exam_demo/demo_exam_home.dart';
+import 'auth/student_login_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +15,7 @@ class StudentsUiDemoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'K-SLAS Student Portal',
+      title: 'KASU DLI Assessment Portal',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -25,7 +25,7 @@ class StudentsUiDemoApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
-      home: const DemoExamHome(),
+      home: const StudentLoginView(),
     );
   }
 }

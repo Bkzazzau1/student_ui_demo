@@ -10,6 +10,7 @@ class DemoExamResultView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final duration = result.endedAt.difference(result.startedAt);
+    final passed = result.assessment.attendanceOnly || result.percent >= 50;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(title: Text(_resultTitle)),
@@ -51,6 +52,27 @@ class DemoExamResultView extends StatelessWidget {
                     '${result.scoredMarks} of ${result.totalMarks} marks',
                     style: const TextStyle(color: Color(0xFFCBD5E1)),
                   ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _ResultPill(
+                        label: passed ? 'Passed' : 'Carryover',
+                        icon: passed
+                            ? Icons.check_circle_outline
+                            : Icons.replay_circle_filled_outlined,
+                        color: passed
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFFCA5A5),
+                      ),
+                      _ResultPill(
+                        label: 'Grade: ${_gradeLabel}',
+                        icon: Icons.workspace_premium_outlined,
+                        color: const Color(0xFF93C5FD),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -66,6 +88,8 @@ class DemoExamResultView extends StatelessWidget {
                 ),
                 ('Face ID status', _faceIdLabel(result.agentDecision)),
                 ('Exam check status', _proctoringLabel(result.agentDecision)),
+                ('Result status', passed ? 'Passed' : 'Carryover'),
+                ('Grade', _gradeLabel),
                 (
                   'Saved record',
                   result.proctoringManifestPath ?? 'Not required',
@@ -118,6 +142,51 @@ class DemoExamResultView extends StatelessWidget {
     if (result.assessment.isStrictExam) return 'Exam result';
     if (result.assessment.attendanceOnly) return 'Attendance practice result';
     return 'Assessment result';
+  }
+
+  String get _gradeLabel {
+    if (result.assessment.attendanceOnly) return 'Completed';
+    final percent = result.percent;
+    if (percent >= 70) return 'A';
+    if (percent >= 60) return 'B';
+    if (percent >= 50) return 'C';
+    if (percent >= 45) return 'D';
+    return 'F';
+  }
+}
+
+class _ResultPill extends StatelessWidget {
+  const _ResultPill({
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.42)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
   }
 }
 
