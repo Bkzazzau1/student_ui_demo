@@ -25,6 +25,7 @@ import 'proctoring_risk_policy.dart';
 import 'snapshot_gaze_fallback_service.dart';
 import 'vision_compute_budget_service.dart';
 import 'visual_reflection_shadow_service.dart';
+import 'yolo_runtime_health_check.dart';
 
 class LiveExamMonitor extends StatefulWidget {
   const LiveExamMonitor({
@@ -148,7 +149,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _visualRiskStreak = 0;
   int _multiplePeopleRiskStreak = 0;
   int _framesPublished = 0;
+  int _snapshotChecksProcessed = 0;
   int _objectFramesReady = 0;
+  bool _yoloRuntimeReady = false;
+  String _yoloRuntimeStatus = 'YOLO model waiting for native runtime';
+  String _yoloModelPath = '';
 
   @override
   void initState() {
@@ -157,6 +162,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       widget.assessmentType,
       reviewAudience: widget.reviewAudience,
     );
+    unawaited(_startYoloHealthCheck());
     unawaited(_startObjectModelGate());
     unawaited(_startCamera());
     unawaited(_startAudio());
@@ -429,6 +435,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         final picture = await controller.takePicture();
         final bytes = await picture.readAsBytes();
         final result = _snapshotGazeFallback.analyseJpeg(bytes);
+        _snapshotChecksProcessed++;
         if (result == null) return;
 
         if (result.ready && result.headPoseShiftLikely) {
@@ -573,6 +580,22 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       message: status.message,
       metadata: status.toJson(),
     );
+  }
+
+  Future<void> _startYoloHealthCheck() async {
+    final result = await YoloRuntimeHealthCheck(
+      runtime: _optimizedVision,
+    ).check();
+
+    if (!mounted) return;
+
+    setState(() {
+      _yoloRuntimeReady = result.ready;
+      _yoloModelPath = result.modelPath;
+      _yoloRuntimeStatus = result.ready
+          ? 'YOLO model ready'
+          : 'YOLO model waiting for native runtime';
+    });
   }
 
   void _handleFrameQuality(CameraImage image) {
@@ -1185,9 +1208,21 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             ),
             const SizedBox(height: 8),
             Text('Live duration: ${_secondsLive}s'),
-            Text('Camera frames shared: $_framesPublished'),
+            Text(
+              _imageStreamAvailable
+                  ? 'Camera frames processed: $_framesPublished'
+                  : _snapshotChecksProcessed > 0
+                  ? 'Snapshot camera checks processed: $_snapshotChecksProcessed'
+                  : 'Camera preview active; frame stream waiting',
+            ),
+            Text(_yoloRuntimeStatus),
+            if (_yoloRuntimeReady && _yoloModelPath.isNotEmpty)
+              Text(
+                'YOLO asset ready',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             if (_objectFramesReady > 0)
-              Text('Object review frames ready: $_objectFramesReady'),
+              Text('Object review frames processed: $_objectFramesReady'),
             if (_eventsSent.isNotEmpty) ...[
               const SizedBox(height: 8),
               ..._eventsSent.map(
