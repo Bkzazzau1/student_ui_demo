@@ -18,9 +18,15 @@ import kotlin.system.measureNanoTime
 
 class MainActivity : FlutterActivity() {
     private val optimizedVisionEngine = AndroidOptimizedVisionRuntimeEngine()
+    private val faceLandmarkerChannel by lazy { AndroidFaceLandmarkerChannel(this) }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        registerOptimizedVisionRuntime(flutterEngine)
+        registerFaceLandmarkerRuntime(flutterEngine)
+    }
+
+    private fun registerOptimizedVisionRuntime(flutterEngine: FlutterEngine) {
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "kslas.optimized_vision_runtime",
@@ -40,6 +46,29 @@ class MainActivity : FlutterActivity() {
                     val request = call.arguments as? Map<*, *>
                     result.success(optimizedVisionEngine.runFrame(request))
                 }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun registerFaceLandmarkerRuntime(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "kslas.face_landmarker",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "initialize" -> {
+                    val request = call.arguments as? Map<*, *>
+                    result.success(faceLandmarkerChannel.initialize(request))
+                }
+
+                "analyseFrame" -> {
+                    val request = call.arguments as? Map<*, *>
+                    result.success(faceLandmarkerChannel.analyseFrame(request))
+                }
+
+                "status" -> result.success(faceLandmarkerChannel.status())
 
                 else -> result.notImplemented()
             }
