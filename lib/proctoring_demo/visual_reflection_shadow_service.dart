@@ -86,9 +86,15 @@ class VisualReflectionShadowService {
     var localContrastCount = 0;
 
     for (var gy = 0; gy < gridH; gy++) {
-      final y = ((gy + 0.5) * height / gridH).floor().clamp(0, height - 1);
+      final y = ((gy + 0.5) * height / gridH)
+          .floor()
+          .clamp(0, height - 1)
+          .toInt();
       for (var gx = 0; gx < gridW; gx++) {
-        final x = ((gx + 0.5) * width / gridW).floor().clamp(0, width - 1);
+        final x = ((gx + 0.5) * width / gridW)
+            .floor()
+            .clamp(0, width - 1)
+            .toInt();
         final idx = y * rowStride + x;
         if (idx < 0 || idx >= bytes.length) continue;
         final value = bytes[idx] / 255.0;
@@ -124,15 +130,17 @@ class VisualReflectionShadowService {
     final contrast = localContrastCount == 0
         ? 0.0
         : localContrastTotal / localContrastCount;
-    final hotspotScore = (brightest - centerMean).clamp(0.0, 1.0);
-    final sideReflectionScore = (sideMean - centerMean).clamp(0.0, 1.0);
+    final hotspotScore = (brightest - centerMean).clamp(0.0, 1.0).toDouble();
+    final sideReflectionScore =
+        (sideMean - centerMean).clamp(0.0, 1.0).toDouble();
     final lowerMotion = _lastGrid == null
         ? 0.0
         : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: true);
     final fullMotion = _lastGrid == null
         ? 0.0
         : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: false);
-    final shadowShift = ((brightest - darkest) * contrast).clamp(0.0, 1.0);
+    final shadowShift =
+        ((brightest - darkest) * contrast).clamp(0.0, 1.0).toDouble();
 
     _push(_hotspotHistory, hotspotScore, 18);
     _push(_shadowHistory, shadowShift, 18);
@@ -152,7 +160,7 @@ class VisualReflectionShadowService {
     if (lowerInteraction) risk += 0.28;
     if (sideReflection) risk += 0.25;
     if (lowerMean > centerMean + 0.16 && lowerMotion > 0.025) risk += 0.10;
-    risk = risk.clamp(0.0, 1.0);
+    risk = risk.clamp(0.0, 1.0).toDouble();
 
     final nativeQualityNeedsAttention = nativeQuality != null &&
         !nativeQuality.isUsable &&
@@ -177,7 +185,7 @@ class VisualReflectionShadowService {
     return VisualReflectionShadowResult(
       brightHotspotScore: hotspotScore,
       shadowShiftScore: shadowShift,
-      lowerFrameActivity: lowerAverage.clamp(0.0, 1.0),
+      lowerFrameActivity: lowerAverage.clamp(0.0, 1.0).toDouble(),
       sideReflectionScore: sideReflectionScore,
       screenGlowLikely: suddenGlow,
       mirrorOrGlassLikely: sideReflection,
@@ -206,7 +214,7 @@ class VisualReflectionShadowService {
       count++;
     }
     if (count == 0) return 0.0;
-    return (total / count).clamp(0.0, 1.0);
+    return (total / count).clamp(0.0, 1.0).toDouble();
   }
 
   void _push(List<double> values, double value, int maxLength) {
