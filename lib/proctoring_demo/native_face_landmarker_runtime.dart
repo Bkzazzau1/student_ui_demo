@@ -5,14 +5,19 @@ import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 
 import 'gaze_head_pose_estimator.dart';
+import 'native_head_pose_geometry_service.dart';
 
 class NativeFaceLandmarkerRuntime {
   NativeFaceLandmarkerRuntime({
     MethodChannel? channel,
+    NativeHeadPoseGeometryService? headPoseGeometry,
     this.assetPath = 'assets/models/face_landmarker/face_landmarker.task',
-  }) : _channel = channel ?? const MethodChannel('kslas.face_landmarker');
+  })  : _channel = channel ?? const MethodChannel('kslas.face_landmarker'),
+        _headPoseGeometry =
+            headPoseGeometry ?? const NativeHeadPoseGeometryService();
 
   final MethodChannel _channel;
+  final NativeHeadPoseGeometryService _headPoseGeometry;
   final String assetPath;
   bool _ready = false;
   bool _failed = false;
@@ -84,24 +89,37 @@ class NativeFaceLandmarkerRuntime {
       final pose = Map<String, Object?>.from(
         result['head_pose'] as Map? ?? const <String, Object?>{},
       );
-      final label = result['label']?.toString() ?? 'landmark_runtime_result';
+      final landmarks = _readLandmarks(result['landmarks'] ?? result['face_landmarks']);
+      final rustHeadPose = _headPoseGeometry.analyzeLandmarks(
+        landmarks: landmarks,
+        imageWidth: image.width.toDouble(),
+        imageHeight: image.height.toDouble(),
+      );
+      final label = result['label']?.toString() ??
+          (rustHeadPose?.reason ?? 'landmark_runtime_result');
       final confidence = _toDouble(
         result['confidence'],
-        fallback: 0.0,
-      ).clamp(0.0, 1.0);
-      final lookingAway = result['looking_away'] == true;
-      final stableHeadPose = result['stable_head_pose'] != false;
+        fallback: rustHeadPose == null ? 0.0 : 0.86,
+      ).clamp(0.0, 1.0).toDouble();
+      final rustLookingAway = rustHeadPose?.lookingAway;
+      final lookingAway = rustLookingAway ?? result['looking_away'] == true;
+      final stableHeadPose = rustHeadPose == null
+          ? result['stable_head_pose'] != false
+          : !rustHeadPose.lookingAway;
+      final yaw = rustHeadPose?.yawScore ?? _toDouble(pose['yaw']).clamp(-1.0, 1.0).toDouble();
+      final pitch = rustHeadPose?.pitchScore ?? _toDouble(pose['pitch']).clamp(-1.0, 1.0).toDouble();
+      final roll = rustHeadPose?.rollScore ?? _toDouble(pose['roll']).clamp(-1.0, 1.0).toDouble();
       return GazeHeadPoseResult(
-        gazeX: _toDouble(gaze['x']).clamp(-1.0, 1.0),
-        gazeY: _toDouble(gaze['y']).clamp(-1.0, 1.0),
-        gazeZ: _toDouble(gaze['z'], fallback: 1.0).clamp(-1.0, 1.0),
-        yawProxy: _toDouble(pose['yaw']).clamp(-1.0, 1.0),
-        pitchProxy: _toDouble(pose['pitch']).clamp(-1.0, 1.0),
-        rollProxy: _toDouble(pose['roll']).clamp(-1.0, 1.0),
+        gazeX: _toDouble(gaze['x']).clamp(-1.0, 1.0).toDouble(),
+        gazeY: _toDouble(gaze['y']).clamp(-1.0, 1.0).toDouble(),
+        gazeZ: _toDouble(gaze['z'], fallback: 1.0).clamp(-1.0, 1.0).toDouble(),
+        yawProxy: yaw.clamp(-1.0, 1.0).toDouble(),
+        pitchProxy: pitch.clamp(-1.0, 1.0).toDouble(),
+        rollProxy: roll.clamp(-1.0, 1.0).toDouble(),
         confidence: confidence,
         stableHeadPose: stableHeadPose,
         lookingAway: lookingAway,
-        label: label,
+        label: rustHeadPose == null ? label : 'rust_head_pose_geometry',
       );
     } on MissingPluginException {
       _failed = true;
@@ -110,6 +128,14 @@ class NativeFaceLandmarkerRuntime {
     } catch (_) {
       return null;
     }
+  }
+
+  List<LandmarkPoint> _readLandmarks(Object? value) {
+    if (value is! Iterable) return const <LandmarkPoint>[];
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, Object?>.from(item))
+        .toList(growable: false);
   }
 
   double _toDouble(Object? value, {double fallback = 0.0}) {
