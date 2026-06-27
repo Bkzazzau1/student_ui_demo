@@ -84,6 +84,10 @@ private class AndroidOptimizedVisionRuntimeEngine {
     private var modelPath: String = ""
     private var backend: String = "not_available"
     private var precision: String = "not_available"
+    private var outputLayout: String = "channels_first_yolov8"
+    private var confidenceThreshold: Double = 0.45
+    private var iouThreshold: Double = 0.45
+    private var classNames: List<String> = defaultCocoClassNames()
     private var lastInferenceMs: Double = 0.0
     private var lastError: String =
         "Android ONNX Runtime has not been initialized."
@@ -94,6 +98,10 @@ private class AndroidOptimizedVisionRuntimeEngine {
     ): Boolean {
         backend = policy.stringValue("backend", "onnxRuntimeCpu")
         precision = policy.stringValue("precision", "int8")
+        outputLayout = policy.stringValue("output_layout", "channels_first_yolov8")
+        confidenceThreshold = policy.doubleValue("confidence_threshold", 0.45)
+        iouThreshold = policy.doubleValue("iou_threshold", 0.45)
+        classNames = policy.stringListValue("class_names", defaultCocoClassNames())
         return try {
             val assetPath = resolveAssetPath(policy)
             val assetKey = FlutterInjector.instance()
@@ -111,8 +119,8 @@ private class AndroidOptimizedVisionRuntimeEngine {
             inputName = firstInput.key
             inputShape = normalizeShape(
                 tensorInfo?.shape ?: longArrayOf(1, 3, 416, 416),
-                policy.intValue("max_input_height", 416),
-                policy.intValue("max_input_width", 416),
+                policy.intValue("max_input_height", policy.intValue("input_height", 416)),
+                policy.intValue("max_input_width", policy.intValue("input_width", 416)),
             )
             env = environment
             session = createdSession
@@ -142,7 +150,7 @@ private class AndroidOptimizedVisionRuntimeEngine {
                     inputShape,
                 ).use { tensor ->
                     activeSession.run(mapOf(inputName to tensor)).use { outputs ->
-                        response = availableResponse(outputs)
+                        response = availableResponse(outputs, request)
                     }
                 }
             }
@@ -160,12 +168,12 @@ private class AndroidOptimizedVisionRuntimeEngine {
         if (explicit.isNotBlank()) return explicit
         val explicitOnnx = policy.stringValue("onnx_path", "")
         if (explicitOnnx.isNotBlank()) return explicitOnnx
-        val fileName = if (precision == "fp16") {
-            "object_reflection_shadow_detector.fp16.onnx"
-        } else {
-            "object_reflection_shadow_detector.int8.onnx"
+        val fileName = when (precision) {
+            "fp16" -> "yolo_exam_review.fp16.onnx"
+            "fp32Fallback" -> "yolo_exam_review.fp32.onnx"
+            else -> "yolo_exam_review.int8.onnx"
         }
-        return "assets/models/optimized_vision_runtime/$fileName"
+        return "assets/models/yolo_exam_review/$fileName"
     }
 
     private fun normalizeShape(
@@ -224,14 +232,21 @@ private class AndroidOptimizedVisionRuntimeEngine {
         return tensor
     }
 
-    private fun availableResponse(outputs: OrtSession.Result): Map<String, Any?> {
+    private fun availableResponse(
+        outputs: OrtSession.Result,
+        request: Map<*, *>,
+    ): Map<String, Any?> {
         val summaries = mutableListOf<Map<String, Any?>>()
         val detections = mutableListOf<Detection>()
+        var rawYoloOutput: Map<String, Any?>? = null
         var index = 0
         for (entry in outputs) {
             val value = entry.value
             summaries.add(summarizeOutput(index, value))
             detections.addAll(parseDetections(value))
+            if (rawYoloOutput == null) {
+                rawYoloOutput = extractRawYoloOutput(value)
+            }
             index++
         }
         val sortedDetections = detections.sortedByDescending { it.confidence }.take(20)
@@ -239,23 +254,79 @@ private class AndroidOptimizedVisionRuntimeEngine {
         val screenGlow = sortedDetections.any { it.label.isPhoneLike() }
         val mirrorReflection = sortedDetections.any { it.label.isMirrorLike() }
         val offscreenInteraction = sortedDetections.any { it.label.isOffscreenLike() }
+        val sourceWidth = request.intValue("width", 0)
+        val sourceHeight = request.intValue("height", 0)
+        val outputMap = mutableMapOf<String, Any?>(
+            "objects" to objects,
+            "screen_glow" to screenGlow,
+            "mirror_reflection" to mirrorReflection,
+            "offscreen_interaction" to offscreenInteraction,
+            "runtime" to backend,
+            "precision" to precision,
+            "inference_ms" to lastInferenceMs,
+            "model_path" to modelPath,
+            "model_family" to "yolo",
+            "raw_outputs" to summaries,
+            "class_names" to classNames,
+            "num_classes" to classNames.size,
+            "layout" to outputLayout,
+            "output_layout" to outputLayout,
+            "confidence_threshold" to confidenceThreshold,
+            "iou_threshold" to iouThreshold,
+            "image_width" to sourceWidth,
+            "image_height" to sourceHeight,
+            "requires_rust_decode" to true,
+        )
+        rawYoloOutput?.let { outputMap.putAll(it) }
         return mapOf(
-            "available" to true,
+            "available" to (rawYoloOutput != null),
             "backend" to backend,
             "precision" to precision,
             "inference_ms" to lastInferenceMs,
-            "outputs" to mapOf(
-                "objects" to objects,
-                "screen_glow" to screenGlow,
-                "mirror_reflection" to mirrorReflection,
-                "offscreen_interaction" to offscreenInteraction,
-                "runtime" to backend,
-                "precision" to precision,
-                "inference_ms" to lastInferenceMs,
-                "model_path" to modelPath,
-                "raw_outputs" to summaries,
-            ),
+            "outputs" to outputMap,
         )
+    }
+
+    private fun extractRawYoloOutput(value: OnnxValue): Map<String, Any?>? {
+        val tensor = value as? OnnxTensor ?: return null
+        val info = tensor.info as? TensorInfo ?: return null
+        if (info.type != ai.onnxruntime.OnnxJavaType.FLOAT) return null
+        val shape = info.shape
+        val data = tensor.floatBuffer
+        val elementCount = shape.fold(1L) { acc, dim -> acc * max(1L, dim) }
+        if (elementCount <= 0 || elementCount > Int.MAX_VALUE) return null
+        val output = List(elementCount.toInt()) { index -> data.get(index).toDouble() }
+        val predictionCount = inferPredictionCount(shape, output.size)
+        if (predictionCount <= 0) return null
+        return mapOf(
+            "yolo_output" to output,
+            "raw_yolo_output" to output,
+            "num_predictions" to predictionCount,
+            "num_classes" to classNames.size,
+            "class_names" to classNames,
+            "layout" to outputLayout,
+            "output_layout" to outputLayout,
+            "confidence_threshold" to confidenceThreshold,
+            "iou_threshold" to iouThreshold,
+        )
+    }
+
+    private fun inferPredictionCount(shape: LongArray, outputLength: Int): Int {
+        val classCount = classNames.size
+        val attributesV8 = 4 + classCount
+        val attributesV5 = 5 + classCount
+        if (shape.size == 3) {
+            val dim1 = shape[1].toInt()
+            val dim2 = shape[2].toInt()
+            if (outputLayout == "channels_first_yolov8" && dim1 == attributesV8) return dim2
+            if (dim2 == attributesV8 || dim2 == attributesV5) return dim1
+            if (dim1 == attributesV8 || dim1 == attributesV5) return dim2
+        }
+        if (outputLayout == "rows_yolov5" && outputLength % attributesV5 == 0) {
+            return outputLength / attributesV5
+        }
+        if (outputLength % attributesV8 == 0) return outputLength / attributesV8
+        return 0
     }
 
     private fun parseDetections(value: OnnxValue): List<Detection> {
@@ -271,7 +342,7 @@ private class AndroidOptimizedVisionRuntimeEngine {
             for (row in 0 until rows) {
                 detections.decodeCandidate(FloatArray(columns) { col ->
                     data.get(row * columns + col)
-                })
+                }, classNames)
             }
         } else if (shape.size == 3) {
             val dim1 = shape[1].toInt()
@@ -280,13 +351,13 @@ private class AndroidOptimizedVisionRuntimeEngine {
                 for (row in 0 until dim1) {
                     detections.decodeCandidate(FloatArray(dim2) { col ->
                         data.get(row * dim2 + col)
-                    })
+                    }, classNames)
                 }
             } else if (dim1 >= 6) {
                 for (row in 0 until dim2) {
                     detections.decodeCandidate(FloatArray(dim1) { col ->
                         data.get(col * dim2 + row)
-                    })
+                    }, classNames)
                 }
             }
         }
@@ -318,6 +389,11 @@ private class AndroidOptimizedVisionRuntimeEngine {
         "outputs" to mapOf(
             "message" to message,
             "model_path" to modelPath,
+            "model_family" to "yolo",
+            "requires_real_model" to true,
+            "class_names" to classNames,
+            "num_classes" to classNames.size,
+            "layout" to outputLayout,
         ),
     )
 }
@@ -344,7 +420,7 @@ private data class Detection(
     )
 }
 
-private fun MutableList<Detection>.decodeCandidate(values: FloatArray) {
+private fun MutableList<Detection>.decodeCandidate(values: FloatArray, classNames: List<String>) {
     if (values.size < 6) return
     var confidence = 0.0
     var classId = -1L
@@ -385,7 +461,7 @@ private fun MutableList<Detection>.decodeCandidate(values: FloatArray) {
             y2 = box[3],
             confidence = confidence.coerceIn(0.0, 1.0),
             classId = classId,
-            label = classId.labelForClass(),
+            label = classNames.getOrNull(classId.toInt()) ?: classId.labelForClass(),
         ),
     )
 }
@@ -397,11 +473,10 @@ private fun Float.logistic(): Double {
 }
 
 private fun Long.labelForClass(): String = when (this) {
-    0L -> "phone"
-    1L -> "screen_glow"
-    2L -> "mirror_reflection"
-    3L -> "offscreen_interaction"
-    67L -> "cell_phone"
+    0L -> "person"
+    63L -> "laptop"
+    67L -> "cell phone"
+    73L -> "book"
     else -> "class_$this"
 }
 
@@ -432,3 +507,35 @@ private fun Map<*, *>?.intValue(key: String, fallback: Int): Int {
         else -> value.toString().toIntOrNull() ?: fallback
     }
 }
+
+private fun Map<*, *>?.doubleValue(key: String, fallback: Double): Double {
+    val value = this?.get(key) ?: return fallback
+    return when (value) {
+        is Double -> value
+        is Float -> value.toDouble()
+        is Int -> value.toDouble()
+        is Long -> value.toDouble()
+        is Number -> value.toDouble()
+        else -> value.toString().toDoubleOrNull() ?: fallback
+    }
+}
+
+private fun Map<*, *>?.stringListValue(key: String, fallback: List<String>): List<String> {
+    val value = this?.get(key) ?: return fallback
+    if (value !is Iterable<*>) return fallback
+    val items = value.mapNotNull { item -> item?.toString()?.trim() }.filter { it.isNotEmpty() }
+    return items.ifEmpty { fallback }
+}
+
+private fun defaultCocoClassNames(): List<String> = listOf(
+    "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+    "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog",
+    "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
+    "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite",
+    "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle",
+    "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich",
+    "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
+    "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote",
+    "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book",
+    "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush",
+)
