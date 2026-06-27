@@ -70,6 +70,9 @@ class SystemSecurityReviewService {
 
   final NativeSystemSecurityReviewBridge _nativeBridge;
 
+  static const Duration _deviceReportTimeout = Duration(seconds: 18);
+  static const Duration _optionalDeviceReportTimeout = Duration(seconds: 6);
+
   Future<SystemSecurityReviewResult> check() async {
     if (_allowSystemReviewOverride) {
       return const SystemSecurityReviewResult(
@@ -90,7 +93,10 @@ class SystemSecurityReviewService {
       );
     }
 
-    final nativeResult = await _nativeBridge.check();
+    final nativeResult = await _nativeBridge.check().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () => null,
+    );
     if (nativeResult != null) {
       return nativeResult.toSystemSecurityReviewResult();
     }
@@ -123,7 +129,9 @@ class SystemSecurityReviewService {
       if (Platform.isWindows) return await _checkWindows();
       if (Platform.isMacOS) return await _checkMacOS();
       return await _checkLinux();
-    } catch (e) {
+    } catch (_) {
+      const message =
+          'Device review could not finish. Close other apps, wait a moment, then run the device check again.';
       return SystemSecurityReviewResult(
         ready: false,
         platformSupported: true,
@@ -135,17 +143,34 @@ class SystemSecurityReviewService {
         containerDetected: false,
         virtualCameraDetected: false,
         unknownDeviceState: true,
-        findings: <String>['System devices could not be verified: $e'],
-        hardFindings: <String>['System devices could not be verified: $e'],
+        findings: const <String>[message],
+        hardFindings: const <String>[message],
         warningFindings: const <String>[],
-        message:
-            'System review could not verify connected devices. Contact the invigilator.',
+        message: message,
       );
     }
   }
 
   Future<SystemSecurityReviewResult> _checkWindows() async {
-    final output = await _run('powershell', <String>[
+    final primaryOutput = await _run('powershell', <String>[
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      r'''
+$devices = Get-CimInstance Win32_PnPEntity | Where-Object {
+  $_.ConfigManagerErrorCode -eq 0 -and (
+    $_.PNPClass -match 'Bluetooth|AudioEndpoint|Media|USB|Camera|Image' -or
+    $_.Name -match 'Bluetooth|Headset|Headphone|Earbud|AirPods|Hands-Free|Microphone|Mic|Audio|Wireless|USB|Capture|Camera|Webcam|Virtual|OBS|ManyCam|DroidCam|Snap|XSplit|NDI|SplitCam|Camo|EpocCam|iVCam'
+  )
+} | Select-Object PNPClass,Name,Status,DeviceID
+[ordered]@{
+  devices = $devices
+} | ConvertTo-Json -Compress -Depth 3
+''',
+    ], timeout: _deviceReportTimeout);
+
+    final optionalOutput = await _runOptional('powershell', <String>[
       '-NoProfile',
       '-ExecutionPolicy',
       'Bypass',
@@ -164,14 +189,17 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
   $_.FriendlyName -match 'Camera|Webcam|Virtual|OBS|ManyCam|DroidCam|Snap|XSplit|NDI|SplitCam|Camo|EpocCam|iVCam'
 } | Select-Object Class,FriendlyName,InstanceId,Status
 [ordered]@{
-  devices = $devices
   computer = $computer
   bios = $bios
   camera = $camera
 } | ConvertTo-Json -Compress -Depth 4
 ''',
-    ]);
-    return _analyseOutput(output, platformName: 'Windows');
+    ], timeout: _optionalDeviceReportTimeout);
+
+    return _analyseOutput(
+      '$primaryOutput\n$optionalOutput',
+      platformName: 'Windows',
+    );
   }
 
   Future<SystemSecurityReviewResult> _checkMacOS() async {
@@ -204,15 +232,16 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
     return _analyseOutput(output, platformName: 'Linux');
   }
 
-  Future<String> _run(String executable, List<String> arguments) async {
+  Future<String> _run(
+    String executable,
+    List<String> arguments, {
+    Duration timeout = _deviceReportTimeout,
+  }) async {
     final ProcessResult result;
     try {
-      result = await Process.run(
-        executable,
-        arguments,
-      ).timeout(const Duration(seconds: 7));
+      result = await Process.run(executable, arguments).timeout(timeout);
     } on TimeoutException {
-      throw StateError('device report timed out after 7 seconds');
+      throw StateError('device report timed out');
     }
     final stdout = result.stdout.toString();
     final stderr = result.stderr.toString();
@@ -221,6 +250,18 @@ $camera = Get-PnpDevice -PresentOnly | Where-Object {
       throw StateError('empty device report');
     }
     return combined;
+  }
+
+  Future<String> _runOptional(
+    String executable,
+    List<String> arguments, {
+    required Duration timeout,
+  }) async {
+    try {
+      return await _run(executable, arguments, timeout: timeout);
+    } catch (_) {
+      return '';
+    }
   }
 
   SystemSecurityReviewResult _analyseOutput(
