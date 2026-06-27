@@ -65,6 +65,10 @@ class OptimizedVisionObjectEventAdapter {
       return enriched;
     }
 
+    if (_requiresRustYoloDecode(result.outputs)) {
+      return const <ObjectReviewEventDecision>[];
+    }
+
     final labels = extractObjectLabels(result.outputs);
     return mapper.mapLabels(labels, source: source);
   }
@@ -84,15 +88,17 @@ class OptimizedVisionObjectEventAdapter {
       }
     }
 
-    // Some native runtimes may surface boolean summary signals before a full
-    // object list is available. Preserve those signals as review labels so the
-    // same mapper can raise policy events consistently.
     if (outputs['screen_glow'] == true ||
         outputs['offscreen_interaction'] == true) {
       labels.add('screen');
     }
 
     return labels.where((label) => label.isNotEmpty).toList()..sort();
+  }
+
+  bool _requiresRustYoloDecode(Map<String, Object?> outputs) {
+    final family = outputs['model_family']?.toString().trim().toLowerCase() ?? '';
+    return family == 'yolo' || outputs['requires_rust_decode'] == true;
   }
 
   NativeObjectReviewSnapshot? _decodeNativeYoloReview(
