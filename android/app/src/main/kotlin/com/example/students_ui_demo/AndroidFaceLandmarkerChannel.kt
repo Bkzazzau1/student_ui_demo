@@ -6,6 +6,9 @@ import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class AndroidFaceLandmarkerChannel(private val context: Context) {
     private var faceLandmarker: FaceLandmarker? = null
@@ -18,9 +21,7 @@ class AndroidFaceLandmarkerChannel(private val context: Context) {
             return false
         }
         return try {
-            val baseOptions = BaseOptions.builder()
-                .setModelAssetPath(modelPath)
-                .build()
+            val baseOptions = buildBaseOptions(modelPath)
             val options = FaceLandmarker.FaceLandmarkerOptions.builder()
                 .setBaseOptions(baseOptions)
                 .setRunningMode(RunningMode.IMAGE)
@@ -77,6 +78,24 @@ class AndroidFaceLandmarkerChannel(private val context: Context) {
         "ready" to (faceLandmarker != null),
         "last_error" to lastError,
     )
+
+    private fun buildBaseOptions(modelPath: String): BaseOptions {
+        val file = File(modelPath)
+        if (file.exists() && file.isFile) {
+            val bytes = file.readBytes()
+            val buffer = ByteBuffer
+                .allocateDirect(bytes.size)
+                .order(ByteOrder.nativeOrder())
+            buffer.put(bytes)
+            buffer.rewind()
+            return BaseOptions.builder()
+                .setModelAssetBuffer(buffer)
+                .build()
+        }
+        return BaseOptions.builder()
+            .setModelAssetPath(modelPath)
+            .build()
+    }
 }
 
 private fun Map<*, *>?.stringValue(key: String, fallback: String): String {
