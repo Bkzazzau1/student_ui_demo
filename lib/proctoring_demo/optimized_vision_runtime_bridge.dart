@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 
 import 'optimized_vision_runtime_policy.dart';
+import 'yolo_exam_review_manifest.dart';
 
 class OptimizedVisionRuntimeResult {
   const OptimizedVisionRuntimeResult({
@@ -31,22 +32,39 @@ class OptimizedVisionRuntimeBridge {
   OptimizedVisionRuntimeBridge({
     MethodChannel? channel,
     OptimizedVisionRuntimePolicy? policy,
+    String manifestAssetPath = YoloExamReviewManifest.defaultAssetPath,
   })  : _channel = channel ?? const MethodChannel('kslas.optimized_vision_runtime'),
-        _policy = policy ?? OptimizedVisionRuntimePolicy.forCurrentPlatform();
+        _policy = policy ?? OptimizedVisionRuntimePolicy.forCurrentPlatform(),
+        _manifestAssetPath = manifestAssetPath;
 
   final MethodChannel _channel;
   final OptimizedVisionRuntimePolicy _policy;
+  final String _manifestAssetPath;
   bool _initialized = false;
   bool _available = false;
+  YoloExamReviewManifest? _manifest;
 
   OptimizedVisionRuntimePolicy get policy => _policy;
   bool get available => _available;
+  YoloExamReviewManifest? get manifest => _manifest;
 
   Future<bool> initialize() async {
     if (_initialized) return _available;
     _initialized = true;
     try {
-      final ok = await _channel.invokeMethod<bool>('initialize', _policy.toJson());
+      final manifest = await YoloExamReviewManifest.load(
+        assetPath: _manifestAssetPath,
+      );
+      if (manifest == null) {
+        _available = false;
+        return false;
+      }
+      _manifest = manifest;
+      final initPolicy = <String, Object?>{
+        ..._policy.toJson(),
+        ...manifest.toPolicyJson(_policy),
+      };
+      final ok = await _channel.invokeMethod<bool>('initialize', initPolicy);
       _available = ok == true;
       return _available;
     } on MissingPluginException {
@@ -68,7 +86,10 @@ class OptimizedVisionRuntimeBridge {
       final response = await _channel.invokeMapMethod<String, Object?>(
         'runFrame',
         <String, Object?>{
-          'policy': _policy.toJson(),
+          'policy': <String, Object?>{
+            ..._policy.toJson(),
+            ...?_manifest?.toPolicyJson(_policy),
+          },
           'tasks': tasks,
           'width': image.width,
           'height': image.height,
@@ -87,8 +108,9 @@ class OptimizedVisionRuntimeBridge {
       );
       if (response == null) return null;
       final elapsedMs = DateTime.now().difference(started).inMicroseconds / 1000.0;
+      final available = response['available'] == true;
       return OptimizedVisionRuntimeResult(
-        available: true,
+        available: available,
         backend: response['backend']?.toString() ?? _policy.backend.name,
         precision: response['precision']?.toString() ?? _policy.precision.name,
         inferenceMs: double.tryParse(response['inference_ms']?.toString() ?? '') ?? elapsedMs,
