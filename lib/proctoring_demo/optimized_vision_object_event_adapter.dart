@@ -1,6 +1,6 @@
+import 'native_vision_bridge.dart';
 import 'object_review_event_mapper.dart';
 import 'optimized_vision_runtime_bridge.dart';
-import 'native_vision_bridge.dart';
 
 class OptimizedVisionObjectEventAdapter {
   const OptimizedVisionObjectEventAdapter({
@@ -29,7 +29,7 @@ class OptimizedVisionObjectEventAdapter {
         labels,
         source: 'native_vision_yolo_decoder',
       );
-      return decisions
+      final enriched = decisions
           .map(
             (decision) => ObjectReviewEventDecision(
               eventType: decision.eventType,
@@ -44,7 +44,25 @@ class OptimizedVisionObjectEventAdapter {
               },
             ),
           )
-          .toList(growable: false);
+          .toList();
+
+      if (nativeReview.peopleCount > 1) {
+        enriched.add(
+          ObjectReviewEventDecision(
+            eventType: 'camera_view_needs_review',
+            severity: 'warning',
+            message: 'Camera view may need review.',
+            labels: const <String>['person'],
+            metadata: <String, Object?>{
+              'source_component': 'native_vision_yolo_decoder',
+              'native_vision_review': nativeReview.toJson(),
+              'person_count': nativeReview.peopleCount,
+            },
+          ),
+        );
+      }
+
+      return enriched;
     }
 
     final labels = extractObjectLabels(result.outputs);
@@ -69,7 +87,8 @@ class OptimizedVisionObjectEventAdapter {
     // Some native runtimes may surface boolean summary signals before a full
     // object list is available. Preserve those signals as review labels so the
     // same mapper can raise policy events consistently.
-    if (outputs['screen_glow'] == true || outputs['offscreen_interaction'] == true) {
+    if (outputs['screen_glow'] == true ||
+        outputs['offscreen_interaction'] == true) {
       labels.add('screen');
     }
 
@@ -102,9 +121,12 @@ class OptimizedVisionObjectEventAdapter {
       output: output,
       numPredictions: numPredictions,
       numClasses: numClasses,
-      imageWidth: _readInt(outputs['image_width']) ?? _readInt(outputs['width']) ?? 640,
-      imageHeight: _readInt(outputs['image_height']) ?? _readInt(outputs['height']) ?? 480,
-      confidenceThreshold: _readDouble(outputs['confidence_threshold']) ?? minimumConfidence,
+      imageWidth:
+          _readInt(outputs['image_width']) ?? _readInt(outputs['width']) ?? 640,
+      imageHeight:
+          _readInt(outputs['image_height']) ?? _readInt(outputs['height']) ?? 480,
+      confidenceThreshold:
+          _readDouble(outputs['confidence_threshold']) ?? minimumConfidence,
       iouThreshold: _readDouble(outputs['iou_threshold']) ?? 0.45,
       layout: outputs['layout']?.toString() ?? 'rows_yolov8',
       classNames: classNames,
