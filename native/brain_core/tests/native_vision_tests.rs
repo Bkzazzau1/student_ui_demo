@@ -106,7 +106,7 @@ fn head_pose_flags_large_yaw() {
     let result = analyze_head_pose_geometry(
         40.0, 40.0,
         80.0, 40.0,
-        95.0, 60.0,
+        74.0, 60.0,
         60.0, 90.0,
         100.0,
         120.0,
