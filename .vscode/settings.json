@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/PROJECTS/students_ui_demo/linux"
+  "cmake.sourceDirectory": "C:/PROJECTS/students_ui_demo/linux",
+  "java.configuration.updateBuildConfiguration": "automatic"
 }

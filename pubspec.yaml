@@ -31,3 +31,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/models/
+    - assets/models/face_landmarker/
+    - assets/models/optimized_vision_runtime/
+    - assets/models/yolo_exam_review/
