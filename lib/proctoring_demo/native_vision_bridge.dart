@@ -372,8 +372,8 @@ _CompactRgbFrame? _cameraImageToCompactRgb(CameraImage image) {
 
   const targetMaxSide = 96;
   final step = _samplingStep(image.width, image.height, targetMaxSide);
-  final outWidth = (image.width / step).floor().clamp(1, image.width);
-  final outHeight = (image.height / step).floor().clamp(1, image.height);
+  final outWidth = (image.width / step).floor().clamp(1, image.width).toInt();
+  final outHeight = (image.height / step).floor().clamp(1, image.height).toInt();
   final out = Uint8List(outWidth * outHeight * 3);
 
   final format = image.format.group;
@@ -389,7 +389,7 @@ _CompactRgbFrame? _cameraImageToCompactRgb(CameraImage image) {
 int _samplingStep(int width, int height, int targetMaxSide) {
   final maxSide = width > height ? width : height;
   if (maxSide <= targetMaxSide) return 1;
-  return (maxSide / targetMaxSide).ceil().clamp(1, maxSide);
+  return (maxSide / targetMaxSide).ceil().clamp(1, maxSide).toInt();
 }
 
 void _sampleLumaAsRgb(
@@ -404,10 +404,10 @@ void _sampleLumaAsRgb(
   final rowStride = plane.bytesPerRow <= 0 ? image.width : plane.bytesPerRow;
   var cursor = 0;
   for (var y = 0; y < outHeight; y++) {
-    final sourceY = (y * step).clamp(0, image.height - 1);
+    final sourceY = (y * step).clamp(0, image.height - 1).toInt();
     final rowStart = sourceY * rowStride;
     for (var x = 0; x < outWidth; x++) {
-      final sourceX = (x * step).clamp(0, image.width - 1);
+      final sourceX = (x * step).clamp(0, image.width - 1).toInt();
       final index = rowStart + sourceX;
       final value = index >= 0 && index < bytes.length ? bytes[index] : 0;
       out[cursor++] = value;
@@ -429,10 +429,10 @@ void _sampleBgra8888(
   final rowStride = plane.bytesPerRow;
   var cursor = 0;
   for (var y = 0; y < outHeight; y++) {
-    final sourceY = (y * step).clamp(0, image.height - 1);
+    final sourceY = (y * step).clamp(0, image.height - 1).toInt();
     final rowStart = sourceY * rowStride;
     for (var x = 0; x < outWidth; x++) {
-      final sourceX = (x * step).clamp(0, image.width - 1);
+      final sourceX = (x * step).clamp(0, image.width - 1).toInt();
       final index = rowStart + sourceX * 4;
       if (index + 2 < bytes.length) {
         out[cursor++] = bytes[index + 2];
