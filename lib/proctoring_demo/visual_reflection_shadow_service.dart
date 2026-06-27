@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
 
+import 'native_vision_bridge.dart';
+
 class VisualReflectionShadowResult {
   const VisualReflectionShadowResult({
     required this.brightHotspotScore,
@@ -13,6 +15,7 @@ class VisualReflectionShadowResult {
     required this.offscreenInteractionLikely,
     required this.visualRiskScore,
     required this.label,
+    this.nativeFrameQuality,
   });
 
   final double brightHotspotScore;
@@ -24,6 +27,7 @@ class VisualReflectionShadowResult {
   final bool offscreenInteractionLikely;
   final double visualRiskScore;
   final String label;
+  final NativeVisionFrameQualitySnapshot? nativeFrameQuality;
 
   Map<String, Object?> toJson() => <String, Object?>{
         'bright_hotspot_score': brightHotspotScore,
@@ -35,10 +39,17 @@ class VisualReflectionShadowResult {
         'offscreen_interaction_likely': offscreenInteractionLikely,
         'visual_risk_score': visualRiskScore,
         'label': label,
+        if (nativeFrameQuality != null)
+          'native_frame_quality': nativeFrameQuality!.toJson(),
       };
 }
 
 class VisualReflectionShadowService {
+  VisualReflectionShadowService({NativeVisionBridge? nativeVision})
+      : _nativeVision = nativeVision ?? const GeneratedNativeVisionBridge();
+
+  final NativeVisionBridge _nativeVision;
+
   int _frameCounter = 0;
   List<double>? _lastGrid;
   final List<double> _hotspotHistory = <double>[];
@@ -48,8 +59,11 @@ class VisualReflectionShadowService {
   VisualReflectionShadowResult? analyse(CameraImage image) {
     _frameCounter++;
     if (_frameCounter % 6 != 0) return null;
-    if (image.planes.isEmpty || image.width <= 0 || image.height <= 0) return null;
+    if (image.planes.isEmpty || image.width <= 0 || image.height <= 0) {
+      return null;
+    }
 
+    final nativeQuality = _nativeVision.analyzeFrameQuality(image);
     final plane = image.planes.first;
     final width = image.width;
     final height = image.height;
@@ -107,11 +121,17 @@ class VisualReflectionShadowService {
     final centerMean = centerCount == 0 ? 0.0 : centerTotal / centerCount;
     final sideMean = sideCount == 0 ? 0.0 : sideTotal / sideCount;
     final lowerMean = lowerCount == 0 ? 0.0 : lowerTotal / lowerCount;
-    final contrast = localContrastCount == 0 ? 0.0 : localContrastTotal / localContrastCount;
+    final contrast = localContrastCount == 0
+        ? 0.0
+        : localContrastTotal / localContrastCount;
     final hotspotScore = (brightest - centerMean).clamp(0.0, 1.0);
     final sideReflectionScore = (sideMean - centerMean).clamp(0.0, 1.0);
-    final lowerMotion = _lastGrid == null ? 0.0 : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: true);
-    final fullMotion = _lastGrid == null ? 0.0 : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: false);
+    final lowerMotion = _lastGrid == null
+        ? 0.0
+        : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: true);
+    final fullMotion = _lastGrid == null
+        ? 0.0
+        : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: false);
     final shadowShift = ((brightest - darkest) * contrast).clamp(0.0, 1.0);
 
     _push(_hotspotHistory, hotspotScore, 18);
@@ -134,6 +154,13 @@ class VisualReflectionShadowService {
     if (lowerMean > centerMean + 0.16 && lowerMotion > 0.025) risk += 0.10;
     risk = risk.clamp(0.0, 1.0);
 
+    final nativeQualityNeedsAttention = nativeQuality != null &&
+        !nativeQuality.isUsable &&
+        (nativeQuality.reason.contains('dark') ||
+            nativeQuality.reason.contains('overexposed') ||
+            nativeQuality.reason.contains('contrast') ||
+            nativeQuality.reason.contains('blurry'));
+
     final label = suddenGlow
         ? 'possible_phone_screen_glow'
         : sideReflection
@@ -142,7 +169,9 @@ class VisualReflectionShadowService {
                 ? 'possible_offscreen_hand_or_phone_interaction'
                 : sharpShadow
                     ? 'sharp_shadow_or_light_shift_detected'
-                    : 'visual_integrity_normal';
+                    : nativeQualityNeedsAttention
+                        ? 'native_frame_quality_needs_attention'
+                        : 'visual_integrity_normal';
 
     _lastGrid = grid;
     return VisualReflectionShadowResult(
@@ -155,10 +184,17 @@ class VisualReflectionShadowService {
       offscreenInteractionLikely: lowerInteraction,
       visualRiskScore: risk,
       label: label,
+      nativeFrameQuality: nativeQuality,
     );
   }
 
-  double _regionMotion(List<double> previous, List<double> current, int gridW, int gridH, {required bool lowerOnly}) {
+  double _regionMotion(
+    List<double> previous,
+    List<double> current,
+    int gridW,
+    int gridH, {
+    required bool lowerOnly,
+  }) {
     final length = math.min(previous.length, current.length);
     if (length == 0) return 0.0;
     var total = 0.0;
