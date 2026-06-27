@@ -7,6 +7,7 @@ import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/lockdown.dart';
+import 'api/native_vision.dart';
 import 'api/proctoring.dart';
 import 'api/system_security.dart';
 import 'dart:async';
@@ -71,7 +72,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1495641733;
+  int get rustContentHash => 107546562;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -134,6 +135,19 @@ abstract class BrainCoreApiApi extends BaseApi {
     required double previousRoll,
   });
 
+  NativeHeadPoseReviewResult crateApiNativeVisionAnalyzeHeadPoseGeometry({
+    required double leftEyeX,
+    required double leftEyeY,
+    required double rightEyeX,
+    required double rightEyeY,
+    required double noseX,
+    required double noseY,
+    required double mouthX,
+    required double mouthY,
+    required double faceWidth,
+    required double faceHeight,
+  });
+
   MotionAnalysisDecision crateApiProctoringAnalyzeMotionSample({
     required double x,
     required double y,
@@ -148,6 +162,12 @@ abstract class BrainCoreApiApi extends BaseApi {
     required PlatformInt64 windowMs,
     required int burstCount,
     required int burstThreshold,
+  });
+
+  NativeVisionFrameQuality crateApiNativeVisionAnalyzeRgbFrameQuality({
+    required int width,
+    required int height,
+    required List<int> rgbBytes,
   });
 
   ScanFrameDecision crateApiProctoringAnalyzeScanFrame({
@@ -188,6 +208,18 @@ abstract class BrainCoreApiApi extends BaseApi {
 
   VisionModelStatus crateApiProctoringCurrentVisionModelStatus();
 
+  NativeObjectReviewResult crateApiNativeVisionDecodeYoloOutput({
+    required List<double> output,
+    required int numPredictions,
+    required int numClasses,
+    required int imageWidth,
+    required int imageHeight,
+    required double confidenceThreshold,
+    required double iouThreshold,
+    required String layout,
+    required List<String> classNames,
+  });
+
   double crateApiProctoringEstimateLightingFromLuma({
     required List<int> lumaBytes,
     required int sampleStride,
@@ -212,6 +244,11 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String studentId,
     required String examId,
     required String attemptId,
+  });
+
+  NativeObjectReviewResult crateApiNativeVisionReviewObjectDetections({
+    required List<NativeVisionDetection> detections,
+    required double iouThreshold,
   });
 
   Future<NativeSecureLockdownReviewResult>
@@ -541,6 +578,74 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  NativeHeadPoseReviewResult crateApiNativeVisionAnalyzeHeadPoseGeometry({
+    required double leftEyeX,
+    required double leftEyeY,
+    required double rightEyeX,
+    required double rightEyeY,
+    required double noseX,
+    required double noseY,
+    required double mouthX,
+    required double mouthY,
+    required double faceWidth,
+    required double faceHeight,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_f_32(leftEyeX, serializer);
+          sse_encode_f_32(leftEyeY, serializer);
+          sse_encode_f_32(rightEyeX, serializer);
+          sse_encode_f_32(rightEyeY, serializer);
+          sse_encode_f_32(noseX, serializer);
+          sse_encode_f_32(noseY, serializer);
+          sse_encode_f_32(mouthX, serializer);
+          sse_encode_f_32(mouthY, serializer);
+          sse_encode_f_32(faceWidth, serializer);
+          sse_encode_f_32(faceHeight, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_head_pose_review_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiNativeVisionAnalyzeHeadPoseGeometryConstMeta,
+        argValues: [
+          leftEyeX,
+          leftEyeY,
+          rightEyeX,
+          rightEyeY,
+          noseX,
+          noseY,
+          mouthX,
+          mouthY,
+          faceWidth,
+          faceHeight,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNativeVisionAnalyzeHeadPoseGeometryConstMeta =>
+      const TaskConstMeta(
+        debugName: "analyze_head_pose_geometry",
+        argNames: [
+          "leftEyeX",
+          "leftEyeY",
+          "rightEyeX",
+          "rightEyeY",
+          "noseX",
+          "noseY",
+          "mouthX",
+          "mouthY",
+          "faceWidth",
+          "faceHeight",
+        ],
+      );
+
+  @override
   MotionAnalysisDecision crateApiProctoringAnalyzeMotionSample({
     required double x,
     required double y,
@@ -573,7 +678,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_64(windowMs, serializer);
           sse_encode_u_32(burstCount, serializer);
           sse_encode_u_32(burstThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_motion_analysis_decision,
@@ -621,6 +726,38 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  NativeVisionFrameQuality crateApiNativeVisionAnalyzeRgbFrameQuality({
+    required int width,
+    required int height,
+    required List<int> rgbBytes,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_i_32(width, serializer);
+          sse_encode_i_32(height, serializer);
+          sse_encode_list_prim_u_8_loose(rgbBytes, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_vision_frame_quality,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiNativeVisionAnalyzeRgbFrameQualityConstMeta,
+        argValues: [width, height, rgbBytes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNativeVisionAnalyzeRgbFrameQualityConstMeta =>
+      const TaskConstMeta(
+        debugName: "analyze_rgb_frame_quality",
+        argNames: ["width", "height", "rgbBytes"],
+      );
+
+  @override
   ScanFrameDecision crateApiProctoringAnalyzeScanFrame({
     required List<int> plane0Bytes,
     required int width,
@@ -637,7 +774,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_u_32(height, serializer);
           sse_encode_u_32(bytesPerRow, serializer);
           sse_encode_String(pixelFormat, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_scan_frame_decision,
@@ -675,7 +812,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(platformName, serializer);
           sse_encode_String(processReport, serializer);
           sse_encode_opt_box_autoadd_i_32(displayCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_secure_lockdown_review_result,
@@ -706,7 +843,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(report, serializer);
           sse_encode_String(platformName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_system_security_review_result,
@@ -733,7 +870,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(payloadJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -758,7 +895,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -786,7 +923,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 14,
             port: port_,
           );
         },
@@ -819,7 +956,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 15,
             port: port_,
           );
         },
@@ -852,7 +989,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 16,
             port: port_,
           );
         },
@@ -880,7 +1017,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -900,6 +1037,70 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  NativeObjectReviewResult crateApiNativeVisionDecodeYoloOutput({
+    required List<double> output,
+    required int numPredictions,
+    required int numClasses,
+    required int imageWidth,
+    required int imageHeight,
+    required double confidenceThreshold,
+    required double iouThreshold,
+    required String layout,
+    required List<String> classNames,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_f_32_loose(output, serializer);
+          sse_encode_i_32(numPredictions, serializer);
+          sse_encode_i_32(numClasses, serializer);
+          sse_encode_i_32(imageWidth, serializer);
+          sse_encode_i_32(imageHeight, serializer);
+          sse_encode_f_32(confidenceThreshold, serializer);
+          sse_encode_f_32(iouThreshold, serializer);
+          sse_encode_String(layout, serializer);
+          sse_encode_list_String(classNames, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_object_review_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiNativeVisionDecodeYoloOutputConstMeta,
+        argValues: [
+          output,
+          numPredictions,
+          numClasses,
+          imageWidth,
+          imageHeight,
+          confidenceThreshold,
+          iouThreshold,
+          layout,
+          classNames,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNativeVisionDecodeYoloOutputConstMeta =>
+      const TaskConstMeta(
+        debugName: "decode_yolo_output",
+        argNames: [
+          "output",
+          "numPredictions",
+          "numClasses",
+          "imageWidth",
+          "imageHeight",
+          "confidenceThreshold",
+          "iouThreshold",
+          "layout",
+          "classNames",
+        ],
+      );
+
+  @override
   double crateApiProctoringEstimateLightingFromLuma({
     required List<int> lumaBytes,
     required int sampleStride,
@@ -910,7 +1111,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(lumaBytes, serializer);
           sse_encode_u_32(sampleStride, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_64,
@@ -936,7 +1137,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -966,7 +1167,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -1000,7 +1201,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lossThresholdDbfs, serializer);
           sse_encode_u_32(lossStreak, serializer);
           sse_encode_u_32(lossSamplesToTrigger, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_acoustic_sample_decision,
@@ -1039,7 +1240,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(studentId, serializer);
           sse_encode_String(examId, serializer);
           sse_encode_String(attemptId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1059,6 +1260,36 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  NativeObjectReviewResult crateApiNativeVisionReviewObjectDetections({
+    required List<NativeVisionDetection> detections,
+    required double iouThreshold,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_native_vision_detection(detections, serializer);
+          sse_encode_f_32(iouThreshold, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_object_review_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiNativeVisionReviewObjectDetectionsConstMeta,
+        argValues: [detections, iouThreshold],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNativeVisionReviewObjectDetectionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "review_object_detections",
+        argNames: ["detections", "iouThreshold"],
+      );
+
+  @override
   Future<NativeSecureLockdownReviewResult>
   crateApiLockdownRunSecureLockdownReview({required String platformName}) {
     return handler.executeNormal(
@@ -1069,7 +1300,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1103,7 +1334,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1149,7 +1380,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1211,7 +1442,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -1261,7 +1492,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(payloadJson, serializer);
           sse_encode_String(checksum, serializer);
           sse_encode_String(recoveredFrom, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_attempt_recovery_check,
@@ -1363,6 +1594,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
@@ -1429,6 +1666,28 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     return (raw as List<dynamic>)
         .map(dco_decode_native_lockdown_finding)
         .toList();
+  }
+
+  @protected
+  List<NativeVisionDetection> dco_decode_list_native_vision_detection(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_vision_detection)
+        .toList();
+  }
+
+  @protected
+  List<double> dco_decode_list_prim_f_32_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<double>;
+  }
+
+  @protected
+  Float32List dco_decode_list_prim_f_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Float32List;
   }
 
   @protected
@@ -1500,6 +1759,25 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  NativeHeadPoseReviewResult dco_decode_native_head_pose_review_result(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NativeHeadPoseReviewResult(
+      usable: dco_decode_bool(arr[0]),
+      lookingAway: dco_decode_bool(arr[1]),
+      yawScore: dco_decode_f_32(arr[2]),
+      pitchScore: dco_decode_f_32(arr[3]),
+      rollScore: dco_decode_f_32(arr[4]),
+      attentionLevel: dco_decode_String(arr[5]),
+      reason: dco_decode_String(arr[6]),
+    );
+  }
+
+  @protected
   NativeLockdownFinding dco_decode_native_lockdown_finding(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1509,6 +1787,24 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       code: dco_decode_String(arr[0]),
       message: dco_decode_String(arr[1]),
       severity: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  NativeObjectReviewResult dco_decode_native_object_review_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return NativeObjectReviewResult(
+      detections: dco_decode_list_native_vision_detection(arr[0]),
+      peopleCount: dco_decode_i_32(arr[1]),
+      phoneCount: dco_decode_i_32(arr[2]),
+      bookCount: dco_decode_i_32(arr[3]),
+      paperCount: dco_decode_i_32(arr[4]),
+      needsReview: dco_decode_bool(arr[5]),
+      attentionLevel: dco_decode_String(arr[6]),
+      reason: dco_decode_String(arr[7]),
     );
   }
 
@@ -1551,6 +1847,42 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       hardFindings: dco_decode_list_String(arr[11]),
       warningFindings: dco_decode_list_String(arr[12]),
       message: dco_decode_String(arr[13]),
+    );
+  }
+
+  @protected
+  NativeVisionDetection dco_decode_native_vision_detection(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return NativeVisionDetection(
+      classId: dco_decode_i_32(arr[0]),
+      label: dco_decode_String(arr[1]),
+      confidence: dco_decode_f_32(arr[2]),
+      xCenter: dco_decode_f_32(arr[3]),
+      yCenter: dco_decode_f_32(arr[4]),
+      width: dco_decode_f_32(arr[5]),
+      height: dco_decode_f_32(arr[6]),
+      xMin: dco_decode_f_32(arr[7]),
+      yMin: dco_decode_f_32(arr[8]),
+      xMax: dco_decode_f_32(arr[9]),
+      yMax: dco_decode_f_32(arr[10]),
+    );
+  }
+
+  @protected
+  NativeVisionFrameQuality dco_decode_native_vision_frame_quality(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeVisionFrameQuality(
+      isUsable: dco_decode_bool(arr[0]),
+      brightness: dco_decode_f_32(arr[1]),
+      contrast: dco_decode_f_32(arr[2]),
+      sharpness: dco_decode_f_32(arr[3]),
+      reason: dco_decode_String(arr[4]),
     );
   }
 
@@ -1750,6 +2082,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
+  }
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
@@ -1844,6 +2182,34 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  List<NativeVisionDetection> sse_decode_list_native_vision_detection(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeVisionDetection>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_vision_detection(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<double> sse_decode_list_prim_f_32_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getFloat32List(len_);
+  }
+
+  @protected
+  Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getFloat32List(len_);
+  }
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -1929,6 +2295,29 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  NativeHeadPoseReviewResult sse_decode_native_head_pose_review_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_usable = sse_decode_bool(deserializer);
+    var var_lookingAway = sse_decode_bool(deserializer);
+    var var_yawScore = sse_decode_f_32(deserializer);
+    var var_pitchScore = sse_decode_f_32(deserializer);
+    var var_rollScore = sse_decode_f_32(deserializer);
+    var var_attentionLevel = sse_decode_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return NativeHeadPoseReviewResult(
+      usable: var_usable,
+      lookingAway: var_lookingAway,
+      yawScore: var_yawScore,
+      pitchScore: var_pitchScore,
+      rollScore: var_rollScore,
+      attentionLevel: var_attentionLevel,
+      reason: var_reason,
+    );
+  }
+
+  @protected
   NativeLockdownFinding sse_decode_native_lockdown_finding(
     SseDeserializer deserializer,
   ) {
@@ -1940,6 +2329,31 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       code: var_code,
       message: var_message,
       severity: var_severity,
+    );
+  }
+
+  @protected
+  NativeObjectReviewResult sse_decode_native_object_review_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_detections = sse_decode_list_native_vision_detection(deserializer);
+    var var_peopleCount = sse_decode_i_32(deserializer);
+    var var_phoneCount = sse_decode_i_32(deserializer);
+    var var_bookCount = sse_decode_i_32(deserializer);
+    var var_paperCount = sse_decode_i_32(deserializer);
+    var var_needsReview = sse_decode_bool(deserializer);
+    var var_attentionLevel = sse_decode_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return NativeObjectReviewResult(
+      detections: var_detections,
+      peopleCount: var_peopleCount,
+      phoneCount: var_phoneCount,
+      bookCount: var_bookCount,
+      paperCount: var_paperCount,
+      needsReview: var_needsReview,
+      attentionLevel: var_attentionLevel,
+      reason: var_reason,
     );
   }
 
@@ -2000,6 +2414,56 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       hardFindings: var_hardFindings,
       warningFindings: var_warningFindings,
       message: var_message,
+    );
+  }
+
+  @protected
+  NativeVisionDetection sse_decode_native_vision_detection(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_classId = sse_decode_i_32(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_confidence = sse_decode_f_32(deserializer);
+    var var_xCenter = sse_decode_f_32(deserializer);
+    var var_yCenter = sse_decode_f_32(deserializer);
+    var var_width = sse_decode_f_32(deserializer);
+    var var_height = sse_decode_f_32(deserializer);
+    var var_xMin = sse_decode_f_32(deserializer);
+    var var_yMin = sse_decode_f_32(deserializer);
+    var var_xMax = sse_decode_f_32(deserializer);
+    var var_yMax = sse_decode_f_32(deserializer);
+    return NativeVisionDetection(
+      classId: var_classId,
+      label: var_label,
+      confidence: var_confidence,
+      xCenter: var_xCenter,
+      yCenter: var_yCenter,
+      width: var_width,
+      height: var_height,
+      xMin: var_xMin,
+      yMin: var_yMin,
+      xMax: var_xMax,
+      yMax: var_yMax,
+    );
+  }
+
+  @protected
+  NativeVisionFrameQuality sse_decode_native_vision_frame_quality(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_isUsable = sse_decode_bool(deserializer);
+    var var_brightness = sse_decode_f_32(deserializer);
+    var var_contrast = sse_decode_f_32(deserializer);
+    var var_sharpness = sse_decode_f_32(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return NativeVisionFrameQuality(
+      isUsable: var_isUsable,
+      brightness: var_brightness,
+      contrast: var_contrast,
+      sharpness: var_sharpness,
+      reason: var_reason,
     );
   }
 
@@ -2222,6 +2686,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
+  }
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
@@ -2295,6 +2765,40 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_native_vision_detection(
+    List<NativeVisionDetection> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_vision_detection(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_f_32_loose(
+    List<double> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putFloat32List(
+      self is Float32List ? self : Float32List.fromList(self),
+    );
+  }
+
+  @protected
+  void sse_encode_list_prim_f_32_strict(
+    Float32List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putFloat32List(self);
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_loose(
     List<int> self,
     SseSerializer serializer,
@@ -2363,6 +2867,21 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_native_head_pose_review_result(
+    NativeHeadPoseReviewResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.usable, serializer);
+    sse_encode_bool(self.lookingAway, serializer);
+    sse_encode_f_32(self.yawScore, serializer);
+    sse_encode_f_32(self.pitchScore, serializer);
+    sse_encode_f_32(self.rollScore, serializer);
+    sse_encode_String(self.attentionLevel, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
   void sse_encode_native_lockdown_finding(
     NativeLockdownFinding self,
     SseSerializer serializer,
@@ -2371,6 +2890,22 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_String(self.code, serializer);
     sse_encode_String(self.message, serializer);
     sse_encode_String(self.severity, serializer);
+  }
+
+  @protected
+  void sse_encode_native_object_review_result(
+    NativeObjectReviewResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_native_vision_detection(self.detections, serializer);
+    sse_encode_i_32(self.peopleCount, serializer);
+    sse_encode_i_32(self.phoneCount, serializer);
+    sse_encode_i_32(self.bookCount, serializer);
+    sse_encode_i_32(self.paperCount, serializer);
+    sse_encode_bool(self.needsReview, serializer);
+    sse_encode_String(self.attentionLevel, serializer);
+    sse_encode_String(self.reason, serializer);
   }
 
   @protected
@@ -2407,6 +2942,38 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_list_String(self.hardFindings, serializer);
     sse_encode_list_String(self.warningFindings, serializer);
     sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_native_vision_detection(
+    NativeVisionDetection self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.classId, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_f_32(self.confidence, serializer);
+    sse_encode_f_32(self.xCenter, serializer);
+    sse_encode_f_32(self.yCenter, serializer);
+    sse_encode_f_32(self.width, serializer);
+    sse_encode_f_32(self.height, serializer);
+    sse_encode_f_32(self.xMin, serializer);
+    sse_encode_f_32(self.yMin, serializer);
+    sse_encode_f_32(self.xMax, serializer);
+    sse_encode_f_32(self.yMax, serializer);
+  }
+
+  @protected
+  void sse_encode_native_vision_frame_quality(
+    NativeVisionFrameQuality self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.isUsable, serializer);
+    sse_encode_f_32(self.brightness, serializer);
+    sse_encode_f_32(self.contrast, serializer);
+    sse_encode_f_32(self.sharpness, serializer);
+    sse_encode_String(self.reason, serializer);
   }
 
   @protected

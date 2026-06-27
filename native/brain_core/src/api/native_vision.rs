@@ -151,6 +151,7 @@ pub fn analyze_head_pose_geometry(
     face_width: f32,
     face_height: f32,
 ) -> NativeHeadPoseReviewResult {
+    let _ = mouth_x;
     if face_width <= 0.0 || face_height <= 0.0 {
         return head_pose(false, true, 1.0, 1.0, 1.0, "urgent_review_required", "invalid face geometry");
     }

@@ -10,6 +10,7 @@ import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/lockdown.dart';
+import 'api/native_vision.dart';
 import 'api/proctoring.dart';
 import 'api/system_security.dart';
 import 'dart:async';
@@ -57,6 +58,9 @@ abstract class BrainCoreApiApiImplPlatform
   EnvironmentFrameDecision dco_decode_environment_frame_decision(dynamic raw);
 
   @protected
+  double dco_decode_f_32(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
@@ -80,6 +84,17 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  List<NativeVisionDetection> dco_decode_list_native_vision_detection(
+    dynamic raw,
+  );
+
+  @protected
+  List<double> dco_decode_list_prim_f_32_loose(dynamic raw);
+
+  @protected
+  Float32List dco_decode_list_prim_f_32_strict(dynamic raw);
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
@@ -99,7 +114,15 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  NativeHeadPoseReviewResult dco_decode_native_head_pose_review_result(
+    dynamic raw,
+  );
+
+  @protected
   NativeLockdownFinding dco_decode_native_lockdown_finding(dynamic raw);
+
+  @protected
+  NativeObjectReviewResult dco_decode_native_object_review_result(dynamic raw);
 
   @protected
   NativeSecureLockdownReviewResult
@@ -108,6 +131,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   NativeSystemSecurityReviewResult
   dco_decode_native_system_security_review_result(dynamic raw);
+
+  @protected
+  NativeVisionDetection dco_decode_native_vision_detection(dynamic raw);
+
+  @protected
+  NativeVisionFrameQuality dco_decode_native_vision_frame_quality(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -184,6 +213,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  double sse_decode_f_32(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
@@ -211,6 +243,17 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  List<NativeVisionDetection> sse_decode_list_native_vision_detection(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<double> sse_decode_list_prim_f_32_loose(SseDeserializer deserializer);
+
+  @protected
+  Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer);
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
@@ -232,7 +275,17 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  NativeHeadPoseReviewResult sse_decode_native_head_pose_review_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeLockdownFinding sse_decode_native_lockdown_finding(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeObjectReviewResult sse_decode_native_object_review_result(
     SseDeserializer deserializer,
   );
 
@@ -243,6 +296,16 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   NativeSystemSecurityReviewResult
   sse_decode_native_system_security_review_result(SseDeserializer deserializer);
+
+  @protected
+  NativeVisionDetection sse_decode_native_vision_detection(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeVisionFrameQuality sse_decode_native_vision_frame_quality(
+    SseDeserializer deserializer,
+  );
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -334,6 +397,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
@@ -360,6 +426,24 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_list_native_lockdown_finding(
     List<NativeLockdownFinding> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_vision_detection(
+    List<NativeVisionDetection> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_f_32_loose(
+    List<double> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_f_32_strict(
+    Float32List self,
     SseSerializer serializer,
   );
 
@@ -391,8 +475,20 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_native_head_pose_review_result(
+    NativeHeadPoseReviewResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_lockdown_finding(
     NativeLockdownFinding self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_object_review_result(
+    NativeObjectReviewResult self,
     SseSerializer serializer,
   );
 
@@ -405,6 +501,18 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_native_system_security_review_result(
     NativeSystemSecurityReviewResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_vision_detection(
+    NativeVisionDetection self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_vision_frame_quality(
+    NativeVisionFrameQuality self,
     SseSerializer serializer,
   );
 

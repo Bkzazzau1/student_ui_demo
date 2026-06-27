@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1495641733;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 107546562;
 
 // Section: executor
 
@@ -273,6 +273,57 @@ fn wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
         },
     )
 }
+fn wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_head_pose_geometry",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_left_eye_x = <f32>::sse_decode(&mut deserializer);
+            let api_left_eye_y = <f32>::sse_decode(&mut deserializer);
+            let api_right_eye_x = <f32>::sse_decode(&mut deserializer);
+            let api_right_eye_y = <f32>::sse_decode(&mut deserializer);
+            let api_nose_x = <f32>::sse_decode(&mut deserializer);
+            let api_nose_y = <f32>::sse_decode(&mut deserializer);
+            let api_mouth_x = <f32>::sse_decode(&mut deserializer);
+            let api_mouth_y = <f32>::sse_decode(&mut deserializer);
+            let api_face_width = <f32>::sse_decode(&mut deserializer);
+            let api_face_height = <f32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::native_vision::analyze_head_pose_geometry(
+                        api_left_eye_x,
+                        api_left_eye_y,
+                        api_right_eye_x,
+                        api_right_eye_y,
+                        api_nose_x,
+                        api_nose_y,
+                        api_mouth_x,
+                        api_mouth_y,
+                        api_face_width,
+                        api_face_height,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__proctoring__analyze_motion_sample_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -324,6 +375,43 @@ fn wire__crate__api__proctoring__analyze_motion_sample_impl(
                         api_window_ms,
                         api_burst_count,
                         api_burst_threshold,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_rgb_frame_quality",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_width = <i32>::sse_decode(&mut deserializer);
+            let api_height = <i32>::sse_decode(&mut deserializer);
+            let api_rgb_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::native_vision::analyze_rgb_frame_quality(
+                        api_width,
+                        api_height,
+                        api_rgb_bytes,
                     ))?;
                 Ok(output_ok)
             })())
@@ -639,6 +727,55 @@ fn wire__crate__api__proctoring__current_vision_model_status_impl(
         },
     )
 }
+fn wire__crate__api__native_vision__decode_yolo_output_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "decode_yolo_output",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_output = <Vec<f32>>::sse_decode(&mut deserializer);
+            let api_num_predictions = <i32>::sse_decode(&mut deserializer);
+            let api_num_classes = <i32>::sse_decode(&mut deserializer);
+            let api_image_width = <i32>::sse_decode(&mut deserializer);
+            let api_image_height = <i32>::sse_decode(&mut deserializer);
+            let api_confidence_threshold = <f32>::sse_decode(&mut deserializer);
+            let api_iou_threshold = <f32>::sse_decode(&mut deserializer);
+            let api_layout = <String>::sse_decode(&mut deserializer);
+            let api_class_names = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::native_vision::decode_yolo_output(
+                        api_output,
+                        api_num_predictions,
+                        api_num_classes,
+                        api_image_width,
+                        api_image_height,
+                        api_confidence_threshold,
+                        api_iou_threshold,
+                        api_layout,
+                        api_class_names,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -812,6 +949,44 @@ fn wire__crate__api__evidence_vault__read_evidence_bundle_impl(
                     api_exam_id,
                     api_attempt_id,
                 )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__native_vision__review_object_detections_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "review_object_detections",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_detections =
+                <Vec<crate::api::native_vision::NativeVisionDetection>>::sse_decode(
+                    &mut deserializer,
+                );
+            let api_iou_threshold = <f32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::native_vision::review_object_detections(
+                        api_detections,
+                        api_iou_threshold,
+                    ))?;
                 Ok(output_ok)
             })())
         },
@@ -1087,6 +1262,13 @@ impl SseDecode for crate::api::proctoring::EnvironmentFrameDecision {
     }
 }
 
+impl SseDecode for f32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_f32::<NativeEndian>().unwrap()
+    }
+}
+
 impl SseDecode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1180,6 +1362,30 @@ impl SseDecode for Vec<crate::api::lockdown::NativeLockdownFinding> {
     }
 }
 
+impl SseDecode for Vec<crate::api::native_vision::NativeVisionDetection> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::native_vision::NativeVisionDetection>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<f32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<f32>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1260,6 +1466,28 @@ impl SseDecode for crate::api::audio_intelligence::NativeAudioIntelligenceResult
     }
 }
 
+impl SseDecode for crate::api::native_vision::NativeHeadPoseReviewResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_usable = <bool>::sse_decode(deserializer);
+        let mut var_lookingAway = <bool>::sse_decode(deserializer);
+        let mut var_yawScore = <f32>::sse_decode(deserializer);
+        let mut var_pitchScore = <f32>::sse_decode(deserializer);
+        let mut var_rollScore = <f32>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::native_vision::NativeHeadPoseReviewResult {
+            usable: var_usable,
+            looking_away: var_lookingAway,
+            yaw_score: var_yawScore,
+            pitch_score: var_pitchScore,
+            roll_score: var_rollScore,
+            attention_level: var_attentionLevel,
+            reason: var_reason,
+        };
+    }
+}
+
 impl SseDecode for crate::api::lockdown::NativeLockdownFinding {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1270,6 +1498,31 @@ impl SseDecode for crate::api::lockdown::NativeLockdownFinding {
             code: var_code,
             message: var_message,
             severity: var_severity,
+        };
+    }
+}
+
+impl SseDecode for crate::api::native_vision::NativeObjectReviewResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_detections =
+            <Vec<crate::api::native_vision::NativeVisionDetection>>::sse_decode(deserializer);
+        let mut var_peopleCount = <i32>::sse_decode(deserializer);
+        let mut var_phoneCount = <i32>::sse_decode(deserializer);
+        let mut var_bookCount = <i32>::sse_decode(deserializer);
+        let mut var_paperCount = <i32>::sse_decode(deserializer);
+        let mut var_needsReview = <bool>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::native_vision::NativeObjectReviewResult {
+            detections: var_detections,
+            people_count: var_peopleCount,
+            phone_count: var_phoneCount,
+            book_count: var_bookCount,
+            paper_count: var_paperCount,
+            needs_review: var_needsReview,
+            attention_level: var_attentionLevel,
+            reason: var_reason,
         };
     }
 }
@@ -1327,6 +1580,54 @@ impl SseDecode for crate::api::system_security::NativeSystemSecurityReviewResult
             hard_findings: var_hardFindings,
             warning_findings: var_warningFindings,
             message: var_message,
+        };
+    }
+}
+
+impl SseDecode for crate::api::native_vision::NativeVisionDetection {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_classId = <i32>::sse_decode(deserializer);
+        let mut var_label = <String>::sse_decode(deserializer);
+        let mut var_confidence = <f32>::sse_decode(deserializer);
+        let mut var_xCenter = <f32>::sse_decode(deserializer);
+        let mut var_yCenter = <f32>::sse_decode(deserializer);
+        let mut var_width = <f32>::sse_decode(deserializer);
+        let mut var_height = <f32>::sse_decode(deserializer);
+        let mut var_xMin = <f32>::sse_decode(deserializer);
+        let mut var_yMin = <f32>::sse_decode(deserializer);
+        let mut var_xMax = <f32>::sse_decode(deserializer);
+        let mut var_yMax = <f32>::sse_decode(deserializer);
+        return crate::api::native_vision::NativeVisionDetection {
+            class_id: var_classId,
+            label: var_label,
+            confidence: var_confidence,
+            x_center: var_xCenter,
+            y_center: var_yCenter,
+            width: var_width,
+            height: var_height,
+            x_min: var_xMin,
+            y_min: var_yMin,
+            x_max: var_xMax,
+            y_max: var_yMax,
+        };
+    }
+}
+
+impl SseDecode for crate::api::native_vision::NativeVisionFrameQuality {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_isUsable = <bool>::sse_decode(deserializer);
+        let mut var_brightness = <f32>::sse_decode(deserializer);
+        let mut var_contrast = <f32>::sse_decode(deserializer);
+        let mut var_sharpness = <f32>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::native_vision::NativeVisionFrameQuality {
+            is_usable: var_isUsable,
+            brightness: var_brightness,
+            contrast: var_contrast,
+            sharpness: var_sharpness,
+            reason: var_reason,
         };
     }
 }
@@ -1474,31 +1775,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        12 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        14 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        15 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__system_security__collect_system_security_report_impl(
+        16 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        25 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__system_security__run_system_security_review_impl(
+        26 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -1533,49 +1834,65 @@ fn pde_ffi_dispatcher_sync_impl(
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
+        6 => wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__system_security__analyze_system_security_report_impl(
+        7 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => {
+        9 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        11 => wire__crate__api__system_security__analyze_system_security_report_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        12 => {
             wire__crate__api__attempt_recovery__attempt_checksum_impl(ptr, rust_vec_len, data_len)
         }
-        11 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        13 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__proctoring__current_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+        18 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => {
+        20 => {
             wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
         }
-        18 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        19 => {
+        21 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        22 => {
             wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
         }
-        20 => {
+        23 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        23 => {
+        24 => wire__crate__api__native_vision__review_object_detections_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        27 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        24 => {
+        28 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        25 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+        29 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -1802,6 +2119,32 @@ impl
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::native_vision::NativeHeadPoseReviewResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.usable.into_into_dart().into_dart(),
+            self.looking_away.into_into_dart().into_dart(),
+            self.yaw_score.into_into_dart().into_dart(),
+            self.pitch_score.into_into_dart().into_dart(),
+            self.roll_score.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::native_vision::NativeHeadPoseReviewResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::native_vision::NativeHeadPoseReviewResult>
+    for crate::api::native_vision::NativeHeadPoseReviewResult
+{
+    fn into_into_dart(self) -> crate::api::native_vision::NativeHeadPoseReviewResult {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::lockdown::NativeLockdownFinding {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -1820,6 +2163,33 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::lockdown::NativeLockdownFindi
     for crate::api::lockdown::NativeLockdownFinding
 {
     fn into_into_dart(self) -> crate::api::lockdown::NativeLockdownFinding {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::native_vision::NativeObjectReviewResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.detections.into_into_dart().into_dart(),
+            self.people_count.into_into_dart().into_dart(),
+            self.phone_count.into_into_dart().into_dart(),
+            self.book_count.into_into_dart().into_dart(),
+            self.paper_count.into_into_dart().into_dart(),
+            self.needs_review.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::native_vision::NativeObjectReviewResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::native_vision::NativeObjectReviewResult>
+    for crate::api::native_vision::NativeObjectReviewResult
+{
+    fn into_into_dart(self) -> crate::api::native_vision::NativeObjectReviewResult {
         self
     }
 }
@@ -1883,6 +2253,60 @@ impl
     for crate::api::system_security::NativeSystemSecurityReviewResult
 {
     fn into_into_dart(self) -> crate::api::system_security::NativeSystemSecurityReviewResult {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::native_vision::NativeVisionDetection {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.class_id.into_into_dart().into_dart(),
+            self.label.into_into_dart().into_dart(),
+            self.confidence.into_into_dart().into_dart(),
+            self.x_center.into_into_dart().into_dart(),
+            self.y_center.into_into_dart().into_dart(),
+            self.width.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.x_min.into_into_dart().into_dart(),
+            self.y_min.into_into_dart().into_dart(),
+            self.x_max.into_into_dart().into_dart(),
+            self.y_max.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::native_vision::NativeVisionDetection
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::native_vision::NativeVisionDetection>
+    for crate::api::native_vision::NativeVisionDetection
+{
+    fn into_into_dart(self) -> crate::api::native_vision::NativeVisionDetection {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::native_vision::NativeVisionFrameQuality {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.is_usable.into_into_dart().into_dart(),
+            self.brightness.into_into_dart().into_dart(),
+            self.contrast.into_into_dart().into_dart(),
+            self.sharpness.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::native_vision::NativeVisionFrameQuality
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::native_vision::NativeVisionFrameQuality>
+    for crate::api::native_vision::NativeVisionFrameQuality
+{
+    fn into_into_dart(self) -> crate::api::native_vision::NativeVisionFrameQuality {
         self
     }
 }
@@ -2004,6 +2428,13 @@ impl SseEncode for crate::api::proctoring::EnvironmentFrameDecision {
     }
 }
 
+impl SseEncode for f32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_f32::<NativeEndian>(self).unwrap();
+    }
+}
+
 impl SseEncode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2072,6 +2503,26 @@ impl SseEncode for Vec<crate::api::lockdown::NativeLockdownFinding> {
     }
 }
 
+impl SseEncode for Vec<crate::api::native_vision::NativeVisionDetection> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::native_vision::NativeVisionDetection>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<f32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <f32>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2122,12 +2573,42 @@ impl SseEncode for crate::api::audio_intelligence::NativeAudioIntelligenceResult
     }
 }
 
+impl SseEncode for crate::api::native_vision::NativeHeadPoseReviewResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.usable, serializer);
+        <bool>::sse_encode(self.looking_away, serializer);
+        <f32>::sse_encode(self.yaw_score, serializer);
+        <f32>::sse_encode(self.pitch_score, serializer);
+        <f32>::sse_encode(self.roll_score, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
 impl SseEncode for crate::api::lockdown::NativeLockdownFinding {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.code, serializer);
         <String>::sse_encode(self.message, serializer);
         <String>::sse_encode(self.severity, serializer);
+    }
+}
+
+impl SseEncode for crate::api::native_vision::NativeObjectReviewResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::native_vision::NativeVisionDetection>>::sse_encode(
+            self.detections,
+            serializer,
+        );
+        <i32>::sse_encode(self.people_count, serializer);
+        <i32>::sse_encode(self.phone_count, serializer);
+        <i32>::sse_encode(self.book_count, serializer);
+        <i32>::sse_encode(self.paper_count, serializer);
+        <bool>::sse_encode(self.needs_review, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <String>::sse_encode(self.reason, serializer);
     }
 }
 
@@ -2160,6 +2641,34 @@ impl SseEncode for crate::api::system_security::NativeSystemSecurityReviewResult
         <Vec<String>>::sse_encode(self.hard_findings, serializer);
         <Vec<String>>::sse_encode(self.warning_findings, serializer);
         <String>::sse_encode(self.message, serializer);
+    }
+}
+
+impl SseEncode for crate::api::native_vision::NativeVisionDetection {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.class_id, serializer);
+        <String>::sse_encode(self.label, serializer);
+        <f32>::sse_encode(self.confidence, serializer);
+        <f32>::sse_encode(self.x_center, serializer);
+        <f32>::sse_encode(self.y_center, serializer);
+        <f32>::sse_encode(self.width, serializer);
+        <f32>::sse_encode(self.height, serializer);
+        <f32>::sse_encode(self.x_min, serializer);
+        <f32>::sse_encode(self.y_min, serializer);
+        <f32>::sse_encode(self.x_max, serializer);
+        <f32>::sse_encode(self.y_max, serializer);
+    }
+}
+
+impl SseEncode for crate::api::native_vision::NativeVisionFrameQuality {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_usable, serializer);
+        <f32>::sse_encode(self.brightness, serializer);
+        <f32>::sse_encode(self.contrast, serializer);
+        <f32>::sse_encode(self.sharpness, serializer);
+        <String>::sse_encode(self.reason, serializer);
     }
 }
 
