@@ -191,9 +191,20 @@ class AudioFingerprintIsolationService {
   }
 
   AudioIsolationResult _fromNative(NativeAudioIntelligenceSnapshot native) {
-    final nearVoiceLikely = native.nearVoiceLikely;
-    final possibleFarVoiceLikely = native.possibleFarVoiceLikely;
-    final allowedAmbientLikely = native.allowedAmbientLikely;
+    final softenedNearVoice =
+        native.voiceConfidence >= 0.48 &&
+        (native.rms >= 0.012 || native.peak >= 0.065);
+    final softenedFarVoice =
+        !softenedNearVoice &&
+        native.voiceConfidence >= 0.35 &&
+        (native.rms >= 0.006 || native.peak >= 0.035);
+    final nearVoiceLikely = native.nearVoiceLikely || softenedNearVoice;
+    final possibleFarVoiceLikely =
+        !nearVoiceLikely && (native.possibleFarVoiceLikely || softenedFarVoice);
+    final allowedAmbientLikely =
+        !nearVoiceLikely &&
+        !possibleFarVoiceLikely &&
+        native.allowedAmbientLikely;
     final label = nearVoiceLikely
         ? 'near_voice_noticed'
         : possibleFarVoiceLikely

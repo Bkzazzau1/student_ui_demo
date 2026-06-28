@@ -62,8 +62,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   static const int _deviceRecoverySeconds = 30;
   static const int _deviceRetryEverySeconds = 5;
   static const int _lowLightWarningStreak = 3;
-  static const bool _allowAudioReviewOverride = bool.fromEnvironment(
-    'KSLAS_ALLOW_AUDIO_REVIEW_OVERRIDE',
+  static const bool _allowLiveAudioMonitorOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_LIVE_AUDIO_MONITOR_OVERRIDE',
     defaultValue: false,
   );
   static const bool _allowExamOverride = bool.fromEnvironment(
@@ -74,8 +74,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     'KSLAS_ALLOW_MONITORING_REVIEW_OVERRIDE',
     defaultValue: false,
   );
-  static const bool _audioOverrideActive =
-      _allowAudioReviewOverride || _allowExamOverride;
+  static const bool _audioOverrideActive = _allowLiveAudioMonitorOverride;
   static const bool _monitoringWarnOnly =
       _allowExamOverride || _allowMonitoringReviewOverride;
 
