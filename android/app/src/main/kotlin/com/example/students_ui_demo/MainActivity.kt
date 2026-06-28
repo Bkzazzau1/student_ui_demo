@@ -197,19 +197,37 @@ private class AndroidOptimizedVisionRuntimeEngine {
         return shape
     }
 
+    private data class PlaneData(
+        val bytes: ByteArray,
+        val rowStride: Int,
+        val pixelStride: Int,
+    )
+
+    private data class RgbPixel(
+        val r: Int,
+        val g: Int,
+        val b: Int,
+    )
+
     private fun buildInputTensor(request: Map<*, *>): FloatArray {
         val sourceWidth = request.intValue("width", 0)
         val sourceHeight = request.intValue("height", 0)
+        if (sourceWidth <= 0 || sourceHeight <= 0) {
+            throw IllegalArgumentException("Camera frame dimensions are invalid")
+        }
         val planes = request["planes"] as? List<*> ?: throw IllegalArgumentException("Missing planes")
-        val firstPlane = planes.firstOrNull() as? Map<*, *>
-            ?: throw IllegalArgumentException("Malformed first plane")
-        val bytes = firstPlane["bytes"] as? ByteArray
-            ?: throw IllegalArgumentException("Missing plane bytes")
-        val rowStride = firstPlane.intValue("bytes_per_row", sourceWidth)
-        val bytesPerPixel = firstPlane.intValue("bytes_per_pixel", 1).coerceAtLeast(1)
-        val format = request.stringValue("format", "")
-        val rgb888 = format == "rgb888" || format == "rgb"
-        val bgra8888 = format == "bgra8888" || format == "bgra"
+        val planeData = planes.mapNotNull { item ->
+            val plane = item as? Map<*, *> ?: return@mapNotNull null
+            val bytes = plane["bytes"] as? ByteArray ?: return@mapNotNull null
+            PlaneData(
+                bytes = bytes,
+                rowStride = plane.intValue("bytes_per_row", sourceWidth).coerceAtLeast(1),
+                pixelStride = plane.intValue("bytes_per_pixel", 1).coerceAtLeast(1),
+            )
+        }
+        if (planeData.isEmpty()) throw IllegalArgumentException("Missing plane bytes")
+
+        val format = request.stringValue("format", "").lowercase()
         val nchw = inputShape.size == 4 && inputShape[1] <= 4
         val targetHeight = (if (nchw) inputShape[2] else inputShape[1]).toInt()
         val targetWidth = (if (nchw) inputShape[3] else inputShape[2]).toInt()
@@ -220,19 +238,21 @@ private class AndroidOptimizedVisionRuntimeEngine {
             val srcY = min(sourceHeight - 1, y * sourceHeight / targetHeight)
             for (x in 0 until targetWidth) {
                 val srcX = min(sourceWidth - 1, x * sourceWidth / targetWidth)
-                val pixelWidth = if (rgb888) 3 else bytesPerPixel
-                val sourceIndex = srcY * rowStride + srcX * pixelWidth
-                if (sourceIndex < 0 || sourceIndex >= bytes.size) continue
+                val pixel = readRgbPixel(
+                    planes = planeData,
+                    format = format,
+                    sourceX = srcX,
+                    sourceY = srcY,
+                    sourceWidth = sourceWidth,
+                )
                 for (channel in 0 until channels) {
-                    val channelIndex = if (rgb888) {
-                        sourceIndex + min(channel, 2)
-                    } else if (bgra8888) {
-                        sourceIndex + (2 - min(channel, 2))
-                    } else {
-                        sourceIndex
+                    val channelValue = when (channel) {
+                        0 -> pixel.r
+                        1 -> pixel.g
+                        2 -> pixel.b
+                        else -> pixel.r
                     }
-                    if (channelIndex < 0 || channelIndex >= bytes.size) continue
-                    val value = (((bytes[channelIndex].toInt() and 0xff) / 255.0f) - 0.5f) / 0.5f
+                    val value = ((channelValue / 255.0f) - 0.5f) / 0.5f
                     val index = if (nchw) {
                         channel * targetHeight * targetWidth + y * targetWidth + x
                     } else {
@@ -243,6 +263,73 @@ private class AndroidOptimizedVisionRuntimeEngine {
             }
         }
         return tensor
+    }
+
+    private fun readRgbPixel(
+        planes: List<PlaneData>,
+        format: String,
+        sourceX: Int,
+        sourceY: Int,
+        sourceWidth: Int,
+    ): RgbPixel {
+        if (format == "rgb888" || format == "rgb") {
+            return readPackedRgb(planes.first(), sourceX, sourceY, 3, redOffset = 0, greenOffset = 1, blueOffset = 2)
+        }
+        if (format == "bgra8888" || format == "bgra") {
+            return readPackedRgb(planes.first(), sourceX, sourceY, 4, redOffset = 2, greenOffset = 1, blueOffset = 0)
+        }
+        if (format.contains("yuv") && planes.size >= 3) {
+            return readYuv420(planes, sourceX, sourceY)
+        }
+
+        val yPlane = planes.first()
+        val yIndex = sourceY * yPlane.rowStride + sourceX * yPlane.pixelStride
+        val y = yPlane.bytes.safeByte(yIndex)
+        return RgbPixel(y, y, y)
+    }
+
+    private fun readPackedRgb(
+        plane: PlaneData,
+        x: Int,
+        y: Int,
+        fallbackPixelWidth: Int,
+        redOffset: Int,
+        greenOffset: Int,
+        blueOffset: Int,
+    ): RgbPixel {
+        val pixelWidth = max(plane.pixelStride, fallbackPixelWidth)
+        val index = y * plane.rowStride + x * pixelWidth
+        return RgbPixel(
+            plane.bytes.safeByte(index + redOffset),
+            plane.bytes.safeByte(index + greenOffset),
+            plane.bytes.safeByte(index + blueOffset),
+        )
+    }
+
+    private fun readYuv420(
+        planes: List<PlaneData>,
+        x: Int,
+        y: Int,
+    ): RgbPixel {
+        val yPlane = planes[0]
+        val uPlane = planes[1]
+        val vPlane = planes[2]
+        val yValue = yPlane.bytes.safeByte(y * yPlane.rowStride + x * yPlane.pixelStride)
+        val chromaX = x / 2
+        val chromaY = y / 2
+        val uValue = uPlane.bytes.safeByte(chromaY * uPlane.rowStride + chromaX * uPlane.pixelStride)
+        val vValue = vPlane.bytes.safeByte(chromaY * vPlane.rowStride + chromaX * vPlane.pixelStride)
+        return yuvToRgb(yValue, uValue, vValue)
+    }
+
+    private fun yuvToRgb(yValue: Int, uValue: Int, vValue: Int): RgbPixel {
+        val c = (yValue - 16).coerceAtLeast(0)
+        val d = uValue - 128
+        val e = vValue - 128
+        val r = ((298 * c + 409 * e + 128) shr 8).coerceIn(0, 255)
+        val g = ((298 * c - 100 * d - 208 * e + 128) shr 8).coerceIn(0, 255)
+        val b = ((298 * c + 516 * d + 128) shr 8).coerceIn(0, 255)
+        return RgbPixel(r, g, b)
     }
 
     private fun availableResponse(
@@ -288,6 +375,8 @@ private class AndroidOptimizedVisionRuntimeEngine {
             "iou_threshold" to iouThreshold,
             "image_width" to sourceWidth,
             "image_height" to sourceHeight,
+            "input_format" to request.stringValue("format", ""),
+            "input_conversion" to "rgb_normalized",
             "requires_rust_decode" to true,
         )
         rawYoloOutput?.let { outputMap.putAll(it) }
@@ -431,6 +520,11 @@ private data class Detection(
             "y2" to y2.coerceIn(0.0, 1.0),
         ),
     )
+}
+
+private fun ByteArray.safeByte(index: Int): Int {
+    if (index < 0 || index >= size) return 0
+    return this[index].toInt() and 0xff
 }
 
 private fun MutableList<Detection>.decodeCandidate(values: FloatArray, classNames: List<String>) {
