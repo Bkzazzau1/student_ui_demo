@@ -56,6 +56,9 @@ class SecureLockdownSnapshot {
     required this.findings,
     required this.actions,
     required this.enforcementActive,
+    required this.examWindowSupported,
+    required this.examWindowActive,
+    required this.examWindowMessage,
     required this.clipboardSweepCount,
     required this.capturedAt,
   });
@@ -69,6 +72,9 @@ class SecureLockdownSnapshot {
   final List<SecureLockdownFinding> findings;
   final List<SecureLockdownAction> actions;
   final bool enforcementActive;
+  final bool examWindowSupported;
+  final bool examWindowActive;
+  final String examWindowMessage;
   final int clipboardSweepCount;
   final DateTime capturedAt;
 
@@ -76,6 +82,7 @@ class SecureLockdownSnapshot {
       lockdownActive &&
       platformSupported &&
       enforcementActive &&
+      (!examWindowSupported || examWindowActive) &&
       prohibitedProcesses.isEmpty &&
       (displayCount == null || displayCount! <= 1) &&
       !findings.any((finding) => finding.severity == 'critical');
@@ -90,6 +97,9 @@ class SecureLockdownSnapshot {
     'clipboard_cleared': clipboardCleared,
     'clipboard_sweep_count': clipboardSweepCount,
     'enforcement_active': enforcementActive,
+    'exam_window_supported': examWindowSupported,
+    'exam_window_active': examWindowActive,
+    'exam_window_message': examWindowMessage,
     'findings': findings.map((finding) => finding.toJson()).toList(),
     'actions': actions.map((action) => action.toJson()).toList(),
     'captured_at': capturedAt.toUtc().toIso8601String(),
@@ -104,11 +114,16 @@ class SecureLockdownSessionService {
         const GeneratedNativeSecureLockdownReviewBridge(),
   }) : _nativeBridge = nativeBridge;
 
+  static const MethodChannel _examWindowChannel = MethodChannel('kslas.exam_window');
+
   final Duration commandTimeout;
   final bool enforcementEnabled;
   final NativeSecureLockdownReviewBridge _nativeBridge;
   bool _active = false;
   bool _clipboardCleared = false;
+  bool _examWindowSupported = false;
+  bool _examWindowActive = false;
+  String _examWindowMessage = 'Exam window mode has not started.';
   int _clipboardSweepCount = 0;
 
   static const List<String> _prohibitedProcessTerms = <String>[
@@ -168,6 +183,18 @@ class SecureLockdownSessionService {
   Future<SecureLockdownSnapshot> collectSnapshot() async {
     final actions = <SecureLockdownAction>[];
     if (_active && enforcementEnabled) {
+      await _refreshExamWindowStatus();
+      actions.add(
+        SecureLockdownAction(
+          code: 'exam_window_status_checked',
+          success: !_examWindowSupported || _examWindowActive,
+          message: _examWindowMessage,
+          metadata: <String, Object?>{
+            'supported': _examWindowSupported,
+            'active': _examWindowActive,
+          },
+        ),
+      );
       final clipboardAction = await _sweepClipboard();
       actions.add(clipboardAction);
     }
@@ -197,18 +224,13 @@ class SecureLockdownSessionService {
           .toList(growable: true);
       _appendLocalFindings(nativeFindings, source.displayCount);
 
-      return SecureLockdownSnapshot(
-        lockdownActive: _active,
+      return _snapshot(
         platformSupported: source.platformSupported,
         platformName: source.platformName,
         displayCount: source.displayCount,
         prohibitedProcesses: source.prohibitedProcesses,
-        clipboardCleared: _clipboardCleared,
         findings: nativeFindings,
         actions: actions,
-        enforcementActive: _active && enforcementEnabled,
-        clipboardSweepCount: _clipboardSweepCount,
-        capturedAt: DateTime.now(),
       );
     }
 
@@ -276,6 +298,24 @@ class SecureLockdownSessionService {
       );
     }
 
+    return _snapshot(
+      platformSupported: platformSupported,
+      platformName: platformName,
+      displayCount: displayCount,
+      prohibitedProcesses: prohibitedProcesses,
+      findings: findings,
+      actions: actions,
+    );
+  }
+
+  SecureLockdownSnapshot _snapshot({
+    required bool platformSupported,
+    required String platformName,
+    required int? displayCount,
+    required List<String> prohibitedProcesses,
+    required List<SecureLockdownFinding> findings,
+    required List<SecureLockdownAction> actions,
+  }) {
     return SecureLockdownSnapshot(
       lockdownActive: _active,
       platformSupported: platformSupported,
@@ -286,6 +326,9 @@ class SecureLockdownSessionService {
       findings: findings,
       actions: actions,
       enforcementActive: _active && enforcementEnabled,
+      examWindowSupported: _examWindowSupported,
+      examWindowActive: _examWindowActive,
+      examWindowMessage: _examWindowMessage,
       clipboardSweepCount: _clipboardSweepCount,
       capturedAt: DateTime.now(),
     );
@@ -295,16 +338,37 @@ class SecureLockdownSessionService {
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     } catch (_) {
-      // Desktop platforms may ignore immersive mode; lockdown still relies on
-      // app-level pause, process review, clipboard sweep, and display checks.
+      // Desktop platforms may ignore immersive mode; native window mode is used
+      // where available.
     }
+    await _invokeExamWindow('enter');
   }
 
   Future<void> _exitExamWindowMode() async {
+    await _invokeExamWindow('exit');
     try {
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     } catch (_) {
       // Best effort only.
+    }
+  }
+
+  Future<void> _refreshExamWindowStatus() => _invokeExamWindow('status');
+
+  Future<void> _invokeExamWindow(String method) async {
+    try {
+      final response = await _examWindowChannel.invokeMapMethod<Object?, Object?>(method);
+      _examWindowSupported = response?['supported'] == true;
+      _examWindowActive = response?['active'] == true;
+      _examWindowMessage = response?['message']?.toString() ?? 'Exam window mode checked.';
+    } on MissingPluginException {
+      _examWindowSupported = false;
+      _examWindowActive = false;
+      _examWindowMessage = 'Exam window mode is not available on this platform.';
+    } catch (error) {
+      _examWindowSupported = false;
+      _examWindowActive = false;
+      _examWindowMessage = 'Exam window mode could not complete: $error';
     }
   }
 
@@ -451,6 +515,15 @@ class SecureLockdownSessionService {
     List<SecureLockdownFinding> findings,
     int? displayCount,
   ) {
+    if (_examWindowSupported && !_examWindowActive) {
+      findings.add(
+        SecureLockdownFinding(
+          code: 'exam_window_mode_inactive',
+          severity: 'critical',
+          message: _examWindowMessage,
+        ),
+      );
+    }
     if (!_clipboardCleared) {
       findings.add(
         const SecureLockdownFinding(
