@@ -19,15 +19,10 @@ class ProctoringRiskDecision {
   };
 }
 
-/// Official local scoring policy for the student app.
-///
-/// The backend remains the final authority, but local code must use one shared
-/// policy so camera, audio, screen, device, and future YOLO object events are
-/// treated consistently.
 class ProctoringRiskPolicy {
   const ProctoringRiskPolicy._();
 
-  static const String version = '2026.06.pre-yolo.5';
+  static const String version = '2026.06.lockdown.1';
 
   static String levelForScore(int score) {
     if (score >= 81) return 'critical';
@@ -73,7 +68,10 @@ class ProctoringRiskPolicy {
       case 'microphone_reconnect_timeout':
         return 35;
       case 'system_monitoring_unavailable':
+      case 'system_device_check_failed':
         return 50;
+      case 'secure_exam_mode_check_failed':
+        return 55;
       case 'gaze_head_pose_monitor_unavailable':
       case 'continuous_liveness_monitor_unavailable':
       case 'object_reflection_shadow_monitor_unavailable':
@@ -97,7 +95,6 @@ class ProctoringRiskPolicy {
       case 'audio_voice_isolation_alert':
         return 35;
       case 'background_voice_environment_warning':
-        return 10;
       case 'audio_environment_noise_warning':
         return 10;
       case 'audio_repeated_fingerprint_detected':
@@ -138,6 +135,8 @@ class ProctoringRiskPolicy {
       'sustained_gaze_head_pose_deviation',
       'audio_voice_isolation_alert',
       'system_monitoring_unavailable',
+      'system_device_check_failed',
+      'secure_exam_mode_check_failed',
       'yolo_phone_detected',
       'yolo_extra_screen_detected',
     };
