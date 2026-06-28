@@ -360,16 +360,16 @@ private class AndroidOptimizedVisionRuntimeEngine {
         } else if (shape.size == 3) {
             val dim1 = shape[1].toInt()
             val dim2 = shape[2].toInt()
-            if (dim2 >= 6) {
-                for (row in 0 until dim1) {
-                    detections.decodeCandidate(FloatArray(dim2) { col ->
-                        data.get(row * dim2 + col)
-                    }, classNames)
-                }
-            } else if (dim1 >= 6) {
+            if (dim1 in 6..512) {
                 for (row in 0 until dim2) {
                     detections.decodeCandidate(FloatArray(dim1) { col ->
                         data.get(col * dim2 + row)
+                    }, classNames)
+                }
+            } else if (dim2 >= 6) {
+                for (row in 0 until dim1) {
+                    detections.decodeCandidate(FloatArray(dim2) { col ->
+                        data.get(row * dim2 + col)
                     }, classNames)
                 }
             }
@@ -452,7 +452,7 @@ private fun MutableList<Detection>.decodeCandidate(values: FloatArray, className
             }
         }
     }
-    if (confidence < 0.35 || classId < 0) return
+    if (confidence < 0.20 || classId < 0) return
 
     val a = values[0].toDouble()
     val b = values[1].toDouble()
@@ -496,7 +496,7 @@ private fun Long.labelForClass(): String = when (this) {
 }
 
 private fun String.isPhoneLike(): Boolean {
-    return contains("phone") || contains("mobile") || contains("screen")
+    return contains("phone") || contains("mobile") || contains("remote") || contains("screen")
 }
 
 private fun String.isMirrorLike(): Boolean {

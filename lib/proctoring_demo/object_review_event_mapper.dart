@@ -14,12 +14,12 @@ class ObjectReviewEventDecision {
   final Map<String, Object?> metadata;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'event_type': eventType,
-        'severity': severity,
-        'message': message,
-        'labels': labels,
-        'metadata': metadata,
-      };
+    'event_type': eventType,
+    'severity': severity,
+    'message': message,
+    'labels': labels,
+    'metadata': metadata,
+  };
 }
 
 class ObjectReviewEventMapper {
@@ -35,10 +35,13 @@ class ObjectReviewEventMapper {
 
     final decisions = <ObjectReviewEventDecision>[];
 
-    final phoneLabels = _matching(
-      normalized,
-      const <String>['phone', 'cell phone', 'mobile', 'smartphone'],
-    );
+    final phoneLabels = _matching(normalized, const <String>[
+      'phone',
+      'cell phone',
+      'mobile',
+      'smartphone',
+      'remote',
+    ]);
     if (phoneLabels.isNotEmpty) {
       decisions.add(
         _decision(
@@ -52,10 +55,14 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final screenLabels = _matching(
-      normalized,
-      const <String>['laptop', 'monitor', 'tv monitor', 'screen', 'tablet'],
-    );
+    final screenLabels = _matching(normalized, const <String>[
+      'laptop',
+      'monitor',
+      'tv',
+      'tv monitor',
+      'screen',
+      'tablet',
+    ]);
     if (screenLabels.isNotEmpty) {
       decisions.add(
         _decision(
@@ -69,10 +76,13 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final paperLabels = _matching(
-      normalized,
-      const <String>['book', 'paper', 'notebook', 'notes', 'sheet'],
-    );
+    final paperLabels = _matching(normalized, const <String>[
+      'book',
+      'paper',
+      'notebook',
+      'notes',
+      'sheet',
+    ]);
     if (paperLabels.isNotEmpty) {
       decisions.add(
         _decision(
@@ -86,10 +96,9 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final calculatorLabels = _matching(
-      normalized,
-      const <String>['calculator'],
-    );
+    final calculatorLabels = _matching(normalized, const <String>[
+      'calculator',
+    ]);
     if (calculatorLabels.isNotEmpty) {
       decisions.add(
         _decision(

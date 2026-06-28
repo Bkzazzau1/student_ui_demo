@@ -199,6 +199,7 @@ bool IsPersonLike(const std::string& label) {
 bool IsPhoneLike(const std::string& label) {
   return label.find("phone") != std::string::npos ||
          label.find("mobile") != std::string::npos ||
+         label.find("remote") != std::string::npos ||
          label.find("screen") != std::string::npos ||
          label.find("laptop") != std::string::npos ||
          label.find("tv_monitor") != std::string::npos;
@@ -239,7 +240,7 @@ void DecodeCandidate(const float* values,
     }
   }
 
-  if (confidence < 0.35 || class_id < 0) return;
+  if (confidence < 0.20 || class_id < 0) return;
 
   const double a = values[0];
   const double b = values[1];
@@ -288,17 +289,17 @@ std::vector<Detection> ParseDetections(const float* data,
   } else if (shape.size() == 3) {
     const int64_t dim1 = shape[1];
     const int64_t dim2 = shape[2];
-    if (dim2 >= 6) {
-      for (int64_t row = 0; row < dim1; ++row) {
-        DecodeCandidate(data + row * dim2, dim2, &detections);
-      }
-    } else if (dim1 >= 6) {
+    if (dim1 >= 6 && dim1 <= 512) {
       std::vector<float> candidate(static_cast<size_t>(dim1));
       for (int64_t row = 0; row < dim2; ++row) {
         for (int64_t col = 0; col < dim1; ++col) {
           candidate[static_cast<size_t>(col)] = data[col * dim2 + row];
         }
         DecodeCandidate(candidate.data(), dim1, &detections);
+      }
+    } else if (dim2 >= 6) {
+      for (int64_t row = 0; row < dim1; ++row) {
+        DecodeCandidate(data + row * dim2, dim2, &detections);
       }
     }
   }
@@ -368,8 +369,13 @@ bool OptimizedVisionRuntimeEngine::LoadSession(const flutter::EncodableMap* poli
 
     if (backend_ == "onnxRuntimeDirectML") {
 #if KSLAS_HAS_DIRECTML_PROVIDER
-      Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(*session_options_, 0));
-      session_options_->DisableMemPattern();
+      const std::string directml_path = JoinPath(ExecutableDirectory(), "DirectML.dll");
+      if (FileExists(directml_path)) {
+        Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(*session_options_, 0));
+        session_options_->DisableMemPattern();
+      } else {
+        backend_ = "onnxRuntimeCpu";
+      }
 #else
       backend_ = "onnxRuntimeCpu";
 #endif

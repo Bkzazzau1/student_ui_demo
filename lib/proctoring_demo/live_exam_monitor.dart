@@ -1197,7 +1197,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       final confidence =
           double.tryParse('${object['confidence'] ?? object['score'] ?? 0}') ??
           0.0;
-      if (confidence < 0.45) continue;
+      if (confidence < 0.25) continue;
       final label = _friendlyDetectionLabel(
         '${object['label'] ?? object['class'] ?? object['name'] ?? ''}',
       );
@@ -1241,7 +1241,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           final detection = Map<Object?, Object?>.from(rawDetection);
           final confidence =
               double.tryParse('${detection['confidence'] ?? 0}') ?? 0.0;
-          if (confidence < 0.45) continue;
+          if (confidence < 0.25) continue;
           final normalized = _friendlyDetectionLabel('${detection['label']}');
           if (normalized.isNotEmpty) labels.add(normalized);
         }
@@ -1257,9 +1257,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         .replaceAll(RegExp(r'[_\-]+'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ');
     if (normalized.isEmpty || normalized == 'null') return '';
+    if (normalized.startsWith('class ')) return '';
     if (normalized == 'cell phone' || normalized == 'smartphone') {
       return 'phone';
     }
+    if (normalized == 'remote') return 'handheld device';
     if (normalized == 'tv monitor') return 'screen';
     return normalized;
   }

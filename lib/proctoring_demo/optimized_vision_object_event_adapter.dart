@@ -6,7 +6,7 @@ class OptimizedVisionObjectEventAdapter {
   const OptimizedVisionObjectEventAdapter({
     this.mapper = const ObjectReviewEventMapper(),
     this.nativeVision = const GeneratedNativeVisionBridge(),
-    this.minimumConfidence = 0.45,
+    this.minimumConfidence = 0.25,
   });
 
   final ObjectReviewEventMapper mapper;
@@ -97,7 +97,8 @@ class OptimizedVisionObjectEventAdapter {
   }
 
   bool _requiresRustYoloDecode(Map<String, Object?> outputs) {
-    final family = outputs['model_family']?.toString().trim().toLowerCase() ?? '';
+    final family =
+        outputs['model_family']?.toString().trim().toLowerCase() ?? '';
     return family == 'yolo' || outputs['requires_rust_decode'] == true;
   }
 
@@ -115,7 +116,8 @@ class OptimizedVisionObjectEventAdapter {
     if (classNames.isEmpty) return null;
 
     final numClasses = _readInt(outputs['num_classes']) ?? classNames.length;
-    final numPredictions = _readInt(outputs['num_predictions']) ??
+    final numPredictions =
+        _readInt(outputs['num_predictions']) ??
         _inferPredictionCount(
           outputLength: output.length,
           numClasses: numClasses,
@@ -130,7 +132,9 @@ class OptimizedVisionObjectEventAdapter {
       imageWidth:
           _readInt(outputs['image_width']) ?? _readInt(outputs['width']) ?? 640,
       imageHeight:
-          _readInt(outputs['image_height']) ?? _readInt(outputs['height']) ?? 480,
+          _readInt(outputs['image_height']) ??
+          _readInt(outputs['height']) ??
+          480,
       confidenceThreshold:
           _readDouble(outputs['confidence_threshold']) ?? minimumConfidence,
       iouThreshold: _readDouble(outputs['iou_threshold']) ?? 0.45,
