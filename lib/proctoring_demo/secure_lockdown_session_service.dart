@@ -56,6 +56,7 @@ class SecureLockdownSnapshot {
     required this.findings,
     required this.actions,
     required this.enforcementActive,
+    required this.realExamMode,
     required this.examWindowSupported,
     required this.examWindowActive,
     required this.examWindowMessage,
@@ -72,13 +73,14 @@ class SecureLockdownSnapshot {
   final List<SecureLockdownFinding> findings;
   final List<SecureLockdownAction> actions;
   final bool enforcementActive;
+  final bool realExamMode;
   final bool examWindowSupported;
   final bool examWindowActive;
   final String examWindowMessage;
   final int clipboardSweepCount;
   final DateTime capturedAt;
 
-  bool get ready =>
+  bool get baseReady =>
       lockdownActive &&
       platformSupported &&
       enforcementActive &&
@@ -87,9 +89,49 @@ class SecureLockdownSnapshot {
       (displayCount == null || displayCount! <= 1) &&
       !findings.any((finding) => finding.severity == 'critical');
 
+  bool get realExamReady => realExamBlockingReasons.isEmpty;
+
+  bool get ready => realExamMode ? realExamReady : baseReady;
+
+  List<String> get realExamBlockingReasons {
+    final reasons = <String>[];
+    if (!realExamMode) return reasons;
+    if (!lockdownActive) reasons.add('Secure exam mode is not active.');
+    if (!platformSupported) reasons.add('Desktop platform is required.');
+    if (!enforcementActive) reasons.add('Secure exam enforcement is not active.');
+    if (platformName != 'windows') {
+      reasons.add('Real exam mode currently requires the Windows desktop build.');
+    }
+    if (!examWindowSupported) {
+      reasons.add('Native exam window support is required.');
+    }
+    if (!examWindowActive) {
+      reasons.add('Native exam window mode must be active.');
+    }
+    if (!clipboardCleared || clipboardSweepCount <= 0) {
+      reasons.add('Clipboard sweep must be confirmed.');
+    }
+    if (displayCount == null) {
+      reasons.add('Display count must be confirmed.');
+    } else if (displayCount != 1) {
+      reasons.add('Exactly one display is required.');
+    }
+    if (prohibitedProcesses.isNotEmpty) {
+      reasons.add('Other apps must be closed before continuing.');
+    }
+    if (findings.any((finding) => finding.severity == 'critical')) {
+      reasons.add('Critical secure exam finding must be resolved.');
+    }
+    return reasons;
+  }
+
   Map<String, Object?> toJson() => <String, Object?>{
     'lockdown_active': lockdownActive,
     'ready': ready,
+    'base_ready': baseReady,
+    'real_exam_mode': realExamMode,
+    'real_exam_ready': realExamReady,
+    'real_exam_blocking_reasons': realExamBlockingReasons,
     'platform_supported': platformSupported,
     'platform_name': platformName,
     'display_count': displayCount,
@@ -110,6 +152,10 @@ class SecureLockdownSessionService {
   SecureLockdownSessionService({
     this.commandTimeout = const Duration(seconds: 5),
     this.enforcementEnabled = true,
+    this.realExamMode = const bool.fromEnvironment(
+      'KSLAS_REAL_EXAM_MODE',
+      defaultValue: false,
+    ),
     NativeSecureLockdownReviewBridge nativeBridge =
         const GeneratedNativeSecureLockdownReviewBridge(),
   }) : _nativeBridge = nativeBridge;
@@ -118,6 +164,7 @@ class SecureLockdownSessionService {
 
   final Duration commandTimeout;
   final bool enforcementEnabled;
+  final bool realExamMode;
   final NativeSecureLockdownReviewBridge _nativeBridge;
   bool _active = false;
   bool _clipboardCleared = false;
@@ -187,11 +234,14 @@ class SecureLockdownSessionService {
       actions.add(
         SecureLockdownAction(
           code: 'exam_window_status_checked',
-          success: !_examWindowSupported || _examWindowActive,
+          success: !realExamMode
+              ? (!_examWindowSupported || _examWindowActive)
+              : (_examWindowSupported && _examWindowActive),
           message: _examWindowMessage,
           metadata: <String, Object?>{
             'supported': _examWindowSupported,
             'active': _examWindowActive,
+            'real_exam_mode': realExamMode,
           },
         ),
       );
@@ -222,7 +272,7 @@ class SecureLockdownSessionService {
             ),
           )
           .toList(growable: true);
-      _appendLocalFindings(nativeFindings, source.displayCount);
+      _appendLocalFindings(nativeFindings, source.displayCount, source.platformName);
 
       return _snapshot(
         platformSupported: source.platformSupported,
@@ -286,7 +336,7 @@ class SecureLockdownSessionService {
       );
     }
 
-    _appendLocalFindings(findings, displayCount);
+    _appendLocalFindings(findings, displayCount, platformName);
 
     if (findings.isEmpty) {
       findings.add(
@@ -316,7 +366,7 @@ class SecureLockdownSessionService {
     required List<SecureLockdownFinding> findings,
     required List<SecureLockdownAction> actions,
   }) {
-    return SecureLockdownSnapshot(
+    final snapshot = SecureLockdownSnapshot(
       lockdownActive: _active,
       platformSupported: platformSupported,
       platformName: platformName,
@@ -326,12 +376,40 @@ class SecureLockdownSessionService {
       findings: findings,
       actions: actions,
       enforcementActive: _active && enforcementEnabled,
+      realExamMode: realExamMode,
       examWindowSupported: _examWindowSupported,
       examWindowActive: _examWindowActive,
       examWindowMessage: _examWindowMessage,
       clipboardSweepCount: _clipboardSweepCount,
       capturedAt: DateTime.now(),
     );
+    if (realExamMode && snapshot.realExamBlockingReasons.isNotEmpty) {
+      findings.add(
+        SecureLockdownFinding(
+          code: 'real_exam_lockdown_not_ready',
+          severity: 'critical',
+          message: snapshot.realExamBlockingReasons.first,
+        ),
+      );
+      return SecureLockdownSnapshot(
+        lockdownActive: snapshot.lockdownActive,
+        platformSupported: snapshot.platformSupported,
+        platformName: snapshot.platformName,
+        displayCount: snapshot.displayCount,
+        prohibitedProcesses: snapshot.prohibitedProcesses,
+        clipboardCleared: snapshot.clipboardCleared,
+        findings: findings,
+        actions: snapshot.actions,
+        enforcementActive: snapshot.enforcementActive,
+        realExamMode: snapshot.realExamMode,
+        examWindowSupported: snapshot.examWindowSupported,
+        examWindowActive: snapshot.examWindowActive,
+        examWindowMessage: snapshot.examWindowMessage,
+        clipboardSweepCount: snapshot.clipboardSweepCount,
+        capturedAt: snapshot.capturedAt,
+      );
+    }
+    return snapshot;
   }
 
   Future<void> _enterExamWindowMode() async {
@@ -514,13 +592,41 @@ class SecureLockdownSessionService {
   void _appendLocalFindings(
     List<SecureLockdownFinding> findings,
     int? displayCount,
+    String platformName,
   ) {
+    if (realExamMode && platformName != 'windows') {
+      findings.add(
+        const SecureLockdownFinding(
+          code: 'real_exam_windows_required',
+          severity: 'critical',
+          message: 'Real exam mode currently requires the Windows desktop build.',
+        ),
+      );
+    }
+    if (realExamMode && !_examWindowSupported) {
+      findings.add(
+        const SecureLockdownFinding(
+          code: 'native_exam_window_required',
+          severity: 'critical',
+          message: 'Native exam window support is required for real exams.',
+        ),
+      );
+    }
     if (_examWindowSupported && !_examWindowActive) {
       findings.add(
         SecureLockdownFinding(
           code: 'exam_window_mode_inactive',
           severity: 'critical',
           message: _examWindowMessage,
+        ),
+      );
+    }
+    if (realExamMode && displayCount == null) {
+      findings.add(
+        const SecureLockdownFinding(
+          code: 'display_count_unconfirmed',
+          severity: 'critical',
+          message: 'Display count must be confirmed before a real exam can continue.',
         ),
       );
     }
