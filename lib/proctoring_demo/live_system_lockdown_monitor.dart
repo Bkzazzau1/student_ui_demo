@@ -78,7 +78,11 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
       setState(() {
         _ready = ready;
         _secureSnapshot = secure;
-        _message = ready ? 'Secure exam mode active.' : _studentMessage(system, secure);
+        _message = ready
+            ? (secure.realExamMode
+                ? 'Real exam secure mode active.'
+                : 'Secure exam mode active.')
+            : _studentMessage(system, secure);
         _findings
           ..clear()
           ..addAll(system.findings)
@@ -117,6 +121,9 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
     SecureLockdownSnapshot secure,
   ) {
     if (!system.ready) return system.message;
+    if (secure.realExamMode && secure.realExamBlockingReasons.isNotEmpty) {
+      return secure.realExamBlockingReasons.first;
+    }
     if (!secure.enforcementActive) return 'Secure exam mode is not active.';
     if (secure.examWindowSupported && !secure.examWindowActive) {
       return 'Secure exam window needs review before continuing.';
@@ -156,6 +163,9 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
       'system_review': system.toJson(),
       'secure_exam_mode': secure.toJson(),
       'lockdown_enforcement_active': secure.enforcementActive,
+      'real_exam_mode': secure.realExamMode,
+      'real_exam_ready': secure.realExamReady,
+      'real_exam_blocking_reasons': secure.realExamBlockingReasons,
       'exam_window_supported': secure.examWindowSupported,
       'exam_window_active': secure.examWindowActive,
       'clipboard_sweep_count': secure.clipboardSweepCount,
@@ -230,6 +240,7 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
+                  _CheckChip(label: 'Real exam', value: snapshot.realExamMode ? (snapshot.realExamReady ? 'ready' : 'blocked') : 'test'),
                   _CheckChip(label: 'Platform', value: snapshot.platformName),
                   _CheckChip(label: 'Window', value: snapshot.examWindowSupported ? (snapshot.examWindowActive ? 'active' : 'review') : 'not available'),
                   _CheckChip(label: 'Displays', value: snapshot.displayCount?.toString() ?? 'unknown'),
