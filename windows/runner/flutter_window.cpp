@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "exam_window_channel.h"
 #include "flutter/generated_plugin_registrant.h"
 #include "optimized_vision_runtime_channel.h"
 
@@ -27,6 +28,7 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   RegisterOptimizedVisionRuntimeChannel(flutter_controller_->engine()->messenger());
+  RegisterExamWindowChannel(flutter_controller_->engine()->messenger(), GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -53,6 +55,10 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (ExamWindowHandleMessage(message, wparam)) {
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
