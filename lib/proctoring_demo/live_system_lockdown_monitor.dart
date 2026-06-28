@@ -118,6 +118,9 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
   ) {
     if (!system.ready) return system.message;
     if (!secure.enforcementActive) return 'Secure exam mode is not active.';
+    if (secure.examWindowSupported && !secure.examWindowActive) {
+      return 'Secure exam window needs review before continuing.';
+    }
     if (secure.prohibitedProcesses.isNotEmpty) {
       return 'Please close other apps before continuing the exam.';
     }
@@ -153,6 +156,8 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
       'system_review': system.toJson(),
       'secure_exam_mode': secure.toJson(),
       'lockdown_enforcement_active': secure.enforcementActive,
+      'exam_window_supported': secure.examWindowSupported,
+      'exam_window_active': secure.examWindowActive,
       'clipboard_sweep_count': secure.clipboardSweepCount,
       'lockdown_action_count': secure.actions.length,
     };
@@ -226,6 +231,7 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
                 runSpacing: 6,
                 children: [
                   _CheckChip(label: 'Platform', value: snapshot.platformName),
+                  _CheckChip(label: 'Window', value: snapshot.examWindowSupported ? (snapshot.examWindowActive ? 'active' : 'review') : 'not available'),
                   _CheckChip(label: 'Displays', value: snapshot.displayCount?.toString() ?? 'unknown'),
                   _CheckChip(label: 'Clipboard', value: snapshot.clipboardCleared ? 'active' : 'unconfirmed'),
                   _CheckChip(label: 'Sweeps', value: snapshot.clipboardSweepCount.toString()),
