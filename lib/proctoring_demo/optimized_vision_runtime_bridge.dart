@@ -20,12 +20,12 @@ class OptimizedVisionRuntimeResult {
   final Map<String, Object?> outputs;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'available': available,
-        'backend': backend,
-        'precision': precision,
-        'inference_ms': inferenceMs,
-        'outputs': outputs,
-      };
+    'available': available,
+    'backend': backend,
+    'precision': precision,
+    'inference_ms': inferenceMs,
+    'outputs': outputs,
+  };
 }
 
 class OptimizedVisionRuntimeBridge {
@@ -33,9 +33,10 @@ class OptimizedVisionRuntimeBridge {
     MethodChannel? channel,
     OptimizedVisionRuntimePolicy? policy,
     String manifestAssetPath = YoloExamReviewManifest.defaultAssetPath,
-  })  : _channel = channel ?? const MethodChannel('kslas.optimized_vision_runtime'),
-        _policy = policy ?? OptimizedVisionRuntimePolicy.forCurrentPlatform(),
-        _manifestAssetPath = manifestAssetPath;
+  }) : _channel =
+           channel ?? const MethodChannel('kslas.optimized_vision_runtime'),
+       _policy = policy ?? OptimizedVisionRuntimePolicy.forCurrentPlatform(),
+       _manifestAssetPath = manifestAssetPath;
 
   final MethodChannel _channel;
   final OptimizedVisionRuntimePolicy _policy;
@@ -96,25 +97,88 @@ class OptimizedVisionRuntimeBridge {
           'format': image.format.group.name,
           'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
           'planes': image.planes
-              .map((plane) => <String, Object?>{
-                    'bytes': plane.bytes,
-                    'bytes_per_row': plane.bytesPerRow,
-                    'bytes_per_pixel': plane.bytesPerPixel ?? 1,
-                    'width': plane.width,
-                    'height': plane.height,
-                  })
+              .map(
+                (plane) => <String, Object?>{
+                  'bytes': plane.bytes,
+                  'bytes_per_row': plane.bytesPerRow,
+                  'bytes_per_pixel': plane.bytesPerPixel ?? 1,
+                  'width': plane.width,
+                  'height': plane.height,
+                },
+              )
               .toList(),
         },
       );
       if (response == null) return null;
-      final elapsedMs = DateTime.now().difference(started).inMicroseconds / 1000.0;
+      final elapsedMs =
+          DateTime.now().difference(started).inMicroseconds / 1000.0;
       final available = response['available'] == true;
       return OptimizedVisionRuntimeResult(
         available: available,
         backend: response['backend']?.toString() ?? _policy.backend.name,
         precision: response['precision']?.toString() ?? _policy.precision.name,
-        inferenceMs: double.tryParse(response['inference_ms']?.toString() ?? '') ?? elapsedMs,
-        outputs: Map<String, Object?>.from(response['outputs'] as Map? ?? const <String, Object?>{}),
+        inferenceMs:
+            double.tryParse(response['inference_ms']?.toString() ?? '') ??
+            elapsedMs,
+        outputs: Map<String, Object?>.from(
+          response['outputs'] as Map? ?? const <String, Object?>{},
+        ),
+      );
+    } on MissingPluginException {
+      _available = false;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<OptimizedVisionRuntimeResult?> runRgbFrame({
+    required Uint8List rgbBytes,
+    required int width,
+    required int height,
+    required List<String> tasks,
+  }) async {
+    if (!await initialize()) return null;
+    if (width <= 0 || height <= 0 || rgbBytes.isEmpty) return null;
+    try {
+      final started = DateTime.now();
+      final response = await _channel.invokeMapMethod<String, Object?>(
+        'runFrame',
+        <String, Object?>{
+          'policy': <String, Object?>{
+            ..._policy.toJson(),
+            ...?_manifest?.toPolicyJson(_policy),
+          },
+          'tasks': tasks,
+          'width': width,
+          'height': height,
+          'format': 'rgb888',
+          'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
+          'planes': <Map<String, Object?>>[
+            <String, Object?>{
+              'bytes': rgbBytes,
+              'bytes_per_row': width * 3,
+              'bytes_per_pixel': 3,
+              'width': width,
+              'height': height,
+            },
+          ],
+        },
+      );
+      if (response == null) return null;
+      final elapsedMs =
+          DateTime.now().difference(started).inMicroseconds / 1000.0;
+      final available = response['available'] == true;
+      return OptimizedVisionRuntimeResult(
+        available: available,
+        backend: response['backend']?.toString() ?? _policy.backend.name,
+        precision: response['precision']?.toString() ?? _policy.precision.name,
+        inferenceMs:
+            double.tryParse(response['inference_ms']?.toString() ?? '') ??
+            elapsedMs,
+        outputs: Map<String, Object?>.from(
+          response['outputs'] as Map? ?? const <String, Object?>{},
+        ),
       );
     } on MissingPluginException {
       _available = false;

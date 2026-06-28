@@ -67,7 +67,7 @@ class DemoExamResultView extends StatelessWidget {
                             : const Color(0xFFFCA5A5),
                       ),
                       _ResultPill(
-                        label: 'Grade: ${_gradeLabel}',
+                        label: 'Grade: $_gradeLabel',
                         icon: Icons.workspace_premium_outlined,
                         color: const Color(0xFF93C5FD),
                       ),

@@ -206,6 +206,10 @@ private class AndroidOptimizedVisionRuntimeEngine {
         val bytes = firstPlane["bytes"] as? ByteArray
             ?: throw IllegalArgumentException("Missing plane bytes")
         val rowStride = firstPlane.intValue("bytes_per_row", sourceWidth)
+        val bytesPerPixel = firstPlane.intValue("bytes_per_pixel", 1).coerceAtLeast(1)
+        val format = request.stringValue("format", "")
+        val rgb888 = format == "rgb888" || format == "rgb"
+        val bgra8888 = format == "bgra8888" || format == "bgra"
         val nchw = inputShape.size == 4 && inputShape[1] <= 4
         val targetHeight = (if (nchw) inputShape[2] else inputShape[1]).toInt()
         val targetWidth = (if (nchw) inputShape[3] else inputShape[2]).toInt()
@@ -216,10 +220,19 @@ private class AndroidOptimizedVisionRuntimeEngine {
             val srcY = min(sourceHeight - 1, y * sourceHeight / targetHeight)
             for (x in 0 until targetWidth) {
                 val srcX = min(sourceWidth - 1, x * sourceWidth / targetWidth)
-                val sourceIndex = srcY * rowStride + srcX
+                val pixelWidth = if (rgb888) 3 else bytesPerPixel
+                val sourceIndex = srcY * rowStride + srcX * pixelWidth
                 if (sourceIndex < 0 || sourceIndex >= bytes.size) continue
-                val value = (((bytes[sourceIndex].toInt() and 0xff) / 255.0f) - 0.5f) / 0.5f
                 for (channel in 0 until channels) {
+                    val channelIndex = if (rgb888) {
+                        sourceIndex + min(channel, 2)
+                    } else if (bgra8888) {
+                        sourceIndex + (2 - min(channel, 2))
+                    } else {
+                        sourceIndex
+                    }
+                    if (channelIndex < 0 || channelIndex >= bytes.size) continue
+                    val value = (((bytes[channelIndex].toInt() and 0xff) / 255.0f) - 0.5f) / 0.5f
                     val index = if (nchw) {
                         channel * targetHeight * targetWidth + y * targetWidth + x
                     } else {

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 
 import 'audio_evidence_capture_service.dart';
 import 'audio_event_evidence_policy.dart';
@@ -136,6 +137,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _ownsCameraLease = false;
   bool _imageStreamAvailable = false;
   bool _snapshotFallbackBusy = false;
+  bool _snapshotYoloBusy = false;
   ResolutionPreset _cameraResolution = ResolutionPreset.low;
   bool _cameraQualityUpgraded = false;
   int _cameraRecoveryRemaining = 0;
@@ -150,6 +152,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _multiplePeopleRiskStreak = 0;
   int _framesPublished = 0;
   int _snapshotChecksProcessed = 0;
+  int _snapshotYoloFramesProcessed = 0;
   int _objectFramesReady = 0;
   bool _yoloRuntimeReady = false;
   String _yoloRuntimeStatus = 'YOLO model waiting for native runtime';
@@ -436,6 +439,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         final bytes = await picture.readAsBytes();
         final result = _snapshotGazeFallback.analyseJpeg(bytes);
         _snapshotChecksProcessed++;
+        unawaited(_runSnapshotYolo(bytes));
         if (result == null) return;
 
         if (result.ready && result.headPoseShiftLikely) {
@@ -532,6 +536,36 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _snapshotFallbackBusy = false;
       }
     });
+  }
+
+  Future<void> _runSnapshotYolo(Uint8List jpegBytes) async {
+    if (!_yoloRuntimeReady) return;
+    if (_snapshotYoloBusy) return;
+    if (!_visionBudget.shouldProcessFrame()) return;
+    _snapshotYoloBusy = true;
+    final started = DateTime.now();
+    try {
+      final decoded = img.decodeImage(jpegBytes);
+      if (decoded == null || decoded.width <= 0 || decoded.height <= 0) {
+        return;
+      }
+      final rgbBytes = decoded.getBytes(order: img.ChannelOrder.rgb);
+      final optimized = await _optimizedVision.runRgbFrame(
+        rgbBytes: Uint8List.fromList(rgbBytes),
+        width: decoded.width,
+        height: decoded.height,
+        tasks: const <String>[
+          'person_detector',
+          'object_reflection_shadow_detector',
+        ],
+      );
+      if (optimized == null || !optimized.available) return;
+      _snapshotYoloFramesProcessed++;
+      _handleOptimizedVisionResult(optimized);
+    } finally {
+      _visionBudget.recordWork(DateTime.now().difference(started));
+      _snapshotYoloBusy = false;
+    }
   }
 
   void _handleCameraImage(CameraImage image) {
@@ -1215,6 +1249,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
                   ? 'Snapshot camera checks processed: $_snapshotChecksProcessed'
                   : 'Camera preview active; frame stream waiting',
             ),
+            if (_snapshotYoloFramesProcessed > 0)
+              Text(
+                'YOLO snapshot frames processed: $_snapshotYoloFramesProcessed',
+              ),
             Text(_yoloRuntimeStatus),
             if (_yoloRuntimeReady && _yoloModelPath.isNotEmpty)
               Text(

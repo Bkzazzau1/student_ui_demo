@@ -480,6 +480,10 @@ std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter:
   }
 
   const int row_stride = ReadInt(first_plane, "bytes_per_row", source_width);
+  const int bytes_per_pixel = std::max(1, ReadInt(first_plane, "bytes_per_pixel", 1));
+  const std::string format = ReadString(request, "format");
+  const bool rgb888 = format == "rgb888" || format == "rgb";
+  const bool bgra8888 = format == "bgra8888" || format == "bgra";
   const bool nchw = input_shape_.size() == 4 && input_shape_[1] <= 4;
   const int target_height = static_cast<int>(nchw ? input_shape_[2] : input_shape_[1]);
   const int target_width = static_cast<int>(nchw ? input_shape_[3] : input_shape_[2]);
@@ -491,10 +495,18 @@ std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter:
     const int src_y = std::min(source_height - 1, y * source_height / target_height);
     for (int x = 0; x < target_width; ++x) {
       const int src_x = std::min(source_width - 1, x * source_width / target_width);
-      const int source_index = src_y * row_stride + src_x;
+      const int pixel_width = rgb888 ? 3 : bytes_per_pixel;
+      const int source_index = src_y * row_stride + src_x * pixel_width;
       if (source_index < 0 || source_index >= static_cast<int>(bytes->size())) continue;
-      const float value = ((*bytes)[source_index] / 255.0f - 0.5f) / 0.5f;
       for (int c = 0; c < channels; ++c) {
+        int channel_index = source_index;
+        if (rgb888) {
+          channel_index = source_index + std::min(c, 2);
+        } else if (bgra8888) {
+          channel_index = source_index + (2 - std::min(c, 2));
+        }
+        if (channel_index < 0 || channel_index >= static_cast<int>(bytes->size())) continue;
+        const float value = ((*bytes)[channel_index] / 255.0f - 0.5f) / 0.5f;
         const size_t index = nchw
                                  ? static_cast<size_t>(c * target_height * target_width + y * target_width + x)
                                  : static_cast<size_t>((y * target_width + x) * channels + c);
