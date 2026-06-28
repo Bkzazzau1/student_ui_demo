@@ -47,12 +47,14 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
   String _message = 'Starting secure exam checks...';
   final List<String> _findings = <String>[];
   SecureLockdownSnapshot? _secureSnapshot;
+  DateTime? _lastReviewEventAt;
+  String? _lastReviewEventType;
 
   @override
   void initState() {
     super.initState();
     unawaited(_checkNow());
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
       unawaited(_checkNow());
     });
   }
@@ -76,13 +78,17 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
       setState(() {
         _ready = ready;
         _secureSnapshot = secure;
-        _message = ready ? 'Secure exam checks active.' : _studentMessage(system, secure);
+        _message = ready ? 'Secure exam mode active.' : _studentMessage(system, secure);
         _findings
           ..clear()
           ..addAll(system.findings)
-          ..addAll(secure.findings.map((finding) => finding.message));
+          ..addAll(secure.findings.map((finding) => finding.message))
+          ..addAll(secure.actions.where((action) => !action.success).map((action) => action.message));
       });
-      if (!ready) await _sendReviewEvent(system, secure);
+      if (!ready) {
+        widget.onReviewRequired(_studentMessage(system, secure));
+        await _sendReviewEvent(system, secure);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -111,8 +117,29 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
     SecureLockdownSnapshot secure,
   ) {
     if (!system.ready) return system.message;
+    if (!secure.enforcementActive) return 'Secure exam mode is not active.';
+    if (secure.prohibitedProcesses.isNotEmpty) {
+      return 'Please close other apps before continuing the exam.';
+    }
+    if (secure.displayCount != null && secure.displayCount! > 1) {
+      return 'Please disconnect extra display before continuing the exam.';
+    }
+    if (!secure.clipboardCleared) return 'Secure exam mode needs review before continuing.';
     if (!secure.ready) return 'Secure exam mode needs review before continuing.';
     return 'Secure exam checks need review before continuing.';
+  }
+
+  bool _shouldSendReviewEvent(String eventType) {
+    final now = DateTime.now();
+    if (_lastReviewEventType != eventType) {
+      _lastReviewEventType = eventType;
+      _lastReviewEventAt = now;
+      return true;
+    }
+    final last = _lastReviewEventAt;
+    if (last != null && now.difference(last).inSeconds < 15) return false;
+    _lastReviewEventAt = now;
+    return true;
   }
 
   Future<void> _sendReviewEvent(
@@ -121,9 +148,13 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
   ) async {
     final message = _studentMessage(system, secure);
     final eventType = secure.ready ? 'system_device_check_failed' : 'secure_exam_mode_check_failed';
+    if (!_shouldSendReviewEvent(eventType)) return;
     final metadata = <String, Object?>{
       'system_review': system.toJson(),
       'secure_exam_mode': secure.toJson(),
+      'lockdown_enforcement_active': secure.enforcementActive,
+      'clipboard_sweep_count': secure.clipboardSweepCount,
+      'lockdown_action_count': secure.actions.length,
     };
     final event = LiveProctoringEvent(
       studentId: widget.studentId,
@@ -163,6 +194,7 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
   @override
   Widget build(BuildContext context) {
     final snapshot = _secureSnapshot;
+    final successfulActions = snapshot?.actions.where((action) => action.success).length ?? 0;
     return Card(
       elevation: 0,
       child: Padding(
@@ -179,7 +211,7 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
-                    'Secure exam checks',
+                    'Secure exam mode',
                     style: TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
@@ -195,7 +227,10 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
                 children: [
                   _CheckChip(label: 'Platform', value: snapshot.platformName),
                   _CheckChip(label: 'Displays', value: snapshot.displayCount?.toString() ?? 'unknown'),
-                  _CheckChip(label: 'Clipboard', value: snapshot.clipboardCleared ? 'cleared' : 'unconfirmed'),
+                  _CheckChip(label: 'Clipboard', value: snapshot.clipboardCleared ? 'active' : 'unconfirmed'),
+                  _CheckChip(label: 'Sweeps', value: snapshot.clipboardSweepCount.toString()),
+                  _CheckChip(label: 'Mode', value: snapshot.enforcementActive ? 'active' : 'inactive'),
+                  _CheckChip(label: 'Actions', value: '$successfulActions/${snapshot.actions.length}'),
                 ],
               ),
             ],
