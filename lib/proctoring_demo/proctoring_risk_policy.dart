@@ -98,6 +98,8 @@ class ProctoringRiskPolicy {
         return 35;
       case 'background_voice_environment_warning':
         return 10;
+      case 'audio_environment_noise_warning':
+        return 10;
       case 'audio_repeated_fingerprint_detected':
         return 15;
       case 'gaze_head_pose_deviation':

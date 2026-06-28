@@ -10,6 +10,7 @@ import 'package:image/image.dart' as img;
 import 'audio_evidence_capture_service.dart';
 import 'audio_event_evidence_policy.dart';
 import 'audio_fingerprint_isolation_service.dart';
+import 'audio_live_event_mapper.dart';
 import 'camera_evidence_capture_service.dart';
 import 'camera_event_evidence_policy.dart';
 import 'camera_runtime_coordinator.dart';
@@ -93,6 +94,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       LandmarkGazeRuntimeSelector();
   final AudioFingerprintIsolationService _audioIsolation =
       AudioFingerprintIsolationService();
+  final AudioLiveEventMapper _audioEventMapper = const AudioLiveEventMapper();
   final AudioEvidenceCaptureService _audioEvidence =
       const AudioEvidenceCaptureService();
   final AudioEventEvidencePolicy _audioEvidencePolicy =
@@ -956,11 +958,17 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   void _handleAudioChunk(Uint8List chunk) {
     final result = _audioIsolation.analysePcm16(chunk);
     if (result == null) return;
+    final audioDecision = _audioEventMapper.map(result);
 
-    if (result.nearVoiceLikely) {
+    final nearVoiceDetected =
+        audioDecision?.eventType == 'audio_voice_isolation_alert';
+    final backgroundVoiceDetected =
+        audioDecision?.eventType == 'background_voice_environment_warning';
+
+    if (nearVoiceDetected) {
       _voiceRiskStreak++;
       _farVoiceRiskStreak = math.max(0, _farVoiceRiskStreak - 1);
-    } else if (result.possibleFarVoiceLikely) {
+    } else if (backgroundVoiceDetected) {
       _farVoiceRiskStreak++;
       _voiceRiskStreak = math.max(0, _voiceRiskStreak - 1);
     } else {
@@ -970,13 +978,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
     if (mounted) {
       setState(() {
-        _audioStatus = result.nearVoiceLikely
+        _audioStatus = audioDecision?.eventType == 'audio_voice_isolation_alert'
             ? 'Voice close to exam area ($_voiceRiskStreak/3)'
-            : result.possibleFarVoiceLikely
+            : audioDecision?.eventType == 'background_voice_environment_warning'
             ? 'Voice may be outside or far away. Improve environment ($_farVoiceRiskStreak/$_farVoiceWarningStreak)'
-            : result.allowedAmbientLikely
-            ? 'Allowed ambient sound: ${result.label}'
-            : 'Unclear environment sound noticed';
+            : audioDecision?.eventType == 'audio_environment_noise_warning'
+            ? 'Environment sound noticed'
+            : _audioEventMapper.isAllowedAmbient(result)
+            ? 'Sound check active'
+            : 'Sound check active';
       });
     }
 
@@ -1000,9 +1010,18 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           metadata: result.toJson(),
         ),
       );
+    } else if (audioDecision?.eventType == 'audio_environment_noise_warning') {
+      unawaited(
+        _raiseEvent(
+          eventType: audioDecision!.eventType,
+          severity: audioDecision.severity,
+          message: audioDecision.message,
+          metadata: result.toJson(),
+        ),
+      );
     } else if (result.repeatedFingerprint &&
-        !result.allowedAmbientLikely &&
-        !result.possibleFarVoiceLikely) {
+        !_audioEventMapper.isAllowedAmbient(result) &&
+        !backgroundVoiceDetected) {
       unawaited(
         _raiseEvent(
           eventType: 'audio_repeated_fingerprint_detected',

@@ -18,6 +18,10 @@ void main() {
       expect(ProctoringRiskPolicy.pointsFor('microphone_unavailable'), 35);
       expect(ProctoringRiskPolicy.pointsFor('multiple_people_detected'), 55);
       expect(ProctoringRiskPolicy.pointsFor('audio_voice_isolation_alert'), 35);
+      expect(
+        ProctoringRiskPolicy.pointsFor('audio_environment_noise_warning'),
+        10,
+      );
       expect(ProctoringRiskPolicy.pointsFor('gaze_head_pose_deviation'), 20);
       expect(
         ProctoringRiskPolicy.pointsFor('sustained_gaze_head_pose_deviation'),
