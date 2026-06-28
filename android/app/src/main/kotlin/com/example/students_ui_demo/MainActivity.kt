@@ -441,12 +441,14 @@ private fun MutableList<Detection>.decodeCandidate(values: FloatArray, className
         confidence = values[4].logistic()
         classId = values[5].roundToLong()
     } else {
-        val objectness = values[4].logistic()
-        for (index in 5 until values.size) {
+        val yolov5Layout = values.size == 85 || values.size == 10
+        val classStart = if (yolov5Layout) 5 else 4
+        val objectness = if (yolov5Layout) values[4].logistic() else 1.0
+        for (index in classStart until values.size) {
             val score = values[index].logistic() * objectness
             if (score > confidence) {
                 confidence = score
-                classId = (index - 5).toLong()
+                classId = (index - classStart).toLong()
             }
         }
     }

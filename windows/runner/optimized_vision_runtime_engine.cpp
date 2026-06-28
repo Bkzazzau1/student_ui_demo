@@ -227,12 +227,14 @@ void DecodeCandidate(const float* values,
     confidence = Logistic(values[4]);
     class_id = static_cast<int64_t>(std::llround(values[5]));
   } else {
-    const double objectness = Logistic(values[4]);
-    for (int64_t i = 5; i < length; ++i) {
+    const bool yolov5_layout = length == 85 || length == 10;
+    const int64_t class_start = yolov5_layout ? 5 : 4;
+    const double objectness = yolov5_layout ? Logistic(values[4]) : 1.0;
+    for (int64_t i = class_start; i < length; ++i) {
       const double score = Logistic(values[i]) * objectness;
       if (score > confidence) {
         confidence = score;
-        class_id = i - 5;
+        class_id = i - class_start;
       }
     }
   }
@@ -445,6 +447,13 @@ std::string OptimizedVisionRuntimeEngine::ResolveModelPath(const flutter::Encoda
 
   const std::string exe_dir = ExecutableDirectory();
   if (!exe_dir.empty()) {
+    std::vector<std::string> expanded_candidates = candidates;
+    for (const auto& candidate : candidates) {
+      expanded_candidates.push_back(JoinPath(exe_dir, JoinPath("data\\flutter_assets", candidate)));
+      expanded_candidates.push_back(JoinPath(exe_dir, JoinPath("flutter_assets", candidate)));
+      expanded_candidates.push_back(JoinPath(exe_dir, candidate));
+    }
+    candidates = expanded_candidates;
     candidates.push_back(JoinPath(exe_dir, JoinPath("data\\flutter_assets", asset_path)));
     candidates.push_back(JoinPath(exe_dir, JoinPath("flutter_assets", asset_path)));
     candidates.push_back(JoinPath(exe_dir, asset_path));

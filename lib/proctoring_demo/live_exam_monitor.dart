@@ -20,6 +20,7 @@ import 'live_event_cooldown_gate.dart';
 import 'live_monitoring_profile.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
+import 'object_review_event_mapper.dart';
 import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
 import 'proctoring_risk_policy.dart';
@@ -69,8 +70,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     'KSLAS_ALLOW_EXAM_OVERRIDE',
     defaultValue: false,
   );
+  static const bool _allowMonitoringReviewOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_MONITORING_REVIEW_OVERRIDE',
+    defaultValue: false,
+  );
   static const bool _audioOverrideActive =
       _allowAudioReviewOverride || _allowExamOverride;
+  static const bool _monitoringWarnOnly =
+      _allowExamOverride || _allowMonitoringReviewOverride;
 
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
@@ -155,7 +162,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _snapshotYoloFramesProcessed = 0;
   int _objectFramesReady = 0;
   bool _yoloRuntimeReady = false;
-  String _yoloRuntimeStatus = 'YOLO model waiting for native runtime';
+  String _yoloRuntimeStatus = 'Object review starting';
   String _yoloModelPath = '';
 
   @override
@@ -627,8 +634,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _yoloRuntimeReady = result.ready;
       _yoloModelPath = result.modelPath;
       _yoloRuntimeStatus = result.ready
-          ? 'YOLO model ready'
-          : 'YOLO model waiting for native runtime';
+          ? 'Object review model ready'
+          : 'Object review starting';
     });
   }
 
@@ -775,6 +782,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         .map((item) => Map<String, Object?>.from(item))
         .toList();
     final objectEvents = _objectEventAdapter.mapResult(result);
+    final objectSummary = _objectDetectionSummary(objects, objectEvents);
     for (final decision in objectEvents) {
       unawaited(
         _raiseEvent(
@@ -814,6 +822,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     }
     if (mounted) {
       setState(() {
+        _objectReady = true;
+        _objectStatus = objectSummary.isEmpty
+            ? 'Object review active'
+            : 'Detected: $objectSummary';
         _visualReady = true;
         _visualStatus = multiplePeople
             ? 'Camera view needs review ($_multiplePeopleRiskStreak/$_secondPersonPauseStreak)'
@@ -1059,16 +1071,19 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }) async {
     if (!_shouldEmit(eventType)) return;
     final riskDecision = ProctoringRiskPolicy.decisionFor(eventType);
-    final effectiveSeverity = riskDecision.points > 0
+    final policySeverity = riskDecision.points > 0
         ? ProctoringRiskPolicy.severityForPoints(riskDecision.points)
         : severity;
+    final effectiveSeverity = _monitoringWarnOnly ? 'warning' : policySeverity;
     final enrichedMetadata = <String, Object?>{
       ...metadata,
       'risk_policy_version': ProctoringRiskPolicy.version,
       'risk_points': riskDecision.points,
       'risk_level': riskDecision.level,
-      'should_pause': riskDecision.shouldPause,
+      'should_pause': !_monitoringWarnOnly && riskDecision.shouldPause,
+      'testing_warn_only': _monitoringWarnOnly,
       'original_severity': severity,
+      'policy_severity': policySeverity,
       'effective_severity': effectiveSeverity,
       'source_component': 'live_exam_monitor',
       'published_frame_sequence': _framesPublished,
@@ -1129,7 +1144,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     setState(() {
       _eventsSent.insert(
         0,
-        synced ? 'Check recorded' : 'Check saved for review',
+        _eventDisplayText(
+          synced: synced,
+          severity: effectiveSeverity,
+          message: message,
+          metadata: enrichedMetadata,
+        ),
       );
       if (_eventsSent.length > 5) _eventsSent.removeLast();
     });
@@ -1149,6 +1169,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     required String severity,
     required ProctoringRiskDecision riskDecision,
   }) {
+    if (_monitoringWarnOnly) return false;
     if (!_monitoringProfile.shouldPauseForEventType(eventType)) return false;
     if (riskDecision.shouldPause) return true;
     if (severity == 'critical') return true;
@@ -1159,6 +1180,88 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       'audio_voice_isolation_alert',
     };
     return hardPauseEvents.contains(eventType);
+  }
+
+  String _objectDetectionSummary(
+    List<Map<String, Object?>> objects,
+    List<ObjectReviewEventDecision> decisions,
+  ) {
+    final labels = <String>{};
+    for (final decision in decisions) {
+      for (final label in decision.labels) {
+        final normalized = _friendlyDetectionLabel(label);
+        if (normalized.isNotEmpty) labels.add(normalized);
+      }
+    }
+    for (final object in objects) {
+      final confidence =
+          double.tryParse('${object['confidence'] ?? object['score'] ?? 0}') ??
+          0.0;
+      if (confidence < 0.45) continue;
+      final label = _friendlyDetectionLabel(
+        '${object['label'] ?? object['class'] ?? object['name'] ?? ''}',
+      );
+      if (label.isNotEmpty) labels.add(label);
+    }
+    return labels.take(4).join(', ');
+  }
+
+  String _eventDisplayText({
+    required bool synced,
+    required String severity,
+    required String message,
+    required Map<String, Object?> metadata,
+  }) {
+    final prefix = _monitoringWarnOnly ? 'Warning only' : 'Check';
+    final detected = _metadataDetectionSummary(metadata);
+    if (detected.isNotEmpty) {
+      return '$prefix: detected $detected';
+    }
+    if (_monitoringWarnOnly) {
+      return 'Warning only: $message';
+    }
+    return synced ? 'Check recorded' : 'Check saved for review';
+  }
+
+  String _metadataDetectionSummary(Map<String, Object?> metadata) {
+    final labels = <String>{};
+    final directLabels = metadata['labels'] ?? metadata['matched_labels'];
+    if (directLabels is Iterable) {
+      for (final label in directLabels) {
+        final normalized = _friendlyDetectionLabel('$label');
+        if (normalized.isNotEmpty) labels.add(normalized);
+      }
+    }
+    final nativeReview = metadata['native_vision_review'];
+    if (nativeReview is Map) {
+      final detections = nativeReview['detections'];
+      if (detections is Iterable) {
+        for (final rawDetection in detections) {
+          if (rawDetection is! Map) continue;
+          final detection = Map<Object?, Object?>.from(rawDetection);
+          final confidence =
+              double.tryParse('${detection['confidence'] ?? 0}') ?? 0.0;
+          if (confidence < 0.45) continue;
+          final normalized = _friendlyDetectionLabel('${detection['label']}');
+          if (normalized.isNotEmpty) labels.add(normalized);
+        }
+      }
+    }
+    return labels.take(4).join(', ');
+  }
+
+  String _friendlyDetectionLabel(String label) {
+    final normalized = label
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[_\-]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ');
+    if (normalized.isEmpty || normalized == 'null') return '';
+    if (normalized == 'cell phone' || normalized == 'smartphone') {
+      return 'phone';
+    }
+    if (normalized == 'tv monitor') return 'screen';
+    return normalized;
   }
 
   void _releaseCameraLease() {
@@ -1251,12 +1354,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             ),
             if (_snapshotYoloFramesProcessed > 0)
               Text(
-                'YOLO snapshot frames processed: $_snapshotYoloFramesProcessed',
+                'Object snapshot checks processed: $_snapshotYoloFramesProcessed',
               ),
             Text(_yoloRuntimeStatus),
             if (_yoloRuntimeReady && _yoloModelPath.isNotEmpty)
               Text(
-                'YOLO asset ready',
+                'Object model asset ready',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             if (_objectFramesReady > 0)

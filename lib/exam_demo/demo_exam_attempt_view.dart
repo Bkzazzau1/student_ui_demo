@@ -39,6 +39,17 @@ class DemoExamAttemptView extends StatefulWidget {
 
 class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     with WidgetsBindingObserver {
+  static const bool _allowExamOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_EXAM_OVERRIDE',
+    defaultValue: false,
+  );
+  static const bool _allowMonitoringReviewOverride = bool.fromEnvironment(
+    'KSLAS_ALLOW_MONITORING_REVIEW_OVERRIDE',
+    defaultValue: false,
+  );
+  static const bool _monitoringWarnOnly =
+      _allowExamOverride || _allowMonitoringReviewOverride;
+
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -225,6 +236,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
 
   void _handleCriticalMonitoringEvent(String message) {
     if (!_monitoringProfile.pauseOnCriticalMonitoringEvent) return;
+    if (_monitoringWarnOnly) return;
     if (!mounted) return;
     setState(() {
       _paused = true;
