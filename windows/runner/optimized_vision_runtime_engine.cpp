@@ -38,6 +38,18 @@ struct Detection {
   std::string label;
 };
 
+struct ImagePlane {
+  const std::vector<uint8_t>* bytes = nullptr;
+  int row_stride = 0;
+  int pixel_stride = 1;
+};
+
+struct RgbPixel {
+  int r = 0;
+  int g = 0;
+  int b = 0;
+};
+
 flutter::EncodableValue StringValue(const char* value) {
   return flutter::EncodableValue(std::string(value));
 }
@@ -167,9 +179,78 @@ double Clamp01(double value) {
   return std::max(0.0, std::min(1.0, value));
 }
 
+int Clamp255(int value) {
+  return std::max(0, std::min(255, value));
+}
+
 double Logistic(double value) {
   if (value >= 0.0 && value <= 1.0) return value;
   return 1.0 / (1.0 + std::exp(-value));
+}
+
+uint8_t SafeByte(const ImagePlane& plane, int index) {
+  if (plane.bytes == nullptr || index < 0 || index >= static_cast<int>(plane.bytes->size())) {
+    return 0;
+  }
+  return (*plane.bytes)[static_cast<size_t>(index)];
+}
+
+RgbPixel YuvToRgb(int y_value, int u_value, int v_value) {
+  const int c = std::max(0, y_value - 16);
+  const int d = u_value - 128;
+  const int e = v_value - 128;
+  return RgbPixel{
+      Clamp255((298 * c + 409 * e + 128) >> 8),
+      Clamp255((298 * c - 100 * d - 208 * e + 128) >> 8),
+      Clamp255((298 * c + 516 * d + 128) >> 8),
+  };
+}
+
+RgbPixel ReadPackedRgb(const ImagePlane& plane,
+                       int x,
+                       int y,
+                       int fallback_pixel_width,
+                       int red_offset,
+                       int green_offset,
+                       int blue_offset) {
+  const int pixel_width = std::max(plane.pixel_stride, fallback_pixel_width);
+  const int index = y * plane.row_stride + x * pixel_width;
+  return RgbPixel{
+      static_cast<int>(SafeByte(plane, index + red_offset)),
+      static_cast<int>(SafeByte(plane, index + green_offset)),
+      static_cast<int>(SafeByte(plane, index + blue_offset)),
+  };
+}
+
+RgbPixel ReadYuv420(const std::vector<ImagePlane>& planes, int x, int y) {
+  const ImagePlane& y_plane = planes[0];
+  const ImagePlane& u_plane = planes[1];
+  const ImagePlane& v_plane = planes[2];
+  const int y_value = SafeByte(y_plane, y * y_plane.row_stride + x * y_plane.pixel_stride);
+  const int chroma_x = x / 2;
+  const int chroma_y = y / 2;
+  const int u_value = SafeByte(u_plane, chroma_y * u_plane.row_stride + chroma_x * u_plane.pixel_stride);
+  const int v_value = SafeByte(v_plane, chroma_y * v_plane.row_stride + chroma_x * v_plane.pixel_stride);
+  return YuvToRgb(y_value, u_value, v_value);
+}
+
+RgbPixel ReadRgbPixel(const std::vector<ImagePlane>& planes,
+                      const std::string& format,
+                      int x,
+                      int y) {
+  if (planes.empty()) return RgbPixel{};
+  if (format == "rgb888" || format == "rgb") {
+    return ReadPackedRgb(planes.front(), x, y, 3, 0, 1, 2);
+  }
+  if (format == "bgra8888" || format == "bgra") {
+    return ReadPackedRgb(planes.front(), x, y, 4, 2, 1, 0);
+  }
+  if (format.find("yuv") != std::string::npos && planes.size() >= 3) {
+    return ReadYuv420(planes, x, y);
+  }
+  const ImagePlane& y_plane = planes.front();
+  const int value = SafeByte(y_plane, y * y_plane.row_stride + x * y_plane.pixel_stride);
+  return RgbPixel{value, value, value};
 }
 
 flutter::EncodableMap BoundingBoxValue(const Detection& detection) {
@@ -483,22 +564,25 @@ std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter:
   if (planes == nullptr || planes->empty()) {
     throw std::runtime_error("Camera frame has no image planes.");
   }
-  const auto* first_plane = std::get_if<flutter::EncodableMap>(&planes->front());
-  if (first_plane == nullptr) {
-    throw std::runtime_error("Camera image plane is malformed.");
-  }
 
-  const auto* bytes_value = FindValue(first_plane, "bytes");
-  const auto* bytes = bytes_value == nullptr ? nullptr : std::get_if<std::vector<uint8_t>>(bytes_value);
-  if (bytes == nullptr || bytes->empty()) {
+  std::vector<ImagePlane> image_planes;
+  for (const auto& plane_value : *planes) {
+    const auto* plane = std::get_if<flutter::EncodableMap>(&plane_value);
+    if (plane == nullptr) continue;
+    const auto* bytes_value = FindValue(plane, "bytes");
+    const auto* bytes = bytes_value == nullptr ? nullptr : std::get_if<std::vector<uint8_t>>(bytes_value);
+    if (bytes == nullptr || bytes->empty()) continue;
+    image_planes.push_back(ImagePlane{
+        bytes,
+        std::max(1, ReadInt(plane, "bytes_per_row", source_width)),
+        std::max(1, ReadInt(plane, "bytes_per_pixel", 1)),
+    });
+  }
+  if (image_planes.empty()) {
     throw std::runtime_error("Camera image plane has no bytes.");
   }
 
-  const int row_stride = ReadInt(first_plane, "bytes_per_row", source_width);
-  const int bytes_per_pixel = std::max(1, ReadInt(first_plane, "bytes_per_pixel", 1));
   const std::string format = ReadString(request, "format");
-  const bool rgb888 = format == "rgb888" || format == "rgb";
-  const bool bgra8888 = format == "bgra8888" || format == "bgra";
   const bool nchw = input_shape_.size() == 4 && input_shape_[1] <= 4;
   const int target_height = static_cast<int>(nchw ? input_shape_[2] : input_shape_[1]);
   const int target_width = static_cast<int>(nchw ? input_shape_[3] : input_shape_[2]);
@@ -510,18 +594,10 @@ std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter:
     const int src_y = std::min(source_height - 1, y * source_height / target_height);
     for (int x = 0; x < target_width; ++x) {
       const int src_x = std::min(source_width - 1, x * source_width / target_width);
-      const int pixel_width = rgb888 ? 3 : bytes_per_pixel;
-      const int source_index = src_y * row_stride + src_x * pixel_width;
-      if (source_index < 0 || source_index >= static_cast<int>(bytes->size())) continue;
+      const RgbPixel pixel = ReadRgbPixel(image_planes, format, src_x, src_y);
       for (int c = 0; c < channels; ++c) {
-        int channel_index = source_index;
-        if (rgb888) {
-          channel_index = source_index + std::min(c, 2);
-        } else if (bgra8888) {
-          channel_index = source_index + (2 - std::min(c, 2));
-        }
-        if (channel_index < 0 || channel_index >= static_cast<int>(bytes->size())) continue;
-        const float value = ((*bytes)[channel_index] / 255.0f - 0.5f) / 0.5f;
+        const int channel_value = c == 0 ? pixel.r : (c == 1 ? pixel.g : pixel.b);
+        const float value = (channel_value / 255.0f - 0.5f) / 0.5f;
         const size_t index = nchw
                                  ? static_cast<size_t>(c * target_height * target_width + y * target_width + x)
                                  : static_cast<size_t>((y * target_width + x) * channels + c);
@@ -599,6 +675,8 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(const flutter::
   outputs_map[StringValue("inference_ms")] = DoubleValue(last_inference_ms_);
   outputs_map[StringValue("model_path")] = StringValue(model_path_);
   outputs_map[StringValue("raw_outputs")] = flutter::EncodableValue(output_summaries);
+  outputs_map[StringValue("input_format")] = StringValue(ReadString(request, "format"));
+  outputs_map[StringValue("input_conversion")] = StringValue("rgb_normalized");
 
   flutter::EncodableMap response;
   response[StringValue("available")] = flutter::EncodableValue(true);
