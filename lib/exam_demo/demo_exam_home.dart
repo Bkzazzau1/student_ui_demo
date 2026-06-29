@@ -12,21 +12,21 @@ import 'grade_book_view.dart';
 import 'secure_exam_setup_view.dart';
 import 'student_assessment_hub_extras.dart';
 
-enum _AssessmentFilter { all, exams, graded, ungraded, practice }
+enum _DashboardTab { today, exams, assessments, practice, updates }
 
-extension _AssessmentFilterX on _AssessmentFilter {
+extension _DashboardTabX on _DashboardTab {
   String get label {
     switch (this) {
-      case _AssessmentFilter.all:
-        return 'All';
-      case _AssessmentFilter.exams:
+      case _DashboardTab.today:
+        return 'Today';
+      case _DashboardTab.exams:
         return 'Exams';
-      case _AssessmentFilter.graded:
-        return 'Graded';
-      case _AssessmentFilter.ungraded:
-        return 'Ungraded';
-      case _AssessmentFilter.practice:
+      case _DashboardTab.assessments:
+        return 'Assessments';
+      case _DashboardTab.practice:
         return 'Practice';
+      case _DashboardTab.updates:
+        return 'Updates';
     }
   }
 }
@@ -39,7 +39,7 @@ class DemoExamHome extends StatefulWidget {
 }
 
 class _DemoExamHomeState extends State<DemoExamHome> {
-  _AssessmentFilter _filter = _AssessmentFilter.all;
+  _DashboardTab _selectedTab = _DashboardTab.today;
 
   @override
   Widget build(BuildContext context) {
@@ -47,53 +47,13 @@ class _DemoExamHomeState extends State<DemoExamHome> {
     final assessments = DemoExamService.assessmentsForDate(today);
     final assignments = DemoStudentHubExtras.assignmentsForDate(today);
     final feedbackItems = DemoStudentHubExtras.feedbackForDate(today);
+
     final exams = assessments.where((item) => item.isStrictExam).toList();
-    final graded = assessments
-        .where((item) => item.isGradedAssessment)
-        .toList();
-    final ungraded = assessments
-        .where((item) => item.isUngradedAssessment)
+    final assessmentsOnly = assessments
+        .where((item) => item.isGradedAssessment || item.isUngradedAssessment)
         .toList();
     final practice = assessments.where((item) => item.attendanceOnly).toList();
-
-    final sections = <_AssessmentSectionData>[
-      _AssessmentSectionData(
-        filter: _AssessmentFilter.exams,
-        title: 'Exams today',
-        subtitle: 'Supervised exams require checks before you start.',
-        icon: Icons.verified_user_outlined,
-        assessments: exams,
-      ),
-      _AssessmentSectionData(
-        filter: _AssessmentFilter.graded,
-        title: 'Graded assessments',
-        subtitle: 'Lecturer-marked quizzes, tests, and continuous assessment.',
-        icon: Icons.assignment_turned_in_outlined,
-        assessments: graded,
-      ),
-      _AssessmentSectionData(
-        filter: _AssessmentFilter.ungraded,
-        title: 'Ungraded assessments',
-        subtitle: 'Self-check activities for feedback and readiness.',
-        icon: Icons.lightbulb_outline,
-        assessments: ungraded,
-      ),
-      _AssessmentSectionData(
-        filter: _AssessmentFilter.practice,
-        title: 'Practice questions',
-        subtitle: 'Weekly learning practice and attendance activities.',
-        icon: Icons.menu_book_outlined,
-        assessments: practice,
-      ),
-    ];
-
-    final visibleSections = sections
-        .where(
-          (section) =>
-              section.assessments.isNotEmpty &&
-              (_filter == _AssessmentFilter.all || section.filter == _filter),
-        )
-        .toList();
+    final nextAssessment = _nextAssessment(exams, assessmentsOnly, practice);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -102,58 +62,10 @@ class _DemoExamHomeState extends State<DemoExamHome> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 20,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.school_outlined,
-                color: Color(0xFF2563EB),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'KASU DLI Assessment Portal',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ],
-        ),
+        title: const _AppTitle(),
         actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const GradeBookView()),
-            ),
-            icon: const Icon(Icons.workspace_premium_outlined),
-            label: const Text('Grade Book'),
-          ),
-          TextButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const DemoFaceIdView()),
-            ),
-            icon: const Icon(Icons.face_retouching_natural_outlined),
-            label: const Text('Face ID'),
-          ),
           Padding(
-            padding: const EdgeInsets.only(left: 6),
-            child: FilledButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ProctoringDemoHome(),
-                ),
-              ),
-              icon: const Icon(Icons.health_and_safety_outlined, size: 18),
-              label: const Text('Exam Check'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 14, left: 6),
+            padding: const EdgeInsets.only(right: 12),
             child: IconButton(
               tooltip: 'Sign out',
               onPressed: () => Navigator.of(context).push(
@@ -166,70 +78,146 @@ class _DemoExamHomeState extends State<DemoExamHome> {
           ),
         ],
       ),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
-          ),
-        ),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 128),
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1220),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _Header(
-                      today: today,
-                      total: assessments.length,
-                      supervised: exams.length,
-                    ),
-                    const SizedBox(height: 14),
-                    _SummaryCards(
-                      exams: exams.length,
-                      graded: graded.length,
-                      ungraded: ungraded.length,
-                      practice: practice.length,
-                      selected: _filter,
-                      onSelected: (filter) => setState(() => _filter = filter),
-                    ),
-                    const SizedBox(height: 14),
-                    _FilterChips(
-                      selected: _filter,
-                      onChanged: (filter) => setState(() => _filter = filter),
-                    ),
-                    const SizedBox(height: 22),
-                    if (assessments.isEmpty)
-                      const _EmptySchedule()
-                    else if (visibleSections.isEmpty)
-                      _NoFilteredSchedule(filter: _filter)
-                    else
-                      _ResponsiveSectionLayout(
-                        sections: visibleSections,
-                        onStart: (assessment) =>
-                            _openSetup(context, assessment),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 96),
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1080),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _WelcomeHeader(
+                    today: today,
+                    examCount: exams.length,
+                    activityCount: assessments.length + assignments.length,
+                  ),
+                  const SizedBox(height: 16),
+                  _QuickActions(
+                    onGradeBook: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const GradeBookView(),
                       ),
-                    const SizedBox(height: 22),
-                    StudentAssessmentHubExtrasPanel(
-                      assignments: assignments,
-                      feedbackItems: feedbackItems,
-                      onOpenAssignment: (assignment) =>
-                          _openAssignment(context, assignment),
-                      onOpenFeedback: (feedbackItem) =>
-                          _openFeedback(context, feedbackItem),
                     ),
-                  ],
-                ),
+                    onIdentity: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const DemoFaceIdView(),
+                      ),
+                    ),
+                    onExamCheck: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ProctoringDemoHome(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  if (nextAssessment != null)
+                    _NextAssessmentCard(
+                      assessment: nextAssessment,
+                      onOpen: () => _openSetup(context, nextAssessment),
+                    )
+                  else
+                    const _EmptyCard(
+                      title: 'No assessment scheduled today',
+                      message: 'Your assessments will appear here when available.',
+                    ),
+                  const SizedBox(height: 18),
+                  _DashboardTabs(
+                    selected: _selectedTab,
+                    onChanged: (tab) => setState(() => _selectedTab = tab),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSelectedContent(
+                    context: context,
+                    assessments: assessments,
+                    exams: exams,
+                    assessmentsOnly: assessmentsOnly,
+                    practice: practice,
+                    assignments: assignments,
+                    feedbackItems: feedbackItems,
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildSelectedContent({
+    required BuildContext context,
+    required List<DemoAssessment> assessments,
+    required List<DemoAssessment> exams,
+    required List<DemoAssessment> assessmentsOnly,
+    required List<DemoAssessment> practice,
+    required List<DemoAssignmentItem> assignments,
+    required List<DemoFeedbackItem> feedbackItems,
+  }) {
+    switch (_selectedTab) {
+      case _DashboardTab.today:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _AssessmentList(
+              title: 'Today\'s activities',
+              emptyTitle: 'Nothing scheduled today',
+              emptyMessage: 'No exam, assessment, or practice activity is scheduled for today.',
+              assessments: assessments,
+              onOpen: (assessment) => _openSetup(context, assessment),
+            ),
+            const SizedBox(height: 16),
+            _LearningUpdates(
+              assignments: assignments,
+              feedbackItems: feedbackItems,
+              onOpenAssignment: (assignment) => _openAssignment(context, assignment),
+              onOpenFeedback: (feedbackItem) => _openFeedback(context, feedbackItem),
+            ),
+          ],
+        );
+      case _DashboardTab.exams:
+        return _AssessmentList(
+          title: 'Exams',
+          emptyTitle: 'No exam today',
+          emptyMessage: 'Supervised exams will appear here when scheduled.',
+          assessments: exams,
+          onOpen: (assessment) => _openSetup(context, assessment),
+        );
+      case _DashboardTab.assessments:
+        return _AssessmentList(
+          title: 'Assessments',
+          emptyTitle: 'No assessment today',
+          emptyMessage: 'Quizzes, tests, and self-check activities will appear here.',
+          assessments: assessmentsOnly,
+          onOpen: (assessment) => _openSetup(context, assessment),
+        );
+      case _DashboardTab.practice:
+        return _AssessmentList(
+          title: 'Practice',
+          emptyTitle: 'No practice activity today',
+          emptyMessage: 'Weekly practice questions will appear here when available.',
+          assessments: practice,
+          onOpen: (assessment) => _openSetup(context, assessment),
+        );
+      case _DashboardTab.updates:
+        return _UpdatesList(
+          assignments: assignments,
+          feedbackItems: feedbackItems,
+          onOpenAssignment: (assignment) => _openAssignment(context, assignment),
+          onOpenFeedback: (feedbackItem) => _openFeedback(context, feedbackItem),
+        );
+    }
+  }
+
+  static DemoAssessment? _nextAssessment(
+    List<DemoAssessment> exams,
+    List<DemoAssessment> assessments,
+    List<DemoAssessment> practice,
+  ) {
+    if (exams.isNotEmpty) return exams.first;
+    if (assessments.isNotEmpty) return assessments.first;
+    if (practice.isNotEmpty) return practice.first;
+    return null;
   }
 
   Future<void> _openSetup(
@@ -275,116 +263,148 @@ class _DemoExamHomeState extends State<DemoExamHome> {
   }
 }
 
-class _AssessmentSectionData {
-  const _AssessmentSectionData({
-    required this.filter,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.assessments,
-  });
+class _AppTitle extends StatelessWidget {
+  const _AppTitle();
 
-  final _AssessmentFilter filter;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final List<DemoAssessment> assessments;
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F4C81),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            'K',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        const Text(
+          'K-SLAS Student Portal',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ],
+    );
+  }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({
+class _WelcomeHeader extends StatelessWidget {
+  const _WelcomeHeader({
     required this.today,
-    required this.total,
-    required this.supervised,
+    required this.examCount,
+    required this.activityCount,
   });
 
   final DateTime today;
-  final int total;
-  final int supervised;
+  final int examCount;
+  final int activityCount;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A0F172A),
-            blurRadius: 24,
-            offset: Offset(0, 14),
-          ),
-        ],
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 820;
-          final content = Column(
+          final wide = constraints.maxWidth >= 720;
+          final intro = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _HeroBadge(
-                    icon: Icons.calendar_today_outlined,
-                    label: _formatDate(today),
-                  ),
-                  const _HeroBadge(
-                    icon: Icons.verified_outlined,
-                    label: 'Calm exam monitoring',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Student assessment centre',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Your exams, graded assessments, self-checks, and practice questions are organised in one place.',
-                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 16),
+              Text(
+                'Welcome back',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: const Color(0xFF0F172A),
+                      fontWeight: FontWeight.w900,
+                    ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Complete the required checks before starting a supervised exam.',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+              Text(
+                _summaryText,
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 16,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           );
 
-          final stats = Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            alignment: wide ? WrapAlignment.end : WrapAlignment.start,
-            children: [
-              _HeroStat(value: '$total', label: 'Today'),
-              _HeroStat(value: '$supervised', label: 'Need checks'),
-            ],
-          );
-
+          final date = _DateBox(today: today);
           if (!wide) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [content, const SizedBox(height: 18), stats],
+              children: [intro, const SizedBox(height: 16), date],
             );
           }
-
           return Row(
             children: [
-              Expanded(child: content),
+              Expanded(child: intro),
               const SizedBox(width: 24),
-              stats,
+              date,
             ],
           );
         },
+      ),
+    );
+  }
+
+  String get _summaryText {
+    if (activityCount == 0) return 'You have no assessment activity scheduled today.';
+    final examPart = examCount == 1 ? '1 exam' : '$examCount exams';
+    final activityPart = activityCount == 1 ? '1 activity' : '$activityCount activities';
+    if (examCount == 0) return 'You have $activityPart today.';
+    return 'You have $examPart and $activityPart today.';
+  }
+}
+
+class _DateBox extends StatelessWidget {
+  const _DateBox({required this.today});
+
+  final DateTime today;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text(
+            'Today',
+            style: TextStyle(
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _formatDate(today),
+            style: const TextStyle(
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -393,146 +413,53 @@ class _Header extends StatelessWidget {
       '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
-class _HeroBadge extends StatelessWidget {
-  const _HeroBadge({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0x1AFFFFFF),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x1FFFFFFF)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: const Color(0xFFBFDBFE), size: 16),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFFDBEAFE),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroStat extends StatelessWidget {
-  const _HeroStat({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 118,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0x12FFFFFF),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x24FFFFFF)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFFCBD5E1),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryCards extends StatelessWidget {
-  const _SummaryCards({
-    required this.exams,
-    required this.graded,
-    required this.ungraded,
-    required this.practice,
-    required this.selected,
-    required this.onSelected,
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({
+    required this.onGradeBook,
+    required this.onIdentity,
+    required this.onExamCheck,
   });
 
-  final int exams;
-  final int graded;
-  final int ungraded;
-  final int practice;
-  final _AssessmentFilter selected;
-  final ValueChanged<_AssessmentFilter> onSelected;
+  final VoidCallback onGradeBook;
+  final VoidCallback onIdentity;
+  final VoidCallback onExamCheck;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final cardWidth = width >= 980
-            ? (width - 36) / 4
-            : width >= 560
-            ? (width - 12) / 2
-            : width;
+        final compact = constraints.maxWidth < 720;
+        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
-            _SummaryCard(
-              width: cardWidth,
-              icon: Icons.verified_user_outlined,
-              value: '$exams',
-              title: 'Exams',
-              subtitle: 'Start checks first',
-              selected: selected == _AssessmentFilter.exams,
-              onTap: () => onSelected(_AssessmentFilter.exams),
+            SizedBox(
+              width: width,
+              child: _QuickAction(
+                title: 'Grade book',
+                subtitle: 'View scores',
+                icon: Icons.workspace_premium_outlined,
+                onTap: onGradeBook,
+              ),
             ),
-            _SummaryCard(
-              width: cardWidth,
-              icon: Icons.assignment_turned_in_outlined,
-              value: '$graded',
-              title: 'Graded',
-              subtitle: 'Lecturer-marked',
-              selected: selected == _AssessmentFilter.graded,
-              onTap: () => onSelected(_AssessmentFilter.graded),
+            SizedBox(
+              width: width,
+              child: _QuickAction(
+                title: 'Identity setup',
+                subtitle: 'Prepare access',
+                icon: Icons.account_circle_outlined,
+                onTap: onIdentity,
+              ),
             ),
-            _SummaryCard(
-              width: cardWidth,
-              icon: Icons.lightbulb_outline,
-              value: '$ungraded',
-              title: 'Ungraded',
-              subtitle: 'Feedback only',
-              selected: selected == _AssessmentFilter.ungraded,
-              onTap: () => onSelected(_AssessmentFilter.ungraded),
-            ),
-            _SummaryCard(
-              width: cardWidth,
-              icon: Icons.menu_book_outlined,
-              value: '$practice',
-              title: 'Practice',
-              subtitle: 'Learning activities',
-              selected: selected == _AssessmentFilter.practice,
-              onTap: () => onSelected(_AssessmentFilter.practice),
+            SizedBox(
+              width: width,
+              child: _QuickAction(
+                title: 'Exam check',
+                subtitle: 'Open readiness check',
+                icon: Icons.verified_user_outlined,
+                onTap: onExamCheck,
+              ),
             ),
           ],
         );
@@ -541,97 +468,211 @@ class _SummaryCards extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.width,
-    required this.icon,
-    required this.value,
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
     required this.title,
     required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: const Color(0xFF0F4C81), size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NextAssessmentCard extends StatelessWidget {
+  const _NextAssessmentCard({required this.assessment, required this.onOpen});
+
+  final DemoAssessment assessment;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 700;
+          final details = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Next assessment',
+                style: TextStyle(
+                  color: Color(0xFFBFDBFE),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                assessment.title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${assessment.course.code} • ${assessment.durationMinutes} min • ${assessment.scheduleLabel()}',
+                style: const TextStyle(
+                  color: Color(0xFFCBD5E1),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Lecturer: ${assessment.course.lecturer}',
+                style: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+          final button = FilledButton(
+            onPressed: onOpen,
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF0F172A),
+              minimumSize: const Size(170, 52),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            child: Text(_buttonLabelFor(assessment)),
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [details, const SizedBox(height: 18), button],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: details),
+              const SizedBox(width: 24),
+              button,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DashboardTabs extends StatelessWidget {
+  const _DashboardTabs({required this.selected, required this.onChanged});
+
+  final _DashboardTab selected;
+  final ValueChanged<_DashboardTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final tab in _DashboardTab.values)
+            _TabButton(
+              label: tab.label,
+              selected: selected == tab,
+              onTap: () => onChanged(tab),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
     required this.selected,
     required this.onTap,
   });
 
-  final double width;
-  final IconData icon;
-  final String value;
-  final String title;
-  final String subtitle;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: selected
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFFE2E8F0),
-                width: selected ? 1.4 : 1,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x080F172A),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? const Color(0xFFDBEAFE)
-                        : const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(icon, color: const Color(0xFF2563EB)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        value,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      Text(
-                        title,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFF64748B)),
-                      ),
-                    ],
-                  ),
-                ),
-                if (selected)
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF2563EB),
-                    size: 20,
-                  ),
-              ],
+    return Material(
+      color: selected ? const Color(0xFF0F4C81) : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : const Color(0xFF334155),
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
@@ -640,42 +681,204 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _FilterChips extends StatelessWidget {
-  const _FilterChips({required this.selected, required this.onChanged});
+class _AssessmentList extends StatelessWidget {
+  const _AssessmentList({
+    required this.title,
+    required this.emptyTitle,
+    required this.emptyMessage,
+    required this.assessments,
+    required this.onOpen,
+  });
 
-  final _AssessmentFilter selected;
-  final ValueChanged<_AssessmentFilter> onChanged;
+  final String title;
+  final String emptyTitle;
+  final String emptyMessage;
+  final List<DemoAssessment> assessments;
+  final ValueChanged<DemoAssessment> onOpen;
 
   @override
   Widget build(BuildContext context) {
+    if (assessments.isEmpty) {
+      return _EmptyCard(title: emptyTitle, message: emptyMessage);
+    }
     return Container(
-      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final filter in _AssessmentFilter.values)
-            ChoiceChip(
-              label: Text(filter.label),
-              selected: selected == filter,
-              onSelected: (_) => onChanged(filter),
-              selectedColor: const Color(0xFFDBEAFE),
-              labelStyle: TextStyle(
-                color: selected == filter
-                    ? const Color(0xFF1D4ED8)
-                    : const Color(0xFF334155),
-                fontWeight: FontWeight.w800,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: const Color(0xFF0F172A),
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+          ),
+          for (var index = 0; index < assessments.length; index++) ...[
+            if (index > 0) const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            _AssessmentRow(
+              assessment: assessments[index],
+              onOpen: () => onOpen(assessments[index]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AssessmentRow extends StatelessWidget {
+  const _AssessmentRow({required this.assessment, required this.onOpen});
+
+  final DemoAssessment assessment;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 680;
+          final content = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_iconFor(assessment), color: const Color(0xFF0F4C81)),
               ),
-              side: BorderSide(
-                color: selected == filter
-                    ? const Color(0xFF93C5FD)
-                    : const Color(0xFFE2E8F0),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      assessment.title,
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${assessment.course.code} • ${assessment.course.title}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${assessment.durationMinutes} min • ${assessment.scheduleLabel()} • ${assessment.course.lecturer}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ],
+          );
+
+          final action = FilledButton(
+            onPressed: onOpen,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F4C81),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(140, 44),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            child: Text(_buttonLabelFor(assessment)),
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [content, const SizedBox(height: 14), action],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: content),
+              const SizedBox(width: 16),
+              action,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LearningUpdates extends StatelessWidget {
+  const _LearningUpdates({
+    required this.assignments,
+    required this.feedbackItems,
+    required this.onOpenAssignment,
+    required this.onOpenFeedback,
+  });
+
+  final List<DemoAssignmentItem> assignments;
+  final List<DemoFeedbackItem> feedbackItems;
+  final ValueChanged<DemoAssignmentItem> onOpenAssignment;
+  final ValueChanged<DemoFeedbackItem> onOpenFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    if (assignments.isEmpty && feedbackItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Learning updates',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: const Color(0xFF0F172A),
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 12),
+          if (assignments.isNotEmpty)
+            _UpdateSummaryRow(
+              title: 'Assignments due',
+              subtitle: '${assignments.length} item${assignments.length == 1 ? '' : 's'} available',
+              actionLabel: 'Open',
+              onTap: () => onOpenAssignment(assignments.first),
+            ),
+          if (assignments.isNotEmpty && feedbackItems.isNotEmpty)
+            const Divider(height: 18, color: Color(0xFFE2E8F0)),
+          if (feedbackItems.isNotEmpty)
+            _UpdateSummaryRow(
+              title: 'Feedback available',
+              subtitle: '${feedbackItems.length} item${feedbackItems.length == 1 ? '' : 's'} released',
+              actionLabel: 'View',
+              onTap: () => onOpenFeedback(feedbackItems.first),
             ),
         ],
       ),
@@ -683,43 +886,167 @@ class _FilterChips extends StatelessWidget {
   }
 }
 
-class _EmptySchedule extends StatelessWidget {
-  const _EmptySchedule();
-
-  @override
-  Widget build(BuildContext context) {
-    return _InfoStateCard(
-      icon: Icons.event_available_outlined,
-      title: 'Nothing scheduled today',
-      message:
-          'No exam, assessment, or practice activity is scheduled for today.',
-    );
-  }
-}
-
-class _NoFilteredSchedule extends StatelessWidget {
-  const _NoFilteredSchedule({required this.filter});
-
-  final _AssessmentFilter filter;
-
-  @override
-  Widget build(BuildContext context) {
-    return _InfoStateCard(
-      icon: Icons.filter_alt_off_outlined,
-      title: 'No ${filter.label.toLowerCase()} item',
-      message: 'Choose All to see every activity scheduled for today.',
-    );
-  }
-}
-
-class _InfoStateCard extends StatelessWidget {
-  const _InfoStateCard({
-    required this.icon,
-    required this.title,
-    required this.message,
+class _UpdatesList extends StatelessWidget {
+  const _UpdatesList({
+    required this.assignments,
+    required this.feedbackItems,
+    required this.onOpenAssignment,
+    required this.onOpenFeedback,
   });
 
-  final IconData icon;
+  final List<DemoAssignmentItem> assignments;
+  final List<DemoFeedbackItem> feedbackItems;
+  final ValueChanged<DemoAssignmentItem> onOpenAssignment;
+  final ValueChanged<DemoFeedbackItem> onOpenFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    if (assignments.isEmpty && feedbackItems.isEmpty) {
+      return const _EmptyCard(
+        title: 'No learning updates',
+        message: 'Assignments and lecturer feedback will appear here.',
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+            child: Text(
+              'Updates',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: const Color(0xFF0F172A),
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+          ),
+          for (final assignment in assignments) ...[
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            _UpdateDetailRow(
+              title: assignment.title,
+              subtitle: '${assignment.course.code} • Due ${assignment.dueLabel}',
+              actionLabel: 'Open',
+              onTap: () => onOpenAssignment(assignment),
+            ),
+          ],
+          for (final item in feedbackItems) ...[
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            _UpdateDetailRow(
+              title: item.title,
+              subtitle: '${item.course.code} • ${item.scoreLabel}',
+              actionLabel: 'View',
+              onTap: () => onOpenFeedback(item),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _UpdateSummaryRow extends StatelessWidget {
+  const _UpdateSummaryRow({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        TextButton(onPressed: onTap, child: Text(actionLabel)),
+      ],
+    );
+  }
+}
+
+class _UpdateDetailRow extends StatelessWidget {
+  const _UpdateDetailRow({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(onPressed: onTap, child: Text(actionLabel)),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyCard extends StatelessWidget {
+  const _EmptyCard({required this.title, required this.message});
+
   final String title;
   final String message;
 
@@ -729,472 +1056,41 @@ class _InfoStateCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: const Color(0xFF2563EB)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(message, style: const TextStyle(color: Color(0xFF64748B))),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResponsiveSectionLayout extends StatelessWidget {
-  const _ResponsiveSectionLayout({
-    required this.sections,
-    required this.onStart,
-  });
-
-  final List<_AssessmentSectionData> sections;
-  final ValueChanged<DemoAssessment> onStart;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final twoColumns = constraints.maxWidth >= 980 && sections.length > 1;
-        final itemWidth = twoColumns
-            ? (constraints.maxWidth - 16) / 2
-            : constraints.maxWidth;
-        return Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            for (final section in sections)
-              SizedBox(
-                width: itemWidth,
-                child: _AssessmentSection(
-                  title: section.title,
-                  subtitle: section.subtitle,
-                  icon: section.icon,
-                  assessments: section.assessments,
-                  onStart: onStart,
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _AssessmentSection extends StatelessWidget {
-  const _AssessmentSection({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.assessments,
-    required this.onStart,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final List<DemoAssessment> assessments;
-  final ValueChanged<DemoAssessment> onStart;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xB3FFFFFF),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: const Color(0xFF2563EB)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.2,
-                          ),
-                    ),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
-              ),
-              _CountPill(count: assessments.length),
-            ],
-          ),
-          const SizedBox(height: 14),
-          for (final assessment in assessments)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _AssessmentCard(
-                assessment: assessment,
-                onStart: () => onStart(assessment),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CountPill extends StatelessWidget {
-  const _CountPill({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Text(
-        '$count',
-        style: const TextStyle(fontWeight: FontWeight.w900),
-      ),
-    );
-  }
-}
-
-class _AssessmentCard extends StatelessWidget {
-  const _AssessmentCard({required this.assessment, required this.onStart});
-
-  final DemoAssessment assessment;
-  final VoidCallback onStart;
-
-  @override
-  Widget build(BuildContext context) {
-    final sections = assessment.sections
-        .map((section) => section.label)
-        .join(', ');
-    final accent = _accentFor(assessment);
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(width: 5, color: accent),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 560;
-                final details = _AssessmentDetails(
-                  assessment: assessment,
-                  sections: sections,
-                );
-                final icon = _AssessmentIcon(assessment: assessment);
-                final action = FilledButton.icon(
-                  onPressed: onStart,
-                  icon: Icon(_buttonIconFor(assessment), size: 18),
-                  label: Text(_buttonLabelFor(assessment)),
-                );
-
-                if (compact) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          icon,
-                          const SizedBox(width: 12),
-                          Expanded(child: details),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 230),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: action,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    icon,
-                    const SizedBox(width: 14),
-                    Expanded(child: details),
-                    const SizedBox(width: 14),
-                    action,
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Color _accentFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam) return const Color(0xFF2563EB);
-    if (assessment.isGradedAssessment) return const Color(0xFF16A34A);
-    if (assessment.isUngradedAssessment) return const Color(0xFFF59E0B);
-    return const Color(0xFF7C3AED);
-  }
-
-  static IconData _buttonIconFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam || assessment.remoteProctored) {
-      return Icons.shield_outlined;
-    }
-    if (assessment.isGradedAssessment) return Icons.open_in_new_rounded;
-    if (assessment.isUngradedAssessment) return Icons.play_circle_outline;
-    return Icons.arrow_forward_rounded;
-  }
-
-  static String _buttonLabelFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam || assessment.remoteProctored) {
-      return 'Start checks';
-    }
-    if (assessment.isGradedAssessment) return 'Open assessment';
-    if (assessment.isUngradedAssessment) return 'Start self-check';
-    return 'Practice now';
-  }
-}
-
-class _AssessmentIcon extends StatelessWidget {
-  const _AssessmentIcon({required this.assessment});
-
-  final DemoAssessment assessment;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 46,
-      height: 46,
-      decoration: BoxDecoration(
-        color: _softFor(assessment),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Icon(_iconFor(assessment), color: _accentFor(assessment)),
-    );
-  }
-
-  static IconData _iconFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam) return Icons.verified_user_outlined;
-    if (assessment.isGradedAssessment) {
-      return Icons.assignment_turned_in_outlined;
-    }
-    if (assessment.isUngradedAssessment) return Icons.lightbulb_outline;
-    return Icons.menu_book_outlined;
-  }
-
-  static Color _accentFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam) return const Color(0xFF2563EB);
-    if (assessment.isGradedAssessment) return const Color(0xFF16A34A);
-    if (assessment.isUngradedAssessment) return const Color(0xFFF59E0B);
-    return const Color(0xFF7C3AED);
-  }
-
-  static Color _softFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam) return const Color(0xFFEFF6FF);
-    if (assessment.isGradedAssessment) return const Color(0xFFF0FDF4);
-    if (assessment.isUngradedAssessment) return const Color(0xFFFFFBEB);
-    return const Color(0xFFF5F3FF);
-  }
-}
-
-class _AssessmentDetails extends StatelessWidget {
-  const _AssessmentDetails({required this.assessment, required this.sections});
-
-  final DemoAssessment assessment;
-  final String sections;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          assessment.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          '${assessment.course.code} - ${assessment.course.title}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Color(0xFF334155),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Lecturer: ${assessment.course.lecturer}',
-          style: const TextStyle(color: Color(0xFF475569)),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _StatusPill(label: _typeLabelFor(assessment)),
-            _InfoPill(
-              icon: Icons.route_outlined,
-              label: _reviewLabelFor(assessment),
-            ),
-            _InfoPill(
-              icon: Icons.schedule_outlined,
-              label: '${assessment.durationMinutes} min',
-            ),
-            _InfoPill(
-              icon: Icons.today_outlined,
-              label: assessment.scheduleLabel(),
-            ),
-            _InfoPill(icon: Icons.list_alt_outlined, label: sections),
-          ],
-        ),
-      ],
-    );
-  }
-
-  static String _typeLabelFor(DemoAssessment assessment) {
-    if (assessment.isStrictExam) return 'Supervised exam';
-    if (assessment.isGradedAssessment) return 'Graded assessment';
-    if (assessment.isUngradedAssessment) return 'Ungraded assessment';
-    return 'Practice questions';
-  }
-
-  static String _reviewLabelFor(DemoAssessment assessment) {
-    if (assessment.attendanceOnly) return 'Attendance only';
-    if (assessment.isUngradedAssessment) return 'Feedback only';
-    if (assessment.sendsEventsToLecturer) return 'Lecturer-marked';
-    return 'Exam officer review';
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF334155),
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: const Color(0xFF64748B)),
-          const SizedBox(width: 6),
           Text(
-            label,
+            title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: const Color(0xFF0F172A),
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
             style: const TextStyle(
-              color: Color(0xFF475569),
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+IconData _iconFor(DemoAssessment assessment) {
+  if (assessment.isStrictExam) return Icons.verified_user_outlined;
+  if (assessment.attendanceOnly) return Icons.menu_book_outlined;
+  return Icons.assignment_turned_in_outlined;
+}
+
+String _buttonLabelFor(DemoAssessment assessment) {
+  if (assessment.isStrictExam) return 'Start checks';
+  if (assessment.attendanceOnly) return 'Open practice';
+  return 'Open';
 }
