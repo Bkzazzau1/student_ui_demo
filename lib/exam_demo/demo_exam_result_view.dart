@@ -12,7 +12,6 @@ const Color _line = Color(0xFFE2E8F0);
 const Color _muted = Color(0xFF64748B);
 const Color _success = Color(0xFF16A34A);
 const Color _warning = Color(0xFFF59E0B);
-const Color _purple = Color(0xFF7C3AED);
 
 class DemoExamResultView extends StatefulWidget {
   const DemoExamResultView({super.key, required this.result});
