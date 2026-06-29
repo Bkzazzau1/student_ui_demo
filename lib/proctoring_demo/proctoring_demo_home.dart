@@ -10,6 +10,16 @@ import 'proctoring_demo_models.dart';
 import 'security_review_service.dart';
 import 'system_security_review_service.dart';
 
+const Color _brand = Color(0xFF0F4C81);
+const Color _brandDark = Color(0xFF0B1220);
+const Color _surface = Colors.white;
+const Color _surfaceSoft = Color(0xFFF8FAFC);
+const Color _line = Color(0xFFE2E8F0);
+const Color _muted = Color(0xFF64748B);
+const Color _success = Color(0xFF16A34A);
+const Color _warning = Color(0xFFF59E0B);
+const Color _danger = Color(0xFFDC2626);
+
 class ProctoringDemoHome extends StatefulWidget {
   const ProctoringDemoHome({
     super.key,
@@ -23,7 +33,7 @@ class ProctoringDemoHome extends StatefulWidget {
 
   final void Function(String? manifestPath)? onApproved;
   final void Function(String? manifestPath, SecurityReviewResult result)?
-  onStartApproved;
+      onStartApproved;
   final bool compactExamGate;
   final String studentId;
   final String examId;
@@ -70,8 +80,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   final DemoCameraScanFrameSource _frameSource = DemoCameraScanFrameSource();
   final DemoEvidenceService _evidence = DemoEvidenceService();
-  final SystemSecurityReviewService _systemReview =
-      SystemSecurityReviewService();
+  final SystemSecurityReviewService _systemReview = SystemSecurityReviewService();
   final SecurityReviewService _securityReview = SecurityReviewService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -532,8 +541,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _status = result.approved
             ? DemoScanStatus.passed
             : result.needsRescan
-            ? DemoScanStatus.failed
-            : DemoScanStatus.pendingReview;
+                ? DemoScanStatus.failed
+                : DemoScanStatus.pendingReview;
         _message = _safeStudentText(result.summary);
       });
       await _showReviewDecisionDialog(result);
@@ -556,9 +565,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             ..clear()
             ..add(
               AgenticReviewEvent(
-                title: _verificationComplete
-                    ? 'Start approval needed'
-                    : 'Check not complete',
+                title: _verificationComplete ? 'Start approval needed' : 'Check not complete',
                 detail: _verificationComplete
                     ? 'The exam can only start after approval is granted.'
                     : 'The full exam check was not completed. Please run it again.',
@@ -820,8 +827,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   Map<String, String> _targetImagePaths() {
     return <String, String>{
       for (final target in _targets)
-        if (target.framePath != null)
-          _fieldKeyForTarget(target.name): target.framePath!,
+        if (target.framePath != null) _fieldKeyForTarget(target.name): target.framePath!,
     };
   }
 
@@ -882,7 +888,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         elevation: 0,
         titleSpacing: 8,
         title: Text(
-          widget.compactExamGate ? 'Pre-exam check' : 'Exam Check',
+          widget.compactExamGate ? 'Pre-exam check' : 'Room scan check',
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -892,56 +898,64 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
               child: _TopProgressPill(saved: _savedViews, total: _targets.length),
             ),
         ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: _line),
+        ),
       ),
       bottomNavigationBar: compact ? _buildMobileActionBar() : null,
-      body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(18, 14, 18, compact ? 104 : 24),
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1280),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 980;
-                        if (!wide) {
-                          return Column(
-                            children: [
-                              _buildCameraPanel(compact: true),
-                              const SizedBox(height: 12),
-                              _buildSidePanel(compact: true),
-                              const SizedBox(height: 12),
-                              _buildReviewPanel(compact: true),
-                            ],
-                          );
-                        }
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF8FAFC), Color(0xFFEFF4FA)],
+          ),
+        ),
+        child: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(20, 18, 20, compact ? 104 : 28),
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1220),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final wide = constraints.maxWidth >= 980;
+                      if (!wide) {
+                        return Column(
                           children: [
-                            Expanded(flex: 8, child: _buildCameraPanel(compact: false)),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                children: [
-                                  _buildSidePanel(compact: false),
-                                  const SizedBox(height: 14),
-                                  _buildReviewPanel(compact: false),
-                                ],
-                              ),
-                            ),
+                            _buildCameraPanel(compact: true),
+                            const SizedBox(height: 14),
+                            _buildSidePanel(compact: true),
+                            const SizedBox(height: 14),
+                            _buildReviewPanel(compact: true),
                           ],
                         );
-                      },
-                    ),
-                  ],
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 8, child: _buildCameraPanel(compact: false)),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              children: [
+                                _buildSidePanel(compact: false),
+                                const SizedBox(height: 16),
+                                _buildReviewPanel(compact: false),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1018,9 +1032,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   String _cameraOverlayText() {
-    if (_recordingVideo) return 'VERIFICATION VIDEO • keep your face visible';
-    if (_reviewing) return 'FINAL CHECK IN PROGRESS';
-    if (_scanComplete) return 'ROOM SCAN COMPLETE';
+    if (_recordingVideo) return 'Short video • keep your face visible';
+    if (_reviewing) return 'Final check in progress';
+    if (_scanComplete) return 'Room scan complete';
     if (_scanning) return '${_currentTarget.toUpperCase()} • automatic capture';
     return 'Ready for automatic 360 room scan';
   }
@@ -1035,15 +1049,16 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   Widget _buildDesktopControls() {
+    final action = _primaryDesktopAction();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Row(
         children: [
           _MetricPill(label: 'Light', value: _lightingScore.toStringAsFixed(2)),
           const SizedBox(width: 8),
-          _MetricPill(label: 'Move', value: _movementScore.toStringAsFixed(2)),
+          _MetricPill(label: 'Movement', value: _movementScore.toStringAsFixed(2)),
           const SizedBox(width: 8),
-          _MetricPill(label: 'Scene', value: _differenceScore.toStringAsFixed(2)),
+          _MetricPill(label: 'View change', value: _differenceScore.toStringAsFixed(2)),
           const SizedBox(width: 8),
           _MetricPill(
             label: 'Video',
@@ -1059,15 +1074,15 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           ),
           const SizedBox(width: 8),
           FilledButton.icon(
-            onPressed: _primaryDesktopAction().onPressed,
-            icon: _primaryDesktopAction().loading
+            onPressed: action.onPressed,
+            icon: action.loading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Icon(_primaryDesktopAction().icon),
-            label: Text(_primaryDesktopAction().label),
+                : Icon(action.icon),
+            label: Text(action.label),
           ),
         ],
       ),
@@ -1097,10 +1112,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
-                  Icons.travel_explore_outlined,
-                  color: Color(0xFF2563EB),
-                ),
+                child: const Icon(Icons.travel_explore_outlined, color: _brand),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1108,16 +1120,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      compact ? 'Current view' : 'Required 360 views',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
+                      compact ? 'Current room view' : 'Required room views',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                     ),
-                    Text(
+                    const Text(
                       'Move slowly. Capture is automatic.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF64748B),
-                          ),
+                      style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -1128,10 +1136,10 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              value: _progress.clamp(0.0, 1.0),
+              value: _progress.clamp(0.0, 1.0).toDouble(),
               minHeight: 8,
-              backgroundColor: const Color(0xFFE2E8F0),
-              color: _scanComplete ? const Color(0xFF22C55E) : const Color(0xFF2563EB),
+              backgroundColor: _line,
+              color: _scanComplete ? _success : _brand,
             ),
           ),
           const SizedBox(height: 12),
@@ -1159,26 +1167,32 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         children: [
           Row(
             children: [
-              Icon(
-                _reviewEvents.isEmpty ? Icons.info_outline : Icons.verified_outlined,
-                color: _reviewEvents.isEmpty ? const Color(0xFF64748B) : const Color(0xFF16A34A),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _reviewEvents.isEmpty ? const Color(0xFFFFFBEB) : const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  _reviewEvents.isEmpty ? Icons.info_outline : Icons.verified_outlined,
+                  color: _reviewEvents.isEmpty ? _warning : _success,
+                ),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Check status',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           if (_reviewEvents.isEmpty)
             const Text(
               'Complete the room scan to prepare the review record.',
-              style: TextStyle(color: Color(0xFF64748B)),
+              style: TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600),
             )
           else
             ..._reviewEvents.map(
@@ -1188,23 +1202,16 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
-                      event.severity == 'success'
-                          ? Icons.check_circle
-                          : Icons.info_outline,
-                      color: event.severity == 'success'
-                          ? const Color(0xFF16A34A)
-                          : const Color(0xFFF59E0B),
+                      event.severity == 'success' ? Icons.check_circle : Icons.info_outline,
+                      color: event.severity == 'success' ? _success : _warning,
                     ),
                     const SizedBox(width: 9),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            _safeStudentText(event.title),
-                            style: const TextStyle(fontWeight: FontWeight.w900),
-                          ),
-                          Text(_safeStudentText(event.detail)),
+                          Text(_safeStudentText(event.title), style: const TextStyle(fontWeight: FontWeight.w900)),
+                          Text(_safeStudentText(event.detail), style: const TextStyle(color: _muted, height: 1.35)),
                         ],
                       ),
                     ),
@@ -1216,9 +1223,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             const SizedBox(height: 8),
             Text(
               _manifestPath!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF64748B),
-                  ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted),
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -1235,13 +1240,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          border: Border(top: BorderSide(color: _line)),
           boxShadow: [
-            BoxShadow(
-              color: Color(0x140F172A),
-              blurRadius: 18,
-              offset: Offset(0, -8),
-            ),
+            BoxShadow(color: Color(0x140F172A), blurRadius: 18, offset: Offset(0, -8)),
           ],
         ),
         child: Row(
@@ -1256,11 +1257,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
               child: FilledButton.icon(
                 onPressed: action.onPressed,
                 icon: action.loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : Icon(action.icon),
                 label: Text(action.label, overflow: TextOverflow.ellipsis),
               ),
@@ -1348,10 +1345,10 @@ class _ScanStatusHeader extends StatelessWidget {
     final status = complete
         ? 'Complete'
         : reviewing
-        ? 'Checking'
-        : scanning
-        ? 'Scanning'
-        : 'Ready';
+            ? 'Checking'
+            : scanning
+                ? 'Scanning'
+                : 'Ready';
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -1361,16 +1358,18 @@ class _ScanStatusHeader extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              gradient: LinearGradient(
+                colors: complete ? const [_success, Color(0xFF22C55E)] : const [_brand, Color(0xFF2563EB)],
+              ),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               complete
                   ? Icons.check_circle_outline
                   : recordingVideo
-                  ? Icons.video_camera_front_outlined
-                  : Icons.screen_rotation_alt_outlined,
-              color: complete ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
+                      ? Icons.video_camera_front_outlined
+                      : Icons.screen_rotation_alt_outlined,
+              color: Colors.white,
             ),
           ),
           const SizedBox(width: 12),
@@ -1388,20 +1387,15 @@ class _ScanStatusHeader extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
+                Text(message, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
                 const SizedBox(height: 9),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
+                    value: progress.clamp(0.0, 1.0).toDouble(),
                     minHeight: 8,
-                    backgroundColor: const Color(0xFFE2E8F0),
-                    color: complete ? const Color(0xFF22C55E) : const Color(0xFF2563EB),
+                    backgroundColor: _line,
+                    color: complete ? _success : _brand,
                   ),
                 ),
               ],
@@ -1444,13 +1438,9 @@ class _CameraPreviewSurface extends StatelessWidget {
         backupScanReady
             ? 'Backup scan mode ready'
             : openingCamera
-            ? 'Opening camera...'
-            : 'Camera preview',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-        ),
+                ? 'Opening camera...'
+                : 'Camera preview',
+        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -1467,9 +1457,9 @@ class _CameraGradientOverlay extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.42),
+            Colors.black.withValues(alpha: 0.44),
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.48),
+            Colors.black.withValues(alpha: 0.56),
           ],
         ),
       ),
@@ -1488,14 +1478,15 @@ class _FocusFrame extends StatelessWidget {
     final color = complete
         ? const Color(0xFF22C55E)
         : recording
-        ? const Color(0xFFFBBF24)
-        : const Color(0xFF60A5FA);
+            ? const Color(0xFFFBBF24)
+            : const Color(0xFF60A5FA);
     return Container(
       width: 330,
       height: 220,
       decoration: BoxDecoration(
         border: Border.all(color: color, width: 2.2),
         borderRadius: BorderRadius.circular(22),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.24), blurRadius: 22)],
       ),
     );
   }
@@ -1509,44 +1500,31 @@ class _StartScanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      width: 360,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.68),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+        color: Colors.black.withValues(alpha: 0.70),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0xFF60A5FA)),
+        boxShadow: const [BoxShadow(color: Color(0x500F172A), blurRadius: 30, offset: Offset(0, 16))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.screen_rotation_alt_outlined,
-            color: Colors.white,
-            size: 38,
-          ),
+          const Icon(Icons.screen_rotation_alt_outlined, color: Colors.white, size: 36),
           const SizedBox(height: 10),
-          const Text(
-            'Automatic room scan',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          const Text('Automatic room scan', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
           const Text(
-            'Start once, then slowly follow each direction.',
+            'Start once, then slowly follow each direction shown on the right.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFFCBD5E1)),
+            style: TextStyle(color: Color(0xFFCBD5E1), height: 1.35, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 14),
           FilledButton.icon(
             onPressed: action.onPressed,
             icon: action.loading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : Icon(action.icon),
             label: Text(action.label),
           ),
@@ -1574,29 +1552,22 @@ class _CameraBottomBar extends StatelessWidget {
     final icon = complete
         ? Icons.check_circle_outline
         : recording
-        ? Icons.videocam_outlined
-        : scanning
-        ? Icons.autorenew_rounded
-        : Icons.info_outline;
+            ? Icons.videocam_outlined
+            : scanning
+                ? Icons.autorenew_rounded
+                : Icons.info_outline;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.62),
+        color: Colors.black.withValues(alpha: 0.64),
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Row(
         children: [
           Icon(icon, color: Colors.white),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
+          Expanded(child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
         ],
       ),
     );
@@ -1614,17 +1585,14 @@ class _MetricPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: _surfaceSoft,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: _line),
       ),
       child: Text.rich(
         TextSpan(
           children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w900),
-            ),
+            TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w900)),
             TextSpan(text: value),
           ],
         ),
@@ -1650,13 +1618,7 @@ class _TopProgressPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
-      child: Text(
-        '$saved of $total views',
-        style: const TextStyle(
-          color: Color(0xFF1D4ED8),
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      child: Text('$saved of $total views', style: const TextStyle(color: Color(0xFF1D4ED8), fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -1675,14 +1637,7 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF1E3A8A),
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      child: Text(label, style: const TextStyle(color: Color(0xFF1E3A8A), fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -1706,10 +1661,10 @@ class _ScanTargetTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final complete = target.captured;
     final color = complete
-        ? const Color(0xFF16A34A)
+        ? _success
         : active
-        ? const Color(0xFF2563EB)
-        : const Color(0xFF64748B);
+            ? _brand
+            : _muted;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
@@ -1717,15 +1672,15 @@ class _ScanTargetTile extends StatelessWidget {
         color: complete
             ? const Color(0xFFF0FDF4)
             : active
-            ? const Color(0xFFEFF6FF)
-            : const Color(0xFFF8FAFC),
+                ? const Color(0xFFEFF6FF)
+                : _surfaceSoft,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: complete
               ? const Color(0xFFBBF7D0)
               : active
-              ? const Color(0xFFBFDBFE)
-              : const Color(0xFFE2E8F0),
+                  ? const Color(0xFFBFDBFE)
+                  : _line,
         ),
       ),
       child: Row(
@@ -1734,38 +1689,26 @@ class _ScanTargetTile extends StatelessWidget {
             width: 30,
             height: 30,
             alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(999),
-            ),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
             child: complete
                 ? Icon(Icons.check, color: color, size: 18)
-                : Text(
-                    '$number',
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                : Text('$number', style: TextStyle(color: color, fontWeight: FontWeight.w900)),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  target.name,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
+                Text(target.name, style: const TextStyle(fontWeight: FontWeight.w900)),
                 Text(
                   complete
                       ? 'Captured automatically'
                       : active
-                      ? instruction
-                      : 'Waiting',
+                          ? instruction
+                          : 'Waiting',
                   maxLines: compact ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFF64748B)),
+                  style: const TextStyle(color: _muted),
                 ),
               ],
             ),
@@ -1774,8 +1717,8 @@ class _ScanTargetTile extends StatelessWidget {
             complete
                 ? Icons.check_circle
                 : active
-                ? Icons.autorenew_rounded
-                : Icons.radio_button_unchecked,
+                    ? Icons.autorenew_rounded
+                    : Icons.radio_button_unchecked,
             color: color,
           ),
         ],
@@ -1795,16 +1738,10 @@ class _Panel extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
+        color: _surface,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: _line),
+        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 8))],
       ),
       child: child,
     );
@@ -1822,17 +1759,11 @@ class _OverlayLabel extends StatelessWidget {
       margin: const EdgeInsets.all(14),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.62),
+        color: Colors.black.withValues(alpha: 0.64),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
     );
   }
 }
