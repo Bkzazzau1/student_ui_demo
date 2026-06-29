@@ -9,6 +9,16 @@ import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 import 'exam_start_approval_service.dart';
 
+const Color _brand = Color(0xFF0F4C81);
+const Color _brandDark = Color(0xFF0B1220);
+const Color _brandSoft = Color(0xFFEFF6FF);
+const Color _surface = Colors.white;
+const Color _surfaceSoft = Color(0xFFF8FAFC);
+const Color _line = Color(0xFFE2E8F0);
+const Color _muted = Color(0xFF64748B);
+const Color _success = Color(0xFF16A34A);
+const Color _warning = Color(0xFFF59E0B);
+
 class SecureExamSetupView extends StatefulWidget {
   const SecureExamSetupView({super.key, required this.assessment});
 
@@ -40,8 +50,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   String? _manifestPath;
   String? _startToken;
   String _approvalMessage = _allowExamOverride
-      ? 'Start approval is complete. You may begin when ready.'
-      : 'Start approval has not been requested.';
+      ? 'You may begin when ready.'
+      : 'Complete the required steps before starting.';
   AudioSystemReviewResult? _audioSystemReview;
   ExamStartApprovalResult? _approvalResult;
 
@@ -91,8 +101,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     _startToken = null;
     _approvalResult = null;
     _approvalMessage = _allowExamOverride
-        ? 'Start approval is complete. You may begin when ready.'
-        : message ?? 'Start approval must be requested again.';
+        ? 'You may begin when ready.'
+        : message ?? 'Please complete the final readiness step again.';
   }
 
   @override
@@ -109,75 +119,77 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: Text(_setupTitle, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          _setupTitle,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: OutlinedButton.icon(
+            child: TextButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.arrow_back_rounded, size: 18),
               label: const Text('Back'),
             ),
           ),
         ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: _line),
+        ),
       ),
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+            colors: [Color(0xFFF8FAFC), Color(0xFFEFF4FA)],
           ),
         ),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 120),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           children: [
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1220),
+                constraints: const BoxConstraints(maxWidth: 1120),
                 child: Column(
                   children: [
-                    _Header(
+                    _PreparationHero(
                       assessment: widget.assessment,
                       questionCount: questions.length,
                       checksPassed: checksPassed,
                       requiredChecks: requiredChecks,
                       startReady: _canStart(context),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final wide = constraints.maxWidth >= 940;
-                        final timeline = _SetupTimeline(
-                          steps: _buildSteps(context),
-                        );
-                        final sidePanel = _SetupSidePanel(
+                        final steps = _PreparationSteps(steps: _buildSteps(context));
+                        final startPanel = _StartPanel(
                           assessment: widget.assessment,
-                          approvalCard: _ApprovalCard(
+                          ready: _canStart(context),
+                          startLabel: _allowExamOverride ? 'Start now' : _startLabel,
+                          approvalCard: _ReadinessCard(
                             approved: _approvalOk,
                             requesting: _requestingApproval,
                             message: _approvalMessage,
                             result: _approvalResult,
                           ),
-                          rules: _Rules(remote: widget.assessment.remoteProctored),
-                          canStart: _canStart(context),
-                          startLabel: _allowExamOverride
-                              ? 'Start exam'
-                              : _startLabel,
                           onStart: _canStart(context) ? _startExam : null,
                         );
 
                         if (!wide) {
                           return Column(
-                            children: [timeline, const SizedBox(height: 16), sidePanel],
+                            children: [steps, const SizedBox(height: 16), startPanel],
                           );
                         }
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(flex: 7, child: timeline),
+                            Expanded(flex: 7, child: steps),
                             const SizedBox(width: 16),
-                            Expanded(flex: 4, child: sidePanel),
+                            Expanded(flex: 4, child: startPanel),
                           ],
                         );
                       },
@@ -196,55 +208,53 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     final steps = <_SetupStepData>[
       _SetupStepData(
         number: 1,
-        title: 'Confirm your identity',
+        title: 'Identity check',
         subtitle: widget.assessment.graded
-            ? 'Face ID is required for this activity.'
-            : 'Face ID is optional for this practice activity.',
+            ? 'Confirm your student identity before continuing.'
+            : 'Identity setup is available for this activity.',
         status: _faceOk ? _StepStatus.complete : _StepStatus.pending,
-        icon: Icons.face_retouching_natural_outlined,
-        actionLabel: _faceId.isComplete ? 'Update Face ID' : 'Set up Face ID',
-        onPressed: widget.assessment.graded || !_faceId.isComplete ? _openFaceId : _openFaceId,
+        icon: Icons.account_circle_outlined,
+        actionLabel: _faceId.isComplete ? 'Review identity' : 'Set up identity',
+        onPressed: _openFaceId,
       ),
       if (_needsChecks)
         _SetupStepData(
           number: 2,
-          title: 'Scan your exam area',
-          subtitle: 'Show your desk and surroundings before the exam starts.',
+          title: 'Camera and room check',
+          subtitle: 'Show your desk and exam area clearly before the exam begins.',
           status: _roomOk ? _StepStatus.complete : _StepStatus.pending,
-          icon: Icons.screen_rotation_alt_outlined,
-          actionLabel: _roomOk ? 'Run scan again' : 'Start room scan',
+          icon: Icons.photo_camera_front_outlined,
+          actionLabel: _roomOk ? 'Check again' : 'Start check',
           onPressed: _openRoomScan,
         ),
       if (_needsChecks)
         _SetupStepData(
           number: 3,
-          title: 'Check sound and device',
-          subtitle: 'Confirm microphone, system readiness, and exam access settings.',
+          title: 'Sound and device check',
+          subtitle: 'Confirm your microphone and device are ready for the assessment.',
           status: _audioOk && _systemOk ? _StepStatus.complete : _StepStatus.pending,
-          icon: Icons.settings_voice_outlined,
-          actionLabel: _audioOk && _systemOk
-              ? 'Run checks again'
-              : 'Start sound and device check',
+          icon: Icons.devices_outlined,
+          actionLabel: _audioOk && _systemOk ? 'Check again' : 'Start check',
           onPressed: _openAudioSystemReview,
         ),
       if (_approvalRequired && !_allowExamOverride)
         _SetupStepData(
           number: _needsChecks ? 4 : 2,
-          title: 'Request start approval',
+          title: 'Final readiness',
           subtitle: _allChecksReady
-              ? 'Send your completed checks for exam start approval.'
-              : 'Complete the required checks first.',
+              ? 'Confirm that everything is ready before you start.'
+              : 'Complete the required steps first.',
           status: _approvalOk
               ? _StepStatus.complete
               : _requestingApproval
                   ? _StepStatus.running
                   : _StepStatus.pending,
-          icon: Icons.verified_user_outlined,
+          icon: Icons.verified_outlined,
           actionLabel: _requestingApproval
-              ? 'Requesting approval...'
+              ? 'Checking...'
               : _approvalOk
-                  ? 'Approval granted'
-                  : 'Request approval',
+                  ? 'Ready'
+                  : 'Confirm readiness',
           onPressed: _canRequestApproval(context) ? _requestApproval : null,
         ),
     ];
@@ -254,7 +264,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         _SetupStepData(
           number: 1,
           title: 'Ready to start',
-          subtitle: 'This activity uses standard access. You may begin when ready.',
+          subtitle: 'You may begin when ready.',
           status: _StepStatus.complete,
           icon: Icons.check_circle_outline,
           actionLabel: 'Ready',
@@ -271,7 +281,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         builder: (_) => DemoFaceIdView(
           onComplete: () => setState(() {
             _faceId = _faceIdService.load();
-            _clearApproval('Face ID was updated. Request start approval again.');
+            _clearApproval('Identity check updated. Please confirm readiness again.');
           }),
         ),
       ),
@@ -279,7 +289,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     if (!mounted) return;
     setState(() {
       _faceId = _faceIdService.load();
-      _clearApproval('Face ID check completed. Request start approval again.');
+      _clearApproval('Identity check completed. Please confirm readiness again.');
     });
   }
 
@@ -287,7 +297,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     setState(() {
       _roomApproved = false;
       _manifestPath = null;
-      _clearApproval('Room scan changed. Request start approval after all checks pass.');
+      _clearApproval('Camera and room check changed. Please confirm readiness after all steps are complete.');
     });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -300,14 +310,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               setState(() {
                 _roomApproved = false;
                 _manifestPath = null;
-                _clearApproval('Room scan was not approved. Run the scan again.');
+                _clearApproval('Camera and room check was not completed. Please try again.');
               });
               return;
             }
             setState(() {
               _roomApproved = true;
               _manifestPath = manifestPath;
-              _clearApproval('Room scan complete. Request start approval after all checks pass.');
+              _clearApproval('Camera and room check complete. Please confirm readiness after all steps are complete.');
             });
             Navigator.of(context).pop();
           },
@@ -327,7 +337,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       _audioSystemReview = result;
       _audioApproved = result.audioReady;
       _systemApproved = result.systemReady;
-      _clearApproval('Sound or device check changed. Request start approval again.');
+      _clearApproval('Sound or device check changed. Please confirm readiness again.');
     });
   }
 
@@ -342,7 +352,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     }
     setState(() {
       _requestingApproval = true;
-      _approvalMessage = 'Checking saved records and exam setup...';
+      _approvalMessage = 'Confirming your assessment readiness...';
     });
     try {
       final result = await _approvalService.requestStartApproval(
@@ -366,7 +376,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         _startApproved = result.approved && result.hasToken;
         _startToken = result.approved && result.hasToken ? result.examStartToken : null;
         _approvalMessage = result.approved && result.hasToken
-            ? 'Start approval granted. You may now begin.'
+            ? 'Everything is ready. You may now begin.'
             : _friendlyApprovalMessage(result);
       });
     } catch (_) {
@@ -375,7 +385,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         _requestingApproval = false;
         _startApproved = false;
         _startToken = null;
-        _approvalMessage = 'Start approval could not be completed. Check your connection and try again.';
+        _approvalMessage = 'Readiness confirmation could not be completed. Check your connection and try again.';
       });
     }
   }
@@ -385,7 +395,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     return result.message
         .replaceAll('Backend ', '')
         .replaceAll('backend ', '')
-        .replaceAll('approved_to_start', 'approved to start')
+        .replaceAll('approved_to_start', 'ready to start')
         .replaceAll('_', ' ');
   }
 
@@ -423,8 +433,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     return showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Activity cannot start yet'),
-        content: const Text('Complete each required check, then request start approval before starting.'),
+        title: const Text('Not ready yet'),
+        content: const Text('Complete each required step before starting.'),
         actions: [
           FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
@@ -439,7 +449,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         title: const Text('Use a larger device'),
         content: const Text(
           'Supervised examinations must be completed on a desktop or laptop. '
-          'Graded assessments may be completed on phone, tablet, desktop, or laptop when allowed by the lecturer.',
+          'Other assessments may be completed on phone, tablet, desktop, or laptop when allowed by the lecturer.',
         ),
         actions: [
           FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
@@ -449,14 +459,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   String get _setupTitle {
-    if (widget.assessment.isStrictExam) return 'Exam setup';
-    if (widget.assessment.attendanceOnly) return 'Attendance practice';
-    return 'Assessment setup';
+    if (widget.assessment.isStrictExam) return 'Prepare for exam';
+    if (widget.assessment.attendanceOnly) return 'Prepare for practice';
+    return 'Prepare for assessment';
   }
 
   String get _startLabel {
     if (widget.assessment.isStrictExam) return 'Start exam';
-    if (widget.assessment.attendanceOnly) return 'Mark attendance and start';
+    if (widget.assessment.attendanceOnly) return 'Start practice';
     return 'Start assessment';
   }
 }
@@ -483,8 +493,8 @@ class _SetupStepData {
   final VoidCallback? onPressed;
 }
 
-class _Header extends StatelessWidget {
-  const _Header({
+class _PreparationHero extends StatelessWidget {
+  const _PreparationHero({
     required this.assessment,
     required this.questionCount,
     required this.checksPassed,
@@ -502,129 +512,201 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = requiredChecks == 0 ? 1.0 : checksPassed / requiredChecks;
     return Container(
-      padding: const EdgeInsets.all(24),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A0F172A),
-            blurRadius: 24,
+            color: Color(0x1F0F172A),
+            blurRadius: 26,
             offset: Offset(0, 14),
           ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 780;
-          final main = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _DarkTag(assessment.isStrictExam ? 'Supervised exam' : assessment.graded ? 'Graded assessment' : 'Practice'),
-                  _DarkTag('${assessment.durationMinutes} minutes'),
-                  _DarkTag('$questionCount questions'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                assessment.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 31,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.4,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${assessment.course.code} - ${assessment.course.title}',
-                style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 16),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Lecturer: ${assessment.course.lecturer}',
-                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-              ),
-            ],
-          );
-
-          final progressCard = Container(
-            width: wide ? 260 : double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0x12FFFFFF),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0x24FFFFFF)),
-            ),
-            child: Column(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_brandDark, Color(0xFF113A63), _brand],
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 780;
+            final info = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    Icon(
-                      startReady ? Icons.check_circle : Icons.pending_actions_outlined,
-                      color: startReady ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        startReady ? 'Ready to start' : 'Setup in progress',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
+                    _HeroTag(assessment.isStrictExam ? 'Supervised exam' : assessment.graded ? 'Graded assessment' : 'Practice'),
+                    _HeroTag('${assessment.durationMinutes} minutes'),
+                    _HeroTag('$questionCount questions'),
                   ],
                 ),
-                const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 9,
-                    value: progress.clamp(0.0, 1.0),
-                    backgroundColor: const Color(0x24FFFFFF),
-                    color: startReady ? const Color(0xFF22C55E) : const Color(0xFF60A5FA),
+                const SizedBox(height: 16),
+                const Text(
+                  'Prepare before you start',
+                  style: TextStyle(
+                    color: Color(0xFFDBEAFE),
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
-                  '$checksPassed of $requiredChecks checks ready',
+                  assessment.title,
                   style: const TextStyle(
-                    color: Color(0xFFCBD5E1),
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${assessment.course.code} • ${assessment.course.title}',
+                  style: const TextStyle(
+                    color: Color(0xFFE2E8F0),
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: 5),
+                Text(
+                  'Lecturer: ${assessment.course.lecturer}',
+                  style: const TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
-            ),
-          );
-
-          if (!wide) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [main, const SizedBox(height: 18), progressCard],
             );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: main),
-              const SizedBox(width: 24),
-              progressCard,
-            ],
-          );
-        },
+
+            final status = _PreparationStatus(
+              startReady: startReady,
+              progress: progress,
+              checksPassed: checksPassed,
+              requiredChecks: requiredChecks,
+            );
+
+            if (!wide) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [info, const SizedBox(height: 18), status],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: info),
+                const SizedBox(width: 24),
+                SizedBox(width: 275, child: status),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 }
 
-class _SetupTimeline extends StatelessWidget {
-  const _SetupTimeline({required this.steps});
+class _HeroTag extends StatelessWidget {
+  const _HeroTag(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _PreparationStatus extends StatelessWidget {
+  const _PreparationStatus({
+    required this.startReady,
+    required this.progress,
+    required this.checksPassed,
+    required this.requiredChecks,
+  });
+
+  final bool startReady;
+  final double progress;
+  final int checksPassed;
+  final int requiredChecks;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                startReady ? Icons.check_circle : Icons.pending_actions_outlined,
+                color: startReady ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  startReady ? 'Ready to start' : 'Preparation in progress',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 9,
+              value: progress.clamp(0.0, 1.0),
+              backgroundColor: Colors.white.withValues(alpha: 0.18),
+              color: startReady ? const Color(0xFF22C55E) : const Color(0xFF60A5FA),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '$checksPassed of $requiredChecks steps ready',
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreparationSteps extends StatelessWidget {
+  const _PreparationSteps({required this.steps});
 
   final List<_SetupStepData> steps;
 
@@ -633,24 +715,31 @@ class _SetupTimeline extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xB3FFFFFF),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: _surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _line),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Required setup steps',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            'Preparation steps',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: _brandDark,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.3,
                 ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           const Text(
-            'Complete the steps below in order. Your activity will open only when the required checks are ready.',
-            style: TextStyle(color: Color(0xFF64748B)),
+            'Complete each step in order. The start button opens when everything is ready.',
+            style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           for (var index = 0; index < steps.length; index++) ...[
@@ -673,35 +762,29 @@ class _StepCard extends StatelessWidget {
     final complete = step.status == _StepStatus.complete;
     final running = step.status == _StepStatus.running;
     final accent = complete
-        ? const Color(0xFF16A34A)
+        ? _success
         : running
-            ? const Color(0xFF2563EB)
-            : const Color(0xFF64748B);
+            ? _brand
+            : _muted;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        color: complete ? const Color(0xFFF0FDF4) : _surfaceSoft,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: complete ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
+          color: complete ? const Color(0xFFBBF7D0) : _line,
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
           final leading = Container(
-            width: 52,
-            height: 52,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: complete ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(18),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accent.withValues(alpha: 0.20)),
             ),
             child: Icon(step.icon, color: accent),
           );
@@ -716,6 +799,7 @@ class _StepCard extends StatelessWidget {
                     child: Text(
                       step.title,
                       style: const TextStyle(
+                        color: _brandDark,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
@@ -724,13 +808,22 @@ class _StepCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text(step.subtitle, style: const TextStyle(color: Color(0xFF64748B))),
+              Text(
+                step.subtitle,
+                style: const TextStyle(color: _muted, fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 10),
               _StepStatusPill(status: step.status),
             ],
           );
           final action = FilledButton.icon(
             onPressed: step.onPressed,
+            style: FilledButton.styleFrom(
+              backgroundColor: complete ? Colors.white : _brand,
+              foregroundColor: complete ? _brand : Colors.white,
+              side: complete ? const BorderSide(color: _line) : BorderSide.none,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             icon: Icon(complete ? Icons.refresh_rounded : Icons.arrow_forward_rounded, size: 18),
             label: Text(step.actionLabel),
           );
@@ -744,13 +837,7 @@ class _StepCard extends StatelessWidget {
                   children: [leading, const SizedBox(width: 12), Expanded(child: text)],
                 ),
                 const SizedBox(height: 14),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 260),
-                    child: SizedBox(width: double.infinity, child: action),
-                  ),
-                ),
+                SizedBox(width: double.infinity, child: action),
               ],
             );
           }
@@ -803,10 +890,10 @@ class _StepStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = status == _StepStatus.complete
-        ? const Color(0xFF16A34A)
+        ? _success
         : status == _StepStatus.running
-            ? const Color(0xFF2563EB)
-            : const Color(0xFF64748B);
+            ? _brand
+            : _muted;
     final label = status == _StepStatus.complete
         ? 'Completed'
         : status == _StepStatus.running
@@ -839,21 +926,19 @@ class _StepStatusPill extends StatelessWidget {
   }
 }
 
-class _SetupSidePanel extends StatelessWidget {
-  const _SetupSidePanel({
+class _StartPanel extends StatelessWidget {
+  const _StartPanel({
     required this.assessment,
-    required this.approvalCard,
-    required this.rules,
-    required this.canStart,
+    required this.ready,
     required this.startLabel,
+    required this.approvalCard,
     required this.onStart,
   });
 
   final DemoAssessment assessment;
-  final Widget approvalCard;
-  final Widget rules;
-  final bool canStart;
+  final bool ready;
   final String startLabel;
+  final Widget approvalCard;
   final VoidCallback? onStart;
 
   @override
@@ -864,14 +949,14 @@ class _SetupSidePanel extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            color: _surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: _line),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x080F172A),
                 blurRadius: 18,
-                offset: Offset(0, 8),
+                offset: Offset(0, 10),
               ),
             ],
           ),
@@ -881,6 +966,7 @@ class _SetupSidePanel extends StatelessWidget {
               Text(
                 'Start summary',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: _brandDark,
                       fontWeight: FontWeight.w900,
                     ),
               ),
@@ -888,27 +974,34 @@ class _SetupSidePanel extends StatelessWidget {
               _SummaryLine(icon: Icons.book_outlined, label: assessment.course.code),
               _SummaryLine(icon: Icons.schedule_outlined, label: '${assessment.durationMinutes} minutes'),
               _SummaryLine(
-                icon: Icons.security_outlined,
-                label: assessment.remoteProctored ? 'Exam checks required' : 'Standard access',
+                icon: Icons.check_circle_outline,
+                label: assessment.remoteProctored ? 'Preparation required' : 'Standard access',
               ),
               _SummaryLine(
                 icon: Icons.rate_review_outlined,
-                label: assessment.graded ? 'Submission will be reviewed' : 'Feedback / attendance activity',
+                label: assessment.graded ? 'Submission will be reviewed' : 'Feedback activity',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: onStart,
-                  icon: Icon(canStart ? Icons.play_arrow_rounded : Icons.lock_outline_rounded),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ready ? _brand : const Color(0xFFCBD5E1),
+                    foregroundColor: ready ? Colors.white : const Color(0xFF475569),
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  icon: Icon(ready ? Icons.play_arrow_rounded : Icons.lock_outline_rounded),
                   label: Text(startLabel),
                 ),
               ),
-              if (!canStart) ...[
+              if (!ready) ...[
                 const SizedBox(height: 10),
                 const Text(
                   'Complete the required steps to unlock this button.',
-                  style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w700),
+                  style: TextStyle(color: _muted, fontWeight: FontWeight.w700),
                 ),
               ],
             ],
@@ -917,7 +1010,7 @@ class _SetupSidePanel extends StatelessWidget {
         const SizedBox(height: 14),
         approvalCard,
         const SizedBox(height: 14),
-        rules,
+        const _SimpleReminder(),
       ],
     );
   }
@@ -935,7 +1028,7 @@ class _SummaryLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          Icon(icon, size: 18, color: _muted),
           const SizedBox(width: 9),
           Expanded(
             child: Text(
@@ -952,8 +1045,8 @@ class _SummaryLine extends StatelessWidget {
   }
 }
 
-class _ApprovalCard extends StatelessWidget {
-  const _ApprovalCard({
+class _ReadinessCard extends StatelessWidget {
+  const _ReadinessCard({
     required this.approved,
     required this.requesting,
     required this.message,
@@ -968,16 +1061,16 @@ class _ApprovalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = requesting
-        ? const Color(0xFF2563EB)
+        ? _brand
         : approved
-            ? const Color(0xFF16A34A)
-            : const Color(0xFFB45309);
+            ? _success
+            : _warning;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: approved ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -986,8 +1079,8 @@ class _ApprovalCard extends StatelessWidget {
             requesting
                 ? Icons.sync
                 : approved
-                    ? Icons.verified_user
-                    : Icons.admin_panel_settings_outlined,
+                    ? Icons.verified_outlined
+                    : Icons.info_outline,
             color: color,
           ),
           const SizedBox(width: 10),
@@ -996,13 +1089,14 @@ class _ApprovalCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Start approval',
+                  approved ? 'Ready' : 'Readiness status',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _brandDark,
                         fontWeight: FontWeight.w900,
                       ),
                 ),
                 const SizedBox(height: 6),
-                Text(message),
+                Text(message, style: const TextStyle(color: Color(0xFF334155))),
                 if (result != null && !approved && result!.issues.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   ...result!.issues.map((issue) => Text('• $issue')),
@@ -1016,10 +1110,8 @@ class _ApprovalCard extends StatelessWidget {
   }
 }
 
-class _Rules extends StatelessWidget {
-  const _Rules({required this.remote});
-
-  final bool remote;
+class _SimpleReminder extends StatelessWidget {
+  const _SimpleReminder();
 
   @override
   Widget build(BuildContext context) {
@@ -1027,48 +1119,13 @@ class _Rules extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFFDE68A)),
+        color: _surfaceSoft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _line),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Before you start',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            remote
-                ? 'Complete each setup check separately, then request start approval. The activity starts only after approval is granted.'
-                : 'Keep your login secure and submit before the timer ends.',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DarkTag extends StatelessWidget {
-  const _DarkTag(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFF334155)),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+      child: const Text(
+        'Sit in a quiet place, keep your device charged, and stay on the assessment screen until you submit.',
+        style: TextStyle(color: _muted, height: 1.45, fontWeight: FontWeight.w600),
       ),
     );
   }
