@@ -1,5 +1,14 @@
 part of 'demo_face_id_view.dart';
 
+const Color _identityBrand = Color(0xFF0F4C81);
+const Color _identityDark = Color(0xFF0B1220);
+const Color _identitySurface = Colors.white;
+const Color _identitySoft = Color(0xFFF8FAFC);
+const Color _identityLine = Color(0xFFE2E8F0);
+const Color _identityMuted = Color(0xFF64748B);
+const Color _identitySuccess = Color(0xFF16A34A);
+const Color _identityWarning = Color(0xFFF59E0B);
+
 class _Header extends StatelessWidget {
   const _Header({
     required this.snapshot,
@@ -14,65 +23,173 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(compact ? 16 : 22),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF17325A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x1A000000), blurRadius: 18, offset: Offset(0, 10)),
+          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: compact ? 48 : 58,
-            height: compact ? 48 : 58,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
-            ),
-            child: Icon(
-              snapshot.isComplete ? Icons.verified_user_rounded : Icons.face_retouching_natural,
-              color: Colors.white,
-              size: compact ? 28 : 34,
-            ),
+      child: Container(
+        padding: EdgeInsets.all(compact ? 18 : 24),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_identityDark, Color(0xFF113A63), _identityBrand],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 720;
+            final content = Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  snapshot.isComplete ? 'Face ID is active' : 'Set up Face ID',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
+                Container(
+                  width: compact ? 52 : 66,
+                  height: compact ? 52 : 66,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+                  ),
+                  child: Icon(
+                    snapshot.isComplete ? Icons.verified_user_rounded : Icons.account_circle_outlined,
+                    color: Colors.white,
+                    size: compact ? 28 : 36,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: const [
+                          _HeaderTag(icon: Icons.school_outlined, text: 'K-SLAS'),
+                          _HeaderTag(icon: Icons.verified_outlined, text: 'Identity setup'),
+                        ],
                       ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  snapshot.isComplete
-                      ? 'Your saved Face ID is protected and ready for exam identity checks.'
-                      : 'Keep your face inside the guide. The app will capture each step automatically.',
-                  style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35),
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 7,
-                    value: progress.clamp(0.0, 1.0),
-                    backgroundColor: Colors.white.withValues(alpha: 0.16),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF22C55E)),
+                      const SizedBox(height: 12),
+                      Text(
+                        snapshot.isComplete ? 'Identity setup active' : 'Set up your identity',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.3,
+                            ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        snapshot.isComplete
+                            ? 'Your identity setup is protected and ready for exam checks.'
+                            : 'Keep your face inside the guide. The app will capture each step automatically.',
+                        style: const TextStyle(
+                          color: Color(0xFFE2E8F0),
+                          height: 1.4,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
+            );
+            final status = _HeaderProgress(snapshot: snapshot, progress: progress);
+            if (!wide) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [content, const SizedBox(height: 16), status],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: 20),
+                SizedBox(width: 250, child: status),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderTag extends StatelessWidget {
+  const _HeaderTag({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 15),
+          const SizedBox(width: 7),
+          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderProgress extends StatelessWidget {
+  const _HeaderProgress({required this.snapshot, required this.progress});
+
+  final DemoFaceIdSnapshot snapshot;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            snapshot.isComplete ? Icons.check_circle_outline : Icons.pending_actions_outlined,
+            color: snapshot.isComplete ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
+            size: 28,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            snapshot.isComplete ? 'Ready' : '${snapshot.capturedSamples}/${snapshot.requiredSamples} captured',
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: progress.clamp(0.0, 1.0),
+              backgroundColor: Colors.white.withValues(alpha: 0.18),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                snapshot.isComplete ? const Color(0xFF22C55E) : const Color(0xFF60A5FA),
+              ),
             ),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            snapshot.isComplete ? 'Identity confirmed' : 'Follow the guide on screen',
+            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -103,11 +220,11 @@ class _CameraPreviewPanel extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1220),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: _identityDark,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _identityLine),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x12000000), blurRadius: 18, offset: Offset(0, 10)),
+          BoxShadow(color: Color(0x120F172A), blurRadius: 18, offset: Offset(0, 10)),
         ],
       ),
       child: AspectRatio(
@@ -120,14 +237,25 @@ class _CameraPreviewPanel extends StatelessWidget {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(22),
-                  child: Text(
-                    openingCamera
-                        ? 'Preparing Face ID check...'
-                        : complete
-                            ? 'Face ID is active on this device.'
-                            : cameraError ?? 'Camera preview',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        complete ? Icons.verified_user_outlined : Icons.photo_camera_front_outlined,
+                        color: Colors.white,
+                        size: 34,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        openingCamera
+                            ? 'Preparing identity check...'
+                            : complete
+                                ? 'Identity setup is active on this device.'
+                                : cameraError ?? 'Camera preview will appear here',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, height: 1.35),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -153,16 +281,45 @@ class _CameraPreviewPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.70),
                   borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
                 ),
                 child: Text(
-                  complete ? 'Face ID active' : '${guide.title}: ${guide.instruction}',
+                  complete ? 'Identity setup active' : '${guide.title}: ${guide.instruction}',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
                 ),
               ),
             ),
+            if (!complete)
+              const Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.all(14),
+                  child: _CameraHint(),
+                ),
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CameraHint extends StatelessWidget {
+  const _CameraHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.90),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        'Stay still while the app captures automatically',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: _identityDark, fontWeight: FontWeight.w900, fontSize: 12),
       ),
     );
   }
@@ -188,19 +345,38 @@ class _StatusPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: _identitySurface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _identityLine),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 8)),
+          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Face ID progress',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.fact_check_outlined, color: _identityBrand),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Identity setup progress',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: _identityDark,
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -217,10 +393,10 @@ class _StatusPanel extends StatelessWidget {
           if (statusMessage != null) ...[
             const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
                 color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFBFDBFE)),
               ),
               child: Row(
@@ -228,30 +404,113 @@ class _StatusPanel extends StatelessWidget {
                 children: [
                   const Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 20),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(statusMessage!)),
+                  Expanded(
+                    child: Text(
+                      statusMessage!,
+                      style: const TextStyle(color: Color(0xFF334155), height: 1.35, fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           ...guides.asMap().entries.map((entry) {
             final done = entry.key < snapshot.capturedSamples;
             final active = entry.key == snapshot.capturedSamples && !snapshot.isComplete;
-            return ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                done ? Icons.check_circle : active ? entry.value.icon : Icons.radio_button_unchecked,
-                color: done
-                    ? const Color(0xFF16A34A)
-                    : active
-                        ? const Color(0xFF0F4C81)
-                        : const Color(0xFF94A3B8),
-              ),
-              title: Text(entry.value.title, style: const TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: Text(entry.value.instruction),
+            return _GuideStep(
+              guide: entry.value,
+              number: entry.key + 1,
+              done: done,
+              active: active,
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuideStep extends StatelessWidget {
+  const _GuideStep({
+    required this.guide,
+    required this.number,
+    required this.done,
+    required this.active,
+  });
+
+  final _IdentityGuide guide;
+  final int number;
+  final bool done;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = done
+        ? _identitySuccess
+        : active
+            ? _identityBrand
+            : _identityMuted;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: done
+            ? const Color(0xFFF0FDF4)
+            : active
+                ? const Color(0xFFEFF6FF)
+                : _identitySoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: done
+              ? const Color(0xFFBBF7D0)
+              : active
+                  ? const Color(0xFFBFDBFE)
+                  : _identityLine,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.22)),
+            ),
+            child: Icon(done ? Icons.check_circle : active ? guide.icon : Icons.circle_outlined, color: color, size: 19),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Step $number',
+                      style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        guide.title,
+                        style: const TextStyle(color: _identityDark, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  guide.instruction,
+                  style: const TextStyle(color: _identityMuted, height: 1.35, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -269,11 +528,11 @@ class _StatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: _identitySoft,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: _identityLine),
       ),
-      child: Text('$label: $value', style: const TextStyle(fontWeight: FontWeight.w800)),
+      child: Text('$label: $value', style: const TextStyle(color: _identityDark, fontWeight: FontWeight.w900, fontSize: 12)),
     );
   }
 }
@@ -299,32 +558,45 @@ class _ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        FilledButton.icon(
-          onPressed: capturing || submitting || snapshot.locked ? null : onCapture,
-          icon: Icon(submitting ? Icons.cloud_done_outlined : Icons.auto_awesome_motion_outlined),
-          label: Text(
-            submitting
-                ? 'Saving Face ID...'
-                : capturing
-                    ? 'Automatic capture running...'
-                    : 'Start automatic capture',
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _identitySurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _identityLine),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(color: Color(0x080F172A), blurRadius: 16, offset: Offset(0, 8)),
+        ],
+      ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          FilledButton.icon(
+            onPressed: capturing || submitting || snapshot.locked ? null : onCapture,
+            icon: Icon(submitting ? Icons.cloud_done_outlined : Icons.auto_awesome_motion_outlined),
+            label: Text(
+              submitting
+                  ? 'Saving identity...'
+                  : capturing
+                      ? 'Automatic capture running...'
+                      : 'Start automatic capture',
+            ),
           ),
-        ),
-        OutlinedButton.icon(
-          onPressed: capturing || submitting || snapshot.locked ? null : onReset,
-          icon: const Icon(Icons.refresh),
-          label: const Text('Restart setup'),
-        ),
-        TextButton.icon(
-          onPressed: onBack,
-          icon: const Icon(Icons.arrow_back),
-          label: const Text('Back'),
-        ),
-      ],
+          OutlinedButton.icon(
+            onPressed: capturing || submitting || snapshot.locked ? null : onReset,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Restart setup'),
+          ),
+          TextButton.icon(
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Back'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -353,7 +625,7 @@ class _MobileCaptureBar extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          border: Border(top: BorderSide(color: _identityLine)),
         ),
         child: Row(
           children: [
