@@ -11,6 +11,8 @@ const Color _surfaceSoft = Color(0xFFF8FAFC);
 const Color _line = Color(0xFFE2E8F0);
 const Color _muted = Color(0xFF64748B);
 const Color _success = Color(0xFF16A34A);
+const Color _warning = Color(0xFFF59E0B);
+const Color _purple = Color(0xFF7C3AED);
 
 class DemoExamResultView extends StatefulWidget {
   const DemoExamResultView({super.key, required this.result});
@@ -50,13 +52,30 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
-          title: Text(
-            _resultTitle,
-            style: const TextStyle(fontWeight: FontWeight.w900),
+          titleSpacing: 20,
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [_brand, Color(0xFF1D4ED8)]),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.task_alt_rounded, color: Colors.white, size: 19),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                _resultTitle,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ],
           ),
           actions: [
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.only(right: 14),
               child: TextButton.icon(
                 onPressed: _goToDashboard,
                 icon: const Icon(Icons.dashboard_outlined, size: 18),
@@ -69,6 +88,14 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
             child: Divider(height: 1, color: _line),
           ),
         ),
+        bottomNavigationBar: _BottomActionBar(
+          onDashboard: _goToDashboard,
+          onFeedback: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => StudentExamFeedbackView(result: result),
+            ),
+          ),
+        ),
         body: DecoratedBox(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -79,11 +106,11 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
           ),
           child: SafeArea(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               children: [
                 Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1040),
+                    constraints: const BoxConstraints(maxWidth: 1080),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -92,21 +119,19 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
                           gradeLabel: _gradeLabel,
                           showScore: showScore,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         LayoutBuilder(
                           builder: (context, constraints) {
                             final wide = constraints.maxWidth >= 900;
-                            final summary = _ResultCard(
-                              title: 'Submission summary',
+                            final summary = _SubmissionSummaryCard(
                               rows: [
-                                ('Course', '${result.assessment.course.code} - ${result.assessment.course.title}'),
-                                ('Started', _formatDateTime(result.startedAt)),
-                                ('Submitted', _formatDateTime(result.endedAt)),
-                                ('Duration used', '${duration.inMinutes} min ${duration.inSeconds % 60} sec'),
-                                ('Identity check', _identityLabel(result.agentDecision)),
-                                ('Exam check', _examCheckLabel(result.agentDecision)),
-                                ('Submission status', 'Submitted successfully'),
-                                ('Review record', _reviewRecordLabel),
+                                _SummaryItem('Course', '${result.assessment.course.code} - ${result.assessment.course.title}'),
+                                _SummaryItem('Started', _formatDateTime(result.startedAt)),
+                                _SummaryItem('Submitted', _formatDateTime(result.endedAt)),
+                                _SummaryItem('Duration used', '${duration.inMinutes} min ${duration.inSeconds % 60} sec'),
+                                _SummaryItem('Identity check', _identityLabel(result.agentDecision)),
+                                _SummaryItem('Exam check', _examCheckLabel(result.agentDecision)),
+                                _SummaryItem('Review record', _reviewRecordLabel),
                               ],
                             );
                             final observation = _ObservationCard(
@@ -122,22 +147,21 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
 
                             if (!wide) {
                               return Column(
-                                children: [summary, const SizedBox(height: 16), observation],
+                                children: [summary, const SizedBox(height: 14), observation],
                               );
                             }
                             return Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(flex: 5, child: summary),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: 14),
                                 Expanded(flex: 5, child: observation),
                               ],
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
-                        _NextActions(
-                          onDashboard: _goToDashboard,
+                        const SizedBox(height: 14),
+                        _CompletionNotice(
                           onFeedback: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
                               builder: (_) => StudentExamFeedbackView(result: result),
@@ -180,9 +204,7 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
 
   void _showDashboardReminder(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Use the Dashboard button to leave this submission page.'),
-      ),
+      const SnackBar(content: Text('Use the Dashboard button to leave this page.')),
     );
   }
 
@@ -209,8 +231,8 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
   }
 
   String get _reviewRecordLabel {
-    if (result.proctoringManifestPath == null ||
-        result.proctoringManifestPath!.trim().isEmpty) {
+    final record = result.proctoringManifestPath;
+    if (record == null || record.trim().isEmpty) {
       return 'No additional review record required';
     }
     return 'Saved for review';
@@ -261,15 +283,11 @@ class _SubmissionHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x1F0F172A),
-            blurRadius: 26,
-            offset: Offset(0, 14),
-          ),
+          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(22),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -283,62 +301,52 @@ class _SubmissionHero extends StatelessWidget {
             final details = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-                  ),
-                  child: const Text(
-                    'Submitted successfully',
-                    style: TextStyle(color: Color(0xFFDBEAFE), fontWeight: FontWeight.w900),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                const _GlassTag(text: 'Submitted successfully'),
+                const SizedBox(height: 12),
                 Text(
                   result.assessment.title,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
+                        letterSpacing: -0.35,
                       ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
                 Text(
                   '${result.assessment.course.code} • ${result.assessment.course.title}',
                   style: const TextStyle(
                     color: Color(0xFFE2E8F0),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Text(
                   'Lecturer: ${result.assessment.course.lecturer}',
-                  style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             );
-
-            final statusBox = _SubmissionStatusBox(
+            final score = _ScoreBox(
               result: result,
               gradeLabel: gradeLabel,
               showScore: showScore,
             );
-
             if (!wide) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [details, const SizedBox(height: 18), statusBox],
+                children: [details, const SizedBox(height: 16), score],
               );
             }
             return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(child: details),
                 const SizedBox(width: 22),
-                SizedBox(width: 250, child: statusBox),
+                SizedBox(width: 230, child: score),
               ],
             );
           },
@@ -348,8 +356,8 @@ class _SubmissionHero extends StatelessWidget {
   }
 }
 
-class _SubmissionStatusBox extends StatelessWidget {
-  const _SubmissionStatusBox({
+class _ScoreBox extends StatelessWidget {
+  const _ScoreBox({
     required this.result,
     required this.gradeLabel,
     required this.showScore,
@@ -361,8 +369,12 @@ class _SubmissionStatusBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scoreText = showScore ? '${result.percent}%' : 'Done';
+    final marksText = showScore
+        ? '${result.scoredMarks} of ${result.totalMarks} marks'
+        : 'Activity record saved';
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
@@ -370,29 +382,116 @@ class _SubmissionStatusBox extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle_outline, color: Color(0xFF86EFAC), size: 30),
-          const SizedBox(height: 12),
+          const Icon(Icons.check_circle_outline, color: Color(0xFF86EFAC), size: 28),
+          const SizedBox(height: 10),
           Text(
-            showScore ? '${result.percent}%' : 'Completed',
+            scoreText,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 34,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
-            showScore
-                ? '${result.scoredMarks} of ${result.totalMarks} marks'
-                : 'Activity record saved',
-            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w700),
+            marksText,
+            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 12),
-          _ResultPill(
-            label: showScore ? 'Grade: $gradeLabel' : gradeLabel,
+          const SizedBox(height: 10),
+          _GlassTag(
+            text: showScore ? 'Grade: $gradeLabel' : gradeLabel,
             icon: Icons.workspace_premium_outlined,
-            color: const Color(0xFF93C5FD),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmissionSummaryCard extends StatelessWidget {
+  const _SubmissionSummaryCard({required this.rows});
+
+  final List<_SummaryItem> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _line),
+        boxShadow: const [
+          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.receipt_long_outlined, color: _brand),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Submission summary',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: _brandDark,
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...rows.map((row) => _SummaryRow(item: row)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryItem {
+  const _SummaryItem(this.label, this.value);
+
+  final String label;
+  final String value;
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.item});
+
+  final _SummaryItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 128,
+            child: Text(
+              item.label,
+              style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              item.value,
+              style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800),
+            ),
           ),
         ],
       ),
@@ -422,15 +521,11 @@ class _ObservationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _line),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 18,
-            offset: Offset(0, 10),
-          ),
+          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
@@ -457,17 +552,17 @@ class _ObservationCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Write any report, concern, or observation about your assessment before returning to the dashboard.',
-            style: TextStyle(color: _muted, height: 1.45, fontWeight: FontWeight.w600),
+            'Write any report, concern, or observation before returning to the dashboard.',
+            style: TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 13),
           TextField(
             controller: controller,
             onChanged: (_) => onChanged(),
-            minLines: 5,
-            maxLines: 8,
+            minLines: 4,
+            maxLines: 6,
             decoration: InputDecoration(
-              hintText: 'Example: I had a network issue, power interruption, noise around me, or any other observation...',
+              hintText: 'Example: I had a network issue, power interruption, noise around me, or another observation...',
               filled: true,
               fillColor: _surfaceSoft,
               border: OutlineInputBorder(
@@ -489,10 +584,10 @@ class _ObservationCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  saved ? 'Observation saved on this page.' : 'Optional. You can leave it empty.',
+                  saved ? 'Observation saved.' : 'Optional. You can leave it empty.',
                   style: TextStyle(
                     color: saved ? _success : _muted,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -509,10 +604,9 @@ class _ObservationCard extends StatelessWidget {
   }
 }
 
-class _NextActions extends StatelessWidget {
-  const _NextActions({required this.onDashboard, required this.onFeedback});
+class _CompletionNotice extends StatelessWidget {
+  const _CompletionNotice({required this.onFeedback});
 
-  final VoidCallback onDashboard;
   final VoidCallback onFeedback;
 
   @override
@@ -520,35 +614,30 @@ class _NextActions extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _line),
+        color: const Color(0xFFFFFBEB),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'You can now return to your dashboard.',
-            style: TextStyle(color: _muted, fontWeight: FontWeight.w700),
+          const Icon(Icons.info_outline, color: _warning, size: 22),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Your submission has been recorded. You may write feedback or return to the dashboard.',
+              style: TextStyle(
+                color: Color(0xFF78350F),
+                height: 1.4,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              OutlinedButton.icon(
-                onPressed: onFeedback,
-                icon: const Icon(Icons.rate_review_outlined),
-                label: const Text('Write feedback'),
-              ),
-              FilledButton.icon(
-                onPressed: onDashboard,
-                icon: const Icon(Icons.dashboard_outlined),
-                label: const Text('Back to dashboard'),
-              ),
-            ],
+          const SizedBox(width: 10),
+          TextButton.icon(
+            onPressed: onFeedback,
+            icon: const Icon(Icons.rate_review_outlined, size: 18),
+            label: const Text('Feedback'),
           ),
         ],
       ),
@@ -556,95 +645,88 @@ class _NextActions extends StatelessWidget {
   }
 }
 
-class _ResultPill extends StatelessWidget {
-  const _ResultPill({
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
+class _BottomActionBar extends StatelessWidget {
+  const _BottomActionBar({required this.onDashboard, required this.onFeedback});
 
-  final String label;
-  final IconData icon;
-  final Color color;
+  final VoidCallback onDashboard;
+  final VoidCallback onFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: _line)),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 560;
+            final feedback = OutlinedButton.icon(
+              onPressed: onFeedback,
+              icon: const Icon(Icons.rate_review_outlined, size: 18),
+              label: const Text('Write feedback'),
+            );
+            final dashboard = FilledButton.icon(
+              onPressed: onDashboard,
+              icon: const Icon(Icons.dashboard_outlined, size: 18),
+              label: const Text('Back to dashboard'),
+            );
+            if (compact) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [feedback, const SizedBox(height: 8), dashboard],
+              );
+            }
+            return Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Submission completed. Choose your next action.',
+                    style: TextStyle(color: _muted, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                feedback,
+                const SizedBox(width: 10),
+                dashboard,
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassTag extends StatelessWidget {
+  const _GlassTag({required this.text, this.icon});
+
+  final String text;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.42)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 7),
+          if (icon != null) ...[
+            Icon(icon, color: const Color(0xFF93C5FD), size: 16),
+            const SizedBox(width: 7),
+          ],
           Text(
-            label,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.title, required this.rows});
-
-  final String title;
-  final List<(String, String)> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _line),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 18,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-          const SizedBox(height: 12),
-          ...rows.map(
-            (row) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 150,
-                    child: Text(
-                      row.$1,
-                      style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      row.$2,
-                      style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
+            text,
+            style: const TextStyle(
+              color: Color(0xFFDBEAFE),
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
