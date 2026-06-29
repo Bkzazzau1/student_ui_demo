@@ -2,6 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'demo_exam_models.dart';
 
+const Color _brand = Color(0xFF0F4C81);
+const Color _brandDark = Color(0xFF0B1220);
+const Color _surface = Colors.white;
+const Color _surfaceSoft = Color(0xFFF8FAFC);
+const Color _line = Color(0xFFE2E8F0);
+const Color _muted = Color(0xFF64748B);
+const Color _success = Color(0xFF16A34A);
+const Color _warning = Color(0xFFF59E0B);
+const Color _danger = Color(0xFFDC2626);
+const Color _purple = Color(0xFF7C3AED);
+
 class GradeBookView extends StatelessWidget {
   const GradeBookView({super.key});
 
@@ -66,53 +77,64 @@ class GradeBookView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final passed = _records
-        .where((record) => record.status == GradeBookStatus.passed)
-        .length;
-    final carryover = _records
-        .where((record) => record.status == GradeBookStatus.carryover)
-        .length;
-    final available = _records
-        .where((record) => record.status == GradeBookStatus.available)
-        .length;
+    final passed = _records.where((record) => record.status == GradeBookStatus.passed).length;
+    final carryover = _records.where((record) => record.status == GradeBookStatus.carryover).length;
+    final available = _records.where((record) => record.status == GradeBookStatus.available).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
       appBar: AppBar(
-        title: const Text('Grade Book'),
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleSpacing: 0,
+        title: const Text(
+          'Grade Book',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: _line),
+        ),
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            _GradeBookHeader(
-              passed: passed,
-              carryover: carryover,
-              available: available,
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final twoColumns = constraints.maxWidth >= 960;
-                final itemWidth = twoColumns
-                    ? (constraints.maxWidth - 16) / 2
-                    : constraints.maxWidth;
-                return Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    for (final record in _records)
-                      SizedBox(
-                        width: itemWidth,
-                        child: _GradeRecordCard(record: record),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF8FAFC), Color(0xFFEFF4FA)],
+          ),
+        ),
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 90),
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1080),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _GradeBookHero(
+                        total: _records.length,
+                        passed: passed,
+                        carryover: carryover,
+                        available: available,
                       ),
-                  ],
-                );
-              },
-            ),
-          ],
+                      const SizedBox(height: 14),
+                      _StatusSummaryStrip(
+                        passed: passed,
+                        carryover: carryover,
+                        available: available,
+                      ),
+                      const SizedBox(height: 14),
+                      _RecordsPanel(records: _records),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -143,8 +165,139 @@ class GradeBookRecord {
 
 enum GradeBookStatus { available, passed, pending, carryover }
 
-class _GradeBookHeader extends StatelessWidget {
-  const _GradeBookHeader({
+class _GradeBookHero extends StatelessWidget {
+  const _GradeBookHero({
+    required this.total,
+    required this.passed,
+    required this.carryover,
+    required this.available,
+  });
+
+  final int total;
+  final int passed;
+  final int carryover;
+  final int available;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
+        ],
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(22),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_brandDark, Color(0xFF113A63), _brand],
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 720;
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _GlassTag(icon: Icons.school_outlined, text: 'KASU DLI'),
+                    _GlassTag(icon: Icons.workspace_premium_outlined, text: 'Student records'),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Grade Book',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Simple view of released results, passed courses, and carryover records.',
+                  style: TextStyle(
+                    color: Color(0xFFE2E8F0),
+                    fontSize: 15,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            );
+            final status = _HeroStatus(total: total, passed: passed, carryover: carryover, available: available);
+            if (!wide) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [details, const SizedBox(height: 16), status],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: details),
+                const SizedBox(width: 22),
+                SizedBox(width: 250, child: status),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroStatus extends StatelessWidget {
+  const _HeroStatus({
+    required this.total,
+    required this.passed,
+    required this.carryover,
+    required this.available,
+  });
+
+  final int total;
+  final int passed;
+  final int carryover;
+  final int available;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.bar_chart_rounded, color: Color(0xFF93C5FD), size: 28),
+          const SizedBox(height: 10),
+          Text(
+            '$total records',
+            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$passed passed • $carryover carryover • $available available',
+            style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusSummaryStrip extends StatelessWidget {
+  const _StatusSummaryStrip({
     required this.passed,
     required this.carryover,
     required this.available,
@@ -156,53 +309,99 @@ class _GradeBookHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _HeaderChip(icon: Icons.school_outlined, label: 'KASU DLI'),
-              _HeaderChip(
-                icon: Icons.workspace_premium_outlined,
-                label: 'Student records',
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 720;
+        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: width,
+              child: _SummaryTile(
+                label: 'Passed',
+                value: '$passed',
+                color: _success,
+                icon: Icons.check_circle_outline,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Grade Book',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
             ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'View exam history, released results, passed courses, and carryover records.',
-            style: TextStyle(
-              color: Color(0xFFCBD5E1),
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+            SizedBox(
+              width: width,
+              child: _SummaryTile(
+                label: 'Carryover',
+                value: '$carryover',
+                color: _danger,
+                icon: Icons.replay_circle_filled_outlined,
+              ),
             ),
+            SizedBox(
+              width: width,
+              child: _SummaryTile(
+                label: 'Available demo',
+                value: '$available',
+                color: _purple,
+                icon: Icons.play_circle_outline,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  const _SummaryTile({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(color: Color(0x060F172A), blurRadius: 14, offset: Offset(0, 8)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _HeaderStat(value: '$passed', label: 'Passed'),
-              _HeaderStat(value: '$carryover', label: 'Carryover'),
-              _HeaderStat(value: '$available', label: 'Available demo'),
-            ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(color: _brandDark, fontSize: 22, fontWeight: FontWeight.w900),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -210,209 +409,220 @@ class _GradeBookHeader extends StatelessWidget {
   }
 }
 
-class _GradeRecordCard extends StatelessWidget {
-  const _GradeRecordCard({required this.record});
+class _RecordsPanel extends StatelessWidget {
+  const _RecordsPanel({required this.records});
+
+  final List<GradeBookRecord> records;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(height: 5, color: _brand),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.list_alt_rounded, color: _brand),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Academic records',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: _brandDark,
+                          fontWeight: FontWeight.w900,
+                        ),
+                  ),
+                ),
+                _SmallCount(count: records.length),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: _line),
+          for (var index = 0; index < records.length; index++) ...[
+            if (index > 0) const Divider(height: 1, color: _line),
+            _GradeRecordRow(record: records[index]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallCount extends StatelessWidget {
+  const _SmallCount({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text('$count', style: const TextStyle(color: _brand, fontWeight: FontWeight.w900)),
+    );
+  }
+}
+
+class _GradeRecordRow extends StatelessWidget {
+  const _GradeRecordRow({required this.record});
 
   final GradeBookRecord record;
 
   @override
   Widget build(BuildContext context) {
-    final accent = _statusColor(record.status);
+    final color = _statusColor(record.status);
     return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0D0F172A),
-            blurRadius: 16,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      color: color.withValues(alpha: 0.025),
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 760;
+          final main = Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(_statusIcon(record.status), color: accent),
-              ),
+              Container(width: 4, height: 58, color: color),
               const SizedBox(width: 12),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(_statusIcon(record.status), color: color),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      record.course.code,
-                      style: const TextStyle(
-                        color: Color(0xFF1E3A8A),
-                        fontWeight: FontWeight.w900,
-                      ),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          record.course.code,
+                          style: const TextStyle(color: _brand, fontWeight: FontWeight.w900),
+                        ),
+                        _StatusPill(label: _statusLabel(record.status), color: color),
+                      ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       record.assessmentTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF0F172A),
-                      ),
+                            color: _brandDark,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      record.course.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: _muted, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      record.note,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
               ),
-              _StatusPill(label: _statusLabel(record.status), color: accent),
             ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            record.course.title,
-            style: const TextStyle(
-              color: Color(0xFF475569),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          );
+          final result = _CompactResultBox(record: record, color: color);
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [main, const SizedBox(height: 12), result],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _InfoPill(label: record.assessmentType),
-              _InfoPill(label: record.dateLabel),
-              _InfoPill(label: 'Score: ${record.scoreLabel}'),
-              _InfoPill(label: 'Grade: ${record.gradeLabel}'),
+              Expanded(child: main),
+              const SizedBox(width: 16),
+              SizedBox(width: 310, child: result),
             ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            record.note,
-            style: const TextStyle(
-              color: Color(0xFF334155),
-              fontWeight: FontWeight.w600,
-              height: 1.35,
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
+}
 
-  static Color _statusColor(GradeBookStatus status) {
-    switch (status) {
-      case GradeBookStatus.available:
-        return const Color(0xFF2563EB);
-      case GradeBookStatus.passed:
-        return const Color(0xFF16A34A);
-      case GradeBookStatus.pending:
-        return const Color(0xFFF59E0B);
-      case GradeBookStatus.carryover:
-        return const Color(0xFFDC2626);
-    }
-  }
+class _CompactResultBox extends StatelessWidget {
+  const _CompactResultBox({required this.record, required this.color});
 
-  static IconData _statusIcon(GradeBookStatus status) {
-    switch (status) {
-      case GradeBookStatus.available:
-        return Icons.play_circle_outline;
-      case GradeBookStatus.passed:
-        return Icons.check_circle_outline;
-      case GradeBookStatus.pending:
-        return Icons.hourglass_empty_outlined;
-      case GradeBookStatus.carryover:
-        return Icons.replay_circle_filled_outlined;
-    }
-  }
+  final GradeBookRecord record;
+  final Color color;
 
-  static String _statusLabel(GradeBookStatus status) {
-    switch (status) {
-      case GradeBookStatus.available:
-        return 'Available';
-      case GradeBookStatus.passed:
-        return 'Passed';
-      case GradeBookStatus.pending:
-        return 'Pending';
-      case GradeBookStatus.carryover:
-        return 'Carryover';
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.end,
+      children: [
+        _InfoPill(label: record.assessmentType, color: _brand),
+        _InfoPill(label: record.dateLabel, color: _muted),
+        _InfoPill(label: 'Score: ${record.scoreLabel}', color: color),
+        _InfoPill(label: 'Grade: ${record.gradeLabel}', color: color),
+      ],
+    );
   }
 }
 
-class _HeaderChip extends StatelessWidget {
-  const _HeaderChip({required this.icon, required this.label});
+class _GlassTag extends StatelessWidget {
+  const _GlassTag({required this.icon, required this.text});
 
   final IconData icon;
-  final String label;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0x1AFFFFFF),
+        color: Colors.white.withValues(alpha: 0.12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x2EFFFFFF)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 18),
+          Icon(icon, color: Colors.white, size: 16),
           const SizedBox(width: 7),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderStat extends StatelessWidget {
-  const _HeaderStat({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 130,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0x1AFFFFFF),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0x2EFFFFFF)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFFCBD5E1),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -428,41 +638,72 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w900),
-      ),
+      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
     );
   }
 }
 
 class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.label});
+  const _InfoPill({required this.label, required this.color});
 
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF334155),
-          fontWeight: FontWeight.w800,
-        ),
-      ),
+      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
     );
+  }
+}
+
+Color _statusColor(GradeBookStatus status) {
+  switch (status) {
+    case GradeBookStatus.available:
+      return const Color(0xFF2563EB);
+    case GradeBookStatus.passed:
+      return _success;
+    case GradeBookStatus.pending:
+      return _warning;
+    case GradeBookStatus.carryover:
+      return _danger;
+  }
+}
+
+IconData _statusIcon(GradeBookStatus status) {
+  switch (status) {
+    case GradeBookStatus.available:
+      return Icons.play_circle_outline;
+    case GradeBookStatus.passed:
+      return Icons.check_circle_outline;
+    case GradeBookStatus.pending:
+      return Icons.hourglass_empty_outlined;
+    case GradeBookStatus.carryover:
+      return Icons.replay_circle_filled_outlined;
+  }
+}
+
+String _statusLabel(GradeBookStatus status) {
+  switch (status) {
+    case GradeBookStatus.available:
+      return 'Available';
+    case GradeBookStatus.passed:
+      return 'Passed';
+    case GradeBookStatus.pending:
+      return 'Pending';
+    case GradeBookStatus.carryover:
+      return 'Carryover';
   }
 }
