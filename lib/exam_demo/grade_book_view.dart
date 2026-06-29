@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'demo_exam_models.dart';
-import 'exam_attendance_view.dart';
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
@@ -101,18 +100,6 @@ class GradeBookView extends StatelessWidget {
           'Grade Book',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: TextButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const ExamAttendanceView()),
-              ),
-              icon: const Icon(Icons.fact_check_outlined, size: 18),
-              label: const Text('Exam attendance'),
-            ),
-          ),
-        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: _line),
