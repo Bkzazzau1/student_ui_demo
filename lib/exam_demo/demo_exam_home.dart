@@ -821,7 +821,7 @@ class _NextFocusBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = assessment.isStrictExam
-        ? 'Checks required'
+        ? 'Exam check required'
         : assessment.attendanceOnly
             ? 'Practice ready'
             : 'Ready to open';
@@ -1480,7 +1480,7 @@ Color _softAccentFor(DemoAssessment assessment) {
 }
 
 String _buttonLabelFor(DemoAssessment assessment) {
-  if (assessment.isStrictExam) return 'Start checks';
+  if (assessment.isStrictExam) return 'Start exam check';
   if (assessment.attendanceOnly) return 'Open practice';
   return 'Open';
 }
