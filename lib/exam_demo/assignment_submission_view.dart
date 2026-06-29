@@ -99,7 +99,7 @@ class _AssignmentSubmissionViewState extends State<AssignmentSubmissionView> {
         ),
         child: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 118),
             children: [
               Center(
                 child: ConstrainedBox(
@@ -108,7 +108,7 @@ class _AssignmentSubmissionViewState extends State<AssignmentSubmissionView> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _AssignmentHero(assignment: assignment),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final wide = constraints.maxWidth >= 900;
@@ -132,7 +132,7 @@ class _AssignmentSubmissionViewState extends State<AssignmentSubmissionView> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 instructions,
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 12),
                                 submission,
                               ],
                             );
@@ -141,13 +141,13 @@ class _AssignmentSubmissionViewState extends State<AssignmentSubmissionView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(flex: 4, child: instructions),
-                              const SizedBox(width: 14),
+                              const SizedBox(width: 12),
                               Expanded(flex: 6, child: submission),
                             ],
                           );
                         },
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       const _SubmissionNotice(),
                     ],
                   ),
@@ -213,13 +213,13 @@ class _AssignmentHero extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
+          BoxShadow(color: Color(0x1A0F172A), blurRadius: 20, offset: Offset(0, 10)),
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.all(18),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -242,54 +242,59 @@ class _AssignmentHero extends StatelessWidget {
                     _GlassTag(icon: Icons.assignment_turned_in_outlined, text: assignment.status),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 11),
                 Text(
                   assignment.title,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
+                        letterSpacing: -0.35,
                       ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 6),
                 Text(
                   '${assignment.course.title} • Lecturer: ${assignment.course.lecturer}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFFE2E8F0),
-                    fontSize: 15,
-                    height: 1.4,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             );
             final side = Container(
-              width: wide ? 210 : double.infinity,
-              padding: const EdgeInsets.all(15),
+              width: wide ? 230 : double.infinity,
+              padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.12),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(18),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  const Icon(Icons.upload_file_outlined, color: Colors.white, size: 28),
-                  const SizedBox(height: 10),
-                  Text(
-                    assignment.submissionMode,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    assignment.graded ? 'Graded assignment' : 'Learning assignment',
-                    style: const TextStyle(
-                      color: Color(0xFFCBD5E1),
-                      height: 1.35,
-                      fontWeight: FontWeight.w700,
+                  const Icon(Icons.upload_file_outlined, color: Colors.white, size: 26),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          assignment.submissionMode,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          assignment.graded ? 'Graded assignment' : 'Learning assignment',
+                          style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -299,14 +304,14 @@ class _AssignmentHero extends StatelessWidget {
             if (!wide) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [details, const SizedBox(height: 16), side],
+                children: [details, const SizedBox(height: 12), side],
               );
             }
             return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(child: details),
-                const SizedBox(width: 22),
+                const SizedBox(width: 18),
                 side,
               ],
             );
@@ -337,13 +342,13 @@ class _InstructionsCard extends StatelessWidget {
             assignment.instructions,
             style: const TextStyle(
               color: Color(0xFF334155),
-              height: 1.45,
+              height: 1.4,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           const _MiniLabel(title: 'Submission details'),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _DetailRow(label: 'Course', value: '${assignment.course.code} - ${assignment.course.title}'),
           _DetailRow(label: 'Due date', value: assignment.dueLabel),
           _DetailRow(label: 'Mode', value: assignment.submissionMode),
@@ -379,29 +384,34 @@ class _SubmissionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle(
-            icon: Icons.edit_note_outlined,
-            title: 'Your submission',
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: _SectionTitle(
+                  icon: Icons.edit_note_outlined,
+                  title: 'Your submission',
+                ),
+              ),
+              _ReadyMiniStatus(canSubmit: canSubmit),
+            ],
           ),
           const SizedBox(height: 8),
           const Text(
-            'Write your response, attach a supporting file where required, and submit when ready.',
-            style: TextStyle(
-              color: _muted,
-              height: 1.4,
-              fontWeight: FontWeight.w600,
-            ),
+            'Write your response and attach a supporting file if required.',
+            style: TextStyle(color: _muted, height: 1.35, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           TextField(
             controller: answerController,
             onChanged: (_) => onChanged(),
-            minLines: 7,
-            maxLines: 12,
+            minLines: 4,
+            maxLines: 7,
             decoration: InputDecoration(
               hintText: 'Write your answer here...',
               filled: true,
               fillColor: _surfaceSoft,
+              contentPadding: const EdgeInsets.all(16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: const BorderSide(color: _line),
@@ -416,35 +426,49 @@ class _SubmissionCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           _AttachmentArea(
             attachmentName: attachmentName,
             onAttachDemoFile: onAttachDemoFile,
             onRemoveAttachment: onRemoveAttachment,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
-              Icon(
-                canSubmit ? Icons.check_circle_outline : Icons.info_outline,
-                color: canSubmit ? _success : _muted,
-                size: 19,
-              ),
+              Icon(canSubmit ? Icons.check_circle_outline : Icons.info_outline, color: canSubmit ? _success : _muted, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  canSubmit
-                      ? 'Ready to submit. Please review before sending.'
-                      : 'Write an answer or attach a file to enable submission.',
-                  style: TextStyle(
-                    color: canSubmit ? _success : _muted,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  canSubmit ? 'Ready to submit after review.' : 'Answer or attachment required.',
+                  style: TextStyle(color: canSubmit ? _success : _muted, fontWeight: FontWeight.w800),
                 ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ReadyMiniStatus extends StatelessWidget {
+  const _ReadyMiniStatus({required this.canSubmit});
+
+  final bool canSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = canSubmit ? _success : _muted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        canSubmit ? 'Ready' : 'Draft',
+        style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
       ),
     );
   }
@@ -472,7 +496,7 @@ class _AttachmentArea extends StatelessWidget {
           onTap: onAttachDemoFile,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: const Color(0xFFFDE68A)),
@@ -484,16 +508,11 @@ class _AttachmentArea extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Attach file',
-                        style: TextStyle(color: _brandDark, fontWeight: FontWeight.w900),
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Add a document if your lecturer requires supporting work.',
-                        style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
-                      ),
+                      Text('Attach file', style: TextStyle(color: _brandDark, fontWeight: FontWeight.w900)),
+                      SizedBox(height: 2),
+                      Text('Add PDF or supporting document where required.', style: TextStyle(color: _muted, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -506,7 +525,7 @@ class _AttachmentArea extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFF0FDF4),
         borderRadius: BorderRadius.circular(16),
@@ -515,8 +534,8 @@ class _AttachmentArea extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: _success.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(13),
@@ -527,16 +546,11 @@ class _AttachmentArea extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Attached file',
-                  style: TextStyle(color: _success, fontWeight: FontWeight.w900),
-                ),
+                const Text('Attached file', style: TextStyle(color: _success, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 2),
-                Text(
-                  attachmentName!,
-                  style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800),
-                ),
+                Text(attachmentName!, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
@@ -557,7 +571,7 @@ class _SubmissionNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFFEFF6FF),
         border: Border.all(color: const Color(0xFFBFDBFE)),
@@ -566,16 +580,12 @@ class _SubmissionNotice extends StatelessWidget {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.verified_user_outlined, color: _brand, size: 21),
+          Icon(Icons.verified_user_outlined, color: _brand, size: 20),
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'After submission, the assignment will be recorded for the lecturer to review. Keep your answer clear and complete.',
-              style: TextStyle(
-                color: Color(0xFF1E3A8A),
-                height: 1.4,
-                fontWeight: FontWeight.w800,
-              ),
+              'After submission, the assignment will be recorded for the lecturer to review.',
+              style: TextStyle(color: Color(0xFF1E3A8A), height: 1.4, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -601,7 +611,7 @@ class _BottomSubmitBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: _line)),
@@ -610,11 +620,8 @@ class _BottomSubmitBar extends StatelessWidget {
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 560;
             final helper = Text(
-              hasAttachment ? 'Answer with attachment ready.' : 'Answer or attachment required.',
-              style: TextStyle(
-                color: canSubmit ? _success : _muted,
-                fontWeight: FontWeight.w800,
-              ),
+              hasAttachment ? 'Attachment added. Review before submitting.' : 'Answer or attachment required.',
+              style: TextStyle(color: canSubmit ? _success : _muted, fontWeight: FontWeight.w800),
             );
             final button = DecoratedBox(
               decoration: BoxDecoration(
@@ -623,13 +630,7 @@ class _BottomSubmitBar extends StatelessWidget {
                     : const LinearGradient(colors: [Color(0xFFE2E8F0), Color(0xFFCBD5E1)]),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: canSubmit && !submitting
-                    ? const [
-                        BoxShadow(
-                          color: Color(0x200F4C81),
-                          blurRadius: 14,
-                          offset: Offset(0, 8),
-                        ),
-                      ]
+                    ? const [BoxShadow(color: Color(0x200F4C81), blurRadius: 14, offset: Offset(0, 8))]
                     : const [],
               ),
               child: Material(
@@ -638,30 +639,19 @@ class _BottomSubmitBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   onTap: canSubmit && !submitting ? onSubmit : null,
                   child: SizedBox(
-                    height: 50,
-                    width: compact ? double.infinity : 220,
+                    height: 46,
+                    width: compact ? double.infinity : 210,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (submitting)
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
+                          const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         else
-                          Icon(
-                            Icons.send_outlined,
-                            color: canSubmit ? Colors.white : _muted,
-                            size: 18,
-                          ),
+                          Icon(Icons.send_outlined, color: canSubmit ? Colors.white : _muted, size: 18),
                         const SizedBox(width: 8),
                         Text(
                           submitting ? 'Submitting...' : 'Submit assignment',
-                          style: TextStyle(
-                            color: canSubmit ? Colors.white : _muted,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: TextStyle(color: canSubmit ? Colors.white : _muted, fontWeight: FontWeight.w900),
                         ),
                       ],
                     ),
@@ -677,12 +667,7 @@ class _BottomSubmitBar extends StatelessWidget {
                 children: [helper, const SizedBox(height: 8), button],
               );
             }
-            return Row(
-              children: [
-                Expanded(child: helper),
-                button,
-              ],
-            );
+            return Row(children: [Expanded(child: helper), button]);
           },
         ),
       ),
@@ -699,18 +684,12 @@ class _WhiteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _line),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 18,
-            offset: Offset(0, 10),
-          ),
-        ],
+        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 16, offset: Offset(0, 8))],
       ),
       child: child,
     );
@@ -726,7 +705,7 @@ class _GlassTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
@@ -735,12 +714,9 @@ class _GlassTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 16),
+          Icon(icon, color: Colors.white, size: 15),
           const SizedBox(width: 7),
-          Text(
-            text,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-          ),
+          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -758,22 +734,16 @@ class _SectionTitle extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, color: _brand),
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(13)),
+          child: Icon(icon, color: _brand, size: 21),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 11),
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900),
           ),
         ),
       ],
@@ -788,13 +758,7 @@ class _MiniLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: _brandDark,
-        fontWeight: FontWeight.w900,
-      ),
-    );
+    return Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900));
   }
 }
 
@@ -807,23 +771,12 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 9),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 86,
-            child: Text(
-              label,
-              style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800),
-            ),
-          ),
+          SizedBox(width: 82, child: Text(label, style: const TextStyle(color: _muted, fontWeight: FontWeight.w800))),
+          Expanded(child: Text(value, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800))),
         ],
       ),
     );
