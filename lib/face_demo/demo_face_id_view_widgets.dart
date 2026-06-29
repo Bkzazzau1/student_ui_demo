@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 part of 'demo_face_id_view.dart';
 
 const Color _identityBrand = Color(0xFF0F4C81);

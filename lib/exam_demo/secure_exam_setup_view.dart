@@ -17,7 +17,6 @@ const Color _line = Color(0xFFE2E8F0);
 const Color _muted = Color(0xFF64748B);
 const Color _success = Color(0xFF16A34A);
 const Color _warning = Color(0xFFF59E0B);
-const Color _purple = Color(0xFF7C3AED);
 
 class SecureExamSetupView extends StatefulWidget {
   const SecureExamSetupView({super.key, required this.assessment});
@@ -119,7 +118,6 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        titleSpacing: 0,
         title: Text(
           _setupTitle,
           style: const TextStyle(fontWeight: FontWeight.w900),
@@ -148,13 +146,12 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           ),
         ),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           children: [
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1080),
+                constraints: const BoxConstraints(maxWidth: 1120),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _PreparationHero(
                       assessment: widget.assessment,
@@ -163,10 +160,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                       requiredChecks: requiredChecks,
                       startReady: _canStart(context),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 18),
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 920;
+                        final wide = constraints.maxWidth >= 940;
                         final steps = _PreparationSteps(steps: _buildSteps(context));
                         final startPanel = _StartPanel(
                           assessment: widget.assessment,
@@ -183,15 +180,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
                         if (!wide) {
                           return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [steps, const SizedBox(height: 14), startPanel],
+                            children: [steps, const SizedBox(height: 16), startPanel],
                           );
                         }
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(flex: 7, child: steps),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 16),
                             Expanded(flex: 4, child: startPanel),
                           ],
                         );
@@ -519,11 +515,15 @@ class _PreparationHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
+          BoxShadow(
+            color: Color(0x1F0F172A),
+            blurRadius: 26,
+            offset: Offset(0, 14),
+          ),
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.all(24),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -533,53 +533,53 @@ class _PreparationHero extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 760;
+            final wide = constraints.maxWidth >= 780;
             final info = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    _HeroTag(
-                      icon: Icons.verified_user_outlined,
-                      text: assessment.isStrictExam
-                          ? 'Supervised exam'
-                          : assessment.graded
-                              ? 'Graded assessment'
-                              : 'Practice',
-                    ),
-                    _HeroTag(icon: Icons.schedule_outlined, text: '${assessment.durationMinutes} minutes'),
-                    _HeroTag(icon: Icons.quiz_outlined, text: '$questionCount questions'),
+                    _HeroTag(assessment.isStrictExam ? 'Supervised exam' : assessment.graded ? 'Graded assessment' : 'Practice'),
+                    _HeroTag('${assessment.durationMinutes} minutes'),
+                    _HeroTag('$questionCount questions'),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 const Text(
-                  'Exam check',
-                  style: TextStyle(color: Color(0xFFDBEAFE), fontWeight: FontWeight.w900),
+                  'Prepare before you start',
+                  style: TextStyle(
+                    color: Color(0xFFDBEAFE),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Text(
                   assessment.title,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
-                      ),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Text(
                   '${assessment.course.code} • ${assessment.course.title}',
                   style: const TextStyle(
                     color: Color(0xFFE2E8F0),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
                 Text(
                   'Lecturer: ${assessment.course.lecturer}',
-                  style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Color(0xFFCBD5E1),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             );
@@ -592,14 +592,17 @@ class _PreparationHero extends StatelessWidget {
             );
 
             if (!wide) {
-              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [info, const SizedBox(height: 16), status]);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [info, const SizedBox(height: 18), status],
+              );
             }
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: info),
-                const SizedBox(width: 22),
-                SizedBox(width: 260, child: status),
+                const SizedBox(width: 24),
+                SizedBox(width: 275, child: status),
               ],
             );
           },
@@ -610,9 +613,8 @@ class _PreparationHero extends StatelessWidget {
 }
 
 class _HeroTag extends StatelessWidget {
-  const _HeroTag({required this.icon, required this.text});
+  const _HeroTag(this.text);
 
-  final IconData icon;
   final String text;
 
   @override
@@ -624,13 +626,12 @@ class _HeroTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 15),
-          const SizedBox(width: 7),
-          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
-        ],
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -652,7 +653,7 @@ class _PreparationStatus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
@@ -660,19 +661,26 @@ class _PreparationStatus extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            startReady ? Icons.check_circle_outline : Icons.pending_actions_outlined,
-            color: startReady ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
-            size: 28,
+          Row(
+            children: [
+              Icon(
+                startReady ? Icons.check_circle : Icons.pending_actions_outlined,
+                color: startReady ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  startReady ? 'Ready to start' : 'Preparation in progress',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            startReady ? 'Ready to start' : 'Steps remaining',
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
@@ -685,7 +693,10 @@ class _PreparationStatus extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             '$checksPassed of $requiredChecks steps ready',
-            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800),
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -707,43 +718,32 @@ class _PreparationSteps extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _line),
         boxShadow: const [
-          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Icons.task_alt_outlined, color: _brand),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Complete these steps',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 3),
-                    const Text(
-                      'Follow the steps below. The start button opens when everything is ready.',
-                      style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+          Text(
+            'Preparation steps',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: _brandDark,
+                  fontWeight: FontWeight.w900,
                 ),
-              ),
-            ],
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            'Complete each step in order. The start button opens when everything is ready.',
+            style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           for (var index = 0; index < steps.length; index++) ...[
             _StepCard(step: steps[index]),
-            if (index != steps.length - 1) const SizedBox(height: 10),
+            if (index != steps.length - 1) const SizedBox(height: 12),
           ],
         ],
       ),
@@ -764,30 +764,22 @@ class _StepCard extends StatelessWidget {
         ? _success
         : running
             ? _brand
-            : _warning;
+            : _muted;
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: complete
-            ? const Color(0xFFF0FDF4)
-            : running
-                ? const Color(0xFFEFF6FF)
-                : _surfaceSoft,
+        color: complete ? const Color(0xFFF0FDF4) : _surfaceSoft,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: complete
-              ? const Color(0xFFBBF7D0)
-              : running
-                  ? const Color(0xFFBFDBFE)
-                  : _line,
+          color: complete ? const Color(0xFFBBF7D0) : _line,
         ),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final compact = constraints.maxWidth < 600;
+          final compact = constraints.maxWidth < 560;
           final leading = Container(
-            width: 48,
-            height: 48,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -805,13 +797,20 @@ class _StepCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       step.title,
-                      style: const TextStyle(color: _brandDark, fontSize: 17, fontWeight: FontWeight.w900),
+                      style: const TextStyle(
+                        color: _brandDark,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
-              Text(step.subtitle, style: const TextStyle(color: _muted, height: 1.35, fontWeight: FontWeight.w600)),
+              Text(
+                step.subtitle,
+                style: const TextStyle(color: _muted, fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 10),
               _StepStatusPill(status: step.status),
             ],
@@ -821,11 +820,8 @@ class _StepCard extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: complete ? Colors.white : _brand,
               foregroundColor: complete ? _brand : Colors.white,
-              disabledBackgroundColor: const Color(0xFFE2E8F0),
-              disabledForegroundColor: _muted,
               side: complete ? const BorderSide(color: _line) : BorderSide.none,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              textStyle: const TextStyle(fontWeight: FontWeight.w900),
             ),
             icon: Icon(complete ? Icons.refresh_rounded : Icons.arrow_forward_rounded, size: 18),
             label: Text(step.actionLabel),
@@ -833,11 +829,14 @@ class _StepCard extends StatelessWidget {
 
           if (compact) {
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [leading, const SizedBox(width: 12), Expanded(child: text)]),
-                const SizedBox(height: 12),
-                action,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [leading, const SizedBox(width: 12), Expanded(child: text)],
+                ),
+                const SizedBox(height: 14),
+                SizedBox(width: double.infinity, child: action),
               ],
             );
           }
@@ -847,7 +846,7 @@ class _StepCard extends StatelessWidget {
               leading,
               const SizedBox(width: 14),
               Expanded(child: text),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               action,
             ],
           );
@@ -874,7 +873,10 @@ class _StepNumber extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
-      child: Text('$number', style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
+      child: Text(
+        '$number',
+        style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
+      ),
     );
   }
 }
@@ -890,7 +892,7 @@ class _StepStatusPill extends StatelessWidget {
         ? _success
         : status == _StepStatus.running
             ? _brand
-            : _warning;
+            : _muted;
     final label = status == _StepStatus.complete
         ? 'Completed'
         : status == _StepStatus.running
@@ -913,7 +915,10 @@ class _StepStatusPill extends StatelessWidget {
         children: [
           Icon(icon, size: 15, color: color),
           const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
+          Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -947,30 +952,24 @@ class _StartPanel extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: _line),
             boxShadow: const [
-              BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+              BoxShadow(
+                color: Color(0x080F172A),
+                blurRadius: 18,
+                offset: Offset(0, 10),
+              ),
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(14)),
-                    child: Icon(ready ? Icons.play_circle_outline : Icons.lock_outline_rounded, color: ready ? _success : _brand),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Final step',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900),
+              Text(
+                'Start summary',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: _brandDark,
+                      fontWeight: FontWeight.w900,
                     ),
-                  ),
-                ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _SummaryLine(icon: Icons.book_outlined, label: assessment.course.code),
               _SummaryLine(icon: Icons.schedule_outlined, label: '${assessment.durationMinutes} minutes'),
               _SummaryLine(
@@ -981,39 +980,20 @@ class _StartPanel extends StatelessWidget {
                 icon: Icons.rate_review_outlined,
                 label: assessment.graded ? 'Submission will be reviewed' : 'Feedback activity',
               ),
-              const SizedBox(height: 16),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: ready
-                      ? const LinearGradient(colors: [_brand, Color(0xFF1D4ED8), _success])
-                      : const LinearGradient(colors: [Color(0xFFE2E8F0), Color(0xFFCBD5E1)]),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: ready
-                      ? const [
-                          BoxShadow(color: Color(0x200F4C81), blurRadius: 14, offset: Offset(0, 8)),
-                        ]
-                      : const [],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onStart,
-                    borderRadius: BorderRadius.circular(14),
-                    child: SizedBox(
-                      height: 52,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(ready ? Icons.play_arrow_rounded : Icons.lock_outline_rounded, color: ready ? Colors.white : _muted),
-                          const SizedBox(width: 8),
-                          Text(
-                            startLabel,
-                            style: TextStyle(color: ready ? Colors.white : _muted, fontWeight: FontWeight.w900),
-                          ),
-                        ],
-                      ),
-                    ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onStart,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: ready ? _brand : const Color(0xFFCBD5E1),
+                    foregroundColor: ready ? Colors.white : const Color(0xFF475569),
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w900),
                   ),
+                  icon: Icon(ready ? Icons.play_arrow_rounded : Icons.lock_outline_rounded),
+                  label: Text(startLabel),
                 ),
               ),
               if (!ready) ...[
@@ -1050,7 +1030,13 @@ class _SummaryLine extends StatelessWidget {
           Icon(icon, size: 18, color: _muted),
           const SizedBox(width: 9),
           Expanded(
-            child: Text(label, style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w800)),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF334155),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),
@@ -1103,10 +1089,13 @@ class _ReadinessCard extends StatelessWidget {
               children: [
                 Text(
                   approved ? 'Ready' : 'Readiness status',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: _brandDark, fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _brandDark,
+                        fontWeight: FontWeight.w900,
+                      ),
                 ),
                 const SizedBox(height: 6),
-                Text(message, style: const TextStyle(color: Color(0xFF334155), height: 1.35, fontWeight: FontWeight.w600)),
+                Text(message, style: const TextStyle(color: Color(0xFF334155))),
                 if (result != null && !approved && result!.issues.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   ...result!.issues.map((issue) => Text('• $issue')),
@@ -1129,22 +1118,13 @@ class _SimpleReminder extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
+        color: _surfaceSoft,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFFDE68A)),
+        border: Border.all(color: _line),
       ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: _warning, size: 20),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Sit in a quiet place, keep your device charged, and stay on the assessment screen until you submit.',
-              style: TextStyle(color: Color(0xFF78350F), height: 1.45, fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
+      child: const Text(
+        'Sit in a quiet place, keep your device charged, and stay on the assessment screen until you submit.',
+        style: TextStyle(color: _muted, height: 1.45, fontWeight: FontWeight.w600),
       ),
     );
   }
