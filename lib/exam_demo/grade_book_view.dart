@@ -9,77 +9,79 @@ const Color _surfaceSoft = Color(0xFFF8FAFC);
 const Color _line = Color(0xFFE2E8F0);
 const Color _muted = Color(0xFF64748B);
 const Color _success = Color(0xFF16A34A);
-const Color _warning = Color(0xFFF59E0B);
 const Color _danger = Color(0xFFDC2626);
-const Color _purple = Color(0xFF7C3AED);
+const Color _warning = Color(0xFFF59E0B);
 
 class GradeBookView extends StatelessWidget {
   const GradeBookView({super.key});
 
-  static const _records = <GradeBookRecord>[
-    GradeBookRecord(
+  static const _records = <ExamAttendanceRecord>[
+    ExamAttendanceRecord(
       course: DemoCourse(
         code: 'CSC 305',
         title: 'Secure Examination Systems',
         lecturer: 'Dr. A. Bello',
       ),
-      assessmentTitle: 'Sample supervised exam for today',
-      assessmentType: 'Examination',
-      dateLabel: 'Current demo',
-      scoreLabel: 'Available',
-      gradeLabel: 'Ready',
-      status: GradeBookStatus.available,
-      note: 'Open this sample exam anytime for testing.',
+      examTitle: 'Sample supervised exam for today',
+      examType: 'Supervised examination',
+      dateLabel: '29/06/2026',
+      startTimeLabel: '18:30',
+      endTimeLabel: '18:52',
+      status: ExamAttendanceStatus.submitted,
+      note: 'Submitted by the student.',
     ),
-    GradeBookRecord(
+    ExamAttendanceRecord(
       course: DemoCourse(
         code: 'GST 204',
         title: 'Entrepreneurship and Innovation',
         lecturer: 'Dr. M. Okafor',
       ),
-      assessmentTitle: 'Continuous assessment quiz',
-      assessmentType: 'Graded assessment',
+      examTitle: 'Continuous assessment quiz',
+      examType: 'Assessment quiz',
       dateLabel: '26/06/2026',
-      scoreLabel: '8 / 10',
-      gradeLabel: 'A',
-      status: GradeBookStatus.passed,
-      note: 'Good progress. Review the lecturer feedback.',
+      startTimeLabel: '10:00',
+      endTimeLabel: '10:28',
+      status: ExamAttendanceStatus.submitted,
+      note: 'Submitted by the student.',
     ),
-    GradeBookRecord(
+    ExamAttendanceRecord(
       course: DemoCourse(
         code: 'CSC 305',
         title: 'Secure Examination Systems',
         lecturer: 'Dr. A. Bello',
       ),
-      assessmentTitle: 'First semester supervised examination',
-      assessmentType: 'Examination',
+      examTitle: 'First semester supervised examination',
+      examType: 'Supervised examination',
       dateLabel: '19/06/2026',
-      scoreLabel: '72%',
-      gradeLabel: 'B',
-      status: GradeBookStatus.passed,
-      note: 'Passed.',
+      startTimeLabel: '09:00',
+      endTimeLabel: '11:00',
+      status: ExamAttendanceStatus.submitted,
+      note: 'Submitted by the student.',
     ),
-    GradeBookRecord(
+    ExamAttendanceRecord(
       course: DemoCourse(
         code: 'MAT 221',
         title: 'Linear Algebra for Computing',
         lecturer: 'Dr. S. Musa',
       ),
-      assessmentTitle: 'Second semester examination',
-      assessmentType: 'Examination',
-      dateLabel: 'Pending',
-      scoreLabel: 'Carryover',
-      gradeLabel: 'CO',
-      status: GradeBookStatus.carryover,
-      note: 'Register and sit for the next available examination.',
+      examTitle: 'Second semester examination',
+      examType: 'Supervised examination',
+      dateLabel: 'Pending date',
+      startTimeLabel: 'Not opened',
+      endTimeLabel: 'Closed',
+      status: ExamAttendanceStatus.closed,
+      note: 'Closed because the student did not write the exam.',
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final passed = _records.where((record) => record.status == GradeBookStatus.passed).length;
-    final carryover = _records.where((record) => record.status == GradeBookStatus.carryover).length;
-    final available = _records.where((record) => record.status == GradeBookStatus.available).length;
+    final submitted = _records
+        .where((record) => record.status == ExamAttendanceStatus.submitted)
+        .length;
+    final closed = _records
+        .where((record) => record.status == ExamAttendanceStatus.closed)
+        .length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -89,7 +91,7 @@ class GradeBookView extends StatelessWidget {
         elevation: 0,
         titleSpacing: 0,
         title: const Text(
-          'Grade Book',
+          'Exam Attendance',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         bottom: const PreferredSize(
@@ -115,20 +117,18 @@ class GradeBookView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _GradeBookHero(
+                      _AttendanceHero(
                         total: _records.length,
-                        passed: passed,
-                        carryover: carryover,
-                        available: available,
+                        submitted: submitted,
+                        closed: closed,
                       ),
                       const SizedBox(height: 14),
-                      _StatusSummaryStrip(
-                        passed: passed,
-                        carryover: carryover,
-                        available: available,
+                      _AttendanceSummaryStrip(
+                        submitted: submitted,
+                        closed: closed,
                       ),
                       const SizedBox(height: 14),
-                      _RecordsPanel(records: _records),
+                      _AttendanceRecordsPanel(records: _records),
                     ],
                   ),
                 ),
@@ -141,42 +141,40 @@ class GradeBookView extends StatelessWidget {
   }
 }
 
-class GradeBookRecord {
-  const GradeBookRecord({
+class ExamAttendanceRecord {
+  const ExamAttendanceRecord({
     required this.course,
-    required this.assessmentTitle,
-    required this.assessmentType,
+    required this.examTitle,
+    required this.examType,
     required this.dateLabel,
-    required this.scoreLabel,
-    required this.gradeLabel,
+    required this.startTimeLabel,
+    required this.endTimeLabel,
     required this.status,
     required this.note,
   });
 
   final DemoCourse course;
-  final String assessmentTitle;
-  final String assessmentType;
+  final String examTitle;
+  final String examType;
   final String dateLabel;
-  final String scoreLabel;
-  final String gradeLabel;
-  final GradeBookStatus status;
+  final String startTimeLabel;
+  final String endTimeLabel;
+  final ExamAttendanceStatus status;
   final String note;
 }
 
-enum GradeBookStatus { available, passed, pending, carryover }
+enum ExamAttendanceStatus { submitted, closed }
 
-class _GradeBookHero extends StatelessWidget {
-  const _GradeBookHero({
+class _AttendanceHero extends StatelessWidget {
+  const _AttendanceHero({
     required this.total,
-    required this.passed,
-    required this.carryover,
-    required this.available,
+    required this.submitted,
+    required this.closed,
   });
 
   final int total;
-  final int passed;
-  final int carryover;
-  final int available;
+  final int submitted;
+  final int closed;
 
   @override
   Widget build(BuildContext context) {
@@ -207,13 +205,13 @@ class _GradeBookHero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _GlassTag(icon: Icons.school_outlined, text: 'KASU DLI'),
-                    _GlassTag(icon: Icons.workspace_premium_outlined, text: 'Student records'),
+                    _GlassTag(icon: Icons.fact_check_outlined, text: 'Exam attendance'),
+                    _GlassTag(icon: Icons.history_rounded, text: 'Historical record'),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Grade Book',
+                  'Exam Attendance Record',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -222,7 +220,7 @@ class _GradeBookHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Simple view of released results, passed courses, and carryover records.',
+                  'A simple record of exams scheduled for the student, showing only date, time, and attendance status.',
                   style: TextStyle(
                     color: Color(0xFFE2E8F0),
                     fontSize: 15,
@@ -232,7 +230,11 @@ class _GradeBookHero extends StatelessWidget {
                 ),
               ],
             );
-            final status = _HeroStatus(total: total, passed: passed, carryover: carryover, available: available);
+            final status = _HeroStatus(
+              total: total,
+              submitted: submitted,
+              closed: closed,
+            );
             if (!wide) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,15 +258,13 @@ class _GradeBookHero extends StatelessWidget {
 class _HeroStatus extends StatelessWidget {
   const _HeroStatus({
     required this.total,
-    required this.passed,
-    required this.carryover,
-    required this.available,
+    required this.submitted,
+    required this.closed,
   });
 
   final int total;
-  final int passed;
-  final int carryover;
-  final int available;
+  final int submitted;
+  final int closed;
 
   @override
   Widget build(BuildContext context) {
@@ -279,16 +279,20 @@ class _HeroStatus extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.bar_chart_rounded, color: Color(0xFF93C5FD), size: 28),
+          const Icon(Icons.event_available_outlined, color: Color(0xFF93C5FD), size: 28),
           const SizedBox(height: 10),
           Text(
-            '$total records',
+            '$total exams',
             style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
           Text(
-            '$passed passed • $carryover carryover • $available available',
-            style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35, fontWeight: FontWeight.w800),
+            '$submitted submitted • $closed closed',
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -296,23 +300,18 @@ class _HeroStatus extends StatelessWidget {
   }
 }
 
-class _StatusSummaryStrip extends StatelessWidget {
-  const _StatusSummaryStrip({
-    required this.passed,
-    required this.carryover,
-    required this.available,
-  });
+class _AttendanceSummaryStrip extends StatelessWidget {
+  const _AttendanceSummaryStrip({required this.submitted, required this.closed});
 
-  final int passed;
-  final int carryover;
-  final int available;
+  final int submitted;
+  final int closed;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 720;
-        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
+        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 12) / 2;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -320,8 +319,8 @@ class _StatusSummaryStrip extends StatelessWidget {
             SizedBox(
               width: width,
               child: _SummaryTile(
-                label: 'Passed',
-                value: '$passed',
+                label: 'Submitted exams',
+                value: '$submitted',
                 color: _success,
                 icon: Icons.check_circle_outline,
               ),
@@ -329,19 +328,10 @@ class _StatusSummaryStrip extends StatelessWidget {
             SizedBox(
               width: width,
               child: _SummaryTile(
-                label: 'Carryover',
-                value: '$carryover',
+                label: 'Closed exams',
+                value: '$closed',
                 color: _danger,
-                icon: Icons.replay_circle_filled_outlined,
-              ),
-            ),
-            SizedBox(
-              width: width,
-              child: _SummaryTile(
-                label: 'Available demo',
-                value: '$available',
-                color: _purple,
-                icon: Icons.play_circle_outline,
+                icon: Icons.cancel_outlined,
               ),
             ),
           ],
@@ -409,10 +399,10 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-class _RecordsPanel extends StatelessWidget {
-  const _RecordsPanel({required this.records});
+class _AttendanceRecordsPanel extends StatelessWidget {
+  const _AttendanceRecordsPanel({required this.records});
 
-  final List<GradeBookRecord> records;
+  final List<ExamAttendanceRecord> records;
 
   @override
   Widget build(BuildContext context) {
@@ -446,7 +436,7 @@ class _RecordsPanel extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Academic records',
+                    'Exam history',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: _brandDark,
                           fontWeight: FontWeight.w900,
@@ -460,7 +450,7 @@ class _RecordsPanel extends StatelessWidget {
           const Divider(height: 1, color: _line),
           for (var index = 0; index < records.length; index++) ...[
             if (index > 0) const Divider(height: 1, color: _line),
-            _GradeRecordRow(record: records[index]),
+            _AttendanceRecordRow(record: records[index]),
           ],
         ],
       ),
@@ -487,10 +477,10 @@ class _SmallCount extends StatelessWidget {
   }
 }
 
-class _GradeRecordRow extends StatelessWidget {
-  const _GradeRecordRow({required this.record});
+class _AttendanceRecordRow extends StatelessWidget {
+  const _AttendanceRecordRow({required this.record});
 
-  final GradeBookRecord record;
+  final ExamAttendanceRecord record;
 
   @override
   Widget build(BuildContext context) {
@@ -534,7 +524,7 @@ class _GradeRecordRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      record.assessmentTitle,
+                      record.examTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: _brandDark,
                             fontWeight: FontWeight.w900,
@@ -559,11 +549,11 @@ class _GradeRecordRow extends StatelessWidget {
               ),
             ],
           );
-          final result = _CompactResultBox(record: record, color: color);
+          final dateTime = _DateTimeBox(record: record, color: color);
           if (compact) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [main, const SizedBox(height: 12), result],
+              children: [main, const SizedBox(height: 12), dateTime],
             );
           }
           return Row(
@@ -571,7 +561,7 @@ class _GradeRecordRow extends StatelessWidget {
             children: [
               Expanded(child: main),
               const SizedBox(width: 16),
-              SizedBox(width: 310, child: result),
+              SizedBox(width: 340, child: dateTime),
             ],
           );
         },
@@ -580,10 +570,10 @@ class _GradeRecordRow extends StatelessWidget {
   }
 }
 
-class _CompactResultBox extends StatelessWidget {
-  const _CompactResultBox({required this.record, required this.color});
+class _DateTimeBox extends StatelessWidget {
+  const _DateTimeBox({required this.record, required this.color});
 
-  final GradeBookRecord record;
+  final ExamAttendanceRecord record;
   final Color color;
 
   @override
@@ -593,10 +583,10 @@ class _CompactResultBox extends StatelessWidget {
       runSpacing: 8,
       alignment: WrapAlignment.end,
       children: [
-        _InfoPill(label: record.assessmentType, color: _brand),
+        _InfoPill(label: record.examType, color: _brand),
         _InfoPill(label: record.dateLabel, color: _muted),
-        _InfoPill(label: 'Score: ${record.scoreLabel}', color: color),
-        _InfoPill(label: 'Grade: ${record.gradeLabel}', color: color),
+        _InfoPill(label: 'Start: ${record.startTimeLabel}', color: color),
+        _InfoPill(label: 'End: ${record.endTimeLabel}', color: color),
       ],
     );
   }
@@ -669,41 +659,29 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-Color _statusColor(GradeBookStatus status) {
+Color _statusColor(ExamAttendanceStatus status) {
   switch (status) {
-    case GradeBookStatus.available:
-      return const Color(0xFF2563EB);
-    case GradeBookStatus.passed:
+    case ExamAttendanceStatus.submitted:
       return _success;
-    case GradeBookStatus.pending:
-      return _warning;
-    case GradeBookStatus.carryover:
+    case ExamAttendanceStatus.closed:
       return _danger;
   }
 }
 
-IconData _statusIcon(GradeBookStatus status) {
+IconData _statusIcon(ExamAttendanceStatus status) {
   switch (status) {
-    case GradeBookStatus.available:
-      return Icons.play_circle_outline;
-    case GradeBookStatus.passed:
+    case ExamAttendanceStatus.submitted:
       return Icons.check_circle_outline;
-    case GradeBookStatus.pending:
-      return Icons.hourglass_empty_outlined;
-    case GradeBookStatus.carryover:
-      return Icons.replay_circle_filled_outlined;
+    case ExamAttendanceStatus.closed:
+      return Icons.cancel_outlined;
   }
 }
 
-String _statusLabel(GradeBookStatus status) {
+String _statusLabel(ExamAttendanceStatus status) {
   switch (status) {
-    case GradeBookStatus.available:
-      return 'Available';
-    case GradeBookStatus.passed:
-      return 'Passed';
-    case GradeBookStatus.pending:
-      return 'Pending';
-    case GradeBookStatus.carryover:
-      return 'Carryover';
+    case ExamAttendanceStatus.submitted:
+      return 'Submitted';
+    case ExamAttendanceStatus.closed:
+      return 'Closed';
   }
 }
