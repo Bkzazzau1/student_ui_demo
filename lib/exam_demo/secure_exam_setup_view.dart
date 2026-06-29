@@ -11,7 +11,6 @@ import 'exam_start_approval_service.dart';
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
-const Color _brandSoft = Color(0xFFEFF6FF);
 const Color _surface = Colors.white;
 const Color _surfaceSoft = Color(0xFFF8FAFC);
 const Color _line = Color(0xFFE2E8F0);

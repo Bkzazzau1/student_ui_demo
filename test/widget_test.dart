@@ -9,9 +9,9 @@ void main() {
   ) async {
     await tester.pumpWidget(const StudentsUiDemoApp());
 
-    expect(find.text('K-SLAS Student Assessment Portal'), findsOneWidget);
+    expect(find.text('K-SLAS Student Portal'), findsOneWidget);
     expect(find.text('Student Login'), findsOneWidget);
-    expect(find.text('Demo access is pre-filled for this build.'), findsOneWidget);
+    expect(find.text('Demo Credentials'), findsOneWidget);
   });
 
   testWidgets('student can open logout page', (WidgetTester tester) async {
@@ -19,8 +19,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const StudentsUiDemoApp());
 
-    await tester.ensureVisible(find.text('Sign In to Portal'));
-    await tester.tap(find.text('Sign In to Portal'));
+    await tester.ensureVisible(find.text('Sign In'));
+    await tester.tap(find.text('Sign In'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Sign out'));
     await tester.pumpAndSettle();

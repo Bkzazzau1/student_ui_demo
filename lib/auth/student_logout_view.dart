@@ -8,7 +8,6 @@ const Color _green = Color(0xFF16A34A);
 const Color _amber = Color(0xFFF59E0B);
 const Color _surface = Colors.white;
 const Color _line = Color(0xFFE2E8F0);
-const Color _muted = Color(0xFF64748B);
 
 class StudentLogoutView extends StatelessWidget {
   const StudentLogoutView({super.key});
@@ -55,59 +54,87 @@ class StudentLogoutView extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 820),
-                child: Container(
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: _surface,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFFD6DFEA)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x180F172A),
-                        blurRadius: 28,
-                        offset: Offset(0, 18),
-                      ),
-                    ],
+          child: LayoutBuilder(
+            builder: (context, viewportConstraints) {
+              final panelHeight = viewportConstraints.maxHeight.isFinite
+                  ? (viewportConstraints.maxHeight - 52).clamp(420.0, 560.0)
+                  : 420.0;
+
+              return Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 26,
                   ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final wide = constraints.maxWidth >= 720;
-                      if (!wide) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const _SignOutBrandPanel(),
-                            _SignOutCard(
-                              onStay: () => _returnToPortal(context),
-                              onSignOut: () => _signOut(context),
-                            ),
-                          ],
-                        );
-                      }
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Expanded(flex: 4, child: _SignOutBrandPanel()),
-                          Container(width: 1, color: _line),
-                          Expanded(
-                            flex: 5,
-                            child: _SignOutCard(
-                              onStay: () => _returnToPortal(context),
-                              onSignOut: () => _signOut(context),
-                            ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 820),
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: _surface,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFFD6DFEA)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x180F172A),
+                            blurRadius: 28,
+                            offset: Offset(0, 18),
                           ),
                         ],
-                      );
-                    },
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final wide = constraints.maxWidth >= 720;
+                          if (!wide) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const _SignOutBrandPanel(),
+                                _SignOutCard(
+                                  onStay: () => _returnToPortal(context),
+                                  onSignOut: () => _signOut(context),
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: panelHeight,
+                                  ),
+                                  child: const _SignOutBrandPanel(),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: panelHeight,
+                                color: _line,
+                              ),
+                              Expanded(
+                                flex: 5,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: panelHeight,
+                                  ),
+                                  child: _SignOutCard(
+                                    onStay: () => _returnToPortal(context),
+                                    onSignOut: () => _signOut(context),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -188,17 +215,20 @@ class _SignOutBrandPanel extends StatelessWidget {
             ),
             child: const Text(
               'Student session',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           const SizedBox(height: 16),
           Text(
             'You are leaving the student portal.',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  height: 1.12,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              height: 1.12,
+            ),
           ),
           const SizedBox(height: 10),
           const Text(
@@ -295,7 +325,9 @@ class _SignOutCard extends StatelessWidget {
             height: 62,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_brand, Color(0xFF1D4ED8), _green]),
+              gradient: const LinearGradient(
+                colors: [_brand, Color(0xFF1D4ED8), _green],
+              ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: const [
                 BoxShadow(
@@ -305,15 +337,19 @@ class _SignOutCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.logout_rounded, color: Colors.white, size: 30),
+            child: const Icon(
+              Icons.logout_rounded,
+              color: Colors.white,
+              size: 30,
+            ),
           ),
           const SizedBox(height: 22),
           Text(
             'End student session?',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 10),
           const Text(
@@ -337,7 +373,9 @@ class _SignOutCard extends StatelessWidget {
                   foregroundColor: _brand,
                   side: const BorderSide(color: _brand),
                   minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   textStyle: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 icon: const Icon(Icons.dashboard_outlined, size: 18),
@@ -349,7 +387,9 @@ class _SignOutCard extends StatelessWidget {
                   backgroundColor: _brand,
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   textStyle: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 icon: const Icon(Icons.logout_rounded, size: 18),
