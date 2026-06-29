@@ -5,12 +5,10 @@ import 'demo_exam_models.dart';
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
 const Color _surface = Colors.white;
-const Color _surfaceSoft = Color(0xFFF8FAFC);
 const Color _line = Color(0xFFE2E8F0);
 const Color _muted = Color(0xFF64748B);
 const Color _success = Color(0xFF16A34A);
 const Color _danger = Color(0xFFDC2626);
-const Color _warning = Color(0xFFF59E0B);
 
 class GradeBookView extends StatelessWidget {
   const GradeBookView({super.key});
