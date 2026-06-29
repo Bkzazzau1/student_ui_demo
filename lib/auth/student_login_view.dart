@@ -41,16 +41,16 @@ class _StudentLoginViewState extends State<StudentLoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F6FA),
+      backgroundColor: const Color(0xFFEFF3F8),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 26),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1120),
+              constraints: const BoxConstraints(maxWidth: 1160),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final wide = constraints.maxWidth >= 900;
+                  final wide = constraints.maxWidth >= 920;
                   final loginPanel = _LoginPanel(
                     formKey: _formKey,
                     studentIdController: _studentIdController,
@@ -67,7 +67,7 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const _AcademicHeader(compact: true),
+                        const _BrandPanel(compact: true),
                         const SizedBox(height: 16),
                         loginPanel,
                       ],
@@ -77,12 +77,12 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                   return Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: const Color(0xFFD8E0EA)),
+                      border: Border.all(color: const Color(0xFFD6DFEA)),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x140F172A),
-                          blurRadius: 24,
-                          offset: Offset(0, 14),
+                          color: Color(0x160F172A),
+                          blurRadius: 30,
+                          offset: Offset(0, 18),
                         ),
                       ],
                     ),
@@ -90,9 +90,9 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const Expanded(child: _AcademicHeader()),
+                          const Expanded(child: _BrandPanel()),
                           Container(width: 1, color: const Color(0xFFE2E8F0)),
-                          SizedBox(width: 450, child: loginPanel),
+                          SizedBox(width: 470, child: loginPanel),
                         ],
                       ),
                     ),
@@ -107,86 +107,36 @@ class _StudentLoginViewState extends State<StudentLoginView> {
   }
 }
 
-class _AcademicHeader extends StatelessWidget {
-  const _AcademicHeader({this.compact = false});
+class _BrandPanel extends StatelessWidget {
+  const _BrandPanel({this.compact = false});
 
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(compact ? 24 : 42),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: compact ? Border.all(color: const Color(0xFFD8E0EA)) : null,
-      ),
+      color: const Color(0xFFFBFCFE),
+      padding: EdgeInsets.all(compact ? 24 : 44),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: compact ? 58 : 68,
-                height: compact ? 58 : 68,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F4C81),
-                  border: Border.all(color: const Color(0xFF0B3A63), width: 1.5),
-                ),
-                child: Text(
-                  'KASU',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: compact ? 16 : 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Kaduna State University',
-                      style: TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        height: 1.1,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Distance Learning Institute',
-                      style: TextStyle(
-                        color: Color(0xFF334155),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: compact ? 24 : 58),
-          Container(width: 72, height: 4, color: const Color(0xFF0F4C81)),
+          const _InstitutionMark(),
+          SizedBox(height: compact ? 28 : 52),
+          Container(width: 76, height: 4, color: const Color(0xFF0F4C81)),
           const SizedBox(height: 22),
           Text(
-            'K-SLAS Student Assessment Portal',
+            'K-SLAS Student Portal',
             style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: const Color(0xFF0F172A),
+                  color: const Color(0xFF0B1220),
                   fontWeight: FontWeight.w900,
-                  height: 1.08,
+                  height: 1.06,
+                  letterSpacing: -0.8,
                 ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           const Text(
-            'Access examinations, graded assessments, practice activities, assignments, and lecturer feedback from one official student portal.',
+            'A formal access point for assessments, coursework, results, and lecturer feedback for Distance Learning students.',
             style: TextStyle(
               color: Color(0xFF475569),
               fontSize: 17,
@@ -195,11 +145,136 @@ class _AcademicHeader extends StatelessWidget {
             ),
           ),
           if (!compact) ...[
-            const SizedBox(height: 36),
+            const SizedBox(height: 34),
+            const _AccessSummary(),
+            const SizedBox(height: 28),
             const _AcademicNotice(),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _InstitutionMark extends StatelessWidget {
+  const _InstitutionMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 68,
+          height: 68,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F4C81),
+            border: Border.all(color: const Color(0xFF0B3A63), width: 1.5),
+          ),
+          child: const Text(
+            'KASU',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kaduna State University',
+                style: TextStyle(
+                  color: Color(0xFF0B1220),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                ),
+              ),
+              SizedBox(height: 5),
+              Text(
+                'Distance Learning Institute',
+                style: TextStyle(
+                  color: Color(0xFF334155),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AccessSummary extends StatelessWidget {
+  const _AccessSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SummaryRow(title: 'Assessments', subtitle: 'Open available exams, quizzes, and practice activities.'),
+          SizedBox(height: 14),
+          _SummaryRow(title: 'Guided exam checks', subtitle: 'Follow simple steps before monitored assessments begin.'),
+          SizedBox(height: 14),
+          _SummaryRow(title: 'Feedback', subtitle: 'View lecturer feedback and continue learning after submission.'),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(width: 5, height: 44, color: const Color(0xFF0F4C81)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF0B1220),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -231,7 +306,7 @@ class _LoginPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.all(34),
+      padding: const EdgeInsets.symmetric(horizontal: 38, vertical: 42),
       child: Form(
         key: formKey,
         child: Column(
@@ -243,27 +318,27 @@ class _LoginPanel extends StatelessWidget {
               'Student Login',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF0F172A),
+                    color: const Color(0xFF0B1220),
                   ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Enter your student credentials to continue.',
+              'Use your official student access details to continue.',
               style: TextStyle(
                 color: Color(0xFF64748B),
                 fontWeight: FontWeight.w600,
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 10),
-            const _DemoAccessNote(),
+            const SizedBox(height: 18),
+            const _DemoCredentialsCard(),
             const SizedBox(height: 24),
             TextFormField(
               controller: studentIdController,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: 'Student ID',
-                hintText: 'Enter matric number or student ID',
+                hintText: 'Enter student ID',
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
@@ -272,7 +347,7 @@ class _LoginPanel extends StatelessWidget {
                 return null;
               },
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 16),
             TextFormField(
               controller: passwordController,
               obscureText: obscurePassword,
@@ -328,13 +403,13 @@ class _LoginPanel extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             FilledButton(
               onPressed: signingIn ? null : onSignIn,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF0F4C81),
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(54),
+                minimumSize: const Size.fromHeight(56),
                 shape: const RoundedRectangleBorder(),
                 textStyle: const TextStyle(
                   fontSize: 16,
@@ -350,7 +425,7 @@ class _LoginPanel extends StatelessWidget {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Sign In to Portal'),
+                  : const Text('Sign In'),
             ),
           ],
         ),
@@ -359,23 +434,65 @@ class _LoginPanel extends StatelessWidget {
   }
 }
 
-class _DemoAccessNote extends StatelessWidget {
-  const _DemoAccessNote();
+class _DemoCredentialsCard extends StatelessWidget {
+  const _DemoCredentialsCard();
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        border: Border.all(color: const Color(0xFFD6DFEA)),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Demo Credentials',
+            style: TextStyle(
+              color: Color(0xFF0B1220),
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          SizedBox(height: 10),
+          _DemoLoginLine(label: 'Student ID', value: _StudentLoginViewState.demoStudentId),
+          SizedBox(height: 6),
+          _DemoLoginLine(label: 'Password', value: _StudentLoginViewState.demoPassword),
+        ],
+      ),
+    );
+  }
+}
+
+class _DemoLoginLine extends StatelessWidget {
+  const _DemoLoginLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.check_circle_outline, size: 18, color: Color(0xFF0F4C81)),
-        SizedBox(width: 8),
+        SizedBox(
+          width: 92,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
         Expanded(
           child: Text(
-            'Demo access is pre-filled for this build.',
-            style: TextStyle(
-              color: Color(0xFF475569),
-              fontSize: 13,
-              height: 1.35,
-              fontWeight: FontWeight.w700,
+            value,
+            style: const TextStyle(
+              color: Color(0xFF0B1220),
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
@@ -392,7 +509,7 @@ class _AcademicNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: Colors.white,
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: const Column(
@@ -401,13 +518,13 @@ class _AcademicNotice extends StatelessWidget {
           Text(
             'Official Student Access',
             style: TextStyle(
-              color: Color(0xFF0F172A),
+              color: Color(0xFF0B1220),
               fontWeight: FontWeight.w900,
             ),
           ),
           SizedBox(height: 8),
           Text(
-            'For monitored examinations, the app will guide students through the required identity, camera, microphone, and device checks before the assessment begins.',
+            'For monitored examinations, students will complete the required identity, camera, microphone, and device checks before the assessment begins.',
             style: TextStyle(
               color: Color(0xFF475569),
               height: 1.45,
