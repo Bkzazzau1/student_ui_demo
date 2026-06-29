@@ -605,12 +605,23 @@ class _QuestionCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             if (question.options.isNotEmpty)
-              ...question.options.map(
-                (option) => RadioListTile<String>(
-                  value: option,
-                  groupValue: value,
-                  onChanged: enabled ? (value) => onChanged(value ?? '') : null,
-                  title: Text(option),
+              RadioGroup<String>(
+                groupValue: value,
+                onChanged: (value) {
+                  if (enabled) {
+                    onChanged(value ?? '');
+                  }
+                },
+                child: Column(
+                  children: question.options
+                      .map(
+                        (option) => RadioListTile<String>(
+                          enabled: enabled,
+                          value: option,
+                          title: Text(option),
+                        ),
+                      )
+                      .toList(),
                 ),
               )
             else

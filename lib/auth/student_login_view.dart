@@ -331,7 +331,7 @@ class _WelcomePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      minHeight: 640,
+      constraints: const BoxConstraints(minHeight: 640),
       padding: const EdgeInsets.all(34),
       decoration: BoxDecoration(
         color: _brandNavy,
