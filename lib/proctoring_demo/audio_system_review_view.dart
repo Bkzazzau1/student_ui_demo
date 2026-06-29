@@ -3,6 +3,16 @@ import 'package:flutter/material.dart';
 import 'audio_security_check_service.dart';
 import 'system_security_review_service.dart';
 
+const Color _brand = Color(0xFF0F4C81);
+const Color _brandDark = Color(0xFF0B1220);
+const Color _surface = Colors.white;
+const Color _surfaceSoft = Color(0xFFF8FAFC);
+const Color _line = Color(0xFFE2E8F0);
+const Color _muted = Color(0xFF64748B);
+const Color _success = Color(0xFF16A34A);
+const Color _warning = Color(0xFFF59E0B);
+const Color _danger = Color(0xFFDC2626);
+
 class AudioSystemReviewResult {
   const AudioSystemReviewResult({
     required this.audioReady,
@@ -131,9 +141,14 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        titleSpacing: 0,
         title: const Text(
           'Sound and device check',
           style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: _line),
         ),
       ),
       body: DecoratedBox(
@@ -141,93 +156,95 @@ class _AudioSystemReviewViewState extends State<AudioSystemReviewView> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+            colors: [Color(0xFFF8FAFC), Color(0xFFEFF4FA)],
           ),
         ),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 120),
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1220),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _HeaderPanel(
-                      ready: _ready,
-                      busy: _busy,
-                      progress: progress,
-                    ),
-                    const SizedBox(height: 16),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 950;
-                        final checks = _ChecksPanel(
-                          audioCard: _ReviewStepCard(
-                            number: 1,
-                            title: 'Room sound learning',
-                            subtitle: 'The app listens briefly to understand the room background sound.',
-                            icon: Icons.hearing_outlined,
-                            passed: _audioReady,
-                            checking: _checkingAudio,
-                            message: _audioMessage,
-                            primaryButtonText: _checkingAudio
-                                ? 'Learning room sound...'
-                                : 'Run sound check',
-                            onPrimaryPressed: _busy ? null : _checkAudio,
-                            metrics: _audioReviewResult == null
-                                ? const <_MetricData>[]
-                                : _audioMetrics(_audioReviewResult!),
-                            blockingFindings: audioBlocking,
-                            warningFindings: audioWarnings,
-                          ),
-                          systemCard: _ReviewStepCard(
-                            number: 2,
-                            title: 'Device readiness',
-                            subtitle: 'The app checks connected devices and exam access settings.',
-                            icon: Icons.desktop_windows_outlined,
-                            passed: _systemReady,
-                            checking: _checkingSystem,
-                            message: _systemMessage,
-                            primaryButtonText: _checkingSystem
-                                ? 'Checking device...'
-                                : 'Run device check',
-                            onPrimaryPressed: _busy ? null : _checkSystem,
-                            metrics: _systemReviewResult == null
-                                ? const <_MetricData>[]
-                                : _systemMetrics(_systemReviewResult!),
-                            blockingFindings: systemBlocking,
-                            warningFindings: systemWarnings,
-                          ),
-                        );
-                        final side = _ActionPanel(
-                          ready: _ready,
-                          busy: _busy,
-                          audioReady: _audioReady,
-                          systemReady: _systemReady,
-                          onRunAll: _busy ? null : _runFullReview,
-                          onContinue: _ready ? _finish : null,
-                        );
-                        if (!wide) {
-                          return Column(
-                            children: [checks, const SizedBox(height: 16), side],
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 96),
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1080),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _HeaderPanel(
+                        ready: _ready,
+                        busy: _busy,
+                        progress: progress,
+                      ),
+                      const SizedBox(height: 14),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final wide = constraints.maxWidth >= 920;
+                          final checks = _ChecksPanel(
+                            audioCard: _ReviewStepCard(
+                              number: 1,
+                              title: 'Room sound check',
+                              subtitle: 'The app listens briefly to understand the room background sound.',
+                              icon: Icons.hearing_outlined,
+                              passed: _audioReady,
+                              checking: _checkingAudio,
+                              message: _audioMessage,
+                              primaryButtonText: _checkingAudio
+                                  ? 'Checking room sound...'
+                                  : 'Run sound check',
+                              onPrimaryPressed: _busy ? null : _checkAudio,
+                              metrics: _audioReviewResult == null
+                                  ? const <_MetricData>[]
+                                  : _audioMetrics(_audioReviewResult!),
+                              blockingFindings: audioBlocking,
+                              warningFindings: audioWarnings,
+                            ),
+                            systemCard: _ReviewStepCard(
+                              number: 2,
+                              title: 'Device readiness',
+                              subtitle: 'The app checks connected devices and exam access settings.',
+                              icon: Icons.desktop_windows_outlined,
+                              passed: _systemReady,
+                              checking: _checkingSystem,
+                              message: _systemMessage,
+                              primaryButtonText: _checkingSystem
+                                  ? 'Checking device...'
+                                  : 'Run device check',
+                              onPrimaryPressed: _busy ? null : _checkSystem,
+                              metrics: _systemReviewResult == null
+                                  ? const <_MetricData>[]
+                                  : _systemMetrics(_systemReviewResult!),
+                              blockingFindings: systemBlocking,
+                              warningFindings: systemWarnings,
+                            ),
                           );
-                        }
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(flex: 7, child: checks),
-                            const SizedBox(width: 16),
-                            Expanded(flex: 4, child: side),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
+                          final side = _ActionPanel(
+                            ready: _ready,
+                            busy: _busy,
+                            audioReady: _audioReady,
+                            systemReady: _systemReady,
+                            onRunAll: _busy ? null : _runFullReview,
+                            onContinue: _ready ? _finish : null,
+                          );
+                          if (!wide) {
+                            return Column(
+                              children: [checks, const SizedBox(height: 14), side],
+                            );
+                          }
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 7, child: checks),
+                              const SizedBox(width: 14),
+                              Expanded(flex: 4, child: side),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -290,105 +307,172 @@ class _HeaderPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A0F172A),
-            blurRadius: 24,
-            offset: Offset(0, 14),
-          ),
+          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 760;
-          final main = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _DarkTag('Room sound'),
-                  _DarkTag('Device readiness'),
-                  _DarkTag(ready ? 'Ready' : busy ? 'Checking' : 'Not started'),
-                ],
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Sound and device check',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 31,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.4,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Complete the room sound and device readiness checks before requesting exam start approval.',
-                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 16),
-              ),
-            ],
-          );
-          final progressCard = Container(
-            width: wide ? 280 : double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0x12FFFFFF),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0x24FFFFFF)),
-            ),
-            child: Column(
+      child: Container(
+        padding: const EdgeInsets.all(22),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_brandDark, Color(0xFF113A63), _brand],
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 720;
+            final main = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Icon(
-                      ready ? Icons.check_circle : Icons.pending_actions_outlined,
-                      color: ready ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        ready ? 'Ready to continue' : 'Check progress',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-                      ),
+                    const _HeroTag(icon: Icons.hearing_outlined, text: 'Room sound'),
+                    const _HeroTag(icon: Icons.desktop_windows_outlined, text: 'Device readiness'),
+                    _HeroTag(
+                      icon: ready
+                          ? Icons.check_circle_outline
+                          : busy
+                              ? Icons.sync
+                              : Icons.pending_actions_outlined,
+                      text: ready
+                          ? 'Ready'
+                          : busy
+                              ? 'Checking'
+                              : 'Not started',
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    minHeight: 9,
-                    value: progress.clamp(0.0, 1.0),
-                    backgroundColor: const Color(0x24FFFFFF),
-                    color: ready ? const Color(0xFF22C55E) : const Color(0xFF60A5FA),
+                Text(
+                  'Sound and device check',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                ),
+                const SizedBox(height: 7),
+                const Text(
+                  'Complete room sound and device readiness before continuing to the exam setup.',
+                  style: TextStyle(
+                    color: Color(0xFFE2E8F0),
+                    fontSize: 15,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  '${(progress * 2).round()} of 2 checks ready',
-                  style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w700),
-                ),
               ],
-            ),
-          );
-          if (!wide) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [main, const SizedBox(height: 18), progressCard],
             );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [Expanded(child: main), const SizedBox(width: 24), progressCard],
-          );
-        },
+            final progressCard = _ProgressCard(ready: ready, busy: busy, progress: progress);
+            if (!wide) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [main, const SizedBox(height: 16), progressCard],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: main),
+                const SizedBox(width: 22),
+                SizedBox(width: 260, child: progressCard),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressCard extends StatelessWidget {
+  const _ProgressCard({required this.ready, required this.busy, required this.progress});
+
+  final bool ready;
+  final bool busy;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            ready
+                ? Icons.check_circle_outline
+                : busy
+                    ? Icons.sync
+                    : Icons.pending_actions_outlined,
+            color: ready ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
+            size: 28,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            ready
+                ? 'Ready to continue'
+                : busy
+                    ? 'Checking now'
+                    : 'Checks pending',
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 9,
+              value: progress.clamp(0.0, 1.0).toDouble(),
+              backgroundColor: Colors.white.withValues(alpha: 0.18),
+              color: ready ? const Color(0xFF22C55E) : const Color(0xFF60A5FA),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${(progress * 2).round()} of 2 checks ready',
+            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroTag extends StatelessWidget {
+  const _HeroTag({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 15),
+          const SizedBox(width: 7),
+          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+        ],
       ),
     );
   }
@@ -403,14 +487,17 @@ class _ChecksPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xB3FFFFFF),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: _surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _line),
+        boxShadow: const [
+          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+        ],
       ),
       child: Column(
-        children: [audioCard, const SizedBox(height: 14), systemCard],
+        children: [audioCard, const SizedBox(height: 12), systemCard],
       ),
     );
   }
@@ -449,31 +536,43 @@ class _ReviewStepCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasIssues = blockingFindings.isNotEmpty && !passed;
     final color = passed
-        ? const Color(0xFF16A34A)
+        ? _success
         : hasIssues
-            ? const Color(0xFFDC2626)
+            ? _danger
             : checking
-                ? const Color(0xFF2563EB)
-                : const Color(0xFF64748B);
+                ? _brand
+                : _warning;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: passed ? const Color(0xFFBBF7D0) : hasIssues ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 8)),
-        ],
+        color: passed
+            ? const Color(0xFFF0FDF4)
+            : hasIssues
+                ? const Color(0xFFFFF1F2)
+                : checking
+                    ? const Color(0xFFEFF6FF)
+                    : _surfaceSoft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: passed
+              ? const Color(0xFFBBF7D0)
+              : hasIssues
+                  ? const Color(0xFFFECACA)
+                  : checking
+                      ? const Color(0xFFBFDBFE)
+                      : _line,
+        ),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 620;
           final leading = Container(
-            width: 52,
-            height: 52,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withValues(alpha: 0.20)),
             ),
             child: Icon(icon, color: color),
           );
@@ -487,22 +586,28 @@ class _ReviewStepCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                      style: const TextStyle(color: _brandDark, fontSize: 17, fontWeight: FontWeight.w900),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 5),
-              Text(subtitle, style: const TextStyle(color: Color(0xFF64748B))),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: const TextStyle(color: _muted, height: 1.35, fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 8),
-              Text(message),
+              Text(
+                message,
+                style: const TextStyle(color: Color(0xFF334155), height: 1.35, fontWeight: FontWeight.w600),
+              ),
               if (metrics.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                _MetricsGrid(metrics: metrics),
+                _MetricsGrid(metrics: metrics, color: color),
               ],
               if (blockingFindings.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                _FindingList(findings: blockingFindings, color: const Color(0xFFDC2626), icon: Icons.warning_amber_outlined),
+                _FindingList(findings: blockingFindings, color: _danger, icon: Icons.warning_amber_outlined),
               ],
               if (warningFindings.isNotEmpty) ...[
                 const SizedBox(height: 10),
@@ -514,6 +619,12 @@ class _ReviewStepCard extends StatelessWidget {
           );
           final action = OutlinedButton.icon(
             onPressed: onPrimaryPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _brand,
+              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
+            ),
             icon: checking
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.refresh_rounded),
@@ -521,11 +632,11 @@ class _ReviewStepCard extends StatelessWidget {
           );
           if (compact) {
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [leading, const SizedBox(width: 12), Expanded(child: details)]),
-                const SizedBox(height: 14),
-                Align(alignment: Alignment.centerRight, child: action),
+                const SizedBox(height: 12),
+                action,
               ],
             );
           }
@@ -564,37 +675,85 @@ class _ActionPanel extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 8))],
+            color: _surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: _line),
+            boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10))],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Check summary', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(ready ? Icons.check_circle_outline : Icons.fact_check_outlined, color: ready ? _success : _brand),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Check summary',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: _brandDark,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
               _SummaryLine(icon: Icons.hearing_outlined, label: audioReady ? 'Room sound ready' : 'Room sound pending', ok: audioReady),
               _SummaryLine(icon: Icons.desktop_windows_outlined, label: systemReady ? 'Device ready' : 'Device check pending', ok: systemReady),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: onRunAll,
-                  icon: busy
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.play_arrow_rounded),
-                  label: Text(busy ? 'Checking...' : 'Start sound and device check'),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: busy || onRunAll == null
+                      ? const LinearGradient(colors: [Color(0xFFE2E8F0), Color(0xFFCBD5E1)])
+                      : const LinearGradient(colors: [_brand, Color(0xFF1D4ED8), _success]),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: busy || onRunAll == null
+                      ? const []
+                      : const [BoxShadow(color: Color(0x200F4C81), blurRadius: 14, offset: Offset(0, 8))],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onRunAll,
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(
+                      height: 50,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (busy)
+                            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          else
+                            const Icon(Icons.play_arrow_rounded, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(
+                            busy ? 'Checking...' : 'Start sound and device check',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: onContinue,
-                  icon: Icon(ready ? Icons.check_circle_outline : Icons.lock_outline_rounded),
-                  label: Text(ready ? 'Continue to setup' : 'Complete checks to continue'),
+              OutlinedButton.icon(
+                onPressed: onContinue,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
+                icon: Icon(ready ? Icons.check_circle_outline : Icons.lock_outline_rounded),
+                label: Text(ready ? 'Continue to setup' : 'Complete checks to continue'),
               ),
             ],
           ),
@@ -605,11 +764,21 @@ class _ActionPanel extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0xFFFFFBEB),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: const Color(0xFFFDE68A)),
           ),
-          child: const Text(
-            'Keep the room quiet while sound is being checked. Disconnect external audio devices before continuing.',
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: _warning, size: 21),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Keep the room quiet while sound is being checked. Disconnect external audio devices before continuing.',
+                  style: TextStyle(color: Color(0xFF78350F), height: 1.45, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -619,8 +788,10 @@ class _ActionPanel extends StatelessWidget {
 
 class _StepNumber extends StatelessWidget {
   const _StepNumber({required this.number, required this.color});
+
   final int number;
   final Color color;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -639,18 +810,20 @@ class _StepNumber extends StatelessWidget {
 
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.passed, required this.checking, required this.hasIssues});
+
   final bool passed;
   final bool checking;
   final bool hasIssues;
+
   @override
   Widget build(BuildContext context) {
     final color = passed
-        ? const Color(0xFF16A34A)
+        ? _success
         : hasIssues
-            ? const Color(0xFFDC2626)
+            ? _danger
             : checking
-                ? const Color(0xFF2563EB)
-                : const Color(0xFF64748B);
+                ? _brand
+                : _warning;
     final label = passed
         ? 'Completed'
         : hasIssues
@@ -667,21 +840,36 @@ class _StatusPill extends StatelessWidget {
                 : Icons.radio_button_unchecked;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: 0.25))),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, color: color, size: 15), const SizedBox(width: 6), Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12))]),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 15),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
+        ],
+      ),
     );
   }
 }
 
 class _MetricData {
   const _MetricData(this.label, this.value);
+
   final String label;
   final String value;
 }
 
 class _MetricsGrid extends StatelessWidget {
-  const _MetricsGrid({required this.metrics});
+  const _MetricsGrid({required this.metrics, required this.color});
+
   final List<_MetricData> metrics;
+  final Color color;
+
   @override
   Widget build(BuildContext context) {
     return Wrap(
@@ -691,8 +879,15 @@ class _MetricsGrid extends StatelessWidget {
         for (final metric in metrics)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFFE2E8F0))),
-            child: Text('${metric.label}: ${metric.value}', style: const TextStyle(fontWeight: FontWeight.w800)),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.70),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: color.withValues(alpha: 0.18)),
+            ),
+            child: Text(
+              '${metric.label}: ${metric.value}',
+              style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 12),
+            ),
           ),
       ],
     );
@@ -701,9 +896,11 @@ class _MetricsGrid extends StatelessWidget {
 
 class _FindingList extends StatelessWidget {
   const _FindingList({required this.findings, required this.color, required this.icon});
+
   final List<String> findings;
   final Color color;
   final IconData icon;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -712,7 +909,19 @@ class _FindingList extends StatelessWidget {
         for (final finding in findings)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, size: 17, color: color), const SizedBox(width: 8), Expanded(child: Text(finding))]),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 17, color: color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    finding,
+                    style: const TextStyle(color: Color(0xFF334155), height: 1.35, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );
@@ -721,33 +930,22 @@ class _FindingList extends StatelessWidget {
 
 class _SummaryLine extends StatelessWidget {
   const _SummaryLine({required this.icon, required this.label, required this.ok});
+
   final IconData icon;
   final String label;
   final bool ok;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(ok ? Icons.check_circle : icon, color: ok ? const Color(0xFF16A34A) : const Color(0xFF64748B), size: 19),
+          Icon(ok ? Icons.check_circle : icon, color: ok ? _success : _muted, size: 19),
           const SizedBox(width: 9),
           Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w800))),
         ],
       ),
-    );
-  }
-}
-
-class _DarkTag extends StatelessWidget {
-  const _DarkTag(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: const Color(0xFF1F2937), borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF334155))),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
     );
   }
 }
