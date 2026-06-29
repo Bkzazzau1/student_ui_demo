@@ -10,11 +10,12 @@ class StudentLoginView extends StatefulWidget {
 }
 
 class _StudentLoginViewState extends State<StudentLoginView> {
+  static const String demoStudentId = 'KSLAS/STD/2026/001';
+  static const String demoPassword = 'demo123';
+
   final _formKey = GlobalKey<FormState>();
-  final _studentIdController = TextEditingController(
-    text: 'KSLAS/STD/2026/001',
-  );
-  final _passwordController = TextEditingController(text: 'demo123');
+  final _studentIdController = TextEditingController(text: demoStudentId);
+  final _passwordController = TextEditingController(text: demoPassword);
   bool _rememberMe = true;
   bool _obscurePassword = true;
   bool _signingIn = false;
@@ -40,59 +41,61 @@ class _StudentLoginViewState extends State<StudentLoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF8FAFC), Color(0xFFEFF6FF)],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final wide = constraints.maxWidth >= 840;
-                    final form = _LoginPanel(
-                      formKey: _formKey,
-                      studentIdController: _studentIdController,
-                      passwordController: _passwordController,
-                      rememberMe: _rememberMe,
-                      obscurePassword: _obscurePassword,
-                      signingIn: _signingIn,
-                      onRememberChanged: (value) =>
-                          setState(() => _rememberMe = value),
-                      onTogglePassword: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                      onSignIn: _signIn,
-                    );
+      backgroundColor: const Color(0xFFF3F6FA),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1120),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide = constraints.maxWidth >= 900;
+                  final loginPanel = _LoginPanel(
+                    formKey: _formKey,
+                    studentIdController: _studentIdController,
+                    passwordController: _passwordController,
+                    rememberMe: _rememberMe,
+                    obscurePassword: _obscurePassword,
+                    signingIn: _signingIn,
+                    onRememberChanged: (value) => setState(() => _rememberMe = value),
+                    onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
+                    onSignIn: _signIn,
+                  );
 
-                    if (!wide) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const _InstitutionHeader(compact: true),
-                          const SizedBox(height: 18),
-                          form,
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                  if (!wide) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Expanded(child: _InstitutionHeader()),
-                        const SizedBox(width: 28),
-                        SizedBox(width: 430, child: form),
+                        const _AcademicHeader(compact: true),
+                        const SizedBox(height: 16),
+                        loginPanel,
                       ],
                     );
-                  },
-                ),
+                  }
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: const Color(0xFFD8E0EA)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x140F172A),
+                          blurRadius: 24,
+                          offset: Offset(0, 14),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Expanded(child: _AcademicHeader()),
+                        Container(width: 1, color: const Color(0xFFE2E8F0)),
+                        SizedBox(width: 450, child: loginPanel),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -102,106 +105,100 @@ class _StudentLoginViewState extends State<StudentLoginView> {
   }
 }
 
-class _InstitutionHeader extends StatelessWidget {
-  const _InstitutionHeader({this.compact = false});
+class _AcademicHeader extends StatelessWidget {
+  const _AcademicHeader({this.compact = false});
 
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: compact ? 50 : 58,
-              height: compact ? 50 : 58,
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F4C81),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x1F0F172A),
-                    blurRadius: 18,
-                    offset: Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.school_outlined,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Kaduna State University',
-                    style: TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 20,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Distance Learning Institute',
-                    style: TextStyle(
-                      color: Color(0xFF315B7C),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: compact ? 24 : 34),
-        Text(
-          'Student Assessment Portal',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            color: const Color(0xFF0F172A),
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 570),
-          child: const Text(
-            'Sign in to access exams, graded assessments, weekly practice, assignments, and lecturer feedback.',
-            style: TextStyle(
-              color: Color(0xFF475569),
-              fontSize: 17,
-              height: 1.45,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        if (!compact) ...[
-          const SizedBox(height: 26),
-          const Wrap(
-            spacing: 10,
-            runSpacing: 10,
+    return Container(
+      padding: EdgeInsets.all(compact ? 24 : 42),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: compact ? Border.all(color: const Color(0xFFD8E0EA)) : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _InfoChip(icon: Icons.assignment_outlined, label: 'Assessments'),
-              _InfoChip(
-                icon: Icons.verified_user_outlined,
-                label: 'Exam checks',
+              Container(
+                width: compact ? 58 : 68,
+                height: compact ? 58 : 68,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F4C81),
+                  border: Border.all(color: const Color(0xFF0B3A63), width: 1.5),
+                ),
+                child: Text(
+                  'KASU',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: compact ? 16 : 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
               ),
-              _InfoChip(
-                icon: Icons.workspace_premium_outlined,
-                label: 'Grade Book',
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Kaduna State University',
+                      style: TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'Distance Learning Institute',
+                      style: TextStyle(
+                        color: Color(0xFF334155),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
+          SizedBox(height: compact ? 24 : 58),
+          Container(width: 72, height: 4, color: const Color(0xFF0F4C81)),
+          const SizedBox(height: 22),
+          Text(
+            'K-SLAS Student Assessment Portal',
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  color: const Color(0xFF0F172A),
+                  fontWeight: FontWeight.w900,
+                  height: 1.08,
+                ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Access examinations, graded assessments, practice activities, assignments, and lecturer feedback from one official student portal.',
+            style: TextStyle(
+              color: Color(0xFF475569),
+              fontSize: 17,
+              height: 1.55,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (!compact) ...[
+            const Spacer(),
+            const SizedBox(height: 36),
+            const _AcademicNotice(),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -232,129 +229,127 @@ class _LoginPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(26),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x140F172A),
-            blurRadius: 28,
-            offset: Offset(0, 16),
-          ),
-        ],
-      ),
+      color: Colors.white,
+      padding: const EdgeInsets.all(34),
       child: Form(
         key: formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Sign in',
+              'Student Login',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF0F172A),
-              ),
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF0F172A),
+                  ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             const Text(
-              'Use your student ID and password.',
+              'Enter your student credentials to continue.',
               style: TextStyle(
                 color: Color(0xFF64748B),
                 fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             const _DemoEntranceCard(),
-            const SizedBox(height: 22),
+            const SizedBox(height: 24),
             TextFormField(
               controller: studentIdController,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: 'Student ID',
+                hintText: 'Enter matric number or student ID',
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
               validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter your student ID';
-                }
+                if (value == null || value.trim().isEmpty) return 'Enter your student ID';
                 return null;
               },
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 15),
             TextFormField(
               controller: passwordController,
               obscureText: obscurePassword,
               onFieldSubmitted: (_) => onSignIn(),
               decoration: InputDecoration(
                 labelText: 'Password',
+                hintText: 'Enter password',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   tooltip: obscurePassword ? 'Show password' : 'Hide password',
                   onPressed: onTogglePassword,
                   icon: Icon(
-                    obscurePassword
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
+                    obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                   ),
                 ),
                 border: const OutlineInputBorder(),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Enter your password';
-                }
+                if (value == null || value.isEmpty) return 'Enter your password';
                 return null;
               },
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Checkbox(
-                  value: rememberMe,
-                  onChanged: (value) => onRememberChanged(value ?? false),
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: Checkbox(
+                    value: rememberMe,
+                    onChanged: (value) => onRememberChanged(value ?? false),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
                     'Remember me',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      color: Color(0xFF334155),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 TextButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                          'Please contact the institute support desk.',
-                        ),
+                        content: Text('Please contact the institute support desk.'),
                       ),
                     );
                   },
-                  child: const Text('Forgot password?'),
+                  child: const Text('Need help?'),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
+            const SizedBox(height: 18),
+            FilledButton(
               onPressed: signingIn ? null : onSignIn,
-              icon: signingIn
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F4C81),
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(54),
+                shape: const RoundedRectangleBorder(),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              child: signingIn
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Icon(Icons.login_outlined),
-              label: Text(signingIn ? 'Signing in' : 'Sign in'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+                  : const Text('Sign In to Portal'),
             ),
           ],
         ),
@@ -369,26 +364,27 @@ class _DemoEntranceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD7E3F0)),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Demo entrance',
+            'Demo Login Details',
             style: TextStyle(
               color: Color(0xFF0F172A),
+              fontSize: 14,
               fontWeight: FontWeight.w900,
+              letterSpacing: 0.2,
             ),
           ),
-          SizedBox(height: 8),
-          _DemoLoginLine(label: 'Student ID', value: 'KSLAS/STD/2026/001'),
-          SizedBox(height: 4),
-          _DemoLoginLine(label: 'Password', value: 'demo123'),
+          SizedBox(height: 10),
+          _DemoLoginLine(label: 'Student ID', value: _StudentLoginViewState.demoStudentId),
+          SizedBox(height: 6),
+          _DemoLoginLine(label: 'Password', value: _StudentLoginViewState.demoPassword),
         ],
       ),
     );
@@ -404,9 +400,10 @@ class _DemoLoginLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 78,
+          width: 92,
           child: Text(
             label,
             style: const TextStyle(
@@ -420,7 +417,7 @@ class _DemoLoginLine extends StatelessWidget {
             value,
             style: const TextStyle(
               color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
@@ -429,31 +426,34 @@ class _DemoLoginLine extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
+class _AcademicNotice extends StatelessWidget {
+  const _AcademicNotice();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFD7E3F0)),
+        color: const Color(0xFFF8FAFC),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF0F4C81)),
-          const SizedBox(width: 8),
           Text(
-            label,
-            style: const TextStyle(
+            'Official Student Access',
+            style: TextStyle(
               color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'For monitored examinations, the app will guide students through the required identity, camera, microphone, and device checks before the assessment begins.',
+            style: TextStyle(
+              color: Color(0xFF475569),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
