@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -15,7 +13,6 @@ class StudentLoginView extends StatefulWidget {
 class _StudentLoginViewState extends State<StudentLoginView> {
   static const Color _brandBlue = Color(0xFF0F4C81);
   static const Color _brandNavy = Color(0xFF0F172A);
-  static const Color _brandGreen = Color(0xFF16A34A);
   static const String _rememberKey = 'student_login_remember_identity';
   static const String _identityKey = 'student_login_identity';
 
