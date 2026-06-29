@@ -286,10 +286,12 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
               ),
               bottomNavigationBar: compact
                   ? _MobileExamActionBar(
-                      canGoBack: _currentIndex > 0 && !_paused,
+                      canGoBack: _currentIndex > 0 && !_paused && !_submitting,
                       canGoNext:
-                          _currentIndex < _questions.length - 1 && !_paused,
-                      canSubmit: !_paused,
+                          _currentIndex < _questions.length - 1 &&
+                          !_paused &&
+                          !_submitting,
+                      canSubmit: !_paused && !_submitting,
                       onPrevious: () => setState(() => _currentIndex--),
                       onNext: () => setState(() => _currentIndex++),
                       onSubmit: () => _submit(autoSubmitted: false),
@@ -361,7 +363,10 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
                       canNext: _currentIndex < _questions.length - 1,
                       onPrevious: () => setState(() => _currentIndex--),
                       onNext: () => setState(() => _currentIndex++),
-                      onSubmit: () => _submit(autoSubmitted: false),
+                      onSubmit: _submitting
+                          ? null
+                          : () => _submit(autoSubmitted: false),
+                      submitting: _submitting,
                     ),
             ],
           ),
@@ -484,7 +489,11 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   }) async {
     if (_submitting) return;
     if (_paused && !force) return;
-    _submitting = true;
+    if (mounted) {
+      setState(() => _submitting = true);
+    } else {
+      _submitting = true;
+    }
     _timer?.cancel();
     if (!autoSubmitted && mounted) {
       final unanswered = _questions.length - _answeredCount;
@@ -510,14 +519,23 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
         ),
       );
       if (confirmed != true) {
-        _submitting = false;
+        if (mounted) {
+          setState(() => _submitting = false);
+        } else {
+          _submitting = false;
+        }
         _startTimer();
         return;
       }
     }
 
     final result = _score();
-    await _sendSubmissionEvent(result, autoSubmitted: autoSubmitted);
+    unawaited(
+      _sendSubmissionEvent(
+        result,
+        autoSubmitted: autoSubmitted,
+      ).timeout(const Duration(seconds: 3)).catchError((_) {}),
+    );
     if (!mounted) return;
     Navigator.of(context).pop(result);
   }
@@ -762,6 +780,7 @@ class _QuestionWorkArea extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onSubmit,
+    required this.submitting,
   });
 
   final DemoQuestion question;
@@ -772,7 +791,8 @@ class _QuestionWorkArea extends StatelessWidget {
   final bool canNext;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
-  final VoidCallback onSubmit;
+  final VoidCallback? onSubmit;
+  final bool submitting;
 
   @override
   Widget build(BuildContext context) {
@@ -810,8 +830,14 @@ class _QuestionWorkArea extends StatelessWidget {
               const Spacer(),
               FilledButton.icon(
                 onPressed: onSubmit,
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Submit'),
+                icon: submitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.upload_file),
+                label: Text(submitting ? 'Submitting' : 'Submit'),
               ),
             ],
           ),
