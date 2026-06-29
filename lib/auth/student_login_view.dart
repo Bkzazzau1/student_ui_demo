@@ -15,6 +15,8 @@ class _StudentLoginViewState extends State<StudentLoginView> {
   static const Color _brandNavy = Color(0xFF0F172A);
   static const String _rememberKey = 'student_login_remember_identity';
   static const String _identityKey = 'student_login_identity';
+  static const String _demoIdentity = 'KASU/STU/2026/001';
+  static const String _demoPassword = 'demo123';
 
   final GetStorage _storage = GetStorage();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -32,9 +34,20 @@ class _StudentLoginViewState extends State<StudentLoginView> {
   void initState() {
     super.initState();
     _rememberIdentity = _storage.read<bool>(_rememberKey) ?? true;
-    if (_rememberIdentity) {
-      _identityController.text = _storage.read<String>(_identityKey) ?? '';
-    }
+    final rememberedIdentity = _storage.read<String>(_identityKey) ?? '';
+    _identityController.text =
+        _rememberIdentity && rememberedIdentity.isNotEmpty
+            ? rememberedIdentity
+            : _demoIdentity;
+    _passwordController.text = _demoPassword;
+  }
+
+  void _useDemoLogin() {
+    setState(() {
+      _identityController.text = _demoIdentity;
+      _passwordController.text = _demoPassword;
+      _statusMessage = null;
+    });
   }
 
   @override
@@ -195,7 +208,13 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                   'Use your matric number or student email to open your assessment dashboard.',
                   style: TextStyle(color: Color(0xFF64748B), height: 1.45),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
+                _DemoCredentialsNotice(
+                  identity: _demoIdentity,
+                  password: _demoPassword,
+                  onUseDemoLogin: _useDemoLogin,
+                ),
+                const SizedBox(height: 18),
                 TextFormField(
                   controller: _identityController,
                   focusNode: _identityFocus,
@@ -381,7 +400,7 @@ class _WelcomePanel extends StatelessWidget {
               ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 76),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -423,7 +442,7 @@ class _WelcomePanel extends StatelessWidget {
               _FeaturePill(icon: Icons.lock_outline, label: 'Secure exam mode'),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 36),
           const Divider(color: Color(0xFF334155)),
           const SizedBox(height: 14),
           const Row(
@@ -499,6 +518,72 @@ class _SecureModeNotice extends StatelessWidget {
               'Before a monitored exam starts, the app will guide you through identity, camera, microphone, and device checks.',
               style: TextStyle(color: Color(0xFF475569), height: 1.4),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DemoCredentialsNotice extends StatelessWidget {
+  const _DemoCredentialsNotice({
+    required this.identity,
+    required this.password,
+    required this.onUseDemoLogin,
+  });
+
+  final String identity;
+  final String password;
+  final VoidCallback onUseDemoLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.key_outlined, color: Color(0xFF0F4C81)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Demo login',
+                  style: TextStyle(
+                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Matric: $identity',
+                  style: const TextStyle(
+                    color: Color(0xFF334155),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Password: $password',
+                  style: const TextStyle(
+                    color: Color(0xFF334155),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: onUseDemoLogin,
+            icon: const Icon(Icons.auto_fix_high_outlined, size: 18),
+            label: const Text('Use demo'),
           ),
         ],
       ),
