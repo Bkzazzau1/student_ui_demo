@@ -9,73 +9,84 @@ const Color _line = Color(0xFFE2E8F0);
 const Color _muted = Color(0xFF64748B);
 const Color _success = Color(0xFF16A34A);
 const Color _danger = Color(0xFFDC2626);
+const Color _warning = Color(0xFFF59E0B);
 
 class ExamAttendanceView extends StatelessWidget {
   const ExamAttendanceView({super.key});
 
-  static const _records = <ExamAttendanceRecord>[
-    ExamAttendanceRecord(
+  static const _records = <ExamScheduleRecord>[
+    ExamScheduleRecord(
       course: DemoCourse(
         code: 'CSC 305',
         title: 'Secure Examination Systems',
         lecturer: 'Dr. A. Bello',
       ),
-      examTitle: 'Sample supervised exam for today',
-      examType: 'Supervised examination',
+      title: 'Sample supervised exam for today',
+      type: 'Supervised examination',
       dateLabel: '29/06/2026',
       startTimeLabel: '18:30',
       submittedTimeLabel: '18:52',
-      status: ExamAttendanceStatus.submitted,
+      status: ExamScheduleStatus.submitted,
     ),
-    ExamAttendanceRecord(
+    ExamScheduleRecord(
       course: DemoCourse(
         code: 'GST 204',
         title: 'Entrepreneurship and Innovation',
         lecturer: 'Dr. M. Okafor',
       ),
-      examTitle: 'Continuous assessment quiz',
-      examType: 'Graded assessment',
+      title: 'Continuous assessment quiz',
+      type: 'Graded assessment',
       dateLabel: '26/06/2026',
       startTimeLabel: '10:00',
       submittedTimeLabel: '10:28',
-      status: ExamAttendanceStatus.submitted,
+      status: ExamScheduleStatus.submitted,
     ),
-    ExamAttendanceRecord(
+    ExamScheduleRecord(
       course: DemoCourse(
         code: 'CSC 305',
         title: 'Secure Examination Systems',
         lecturer: 'Dr. A. Bello',
       ),
-      examTitle: 'First semester supervised examination',
-      examType: 'Supervised examination',
+      title: 'First semester supervised examination',
+      type: 'Supervised examination',
       dateLabel: '19/06/2026',
       startTimeLabel: '09:00',
       submittedTimeLabel: '11:00',
-      status: ExamAttendanceStatus.submitted,
+      status: ExamScheduleStatus.submitted,
     ),
-    ExamAttendanceRecord(
+    ExamScheduleRecord(
       course: DemoCourse(
         code: 'MAT 221',
         title: 'Linear Algebra for Computing',
         lecturer: 'Dr. S. Musa',
       ),
-      examTitle: 'Second semester examination',
-      examType: 'Supervised examination',
+      title: 'Second semester examination',
+      type: 'Supervised examination',
       dateLabel: '22/06/2026',
       startTimeLabel: '09:00',
       submittedTimeLabel: 'Not submitted',
-      status: ExamAttendanceStatus.closed,
+      status: ExamScheduleStatus.closed,
+    ),
+    ExamScheduleRecord(
+      course: DemoCourse(
+        code: 'GST 204',
+        title: 'Entrepreneurship and Innovation',
+        lecturer: 'Dr. M. Okafor',
+      ),
+      title: 'Final graded assessment',
+      type: 'Graded assessment',
+      dateLabel: '05/07/2026',
+      startTimeLabel: '12:00',
+      submittedTimeLabel: 'Not yet submitted',
+      status: ExamScheduleStatus.toBeWritten,
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final submitted = _records
-        .where((record) => record.status == ExamAttendanceStatus.submitted)
-        .length;
-    final closed = _records
-        .where((record) => record.status == ExamAttendanceStatus.closed)
-        .length;
+    final submitted = _records.where((record) => record.status == ExamScheduleStatus.submitted).length;
+    final closed = _records.where((record) => record.status == ExamScheduleStatus.closed).length;
+    final toBeWritten = _records.where((record) => record.status == ExamScheduleStatus.toBeWritten).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -85,7 +96,7 @@ class ExamAttendanceView extends StatelessWidget {
         elevation: 0,
         titleSpacing: 0,
         title: const Text(
-          'Exam Attendance',
+          'Schedule',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         bottom: const PreferredSize(
@@ -111,15 +122,20 @@ class ExamAttendanceView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _AttendanceHero(
+                      _ScheduleHero(
                         total: _records.length,
                         submitted: submitted,
                         closed: closed,
+                        toBeWritten: toBeWritten,
                       ),
                       const SizedBox(height: 14),
-                      _AttendanceSummaryStrip(submitted: submitted, closed: closed),
+                      _ScheduleSummaryStrip(
+                        submitted: submitted,
+                        closed: closed,
+                        toBeWritten: toBeWritten,
+                      ),
                       const SizedBox(height: 14),
-                      _AttendanceRecordsPanel(records: _records),
+                      _ScheduleRecordsPanel(records: _records),
                     ],
                   ),
                 ),
@@ -132,11 +148,11 @@ class ExamAttendanceView extends StatelessWidget {
   }
 }
 
-class ExamAttendanceRecord {
-  const ExamAttendanceRecord({
+class ExamScheduleRecord {
+  const ExamScheduleRecord({
     required this.course,
-    required this.examTitle,
-    required this.examType,
+    required this.title,
+    required this.type,
     required this.dateLabel,
     required this.startTimeLabel,
     required this.submittedTimeLabel,
@@ -144,26 +160,28 @@ class ExamAttendanceRecord {
   });
 
   final DemoCourse course;
-  final String examTitle;
-  final String examType;
+  final String title;
+  final String type;
   final String dateLabel;
   final String startTimeLabel;
   final String submittedTimeLabel;
-  final ExamAttendanceStatus status;
+  final ExamScheduleStatus status;
 }
 
-enum ExamAttendanceStatus { submitted, closed }
+enum ExamScheduleStatus { submitted, closed, toBeWritten }
 
-class _AttendanceHero extends StatelessWidget {
-  const _AttendanceHero({
+class _ScheduleHero extends StatelessWidget {
+  const _ScheduleHero({
     required this.total,
     required this.submitted,
     required this.closed,
+    required this.toBeWritten,
   });
 
   final int total;
   final int submitted;
   final int closed;
+  final int toBeWritten;
 
   @override
   Widget build(BuildContext context) {
@@ -194,13 +212,13 @@ class _AttendanceHero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _GlassTag(icon: Icons.fact_check_outlined, text: 'Exam attendance'),
-                    _GlassTag(icon: Icons.history_rounded, text: 'Historical record'),
+                    _GlassTag(icon: Icons.event_note_outlined, text: 'Schedule'),
+                    _GlassTag(icon: Icons.history_rounded, text: 'Exam history'),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Exam Attendance Record',
+                  'Exam and Assessment Schedule',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -209,7 +227,7 @@ class _AttendanceHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Only exam and graded assessment participation is recorded here. No score, grade, or CGPA is shown on this page.',
+                  'A simple list of exams and graded assessments expected, submitted, or closed. No grade or score is shown here.',
                   style: TextStyle(
                     color: Color(0xFFE2E8F0),
                     fontSize: 15,
@@ -219,7 +237,12 @@ class _AttendanceHero extends StatelessWidget {
                 ),
               ],
             );
-            final status = _HeroStatus(total: total, submitted: submitted, closed: closed);
+            final status = _HeroStatus(
+              total: total,
+              submitted: submitted,
+              closed: closed,
+              toBeWritten: toBeWritten,
+            );
             if (!wide) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,7 +253,7 @@ class _AttendanceHero extends StatelessWidget {
               children: [
                 Expanded(child: details),
                 const SizedBox(width: 22),
-                SizedBox(width: 250, child: status),
+                SizedBox(width: 260, child: status),
               ],
             );
           },
@@ -245,11 +268,13 @@ class _HeroStatus extends StatelessWidget {
     required this.total,
     required this.submitted,
     required this.closed,
+    required this.toBeWritten,
   });
 
   final int total;
   final int submitted;
   final int closed;
+  final int toBeWritten;
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +297,7 @@ class _HeroStatus extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '$submitted submitted • $closed closed',
+            '$toBeWritten to be written • $submitted submitted • $closed closed',
             style: const TextStyle(
               color: Color(0xFFCBD5E1),
               height: 1.35,
@@ -285,22 +310,36 @@ class _HeroStatus extends StatelessWidget {
   }
 }
 
-class _AttendanceSummaryStrip extends StatelessWidget {
-  const _AttendanceSummaryStrip({required this.submitted, required this.closed});
+class _ScheduleSummaryStrip extends StatelessWidget {
+  const _ScheduleSummaryStrip({
+    required this.submitted,
+    required this.closed,
+    required this.toBeWritten,
+  });
 
   final int submitted;
   final int closed;
+  final int toBeWritten;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 720;
-        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 12) / 2;
+        final compact = constraints.maxWidth < 760;
+        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
+            SizedBox(
+              width: width,
+              child: _SummaryTile(
+                label: 'To be written',
+                value: '$toBeWritten',
+                color: _warning,
+                icon: Icons.schedule_outlined,
+              ),
+            ),
             SizedBox(
               width: width,
               child: _SummaryTile(
@@ -381,10 +420,10 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-class _AttendanceRecordsPanel extends StatelessWidget {
-  const _AttendanceRecordsPanel({required this.records});
+class _ScheduleRecordsPanel extends StatelessWidget {
+  const _ScheduleRecordsPanel({required this.records});
 
-  final List<ExamAttendanceRecord> records;
+  final List<ExamScheduleRecord> records;
 
   @override
   Widget build(BuildContext context) {
@@ -418,7 +457,7 @@ class _AttendanceRecordsPanel extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Submitted and closed records',
+                    'Expected and taken activities',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: _brandDark,
                           fontWeight: FontWeight.w900,
@@ -432,7 +471,7 @@ class _AttendanceRecordsPanel extends StatelessWidget {
           const Divider(height: 1, color: _line),
           for (var index = 0; index < records.length; index++) ...[
             if (index > 0) const Divider(height: 1, color: _line),
-            _AttendanceRecordRow(record: records[index]),
+            _ScheduleRecordRow(record: records[index]),
           ],
         ],
       ),
@@ -459,10 +498,10 @@ class _SmallCount extends StatelessWidget {
   }
 }
 
-class _AttendanceRecordRow extends StatelessWidget {
-  const _AttendanceRecordRow({required this.record});
+class _ScheduleRecordRow extends StatelessWidget {
+  const _ScheduleRecordRow({required this.record});
 
-  final ExamAttendanceRecord record;
+  final ExamScheduleRecord record;
 
   @override
   Widget build(BuildContext context) {
@@ -503,7 +542,7 @@ class _AttendanceRecordRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      record.examTitle,
+                      record.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: _brandDark,
                             fontWeight: FontWeight.w900,
@@ -527,7 +566,7 @@ class _AttendanceRecordRow extends StatelessWidget {
           }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [Expanded(child: main), const SizedBox(width: 16), SizedBox(width: 340, child: dateTime)],
+            children: [Expanded(child: main), const SizedBox(width: 16), SizedBox(width: 360, child: dateTime)],
           );
         },
       ),
@@ -538,7 +577,7 @@ class _AttendanceRecordRow extends StatelessWidget {
 class _DateTimeBox extends StatelessWidget {
   const _DateTimeBox({required this.record, required this.color});
 
-  final ExamAttendanceRecord record;
+  final ExamScheduleRecord record;
   final Color color;
 
   @override
@@ -548,7 +587,7 @@ class _DateTimeBox extends StatelessWidget {
       runSpacing: 8,
       alignment: WrapAlignment.end,
       children: [
-        _InfoPill(label: record.examType, color: _brand),
+        _InfoPill(label: record.type, color: _brand),
         _InfoPill(label: record.dateLabel, color: _muted),
         _InfoPill(label: 'Start: ${record.startTimeLabel}', color: color),
         _InfoPill(label: 'Submitted: ${record.submittedTimeLabel}', color: color),
@@ -624,29 +663,35 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-Color _statusColor(ExamAttendanceStatus status) {
+Color _statusColor(ExamScheduleStatus status) {
   switch (status) {
-    case ExamAttendanceStatus.submitted:
+    case ExamScheduleStatus.submitted:
       return _success;
-    case ExamAttendanceStatus.closed:
+    case ExamScheduleStatus.closed:
       return _danger;
+    case ExamScheduleStatus.toBeWritten:
+      return _warning;
   }
 }
 
-IconData _statusIcon(ExamAttendanceStatus status) {
+IconData _statusIcon(ExamScheduleStatus status) {
   switch (status) {
-    case ExamAttendanceStatus.submitted:
+    case ExamScheduleStatus.submitted:
       return Icons.check_circle_outline;
-    case ExamAttendanceStatus.closed:
+    case ExamScheduleStatus.closed:
       return Icons.cancel_outlined;
+    case ExamScheduleStatus.toBeWritten:
+      return Icons.schedule_outlined;
   }
 }
 
-String _statusLabel(ExamAttendanceStatus status) {
+String _statusLabel(ExamScheduleStatus status) {
   switch (status) {
-    case ExamAttendanceStatus.submitted:
+    case ExamScheduleStatus.submitted:
       return 'Submitted';
-    case ExamAttendanceStatus.closed:
+    case ExamScheduleStatus.closed:
       return 'Closed';
+    case ExamScheduleStatus.toBeWritten:
+      return 'To be written';
   }
 }
