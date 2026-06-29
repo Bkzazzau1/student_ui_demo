@@ -12,6 +12,7 @@ import '../proctoring_demo/proctoring_risk_policy.dart';
 import '../proctoring_demo/review_clip_sampler.dart';
 import 'assessment_device_gate.dart';
 import 'assessment_monitoring_profile.dart';
+import 'demo_exam_result_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 
@@ -537,7 +538,11 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       ).timeout(const Duration(seconds: 3)).catchError((_) {}),
     );
     if (!mounted) return;
-    Navigator.of(context).pop(result);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => DemoExamResultView(result: result),
+      ),
+    );
   }
 
   Future<void> _sendSubmissionEvent(

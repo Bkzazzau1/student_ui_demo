@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'demo_exam_models.dart';
+import 'student_exam_feedback_view.dart';
 
 class DemoExamResultView extends StatelessWidget {
   const DemoExamResultView({super.key, required this.result});
@@ -106,6 +107,15 @@ class DemoExamResultView extends StatelessWidget {
                       Navigator.of(context).popUntil((route) => route.isFirst),
                   icon: const Icon(Icons.home_outlined),
                   label: const Text('Back to assessments'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => StudentExamFeedbackView(result: result),
+                    ),
+                  ),
+                  icon: const Icon(Icons.rate_review_outlined),
+                  label: const Text('Write feedback'),
                 ),
               ],
             ),
