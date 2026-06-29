@@ -88,7 +88,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     WidgetsBinding.instance.addObserver(this);
     _startedAt = DateTime.now();
     _questions = DemoExamService.questionsFor(widget.assessment);
-    _monitoringProfile = AssessmentMonitoringProfile.forAssessment(widget.assessment);
+    _monitoringProfile = AssessmentMonitoringProfile.forAssessment(
+      widget.assessment,
+    );
     _remainingSeconds = widget.assessment.durationMinutes * 60;
     _startTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -169,7 +171,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     final question = _questions[_currentIndex];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 900;
+        final compact = constraints.maxWidth < 980;
         return AssessmentDeviceGate(
           assessment: widget.assessment,
           child: PopScope(
@@ -286,23 +288,30 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
             ],
           ),
         ),
-        SizedBox(
-          width: 300,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(0, 16, 18, 18),
-            children: [
-              _ExamStatusPanel(
-                assessment: widget.assessment,
-                profile: _monitoringProfile,
-                paused: _paused,
-                answered: _answeredCount,
-                total: _questions.length,
-              ),
-              if (_monitoringProfile.showsLiveMonitor)
-                _HiddenMonitoringRuntime(child: Column(children: _buildRuntimePanels())),
-            ],
+        if (_monitoringProfile.showsLiveMonitor)
+          SizedBox(
+            width: 360,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(0, 16, 18, 18),
+              children: _buildMonitoringPanels(compact: false),
+            ),
+          )
+        else
+          SizedBox(
+            width: 300,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(0, 16, 18, 18),
+              children: [
+                _ExamStatusPanel(
+                  assessment: widget.assessment,
+                  profile: _monitoringProfile,
+                  paused: _paused,
+                  answered: _answeredCount,
+                  total: _questions.length,
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -346,36 +355,43 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
                     setState(() => _answers[question.id] = value),
               ),
         const SizedBox(height: 12),
-        _ExamStatusPanel(
-          assessment: widget.assessment,
-          profile: _monitoringProfile,
-          paused: _paused,
-          answered: _answeredCount,
-          total: _questions.length,
-          compact: true,
-        ),
         if (_monitoringProfile.showsLiveMonitor)
-          _HiddenMonitoringRuntime(child: Column(children: _buildRuntimePanels())),
+          ..._buildMonitoringPanels(compact: true)
+        else
+          _ExamStatusPanel(
+            assessment: widget.assessment,
+            profile: _monitoringProfile,
+            paused: _paused,
+            answered: _answeredCount,
+            total: _questions.length,
+            compact: true,
+          ),
       ],
     );
   }
 
-  List<Widget> _buildRuntimePanels() {
-    final panels = <Widget>[];
-    if (_monitoringProfile.showsLiveMonitor) {
-      panels.add(
-        LiveExamMonitor(
-          studentId: widget.studentId,
-          examId: widget.assessment.id,
-          attemptId: widget.attemptId,
-          onCriticalEvent: _handleCriticalMonitoringEvent,
-          assessmentType: widget.assessment.assessmentType,
-          reviewAudience: _monitoringProfile.reviewAudience,
-        ),
-      );
-    }
+  List<Widget> _buildMonitoringPanels({required bool compact}) {
+    final panels = <Widget>[
+      _MonitoringHeader(
+        title: _monitoringProfile.mode == AssessmentMonitoringMode.strictExam
+            ? 'Live exam monitoring'
+            : 'Assessment monitoring',
+        subtitle: 'Camera, sound, device, and activity checks are running while you write.',
+      ),
+      const SizedBox(height: 12),
+      LiveExamMonitor(
+        studentId: widget.studentId,
+        examId: widget.assessment.id,
+        attemptId: widget.attemptId,
+        onCriticalEvent: _handleCriticalMonitoringEvent,
+        assessmentType: widget.assessment.assessmentType,
+        reviewAudience: _monitoringProfile.reviewAudience,
+      ),
+    ];
+
     if (_monitoringProfile.usesSystemSecurityPanel) {
-      panels.add(
+      panels.addAll([
+        const SizedBox(height: 12),
         LiveSystemSecurityMonitor(
           studentId: widget.studentId,
           examId: widget.assessment.id,
@@ -384,10 +400,12 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
           assessmentType: widget.assessment.assessmentType,
           reviewAudience: _monitoringProfile.reviewAudience,
         ),
-      );
+      ]);
     }
+
     if (_monitoringProfile.usesReviewClipSampler) {
-      panels.add(
+      panels.addAll([
+        const SizedBox(height: 12),
         ReviewClipSampler(
           studentId: widget.studentId,
           examId: widget.assessment.id,
@@ -396,10 +414,12 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
           assessmentType: widget.assessment.assessmentType,
           reviewAudience: _monitoringProfile.reviewAudience,
         ),
-      );
+      ]);
     }
+
     if (_monitoringProfile.usesCompanionCamera) {
-      panels.add(
+      panels.addAll([
+        const SizedBox(height: 12),
         CompanionCamPanel(
           studentId: widget.studentId,
           examId: widget.assessment.id,
@@ -408,11 +428,28 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
           assessmentType: widget.assessment.assessmentType,
           reviewAudience: _monitoringProfile.reviewAudience,
         ),
-      );
+      ]);
     }
+
     if (_monitoringProfile.mode == AssessmentMonitoringMode.strictExam) {
-      panels.add(const LiveStatusPanel());
+      panels.addAll([
+        const SizedBox(height: 12),
+        const LiveStatusPanel(),
+      ]);
     }
+
+    panels.addAll([
+      const SizedBox(height: 12),
+      _ExamStatusPanel(
+        assessment: widget.assessment,
+        profile: _monitoringProfile,
+        paused: _paused,
+        answered: _answeredCount,
+        total: _questions.length,
+        compact: compact,
+      ),
+    ]);
+
     return panels;
   }
 
@@ -666,8 +703,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     final trimmed = message.trim();
     if (trimmed.isEmpty) return 'Your assessment needs attention before you continue.';
     return trimmed
-        .replaceAll('proctoring', 'exam check')
-        .replaceAll('Proctoring', 'Exam check')
+        .replaceAll('proctoring', 'exam monitoring')
+        .replaceAll('Proctoring', 'Exam monitoring')
         .replaceAll('risk', 'attention')
         .replaceAll('Risk', 'Attention')
         .replaceAll('violation', 'exam rule alert')
@@ -720,7 +757,11 @@ class _TimerPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = paused ? _danger : warning ? _warning : _brand;
+    final color = paused
+        ? _danger
+        : warning
+            ? _warning
+            : _brand;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
@@ -1030,9 +1071,17 @@ class _QuestionNumberButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? _brand : answered ? _success : _muted;
+    final color = selected
+        ? _brand
+        : answered
+            ? _success
+            : _muted;
     return Material(
-      color: selected ? _brand : answered ? const Color(0xFFF0FDF4) : _surfaceSoft,
+      color: selected
+          ? _brand
+          : answered
+              ? const Color(0xFFF0FDF4)
+              : _surfaceSoft,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -1251,9 +1300,11 @@ class _ObjectiveOptions extends StatelessWidget {
             child: RadioListTile<String>(
               value: option,
               groupValue: value.isEmpty ? null : value,
-              onChanged: enabled ? (selected) {
-                if (selected != null) onChanged(selected);
-              } : null,
+              onChanged: enabled
+                  ? (selected) {
+                      if (selected != null) onChanged(selected);
+                    }
+                  : null,
               title: Text(
                 option,
                 style: const TextStyle(fontWeight: FontWeight.w700),
@@ -1423,6 +1474,70 @@ class _MobileExamActionBar extends StatelessWidget {
   }
 }
 
+class _MonitoringHeader extends StatelessWidget {
+  const _MonitoringHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.videocam_outlined, color: _brand),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _brandDark,
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: _muted,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ExamStatusPanel extends StatelessWidget {
   const _ExamStatusPanel({
     required this.assessment,
@@ -1517,9 +1632,9 @@ class _ExamStatusPanel extends StatelessWidget {
   String get _statusTitle {
     switch (profile.mode) {
       case AssessmentMonitoringMode.strictExam:
-        return 'Exam mode active';
+        return 'Exam monitoring active';
       case AssessmentMonitoringMode.gradedLight:
-        return 'Assessment checks active';
+        return 'Assessment monitoring active';
       case AssessmentMonitoringMode.standardAccess:
         return 'Standard access';
     }
@@ -1570,17 +1685,6 @@ class _StatusLine extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _HiddenMonitoringRuntime extends StatelessWidget {
-  const _HiddenMonitoringRuntime({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Offstage(offstage: true, child: child);
   }
 }
 
