@@ -4,8 +4,6 @@ import '../exam_demo/demo_exam_home.dart';
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
-const Color _brandDeep = Color(0xFF082F49);
-const Color _brandLight = Color(0xFFEFF6FF);
 const Color _green = Color(0xFF16A34A);
 const Color _amber = Color(0xFFF59E0B);
 const Color _purple = Color(0xFF7C3AED);
@@ -68,12 +66,12 @@ class _StudentLoginViewState extends State<StudentLoginView> {
               const Positioned(top: 0, left: 0, right: 0, child: _TopColorBand()),
               Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1180),
+                    constraints: const BoxConstraints(maxWidth: 1040),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= 940;
+                        final wide = constraints.maxWidth >= 860;
                         final loginPanel = _LoginPanel(
                           formKey: _formKey,
                           studentIdController: _studentIdController,
@@ -91,7 +89,7 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const _BrandPanel(compact: true),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               loginPanel,
                             ],
                           );
@@ -102,12 +100,12 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                           decoration: BoxDecoration(
                             color: _surface,
                             border: Border.all(color: const Color(0xFFD6DFEA)),
-                            borderRadius: BorderRadius.circular(26),
+                            borderRadius: BorderRadius.circular(22),
                             boxShadow: const [
                               BoxShadow(
-                                color: Color(0x1A0F172A),
-                                blurRadius: 36,
-                                offset: Offset(0, 22),
+                                color: Color(0x180F172A),
+                                blurRadius: 26,
+                                offset: Offset(0, 16),
                               ),
                             ],
                           ),
@@ -117,7 +115,7 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                               children: [
                                 const Expanded(child: _BrandPanel()),
                                 Container(width: 1, color: _line),
-                                SizedBox(width: 480, child: loginPanel),
+                                SizedBox(width: 420, child: loginPanel),
                               ],
                             ),
                           ),
@@ -141,11 +139,9 @@ class _TopColorBand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 8,
+      height: 6,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_brand, _green, _amber, _purple],
-        ),
+        gradient: LinearGradient(colors: [_brand, _green, _amber, _purple]),
       ),
     );
   }
@@ -173,7 +169,7 @@ class _BrandPanel extends StatelessWidget {
             top: 0,
             bottom: 0,
             child: Container(
-              width: compact ? 88 : 130,
+              width: compact ? 64 : 90,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.06),
                 border: Border(left: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
@@ -181,38 +177,38 @@ class _BrandPanel extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(compact ? 24 : 46),
+            padding: EdgeInsets.all(compact ? 18 : 30),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 const _InstitutionMark(),
-                SizedBox(height: compact ? 30 : 54),
+                SizedBox(height: compact ? 20 : 34),
                 const _OfficialAccessTag(),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 Text(
                   'K-SLAS Student Portal',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
-                        height: 1.06,
-                        letterSpacing: -0.8,
+                        height: 1.05,
+                        letterSpacing: -0.5,
                       ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 const Text(
                   'A trusted access point for assessments, coursework, results, and lecturer feedback for Distance Learning students.',
                   style: TextStyle(
                     color: Color(0xFFE2E8F0),
-                    fontSize: 17,
-                    height: 1.55,
+                    fontSize: 14.5,
+                    height: 1.45,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 if (!compact) ...[
-                  const SizedBox(height: 34),
+                  const SizedBox(height: 22),
                   const _AccessSummary(),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 18),
                   const _AcademicNotice(),
                 ],
               ],
@@ -230,7 +226,7 @@ class _OfficialAccessTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
@@ -238,7 +234,7 @@ class _OfficialAccessTag extends StatelessWidget {
       ),
       child: const Text(
         'Official Student Access',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12.5),
       ),
     );
   }
@@ -253,18 +249,18 @@ class _InstitutionMark extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 72,
-          height: 72,
+          width: 56,
+          height: 56,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.2),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x1F000000),
-                blurRadius: 18,
-                offset: Offset(0, 10),
+                color: Color(0x1A000000),
+                blurRadius: 14,
+                offset: Offset(0, 8),
               ),
             ],
           ),
@@ -272,13 +268,13 @@ class _InstitutionMark extends StatelessWidget {
             'KASU',
             style: TextStyle(
               color: _brand,
-              fontSize: 18,
+              fontSize: 15,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.6,
+              letterSpacing: 0.4,
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,17 +283,17 @@ class _InstitutionMark extends StatelessWidget {
                 'Kaduna State University',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   height: 1.1,
                 ),
               ),
-              SizedBox(height: 5),
+              SizedBox(height: 3),
               Text(
                 'Distance Learning Institute',
                 style: TextStyle(
                   color: Color(0xFFCBD5E1),
-                  fontSize: 14,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -315,11 +311,11 @@ class _AccessSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
         border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,16 +325,16 @@ class _AccessSummary extends StatelessWidget {
             subtitle: 'Open available exams, quizzes, and practice activities.',
             color: _amber,
           ),
-          SizedBox(height: 14),
+          SizedBox(height: 10),
           _SummaryRow(
             title: 'Guided exam checks',
             subtitle: 'Follow simple steps before monitored assessments begin.',
             color: _green,
           ),
-          SizedBox(height: 14),
+          SizedBox(height: 10),
           _SummaryRow(
             title: 'Feedback',
-            subtitle: 'View lecturer feedback and continue learning after submission.',
+            subtitle: 'View lecturer feedback after submission.',
             color: Color(0xFF93C5FD),
           ),
         ],
@@ -364,11 +360,11 @@ class _SummaryRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 5,
-          height: 46,
+          width: 4,
+          height: 36,
           decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,14 +374,16 @@ class _SummaryRow extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
+                  fontSize: 13,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: const TextStyle(
                   color: Color(0xFFD8E3F0),
-                  height: 1.35,
+                  height: 1.25,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -424,7 +422,7 @@ class _LoginPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: _surface,
-      padding: const EdgeInsets.symmetric(horizontal: 38, vertical: 42),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
       child: Form(
         key: formKey,
         child: Column(
@@ -433,12 +431,13 @@ class _LoginPanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const _LoginHeading(),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             const _DemoCredentialsCard(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             TextFormField(
               controller: studentIdController,
               textInputAction: TextInputAction.next,
+              style: const TextStyle(fontSize: 14),
               decoration: _fieldDecoration(
                 label: 'Student ID',
                 hint: 'Enter student ID',
@@ -449,10 +448,11 @@ class _LoginPanel extends StatelessWidget {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             TextFormField(
               controller: passwordController,
               obscureText: obscurePassword,
+              style: const TextStyle(fontSize: 14),
               onFieldSubmitted: (_) => onSignIn(),
               decoration: _fieldDecoration(
                 label: 'Password',
@@ -471,41 +471,40 @@ class _LoginPanel extends StatelessWidget {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Row(
               children: [
                 SizedBox(
-                  width: 32,
-                  height: 32,
+                  width: 30,
+                  height: 30,
                   child: Checkbox(
                     value: rememberMe,
                     activeColor: _brand,
                     onChanged: (value) => onRememberChanged(value ?? false),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 const Expanded(
                   child: Text(
                     'Remember me',
                     style: TextStyle(
                       color: Color(0xFF334155),
                       fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
                   ),
                 ),
                 TextButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please contact the institute support desk.'),
-                      ),
+                      const SnackBar(content: Text('Please contact the institute support desk.')),
                     );
                   },
                   child: const Text('Need help?'),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
             _PrimarySignInButton(signingIn: signingIn, onPressed: onSignIn),
           ],
         ),
@@ -522,21 +521,23 @@ class _LoginPanel extends StatelessWidget {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: Icon(icon),
+      prefixIcon: Icon(icon, size: 20),
       suffixIcon: suffixIcon,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       filled: true,
       fillColor: _surfaceSoft,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: _line),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: _line),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: _brand, width: 1.6),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _brand, width: 1.5),
       ),
     );
   }
@@ -551,28 +552,29 @@ class _LoginHeading extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 58,
-          height: 5,
+          width: 50,
+          height: 4,
           decoration: BoxDecoration(
             gradient: const LinearGradient(colors: [_brand, _green, _amber]),
             borderRadius: BorderRadius.circular(999),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
         Text(
           'Student Login',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w900,
                 color: _brandDark,
               ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 5),
         const Text(
           'Use your official student access details to continue.',
           style: TextStyle(
             color: _muted,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
-            height: 1.4,
+            height: 1.3,
           ),
         ),
       ],
@@ -593,22 +595,22 @@ class _PrimarySignInButton extends StatelessWidget {
         gradient: signingIn
             ? const LinearGradient(colors: [Color(0xFF94A3B8), Color(0xFF64748B)])
             : const LinearGradient(colors: [_brand, Color(0xFF1D4ED8), _green]),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x240F4C81),
-            blurRadius: 16,
-            offset: Offset(0, 10),
+            color: Color(0x1F0F4C81),
+            blurRadius: 14,
+            offset: Offset(0, 8),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           onTap: signingIn ? null : onPressed,
           child: SizedBox(
-            height: 56,
+            height: 50,
             child: Center(
               child: signingIn
                   ? const SizedBox(
@@ -619,13 +621,13 @@ class _PrimarySignInButton extends StatelessWidget {
                   : const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.login_rounded, color: Colors.white, size: 20),
-                        SizedBox(width: 9),
+                        Icon(Icons.login_rounded, color: Colors.white, size: 18),
+                        SizedBox(width: 8),
                         Text(
                           'Sign In',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -648,7 +650,7 @@ class _DemoCredentialsCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
       child: Column(
@@ -661,27 +663,27 @@ class _DemoCredentialsCard extends StatelessWidget {
             ),
           ),
           const Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(13),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.verified_user_outlined, color: _amber, size: 20),
+                    Icon(Icons.verified_user_outlined, color: _amber, size: 18),
                     SizedBox(width: 8),
                     Text(
                       'Demo Credentials',
                       style: TextStyle(
                         color: _brandDark,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: 10),
                 _DemoLoginLine(label: 'Student ID', value: _StudentLoginViewState.demoStudentId),
-                SizedBox(height: 7),
+                SizedBox(height: 5),
                 _DemoLoginLine(label: 'Password', value: _StudentLoginViewState.demoPassword),
               ],
             ),
@@ -704,11 +706,12 @@ class _DemoLoginLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 92,
+          width: 86,
           child: Text(
             label,
             style: const TextStyle(
               color: _muted,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -718,6 +721,7 @@ class _DemoLoginLine extends StatelessWidget {
             value,
             style: const TextStyle(
               color: _brandDark,
+              fontSize: 12.5,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -733,11 +737,11 @@ class _AcademicNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
         border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,15 +750,17 @@ class _AcademicNotice extends StatelessWidget {
             'Before monitored examinations',
             style: TextStyle(
               color: Colors.white,
+              fontSize: 13,
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 6),
           Text(
-            'Students will complete identity, camera, microphone, and device checks before the assessment begins.',
+            'Students complete identity, camera, microphone, and device checks before the assessment begins.',
             style: TextStyle(
               color: Color(0xFFD8E3F0),
-              height: 1.45,
+              height: 1.3,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
