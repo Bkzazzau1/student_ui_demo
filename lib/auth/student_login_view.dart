@@ -86,13 +86,15 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                         ),
                       ],
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Expanded(child: _AcademicHeader()),
-                        Container(width: 1, color: const Color(0xFFE2E8F0)),
-                        SizedBox(width: 450, child: loginPanel),
-                      ],
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Expanded(child: _AcademicHeader()),
+                          Container(width: 1, color: const Color(0xFFE2E8F0)),
+                          SizedBox(width: 450, child: loginPanel),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -120,7 +122,7 @@ class _AcademicHeader extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -193,7 +195,6 @@ class _AcademicHeader extends StatelessWidget {
             ),
           ),
           if (!compact) ...[
-            const Spacer(),
             const SizedBox(height: 36),
             const _AcademicNotice(),
           ],
@@ -254,8 +255,8 @@ class _LoginPanel extends StatelessWidget {
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 20),
-            const _DemoEntranceCard(),
+            const SizedBox(height: 10),
+            const _DemoAccessNote(),
             const SizedBox(height: 24),
             TextFormField(
               controller: studentIdController,
@@ -358,66 +359,23 @@ class _LoginPanel extends StatelessWidget {
   }
 }
 
-class _DemoEntranceCard extends StatelessWidget {
-  const _DemoEntranceCard();
+class _DemoAccessNote extends StatelessWidget {
+  const _DemoAccessNote();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        border: Border.all(color: const Color(0xFFCBD5E1)),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Demo Login Details',
-            style: TextStyle(
-              color: Color(0xFF0F172A),
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.2,
-            ),
-          ),
-          SizedBox(height: 10),
-          _DemoLoginLine(label: 'Student ID', value: _StudentLoginViewState.demoStudentId),
-          SizedBox(height: 6),
-          _DemoLoginLine(label: 'Password', value: _StudentLoginViewState.demoPassword),
-        ],
-      ),
-    );
-  }
-}
-
-class _DemoLoginLine extends StatelessWidget {
-  const _DemoLoginLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return const Row(
       children: [
-        SizedBox(
-          width: 92,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
+        Icon(Icons.check_circle_outline, size: 18, color: Color(0xFF0F4C81)),
+        SizedBox(width: 8),
         Expanded(
           child: Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w900,
+            'Demo access is pre-filled for this build.',
+            style: TextStyle(
+              color: Color(0xFF475569),
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),

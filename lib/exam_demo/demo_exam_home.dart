@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../auth/student_logout_view.dart';
 import '../face_demo/demo_face_id_view.dart';
 import '../proctoring_demo/proctoring_demo_home.dart';
 import 'assignment_submission_view.dart';
@@ -140,7 +141,7 @@ class _DemoExamHomeState extends State<DemoExamHome> {
             label: const Text('Face ID'),
           ),
           Padding(
-            padding: const EdgeInsets.only(right: 14, left: 6),
+            padding: const EdgeInsets.only(left: 6),
             child: FilledButton.icon(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -149,6 +150,18 @@ class _DemoExamHomeState extends State<DemoExamHome> {
               ),
               icon: const Icon(Icons.health_and_safety_outlined, size: 18),
               label: const Text('Exam Check'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 14, left: 6),
+            child: IconButton(
+              tooltip: 'Sign out',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const StudentLogoutView(),
+                ),
+              ),
+              icon: const Icon(Icons.logout_outlined),
             ),
           ),
         ],
