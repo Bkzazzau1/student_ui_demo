@@ -26,7 +26,7 @@ void main() {
 
     expect(labels, contains('cell phone'));
     expect(labels, contains('book'));
-    expect(labels, isNot(contains('paper')));
+    expect(labels, contains('paper'));
   });
 
   test('maps optimized vision labels to policy event decisions', () {

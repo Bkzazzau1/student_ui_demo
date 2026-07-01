@@ -13,6 +13,7 @@ class SecurityReviewService {
   Future<SecurityReviewResult> submitPreExamReview({
     required Map<String, dynamic> manifest,
     required Map<String, String> imagePaths,
+    String? calibrationVideoPath,
     String? audioClipPath,
     String? verificationVideoPath,
   }) async {
@@ -35,11 +36,28 @@ class SecurityReviewService {
       }
     }
 
-    if (verificationVideoPath != null && verificationVideoPath.trim().isNotEmpty) {
+    if (calibrationVideoPath != null &&
+        calibrationVideoPath.trim().isNotEmpty) {
+      final file = File(calibrationVideoPath);
+      if (await file.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'calibration_video',
+            calibrationVideoPath,
+          ),
+        );
+      }
+    }
+
+    if (verificationVideoPath != null &&
+        verificationVideoPath.trim().isNotEmpty) {
       final file = File(verificationVideoPath);
       if (await file.exists()) {
         request.files.add(
-          await http.MultipartFile.fromPath('verification_video', verificationVideoPath),
+          await http.MultipartFile.fromPath(
+            'verification_video',
+            verificationVideoPath,
+          ),
         );
       }
     }

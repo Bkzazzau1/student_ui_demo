@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 
 import 'camera_scan_frame_source.dart';
 import 'demo_evidence_service.dart';
+import 'native_face_landmarker_runtime.dart';
+import 'optimized_vision_object_event_adapter.dart';
+import 'optimized_vision_runtime_bridge.dart';
 import 'proctoring_demo_models.dart';
 import 'security_review_service.dart';
 import 'system_security_review_service.dart';
@@ -80,6 +85,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   final DemoEvidenceService _evidence = DemoEvidenceService();
   final SystemSecurityReviewService _systemReview =
       SystemSecurityReviewService();
+  final OptimizedVisionRuntimeBridge _optimizedVision =
+      OptimizedVisionRuntimeBridge();
+  final OptimizedVisionObjectEventAdapter _objectEventAdapter =
+      const OptimizedVisionObjectEventAdapter();
+  final NativeFaceLandmarkerRuntime _faceLandmarker =
+      NativeFaceLandmarkerRuntime();
   final SecurityReviewService _securityReview = SecurityReviewService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -98,7 +109,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   String _message = 'Open the camera and start the 360 room scan.';
   String _frameMode = 'not-started';
   String? _manifestPath;
+  String? _calibrationVideoPath;
   String? _verificationVideoPath;
+  Map<String, Object?>? _videoCalibrationReview;
   SystemSecurityReviewResult? _systemReviewResult;
   int _frameCount = 0;
   int _currentTargetIndex = 0;
@@ -109,6 +122,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   bool _backupScanReady = false;
   bool _backupScanAvailable = false;
   bool _capturingTarget = false;
+  bool _calibratingVideo = false;
   bool _reviewing = false;
   bool _recordingVideo = false;
   Timer? _autoCaptureTimer;
@@ -119,10 +133,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   bool get _realCameraReady => _controller?.value.isInitialized ?? false;
   bool get _cameraReady => _realCameraReady || _backupScanReady;
+  bool get _videoCalibrationComplete => _calibrationVideoPath != null;
   bool get _scanning => _status == DemoScanStatus.scanning;
   bool get _scanComplete => _targets.every((target) => target.captured);
   bool get _verificationComplete =>
       _scanComplete &&
+      (_backupScanReady || _videoCalibrationComplete) &&
       _verificationVideoPath != null &&
       _systemReviewResult != null;
   _ScanGuide get _currentGuide =>
@@ -179,7 +195,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _openingCamera = false;
         _backupScanReady = false;
         _backupScanAvailable = false;
-        _message = 'Camera is ready. Start the 360 room scan.';
+        _message = 'Camera is ready. Run video calibration before scanning.';
       });
       await previousController?.dispose();
     } catch (e) {
@@ -198,6 +214,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _openingCamera = false;
       _backupScanAvailable = false;
       _backupScanReady = true;
+      _calibrationVideoPath = null;
       _message =
           'Backup scan mode is active. Real camera preview is not available on this device.';
     });
@@ -239,6 +256,12 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       setState(() => _message = 'Open the camera before starting the scan.');
       return;
     }
+    if (!_backupScanReady && !_videoCalibrationComplete) {
+      setState(
+        () => _message = 'Run video calibration before starting the room scan.',
+      );
+      return;
+    }
     await _frameSource.stop(controller);
     await _evidence.startScan();
     setState(() {
@@ -248,6 +271,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _acceptedSignatures.clear();
       _previousSignature = null;
       _manifestPath = null;
+      _calibrationVideoPath = null;
+      _videoCalibrationReview = null;
       _verificationVideoPath = null;
       _frameCount = 0;
       _currentTargetIndex = 0;
@@ -475,6 +500,220 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     }
   }
 
+  Future<void> _runVideoCalibration() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      setState(() => _message = 'Open the camera before video calibration.');
+      return;
+    }
+    if (_calibratingVideo || controller.value.isRecordingVideo) return;
+
+    try {
+      await _frameSource.stop(controller);
+      if (!mounted) return;
+      setState(() {
+        _calibratingVideo = true;
+        _videoCalibrationReview = null;
+        _message =
+            'Video calibration is recording. Keep your face visible and turn slightly left and right.';
+      });
+      final beforeFrame = await _frameSource.captureStillFrame(controller);
+      final faceReview = await _captureFaceCalibrationSample(controller);
+      await controller.startVideoRecording();
+      await Future<void>.delayed(const Duration(seconds: 5));
+      final file = await controller.stopVideoRecording();
+      final afterFrame = await _frameSource.captureStillFrame(controller);
+      final review = await _buildVideoCalibrationReview(
+        beforeFrame: beforeFrame,
+        afterFrame: afterFrame,
+        faceReview: faceReview,
+      );
+      if (!mounted) return;
+      setState(() {
+        _calibrationVideoPath = file.path;
+        _videoCalibrationReview = review;
+        _message = 'Video calibration passed. Start the 360 room scan.';
+      });
+    } catch (e) {
+      try {
+        if (controller.value.isRecordingVideo) {
+          await controller.stopVideoRecording();
+        }
+      } catch (_) {}
+      if (!mounted) return;
+      setState(() {
+        _calibrationVideoPath = null;
+        _videoCalibrationReview = <String, Object?>{
+          'completed': false,
+          'reason': 'video calibration failed',
+          'error': e.toString(),
+        };
+        _message = 'Video calibration failed. Check the camera and retry. $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _calibratingVideo = false);
+      }
+    }
+  }
+
+  Future<Map<String, Object?>?> _captureFaceCalibrationSample(
+    CameraController controller,
+  ) async {
+    if (!controller.value.isInitialized || controller.value.isRecordingVideo) {
+      return null;
+    }
+    final completer = Completer<CameraImage?>();
+    try {
+      await controller.startImageStream((image) {
+        if (!completer.isCompleted) completer.complete(image);
+      });
+      final image = await completer.future.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
+      );
+      try {
+        if (controller.value.isStreamingImages) {
+          await controller.stopImageStream();
+        }
+      } catch (_) {}
+      if (image == null) {
+        return const <String, Object?>{
+          'available': false,
+          'source': 'face_landmarker',
+          'reason': 'no live frame available',
+        };
+      }
+      final result = await _faceLandmarker.analyse(image);
+      return <String, Object?>{
+        'available': result != null,
+        'source': result == null ? 'face_landmarker_unavailable' : result.label,
+        if (result != null) ...<String, Object?>{
+          'confidence': result.confidence,
+          'stable_head_pose': result.stableHeadPose,
+          'looking_away': result.lookingAway,
+          'yaw_score': result.yawProxy,
+          'pitch_score': result.pitchProxy,
+          'roll_score': result.rollProxy,
+        },
+      };
+    } catch (e) {
+      try {
+        if (controller.value.isStreamingImages) {
+          await controller.stopImageStream();
+        }
+      } catch (_) {}
+      if (!completer.isCompleted) completer.complete(null);
+      return <String, Object?>{
+        'available': false,
+        'source': 'face_landmarker',
+        'reason': e.toString(),
+      };
+    }
+  }
+
+  Future<Map<String, Object?>> _buildVideoCalibrationReview({
+    required DemoCameraScanFrame? beforeFrame,
+    required DemoCameraScanFrame? afterFrame,
+    required Map<String, Object?>? faceReview,
+  }) async {
+    final optimizedBefore = await _runCalibrationObjectReview(beforeFrame);
+    final optimizedAfter = await _runCalibrationObjectReview(afterFrame);
+    final movement = beforeFrame == null || afterFrame == null
+        ? null
+        : _signatureDifference(beforeFrame.signature, afterFrame.signature);
+    final lightingValues = <double>[
+      if (beforeFrame != null) beforeFrame.luma,
+      if (afterFrame != null) afterFrame.luma,
+    ];
+    final averageLighting = lightingValues.isEmpty
+        ? null
+        : lightingValues.fold<double>(0, (sum, value) => sum + value) /
+              lightingValues.length;
+    final objectDecisions = <Map<String, Object?>>[
+      ..._objectDecisionsJson(optimizedBefore),
+      ..._objectDecisionsJson(optimizedAfter),
+    ];
+    final objectRuntimeAvailable =
+        optimizedBefore?.available == true || optimizedAfter?.available == true;
+
+    return <String, Object?>{
+      'completed': true,
+      'source': 'pre_exam_video_calibration',
+      'object_runtime_available': objectRuntimeAvailable,
+      'face_runtime_available': faceReview?['available'] == true,
+      'average_lighting_score': averageLighting,
+      'movement_score': movement,
+      'before_frame': _calibrationFrameJson(beforeFrame, optimizedBefore),
+      'after_frame': _calibrationFrameJson(afterFrame, optimizedAfter),
+      'object_decisions': objectDecisions,
+      'face_review': faceReview,
+    };
+  }
+
+  Future<OptimizedVisionRuntimeResult?> _runCalibrationObjectReview(
+    DemoCameraScanFrame? frame,
+  ) async {
+    final decoded = frame?.decodedImage;
+    if (decoded == null) return null;
+    final rgb = _imageToRgb(decoded);
+    return _optimizedVision.runRgbFrame(
+      rgbBytes: rgb,
+      width: decoded.width,
+      height: decoded.height,
+      tasks: const <String>['yolo_exam_review', 'object_review'],
+    );
+  }
+
+  Map<String, Object?> _calibrationFrameJson(
+    DemoCameraScanFrame? frame,
+    OptimizedVisionRuntimeResult? objectReview,
+  ) {
+    return <String, Object?>{
+      'captured': frame != null,
+      if (frame != null) ...<String, Object?>{
+        'mode': frame.mode,
+        'lighting_score': frame.luma,
+        'signature_buckets': frame.signature.length,
+      },
+      if (objectReview != null) 'object_review': objectReview.toJson(),
+      if (objectReview != null)
+        'object_decisions': _objectDecisionsJson(objectReview),
+    };
+  }
+
+  List<Map<String, Object?>> _objectDecisionsJson(
+    OptimizedVisionRuntimeResult? result,
+  ) {
+    if (result == null) return const <Map<String, Object?>>[];
+    return _objectEventAdapter
+        .mapResult(result, source: 'pre_exam_video_calibration')
+        .map(
+          (decision) => <String, Object?>{
+            'event_type': decision.eventType,
+            'severity': decision.severity,
+            'message': decision.message,
+            'labels': decision.labels,
+            'metadata': decision.metadata,
+          },
+        )
+        .toList(growable: false);
+  }
+
+  Uint8List _imageToRgb(img.Image image) {
+    final bytes = Uint8List(image.width * image.height * 3);
+    var cursor = 0;
+    for (var y = 0; y < image.height; y++) {
+      for (var x = 0; x < image.width; x++) {
+        final pixel = image.getPixel(x, y);
+        bytes[cursor++] = pixel.r.toInt().clamp(0, 255);
+        bytes[cursor++] = pixel.g.toInt().clamp(0, 255);
+        bytes[cursor++] = pixel.b.toInt().clamp(0, 255);
+      }
+    }
+    return bytes;
+  }
+
   List<String> _labelsFor(DemoCameraScanFrame frame) {
     final labels = <String>[];
     if (frame.luma < 0.08) labels.add('low light');
@@ -507,6 +746,13 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
 
   Future<void> _runSecurityReview() async {
     if (_reviewing || !_scanComplete) return;
+    if (!_backupScanReady && !_videoCalibrationComplete) {
+      setState(
+        () => _message =
+            'Run video calibration before sending the final exam check.',
+      );
+      return;
+    }
     setState(() {
       _reviewing = true;
       _message = 'Preparing pictures and short video...';
@@ -537,6 +783,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       var result = await _securityReview.submitPreExamReview(
         manifest: _buildReviewManifest(),
         imagePaths: _targetImagePaths(),
+        calibrationVideoPath: _calibrationVideoPath,
         verificationVideoPath: videoPath,
       );
       if (_isAudioOnlyReviewIssue(result) && _verificationComplete) {
@@ -779,6 +1026,15 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'face_image_key': _faceImageKey(),
       'face_identity': _faceIdentityReview(),
       'system_review': _systemReviewPayload(),
+      'video_calibration': <String, dynamic>{
+        'required': !_backupScanReady,
+        'duration_seconds': 5,
+        'captured': _videoCalibrationComplete,
+        'file_name': _calibrationVideoPath == null
+            ? null
+            : _fileNameFromPath(_calibrationVideoPath!),
+        'review': _videoCalibrationReview,
+      },
       'verification_video': <String, dynamic>{
         'required': true,
         'duration_seconds': 7,
@@ -845,6 +1101,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       'lighting_score': _lightingScore,
       'movement_score': _movementScore,
       'difference_score': _differenceScore,
+      'video_calibration_recorded': _videoCalibrationComplete,
+      'video_calibration_review': _videoCalibrationReview,
       'verification_video_recorded': _verificationVideoPath != null,
     };
   }
@@ -896,6 +1154,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _movementScore = 0;
       _differenceScore = 0;
       _capturingTarget = false;
+      _calibratingVideo = false;
       _reviewing = false;
       _recordingVideo = false;
       _status = DemoScanStatus.idle;
@@ -1008,7 +1267,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             scanning: _scanning,
             complete: _scanComplete,
             reviewing: _reviewing,
-            recordingVideo: _recordingVideo,
+            recordingVideo: _recordingVideo || _calibratingVideo,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -1035,7 +1294,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                     Center(
                       child: _FocusFrame(
                         complete: _scanComplete,
-                        recording: _recordingVideo,
+                        recording: _recordingVideo || _calibratingVideo,
                       ),
                     ),
                     Positioned(
@@ -1046,7 +1305,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                         message: _cameraBottomText(),
                         scanning: _scanning,
                         complete: _scanComplete,
-                        recording: _recordingVideo,
+                        recording: _recordingVideo || _calibratingVideo,
                       ),
                     ),
                     if (!_scanning && !_scanComplete && !_reviewing)
@@ -1069,6 +1328,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   String _cameraOverlayText() {
+    if (_calibratingVideo) return 'Video calibration in progress';
     if (_recordingVideo) return 'Short video • keep your face visible';
     if (_reviewing) return 'Final check in progress';
     if (_scanComplete) return 'Room scan complete';
@@ -1077,6 +1337,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   String _cameraBottomText() {
+    if (_calibratingVideo) {
+      return 'Keep your face visible and turn slightly left and right.';
+    }
     if (_recordingVideo) {
       return 'Keep your face visible until the short video is complete.';
     }
@@ -1088,6 +1351,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     }
     if (_scanning) return _currentGuide.instruction;
     if (_cameraReady) {
+      if (!_backupScanReady && !_videoCalibrationComplete) {
+        return 'Run video calibration before the automatic room scan.';
+      }
       return 'Click Start automatic scan. The app will capture each view by itself.';
     }
     return 'Camera is opening. Please wait.';
@@ -1116,6 +1382,14 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
             value: _verificationVideoPath == null
                 ? (_recordingVideo ? 'recording' : 'pending')
                 : 'captured',
+          ),
+          _MetricPill(
+            label: 'Calibration',
+            value: _videoCalibrationComplete
+                ? 'done'
+                : _calibratingVideo
+                ? 'recording'
+                : 'pending',
           ),
           TextButton.icon(
             onPressed: _reset,
@@ -1376,6 +1650,16 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         icon: Icons.videocam_outlined,
         loading: _openingCamera,
         onPressed: _openingCamera ? null : _openCamera,
+      );
+    }
+    if (!_backupScanReady && !_videoCalibrationComplete) {
+      return _MobileScanAction(
+        label: _calibratingVideo
+            ? 'Calibrating camera...'
+            : 'Run video calibration',
+        icon: Icons.video_camera_front_outlined,
+        loading: _calibratingVideo,
+        onPressed: _calibratingVideo ? null : _runVideoCalibration,
       );
     }
     if (!_scanning && !_scanComplete) {
