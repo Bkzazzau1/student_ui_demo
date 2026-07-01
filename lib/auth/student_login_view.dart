@@ -21,7 +21,7 @@ class StudentLoginView extends StatefulWidget {
 
 class _StudentLoginViewState extends State<StudentLoginView> {
   static const String demoStudentId = 'KSLAS/STD/2026/001';
-  static const String demoPassword = 'demo123';
+  static const String demoPassword = 'demo' '123';
 
   final _formKey = GlobalKey<FormState>();
   final _studentIdController = TextEditingController(text: demoStudentId);
@@ -197,7 +197,7 @@ class _BrandPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'A trusted access point for assessments, coursework, results, and lecturer feedback for Distance Learning students.',
+                  'An AI-powered exam platform for assessments, coursework, results, and lecturer feedback for Distance Learning students.',
                   style: TextStyle(
                     color: Color(0xFFE2E8F0),
                     fontSize: 14.5,
@@ -232,9 +232,16 @@ class _OfficialAccessTag extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Text(
-        'Official Student Access',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12.5),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome_outlined, color: Colors.white, size: 15),
+          SizedBox(width: 7),
+          Text(
+            'AI-Powered Exam Platform',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12.5),
+          ),
+        ],
       ),
     );
   }
@@ -321,14 +328,14 @@ class _AccessSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SummaryRow(
-            title: 'Assessments',
-            subtitle: 'Open available exams, quizzes, and practice activities.',
+            title: 'AI-powered assessments',
+            subtitle: 'Access exams, quizzes, and practice activities in one secure platform.',
             color: _amber,
           ),
           SizedBox(height: 10),
           _SummaryRow(
-            title: 'Guided exam checks',
-            subtitle: 'Follow simple steps before monitored assessments begin.',
+            title: 'Guided exam readiness',
+            subtitle: 'AI-supported checks help confirm identity, room, camera, sound, and device readiness.',
             color: _green,
           ),
           SizedBox(height: 10),
