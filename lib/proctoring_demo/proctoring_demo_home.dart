@@ -195,7 +195,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _openingCamera = false;
         _backupScanReady = false;
         _backupScanAvailable = false;
-        _message = 'Camera is ready. Run video calibration before scanning.';
+        _message =
+            'Camera is ready. Complete camera readiness before room scan.';
       });
       await previousController?.dispose();
     } catch (e) {
@@ -258,7 +259,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     }
     if (!_backupScanReady && !_videoCalibrationComplete) {
       setState(
-        () => _message = 'Run video calibration before starting the room scan.',
+        () => _message =
+            'Complete camera readiness before starting the room scan.',
       );
       return;
     }
@@ -271,8 +273,6 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       _acceptedSignatures.clear();
       _previousSignature = null;
       _manifestPath = null;
-      _calibrationVideoPath = null;
-      _videoCalibrationReview = null;
       _verificationVideoPath = null;
       _frameCount = 0;
       _currentTargetIndex = 0;
@@ -503,7 +503,9 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   Future<void> _runVideoCalibration() async {
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
-      setState(() => _message = 'Open the camera before video calibration.');
+      setState(
+        () => _message = 'Open the camera before the camera readiness check.',
+      );
       return;
     }
     if (_calibratingVideo || controller.value.isRecordingVideo) return;
@@ -515,7 +517,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
         _calibratingVideo = true;
         _videoCalibrationReview = null;
         _message =
-            'Video calibration is recording. Keep your face visible and turn slightly left and right.';
+            'Camera readiness video is recording. Keep your face visible and turn slightly left and right.';
       });
       final beforeFrame = await _frameSource.captureStillFrame(controller);
       final faceReview = await _captureFaceCalibrationSample(controller);
@@ -532,7 +534,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       setState(() {
         _calibrationVideoPath = file.path;
         _videoCalibrationReview = review;
-        _message = 'Video calibration passed. Start the 360 room scan.';
+        _message = 'Camera readiness complete. Start the 360 room scan.';
       });
     } catch (e) {
       try {
@@ -548,7 +550,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           'reason': 'video calibration failed',
           'error': e.toString(),
         };
-        _message = 'Video calibration failed. Check the camera and retry. $e';
+        _message =
+            'Camera readiness check failed. Check the camera and retry. $e';
       });
     } finally {
       if (mounted) {
@@ -749,7 +752,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (!_backupScanReady && !_videoCalibrationComplete) {
       setState(
         () => _message =
-            'Run video calibration before sending the final exam check.',
+            'Complete camera readiness before sending the final exam check.',
       );
       return;
     }
@@ -1328,7 +1331,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
   }
 
   String _cameraOverlayText() {
-    if (_calibratingVideo) return 'Video calibration in progress';
+    if (_calibratingVideo) return 'Camera readiness in progress';
     if (_recordingVideo) return 'Short video • keep your face visible';
     if (_reviewing) return 'Final check in progress';
     if (_scanComplete) return 'Room scan complete';
@@ -1352,7 +1355,7 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (_scanning) return _currentGuide.instruction;
     if (_cameraReady) {
       if (!_backupScanReady && !_videoCalibrationComplete) {
-        return 'Run video calibration before the automatic room scan.';
+        return 'Complete camera readiness before the automatic room scan.';
       }
       return 'Click Start automatic scan. The app will capture each view by itself.';
     }
@@ -1384,11 +1387,11 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
                 : 'captured',
           ),
           _MetricPill(
-            label: 'Calibration',
+            label: 'Camera readiness',
             value: _videoCalibrationComplete
-                ? 'done'
+                ? 'complete'
                 : _calibratingVideo
-                ? 'recording'
+                ? 'checking'
                 : 'pending',
           ),
           TextButton.icon(
@@ -1655,8 +1658,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     if (!_backupScanReady && !_videoCalibrationComplete) {
       return _MobileScanAction(
         label: _calibratingVideo
-            ? 'Calibrating camera...'
-            : 'Run video calibration',
+            ? 'Checking camera...'
+            : 'Check camera readiness',
         icon: Icons.video_camera_front_outlined,
         loading: _calibratingVideo,
         onPressed: _calibratingVideo ? null : _runVideoCalibration,
