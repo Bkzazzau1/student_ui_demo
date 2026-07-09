@@ -1,5 +1,9 @@
+import 'dart:async';
+
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import '../proctoring_demo/camera_runtime_coordinator.dart';
 import '../rust/api/air_board.dart' as rust_air;
 
 const Color _brand = Color(0xFF0F4C81);
@@ -19,8 +23,16 @@ class AirBoardDemoView extends StatefulWidget {
 }
 
 class _AirBoardDemoViewState extends State<AirBoardDemoView> {
+  static const String _cameraOwner = 'air_board_demo';
+  static const bool _useNativeAirBoard = bool.fromEnvironment(
+    'KSLAS_USE_NATIVE_AIR_BOARD',
+    defaultValue: false,
+  );
+
   final DateTime _openedAt = DateTime.now();
   final List<_AirBoardPage> _pages = <_AirBoardPage>[_AirBoardPage(index: 0)];
+  final CameraRuntimeCoordinator _cameraRuntime =
+      CameraRuntimeCoordinator.instance;
 
   int _activePageIndex = 0;
   int _strokeCounter = 0;
@@ -30,6 +42,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
   DateTime? _lastActivityAt;
   late rust_air.AirBoardActivitySummary _rustSummary;
   late String _evidenceManifest;
+  CameraController? _camera;
+  bool _ownsCameraLease = false;
+  bool _openingCamera = false;
+  String _cameraStatus = 'Opening camera preview...';
 
   _AirBoardPage get _activePage => _pages[_activePageIndex];
   List<_AirBoardStroke> get _allStrokes => [
@@ -42,6 +58,83 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     super.initState();
     _rustSummary = _analyzeWithRust();
     _evidenceManifest = _buildManifest(_rustSummary);
+    unawaited(_startCameraPreview());
+  }
+
+  @override
+  void dispose() {
+    final camera = _camera;
+    _camera = null;
+    unawaited(camera?.dispose());
+    if (_ownsCameraLease) {
+      _cameraRuntime.release(_cameraOwner);
+    }
+    super.dispose();
+  }
+
+  Future<void> _startCameraPreview() async {
+    if (_openingCamera) return;
+    final lease = _cameraRuntime.tryAcquire(
+      owner: _cameraOwner,
+      purpose: 'air_board_camera_preview',
+    );
+    if (lease == null) {
+      if (!mounted) return;
+      final activeOwner = _cameraRuntime.activeLease?.owner ?? 'live monitor';
+      setState(() {
+        _cameraStatus =
+            'Camera is already active for $activeOwner. Your monitoring camera remains running while you use the board.';
+      });
+      return;
+    }
+
+    _ownsCameraLease = true;
+    setState(() {
+      _openingCamera = true;
+      _cameraStatus = 'Opening camera preview...';
+    });
+
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _cameraStatus =
+              'No camera was found. Connect or enable your webcam, then reopen the board.';
+        });
+        return;
+      }
+
+      final selected = cameras.firstWhere(
+        (item) => item.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+      final controller = CameraController(
+        selected,
+        ResolutionPreset.low,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
+      );
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() {
+        _camera = controller;
+        _cameraStatus = 'Camera preview active';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _cameraStatus =
+            'Camera preview could not open. Close other apps using the camera and try again. $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _openingCamera = false);
+      }
+    }
   }
 
   void _startStroke(Offset position) {
@@ -135,14 +228,78 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       openedAtMs: _openedAt.millisecondsSinceEpoch,
       nowMs: now.millisecondsSinceEpoch,
     );
-    return rust_air.analyzeAirBoardContext(context: context);
+    if (!_useNativeAirBoard) return _analyzeWithDart(context);
+    try {
+      return rust_air.analyzeAirBoardContext(context: context);
+    } catch (_) {
+      return _analyzeWithDart(context);
+    }
   }
 
   String _buildManifest(rust_air.AirBoardActivitySummary summary) {
-    return rust_air.buildAirBoardEvidenceManifest(
-      sessionId: 'student-air-board-demo',
-      attemptId: 'attempt-${_openedAt.millisecondsSinceEpoch}',
-      summary: summary,
+    if (_useNativeAirBoard) {
+      try {
+        return rust_air.buildAirBoardEvidenceManifest(
+          sessionId: 'student-air-board-demo',
+          attemptId: 'attempt-${_openedAt.millisecondsSinceEpoch}',
+          summary: summary,
+        );
+      } catch (_) {}
+    }
+    return 'air_board:student-air-board-demo:attempt-${_openedAt.millisecondsSinceEpoch}:'
+        'active=${summary.active}:strokes=${summary.strokeCount}:'
+        'points=${summary.totalPoints}:duration_ms=${summary.activeDurationMs}:'
+        'attention=${summary.attentionLevel}';
+  }
+
+  rust_air.AirBoardActivitySummary _analyzeWithDart(
+    rust_air.AirBoardContext context,
+  ) {
+    final strokeCount = context.strokes.length;
+    final totalPoints = context.strokes.fold<int>(
+      0,
+      (count, stroke) => count + stroke.points.length,
+    );
+    final activeDurationMs = context.isOpen && context.openedAtMs > 0
+        ? (context.nowMs - context.openedAtMs).clamp(0, 1 << 62).toInt()
+        : 0;
+    final idleDurationMs = context.lastActivityAtMs > 0
+        ? (context.nowMs - context.lastActivityAtMs).clamp(0, 1 << 62).toInt()
+        : activeDurationMs;
+    final currentlyWriting =
+        context.isOpen && idleDurationMs <= 4000 && totalPoints > 0;
+
+    late final String attentionLevel;
+    late final String reason;
+    if (!context.isOpen) {
+      attentionLevel = 'normal';
+      reason = 'rough-work board is closed';
+    } else if (currentlyWriting) {
+      attentionLevel = 'normal';
+      reason = 'rough-work board is active and writing is in progress';
+    } else if (totalPoints == 0 && activeDurationMs > 60000) {
+      attentionLevel = 'medium_attention_required';
+      reason = 'rough-work board has been open without writing activity';
+    } else if (idleDurationMs > 120000) {
+      attentionLevel = 'medium_attention_required';
+      reason = 'rough-work board is open but has been idle for a long time';
+    } else {
+      attentionLevel = 'normal';
+      reason = 'rough-work board activity is within expected range';
+    }
+
+    return rust_air.AirBoardActivitySummary(
+      active: context.isOpen,
+      currentlyWriting: currentlyWriting,
+      strokeCount: strokeCount,
+      pageCount: context.pageCount < 0 ? 0 : context.pageCount,
+      activePageIndex:
+          context.activePageIndex < 0 ? 0 : context.activePageIndex,
+      totalPoints: totalPoints,
+      activeDurationMs: activeDurationMs,
+      idleDurationMs: idleDurationMs,
+      attentionLevel: attentionLevel,
+      reason: reason,
     );
   }
 
@@ -202,6 +359,12 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _AirBoardIntroCard(summary: _rustSummary),
+                    const SizedBox(height: 14),
+                    _AirBoardCameraPanel(
+                      controller: _camera,
+                      status: _cameraStatus,
+                      opening: _openingCamera,
+                    ),
                     const SizedBox(height: 14),
                     if (compact)
                       Column(
@@ -358,6 +521,76 @@ class _AirBoardIntroCard extends StatelessWidget {
           if (!wide) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, const SizedBox(height: 14), stats]);
           return Row(children: [Expanded(child: title), const SizedBox(width: 16), stats]);
         },
+      ),
+    );
+  }
+}
+
+class _AirBoardCameraPanel extends StatelessWidget {
+  const _AirBoardCameraPanel({
+    required this.controller,
+    required this.status,
+    required this.opening,
+  });
+
+  final CameraController? controller;
+  final String status;
+  final bool opening;
+
+  @override
+  Widget build(BuildContext context) {
+    final camera = controller;
+    final ready = camera != null && camera.value.isInitialized;
+    return _PanelCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: 150,
+              height: 94,
+              color: _brandDark,
+              child: ready
+                  ? FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: camera.value.previewSize?.height ?? 150,
+                        height: camera.value.previewSize?.width ?? 94,
+                        child: CameraPreview(camera),
+                      ),
+                    )
+                  : Icon(
+                      opening
+                          ? Icons.hourglass_top_rounded
+                          : Icons.videocam_off_outlined,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _PanelTitle(
+                  icon: Icons.photo_camera_front_outlined,
+                  title: 'Camera monitor',
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  status,
+                  style: const TextStyle(
+                    color: _muted,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -3,10 +3,12 @@ import 'package:get_storage/get_storage.dart';
 
 import 'auth/student_login_view.dart';
 import 'exam_demo/air_board_demo_view.dart';
+import 'rust/frb_generated.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
+  await BrainCoreApi.init();
   runApp(const StudentsUiDemoApp());
 }
 
