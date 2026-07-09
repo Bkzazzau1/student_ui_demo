@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 107546562;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1659212297;
 
 // Section: executor
 
@@ -91,6 +91,39 @@ fn wire__crate__api__proctoring__analyze_acoustic_chunk_impl(
                         api_speech_cooldown_ms,
                         api_now_ms,
                     ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__air_board__analyze_air_board_context_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_air_board_context",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_context =
+                <crate::api::air_board::AirBoardContext>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::air_board::analyze_air_board_context(api_context),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -167,6 +200,72 @@ fn wire__crate__api__proctoring__analyze_environment_frame_impl(
                         api_rotation_covered,
                         api_forbidden_keywords,
                     ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__exam_behavior__analyze_exam_behaviour_context_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_exam_behaviour_context",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_context =
+                <crate::api::exam_behavior::ExamBehaviourContext>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::exam_behavior::analyze_exam_behaviour_context(api_context),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__eye_intelligence__analyze_eye_region_signal_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_eye_region_signal",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_signal =
+                <crate::api::eye_intelligence::EyeRegionSignal>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::eye_intelligence::analyze_eye_region_signal(api_signal),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -563,6 +662,79 @@ fn wire__crate__api__attempt_recovery__attempt_checksum_impl(
         },
     )
 }
+fn wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "build_air_board_evidence_manifest",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session_id = <String>::sse_decode(&mut deserializer);
+            let api_attempt_id = <String>::sse_decode(&mut deserializer);
+            let api_summary =
+                <crate::api::air_board::AirBoardActivitySummary>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::air_board::build_air_board_evidence_manifest(
+                        api_session_id,
+                        api_attempt_id,
+                        api_summary,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "build_gaze_calibration_profile",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_samples =
+                <Vec<crate::api::gaze_calibration::GazeCalibrationSample>>::sse_decode(
+                    &mut deserializer,
+                );
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::gaze_calibration::build_gaze_calibration_profile(api_samples),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__proctoring__clear_vision_model_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -776,6 +948,38 @@ fn wire__crate__api__native_vision__decode_yolo_output_impl(
         },
     )
 }
+fn wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "describe_eye_zone_for_student",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_zone = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::eye_intelligence::describe_eye_zone_for_student(api_zone),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -872,6 +1076,52 @@ fn wire__crate__api__proctoring__load_vision_model_impl(
                     api_manifest_json,
                     api_model_bytes,
                 ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "predict_calibrated_gaze_zone",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_profile = <crate::api::gaze_calibration::GazeCalibrationProfile>::sse_decode(
+                &mut deserializer,
+            );
+            let api_eye_x = <f32>::sse_decode(&mut deserializer);
+            let api_eye_y = <f32>::sse_decode(&mut deserializer);
+            let api_head_yaw = <f32>::sse_decode(&mut deserializer);
+            let api_head_pitch = <f32>::sse_decode(&mut deserializer);
+            let api_signal_confidence = <f32>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::gaze_calibration::predict_calibrated_gaze_zone(
+                        api_profile,
+                        api_eye_x,
+                        api_eye_y,
+                        api_head_yaw,
+                        api_head_pitch,
+                        api_signal_confidence,
+                    ),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -1241,6 +1491,94 @@ impl SseDecode for crate::api::proctoring::AcousticSampleDecision {
     }
 }
 
+impl SseDecode for crate::api::air_board::AirBoardActivitySummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_active = <bool>::sse_decode(deserializer);
+        let mut var_currentlyWriting = <bool>::sse_decode(deserializer);
+        let mut var_strokeCount = <i32>::sse_decode(deserializer);
+        let mut var_pageCount = <i32>::sse_decode(deserializer);
+        let mut var_activePageIndex = <i32>::sse_decode(deserializer);
+        let mut var_totalPoints = <i32>::sse_decode(deserializer);
+        let mut var_activeDurationMs = <i64>::sse_decode(deserializer);
+        let mut var_idleDurationMs = <i64>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::air_board::AirBoardActivitySummary {
+            active: var_active,
+            currently_writing: var_currentlyWriting,
+            stroke_count: var_strokeCount,
+            page_count: var_pageCount,
+            active_page_index: var_activePageIndex,
+            total_points: var_totalPoints,
+            active_duration_ms: var_activeDurationMs,
+            idle_duration_ms: var_idleDurationMs,
+            attention_level: var_attentionLevel,
+            reason: var_reason,
+        };
+    }
+}
+
+impl SseDecode for crate::api::air_board::AirBoardContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_isOpen = <bool>::sse_decode(deserializer);
+        let mut var_activePageIndex = <i32>::sse_decode(deserializer);
+        let mut var_pageCount = <i32>::sse_decode(deserializer);
+        let mut var_strokes =
+            <Vec<crate::api::air_board::AirBoardStroke>>::sse_decode(deserializer);
+        let mut var_lastActivityAtMs = <i64>::sse_decode(deserializer);
+        let mut var_openedAtMs = <i64>::sse_decode(deserializer);
+        let mut var_nowMs = <i64>::sse_decode(deserializer);
+        return crate::api::air_board::AirBoardContext {
+            is_open: var_isOpen,
+            active_page_index: var_activePageIndex,
+            page_count: var_pageCount,
+            strokes: var_strokes,
+            last_activity_at_ms: var_lastActivityAtMs,
+            opened_at_ms: var_openedAtMs,
+            now_ms: var_nowMs,
+        };
+    }
+}
+
+impl SseDecode for crate::api::air_board::AirBoardStroke {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_strokeId = <String>::sse_decode(deserializer);
+        let mut var_pageIndex = <i32>::sse_decode(deserializer);
+        let mut var_tool = <String>::sse_decode(deserializer);
+        let mut var_points =
+            <Vec<crate::api::air_board::AirBoardStrokePoint>>::sse_decode(deserializer);
+        let mut var_startedAtMs = <i64>::sse_decode(deserializer);
+        let mut var_endedAtMs = <i64>::sse_decode(deserializer);
+        return crate::api::air_board::AirBoardStroke {
+            stroke_id: var_strokeId,
+            page_index: var_pageIndex,
+            tool: var_tool,
+            points: var_points,
+            started_at_ms: var_startedAtMs,
+            ended_at_ms: var_endedAtMs,
+        };
+    }
+}
+
+impl SseDecode for crate::api::air_board::AirBoardStrokePoint {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_x = <f32>::sse_decode(deserializer);
+        let mut var_y = <f32>::sse_decode(deserializer);
+        let mut var_pressure = <f32>::sse_decode(deserializer);
+        let mut var_timestampMs = <i64>::sse_decode(deserializer);
+        return crate::api::air_board::AirBoardStrokePoint {
+            x: var_x,
+            y: var_y,
+            pressure: var_pressure,
+            timestamp_ms: var_timestampMs,
+        };
+    }
+}
+
 impl SseDecode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1258,6 +1596,108 @@ impl SseDecode for crate::api::proctoring::EnvironmentFrameDecision {
             normalized_lighting_score: var_normalizedLightingScore,
             rotation_confirmed: var_rotationConfirmed,
             forbidden_objects: var_forbiddenObjects,
+        };
+    }
+}
+
+impl SseDecode for crate::api::exam_behavior::ExamBehaviourContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_gaze =
+            <crate::api::gaze_calibration::GazeZonePrediction>::sse_decode(deserializer);
+        let mut var_airBoard =
+            <crate::api::air_board::AirBoardActivitySummary>::sse_decode(deserializer);
+        let mut var_headPoseAttentionLevel = <String>::sse_decode(deserializer);
+        let mut var_audioAttentionLevel = <String>::sse_decode(deserializer);
+        let mut var_screenAttentionLevel = <String>::sse_decode(deserializer);
+        let mut var_externalVoiceDetected = <bool>::sse_decode(deserializer);
+        let mut var_screenLeft = <bool>::sse_decode(deserializer);
+        let mut var_nowMs = <i64>::sse_decode(deserializer);
+        return crate::api::exam_behavior::ExamBehaviourContext {
+            gaze: var_gaze,
+            air_board: var_airBoard,
+            head_pose_attention_level: var_headPoseAttentionLevel,
+            audio_attention_level: var_audioAttentionLevel,
+            screen_attention_level: var_screenAttentionLevel,
+            external_voice_detected: var_externalVoiceDetected,
+            screen_left: var_screenLeft,
+            now_ms: var_nowMs,
+        };
+    }
+}
+
+impl SseDecode for crate::api::exam_behavior::ExamBehaviourDecision {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_behaviourLabel = <String>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_normalCalculationBehaviour = <bool>::sse_decode(deserializer);
+        let mut var_reviewRequired = <bool>::sse_decode(deserializer);
+        let mut var_suggestedStudentMessage = <String>::sse_decode(deserializer);
+        let mut var_reviewerSummary = <String>::sse_decode(deserializer);
+        return crate::api::exam_behavior::ExamBehaviourDecision {
+            behaviour_label: var_behaviourLabel,
+            attention_level: var_attentionLevel,
+            normal_calculation_behaviour: var_normalCalculationBehaviour,
+            review_required: var_reviewRequired,
+            suggested_student_message: var_suggestedStudentMessage,
+            reviewer_summary: var_reviewerSummary,
+        };
+    }
+}
+
+impl SseDecode for crate::api::eye_intelligence::EyeIntelligenceResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_usable = <bool>::sse_decode(deserializer);
+        let mut var_eyeX = <f32>::sse_decode(deserializer);
+        let mut var_eyeY = <f32>::sse_decode(deserializer);
+        let mut var_opennessScore = <f32>::sse_decode(deserializer);
+        let mut var_signalConfidence = <f32>::sse_decode(deserializer);
+        let mut var_headStable = <bool>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::eye_intelligence::EyeIntelligenceResult {
+            usable: var_usable,
+            eye_x: var_eyeX,
+            eye_y: var_eyeY,
+            openness_score: var_opennessScore,
+            signal_confidence: var_signalConfidence,
+            head_stable: var_headStable,
+            attention_level: var_attentionLevel,
+            reason: var_reason,
+        };
+    }
+}
+
+impl SseDecode for crate::api::eye_intelligence::EyeRegionSignal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_leftEyeOpen = <f32>::sse_decode(deserializer);
+        let mut var_rightEyeOpen = <f32>::sse_decode(deserializer);
+        let mut var_leftIrisX = <f32>::sse_decode(deserializer);
+        let mut var_leftIrisY = <f32>::sse_decode(deserializer);
+        let mut var_rightIrisX = <f32>::sse_decode(deserializer);
+        let mut var_rightIrisY = <f32>::sse_decode(deserializer);
+        let mut var_faceConfidence = <f32>::sse_decode(deserializer);
+        let mut var_landmarkConfidence = <f32>::sse_decode(deserializer);
+        let mut var_frameBrightness = <f32>::sse_decode(deserializer);
+        let mut var_headYaw = <f32>::sse_decode(deserializer);
+        let mut var_headPitch = <f32>::sse_decode(deserializer);
+        let mut var_headRoll = <f32>::sse_decode(deserializer);
+        return crate::api::eye_intelligence::EyeRegionSignal {
+            left_eye_open: var_leftEyeOpen,
+            right_eye_open: var_rightEyeOpen,
+            left_iris_x: var_leftIrisX,
+            left_iris_y: var_leftIrisY,
+            right_iris_x: var_rightIrisX,
+            right_iris_y: var_rightIrisY,
+            face_confidence: var_faceConfidence,
+            landmark_confidence: var_landmarkConfidence,
+            frame_brightness: var_frameBrightness,
+            head_yaw: var_headYaw,
+            head_pitch: var_headPitch,
+            head_roll: var_headRoll,
         };
     }
 }
@@ -1294,6 +1734,56 @@ impl SseDecode for crate::api::proctoring::FaceAnalysisDecision {
     }
 }
 
+impl SseDecode for crate::api::gaze_calibration::GazeCalibrationProfile {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_usable = <bool>::sse_decode(deserializer);
+        let mut var_sampleCount = <i32>::sse_decode(deserializer);
+        let mut var_zones = <Vec<String>>::sse_decode(deserializer);
+        let mut var_centerEyeX = <f32>::sse_decode(deserializer);
+        let mut var_centerEyeY = <f32>::sse_decode(deserializer);
+        let mut var_yawBias = <f32>::sse_decode(deserializer);
+        let mut var_pitchBias = <f32>::sse_decode(deserializer);
+        let mut var_qualityScore = <f32>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::gaze_calibration::GazeCalibrationProfile {
+            usable: var_usable,
+            sample_count: var_sampleCount,
+            zones: var_zones,
+            center_eye_x: var_centerEyeX,
+            center_eye_y: var_centerEyeY,
+            yaw_bias: var_yawBias,
+            pitch_bias: var_pitchBias,
+            quality_score: var_qualityScore,
+            reason: var_reason,
+        };
+    }
+}
+
+impl SseDecode for crate::api::gaze_calibration::GazeCalibrationSample {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_zone = <String>::sse_decode(deserializer);
+        let mut var_eyeX = <f32>::sse_decode(deserializer);
+        let mut var_eyeY = <f32>::sse_decode(deserializer);
+        let mut var_headYaw = <f32>::sse_decode(deserializer);
+        let mut var_headPitch = <f32>::sse_decode(deserializer);
+        let mut var_headRoll = <f32>::sse_decode(deserializer);
+        let mut var_confidence = <f32>::sse_decode(deserializer);
+        let mut var_timestampMs = <i64>::sse_decode(deserializer);
+        return crate::api::gaze_calibration::GazeCalibrationSample {
+            zone: var_zone,
+            eye_x: var_eyeX,
+            eye_y: var_eyeY,
+            head_yaw: var_headYaw,
+            head_pitch: var_headPitch,
+            head_roll: var_headRoll,
+            confidence: var_confidence,
+            timestamp_ms: var_timestampMs,
+        };
+    }
+}
+
 impl SseDecode for crate::api::proctoring::GazeHeadPoseDecision {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1322,6 +1812,24 @@ impl SseDecode for crate::api::proctoring::GazeHeadPoseDecision {
     }
 }
 
+impl SseDecode for crate::api::gaze_calibration::GazeZonePrediction {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_zone = <String>::sse_decode(deserializer);
+        let mut var_confidence = <f32>::sse_decode(deserializer);
+        let mut var_calibrated = <bool>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::gaze_calibration::GazeZonePrediction {
+            zone: var_zone,
+            confidence: var_confidence,
+            calibrated: var_calibrated,
+            attention_level: var_attentionLevel,
+            reason: var_reason,
+        };
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1343,6 +1851,48 @@ impl SseDecode for Vec<String> {
         let mut ans_ = vec![];
         for idx_ in 0..len_ {
             ans_.push(<String>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::air_board::AirBoardStroke> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::air_board::AirBoardStroke>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::air_board::AirBoardStrokePoint> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::air_board::AirBoardStrokePoint>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::gaze_calibration::GazeCalibrationSample> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(
+                <crate::api::gaze_calibration::GazeCalibrationSample>::sse_decode(deserializer),
+            );
         }
         return ans_;
     }
@@ -1775,31 +2325,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        14 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        19 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        20 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => wire__crate__api__system_security__collect_system_security_report_impl(
+        21 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        32 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__system_security__run_system_security_review_impl(
+        33 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -1818,81 +2368,114 @@ fn pde_ffi_dispatcher_sync_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         1 => wire__crate__api__proctoring__analyze_acoustic_chunk_impl(ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__audio_intelligence__analyze_audio_pcm16_impl(
+        2 => {
+            wire__crate__api__air_board__analyze_air_board_context_impl(ptr, rust_vec_len, data_len)
+        }
+        3 => wire__crate__api__audio_intelligence__analyze_audio_pcm16_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        3 => wire__crate__api__proctoring__analyze_environment_frame_impl(
+        4 => wire__crate__api__proctoring__analyze_environment_frame_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        4 => wire__crate__api__proctoring__analyze_face_state_impl(ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
+        5 => wire__crate__api__exam_behavior__analyze_exam_behaviour_context_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
+        6 => wire__crate__api__eye_intelligence__analyze_eye_region_signal_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        7 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
+        7 => wire__crate__api__proctoring__analyze_face_state_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
+        9 => wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__system_security__analyze_system_security_report_impl(
+        10 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => {
+        12 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        14 => wire__crate__api__system_security__analyze_system_security_report_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        15 => {
             wire__crate__api__attempt_recovery__attempt_checksum_impl(ptr, rust_vec_len, data_len)
         }
-        13 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        16 => wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+        17 => wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => {
+        18 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__proctoring__current_vision_model_status_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        23 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        25 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        26 => {
             wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
         }
-        21 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        22 => {
-            wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
-        }
-        23 => {
-            wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
-        }
-        24 => wire__crate__api__native_vision__review_object_detections_impl(
+        27 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => {
+        29 => {
+            wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
+        }
+        30 => {
+            wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
+        }
+        31 => wire__crate__api__native_vision__review_object_detections_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        34 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        28 => {
+        35 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        29 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+        36 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -1954,6 +2537,109 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::AcousticSampleDec
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::air_board::AirBoardActivitySummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.active.into_into_dart().into_dart(),
+            self.currently_writing.into_into_dart().into_dart(),
+            self.stroke_count.into_into_dart().into_dart(),
+            self.page_count.into_into_dart().into_dart(),
+            self.active_page_index.into_into_dart().into_dart(),
+            self.total_points.into_into_dart().into_dart(),
+            self.active_duration_ms.into_into_dart().into_dart(),
+            self.idle_duration_ms.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::air_board::AirBoardActivitySummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::air_board::AirBoardActivitySummary>
+    for crate::api::air_board::AirBoardActivitySummary
+{
+    fn into_into_dart(self) -> crate::api::air_board::AirBoardActivitySummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::air_board::AirBoardContext {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.is_open.into_into_dart().into_dart(),
+            self.active_page_index.into_into_dart().into_dart(),
+            self.page_count.into_into_dart().into_dart(),
+            self.strokes.into_into_dart().into_dart(),
+            self.last_activity_at_ms.into_into_dart().into_dart(),
+            self.opened_at_ms.into_into_dart().into_dart(),
+            self.now_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::air_board::AirBoardContext
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::air_board::AirBoardContext>
+    for crate::api::air_board::AirBoardContext
+{
+    fn into_into_dart(self) -> crate::api::air_board::AirBoardContext {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::air_board::AirBoardStroke {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.stroke_id.into_into_dart().into_dart(),
+            self.page_index.into_into_dart().into_dart(),
+            self.tool.into_into_dart().into_dart(),
+            self.points.into_into_dart().into_dart(),
+            self.started_at_ms.into_into_dart().into_dart(),
+            self.ended_at_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::air_board::AirBoardStroke
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::air_board::AirBoardStroke>
+    for crate::api::air_board::AirBoardStroke
+{
+    fn into_into_dart(self) -> crate::api::air_board::AirBoardStroke {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::air_board::AirBoardStrokePoint {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.x.into_into_dart().into_dart(),
+            self.y.into_into_dart().into_dart(),
+            self.pressure.into_into_dart().into_dart(),
+            self.timestamp_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::air_board::AirBoardStrokePoint
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::air_board::AirBoardStrokePoint>
+    for crate::api::air_board::AirBoardStrokePoint
+{
+    fn into_into_dart(self) -> crate::api::air_board::AirBoardStrokePoint {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::proctoring::EnvironmentFrameDecision {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -1972,6 +2658,118 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::EnvironmentFrameD
     for crate::api::proctoring::EnvironmentFrameDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::EnvironmentFrameDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::exam_behavior::ExamBehaviourContext {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.gaze.into_into_dart().into_dart(),
+            self.air_board.into_into_dart().into_dart(),
+            self.head_pose_attention_level.into_into_dart().into_dart(),
+            self.audio_attention_level.into_into_dart().into_dart(),
+            self.screen_attention_level.into_into_dart().into_dart(),
+            self.external_voice_detected.into_into_dart().into_dart(),
+            self.screen_left.into_into_dart().into_dart(),
+            self.now_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::exam_behavior::ExamBehaviourContext
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::exam_behavior::ExamBehaviourContext>
+    for crate::api::exam_behavior::ExamBehaviourContext
+{
+    fn into_into_dart(self) -> crate::api::exam_behavior::ExamBehaviourContext {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::exam_behavior::ExamBehaviourDecision {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.behaviour_label.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.normal_calculation_behaviour
+                .into_into_dart()
+                .into_dart(),
+            self.review_required.into_into_dart().into_dart(),
+            self.suggested_student_message.into_into_dart().into_dart(),
+            self.reviewer_summary.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::exam_behavior::ExamBehaviourDecision
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::exam_behavior::ExamBehaviourDecision>
+    for crate::api::exam_behavior::ExamBehaviourDecision
+{
+    fn into_into_dart(self) -> crate::api::exam_behavior::ExamBehaviourDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::eye_intelligence::EyeIntelligenceResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.usable.into_into_dart().into_dart(),
+            self.eye_x.into_into_dart().into_dart(),
+            self.eye_y.into_into_dart().into_dart(),
+            self.openness_score.into_into_dart().into_dart(),
+            self.signal_confidence.into_into_dart().into_dart(),
+            self.head_stable.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::eye_intelligence::EyeIntelligenceResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::eye_intelligence::EyeIntelligenceResult>
+    for crate::api::eye_intelligence::EyeIntelligenceResult
+{
+    fn into_into_dart(self) -> crate::api::eye_intelligence::EyeIntelligenceResult {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::eye_intelligence::EyeRegionSignal {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.left_eye_open.into_into_dart().into_dart(),
+            self.right_eye_open.into_into_dart().into_dart(),
+            self.left_iris_x.into_into_dart().into_dart(),
+            self.left_iris_y.into_into_dart().into_dart(),
+            self.right_iris_x.into_into_dart().into_dart(),
+            self.right_iris_y.into_into_dart().into_dart(),
+            self.face_confidence.into_into_dart().into_dart(),
+            self.landmark_confidence.into_into_dart().into_dart(),
+            self.frame_brightness.into_into_dart().into_dart(),
+            self.head_yaw.into_into_dart().into_dart(),
+            self.head_pitch.into_into_dart().into_dart(),
+            self.head_roll.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::eye_intelligence::EyeRegionSignal
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::eye_intelligence::EyeRegionSignal>
+    for crate::api::eye_intelligence::EyeRegionSignal
+{
+    fn into_into_dart(self) -> crate::api::eye_intelligence::EyeRegionSignal {
         self
     }
 }
@@ -2006,6 +2804,61 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::FaceAnalysisDecis
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::gaze_calibration::GazeCalibrationProfile {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.usable.into_into_dart().into_dart(),
+            self.sample_count.into_into_dart().into_dart(),
+            self.zones.into_into_dart().into_dart(),
+            self.center_eye_x.into_into_dart().into_dart(),
+            self.center_eye_y.into_into_dart().into_dart(),
+            self.yaw_bias.into_into_dart().into_dart(),
+            self.pitch_bias.into_into_dart().into_dart(),
+            self.quality_score.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::gaze_calibration::GazeCalibrationProfile
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::gaze_calibration::GazeCalibrationProfile>
+    for crate::api::gaze_calibration::GazeCalibrationProfile
+{
+    fn into_into_dart(self) -> crate::api::gaze_calibration::GazeCalibrationProfile {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::gaze_calibration::GazeCalibrationSample {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.zone.into_into_dart().into_dart(),
+            self.eye_x.into_into_dart().into_dart(),
+            self.eye_y.into_into_dart().into_dart(),
+            self.head_yaw.into_into_dart().into_dart(),
+            self.head_pitch.into_into_dart().into_dart(),
+            self.head_roll.into_into_dart().into_dart(),
+            self.confidence.into_into_dart().into_dart(),
+            self.timestamp_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::gaze_calibration::GazeCalibrationSample
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::gaze_calibration::GazeCalibrationSample>
+    for crate::api::gaze_calibration::GazeCalibrationSample
+{
+    fn into_into_dart(self) -> crate::api::gaze_calibration::GazeCalibrationSample {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::proctoring::GazeHeadPoseDecision {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2031,6 +2884,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::GazeHeadPoseDecis
     for crate::api::proctoring::GazeHeadPoseDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::GazeHeadPoseDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::gaze_calibration::GazeZonePrediction {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.zone.into_into_dart().into_dart(),
+            self.confidence.into_into_dart().into_dart(),
+            self.calibrated.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::gaze_calibration::GazeZonePrediction
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::gaze_calibration::GazeZonePrediction>
+    for crate::api::gaze_calibration::GazeZonePrediction
+{
+    fn into_into_dart(self) -> crate::api::gaze_calibration::GazeZonePrediction {
         self
     }
 }
@@ -2412,6 +3289,57 @@ impl SseEncode for crate::api::proctoring::AcousticSampleDecision {
     }
 }
 
+impl SseEncode for crate::api::air_board::AirBoardActivitySummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.active, serializer);
+        <bool>::sse_encode(self.currently_writing, serializer);
+        <i32>::sse_encode(self.stroke_count, serializer);
+        <i32>::sse_encode(self.page_count, serializer);
+        <i32>::sse_encode(self.active_page_index, serializer);
+        <i32>::sse_encode(self.total_points, serializer);
+        <i64>::sse_encode(self.active_duration_ms, serializer);
+        <i64>::sse_encode(self.idle_duration_ms, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
+impl SseEncode for crate::api::air_board::AirBoardContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_open, serializer);
+        <i32>::sse_encode(self.active_page_index, serializer);
+        <i32>::sse_encode(self.page_count, serializer);
+        <Vec<crate::api::air_board::AirBoardStroke>>::sse_encode(self.strokes, serializer);
+        <i64>::sse_encode(self.last_activity_at_ms, serializer);
+        <i64>::sse_encode(self.opened_at_ms, serializer);
+        <i64>::sse_encode(self.now_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::air_board::AirBoardStroke {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.stroke_id, serializer);
+        <i32>::sse_encode(self.page_index, serializer);
+        <String>::sse_encode(self.tool, serializer);
+        <Vec<crate::api::air_board::AirBoardStrokePoint>>::sse_encode(self.points, serializer);
+        <i64>::sse_encode(self.started_at_ms, serializer);
+        <i64>::sse_encode(self.ended_at_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::air_board::AirBoardStrokePoint {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f32>::sse_encode(self.x, serializer);
+        <f32>::sse_encode(self.y, serializer);
+        <f32>::sse_encode(self.pressure, serializer);
+        <i64>::sse_encode(self.timestamp_ms, serializer);
+    }
+}
+
 impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2425,6 +3353,64 @@ impl SseEncode for crate::api::proctoring::EnvironmentFrameDecision {
         <f64>::sse_encode(self.normalized_lighting_score, serializer);
         <bool>::sse_encode(self.rotation_confirmed, serializer);
         <Vec<String>>::sse_encode(self.forbidden_objects, serializer);
+    }
+}
+
+impl SseEncode for crate::api::exam_behavior::ExamBehaviourContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::gaze_calibration::GazeZonePrediction>::sse_encode(self.gaze, serializer);
+        <crate::api::air_board::AirBoardActivitySummary>::sse_encode(self.air_board, serializer);
+        <String>::sse_encode(self.head_pose_attention_level, serializer);
+        <String>::sse_encode(self.audio_attention_level, serializer);
+        <String>::sse_encode(self.screen_attention_level, serializer);
+        <bool>::sse_encode(self.external_voice_detected, serializer);
+        <bool>::sse_encode(self.screen_left, serializer);
+        <i64>::sse_encode(self.now_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::exam_behavior::ExamBehaviourDecision {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.behaviour_label, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <bool>::sse_encode(self.normal_calculation_behaviour, serializer);
+        <bool>::sse_encode(self.review_required, serializer);
+        <String>::sse_encode(self.suggested_student_message, serializer);
+        <String>::sse_encode(self.reviewer_summary, serializer);
+    }
+}
+
+impl SseEncode for crate::api::eye_intelligence::EyeIntelligenceResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.usable, serializer);
+        <f32>::sse_encode(self.eye_x, serializer);
+        <f32>::sse_encode(self.eye_y, serializer);
+        <f32>::sse_encode(self.openness_score, serializer);
+        <f32>::sse_encode(self.signal_confidence, serializer);
+        <bool>::sse_encode(self.head_stable, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
+impl SseEncode for crate::api::eye_intelligence::EyeRegionSignal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f32>::sse_encode(self.left_eye_open, serializer);
+        <f32>::sse_encode(self.right_eye_open, serializer);
+        <f32>::sse_encode(self.left_iris_x, serializer);
+        <f32>::sse_encode(self.left_iris_y, serializer);
+        <f32>::sse_encode(self.right_iris_x, serializer);
+        <f32>::sse_encode(self.right_iris_y, serializer);
+        <f32>::sse_encode(self.face_confidence, serializer);
+        <f32>::sse_encode(self.landmark_confidence, serializer);
+        <f32>::sse_encode(self.frame_brightness, serializer);
+        <f32>::sse_encode(self.head_yaw, serializer);
+        <f32>::sse_encode(self.head_pitch, serializer);
+        <f32>::sse_encode(self.head_roll, serializer);
     }
 }
 
@@ -2453,6 +3439,35 @@ impl SseEncode for crate::api::proctoring::FaceAnalysisDecision {
     }
 }
 
+impl SseEncode for crate::api::gaze_calibration::GazeCalibrationProfile {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.usable, serializer);
+        <i32>::sse_encode(self.sample_count, serializer);
+        <Vec<String>>::sse_encode(self.zones, serializer);
+        <f32>::sse_encode(self.center_eye_x, serializer);
+        <f32>::sse_encode(self.center_eye_y, serializer);
+        <f32>::sse_encode(self.yaw_bias, serializer);
+        <f32>::sse_encode(self.pitch_bias, serializer);
+        <f32>::sse_encode(self.quality_score, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
+impl SseEncode for crate::api::gaze_calibration::GazeCalibrationSample {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.zone, serializer);
+        <f32>::sse_encode(self.eye_x, serializer);
+        <f32>::sse_encode(self.eye_y, serializer);
+        <f32>::sse_encode(self.head_yaw, serializer);
+        <f32>::sse_encode(self.head_pitch, serializer);
+        <f32>::sse_encode(self.head_roll, serializer);
+        <f32>::sse_encode(self.confidence, serializer);
+        <i64>::sse_encode(self.timestamp_ms, serializer);
+    }
+}
+
 impl SseEncode for crate::api::proctoring::GazeHeadPoseDecision {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2466,6 +3481,17 @@ impl SseEncode for crate::api::proctoring::GazeHeadPoseDecision {
         <bool>::sse_encode(self.stable_head_pose, serializer);
         <bool>::sse_encode(self.looking_away, serializer);
         <String>::sse_encode(self.label, serializer);
+    }
+}
+
+impl SseEncode for crate::api::gaze_calibration::GazeZonePrediction {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.zone, serializer);
+        <f32>::sse_encode(self.confidence, serializer);
+        <bool>::sse_encode(self.calibrated, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <String>::sse_encode(self.reason, serializer);
     }
 }
 
@@ -2489,6 +3515,36 @@ impl SseEncode for Vec<String> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <String>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::air_board::AirBoardStroke> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::air_board::AirBoardStroke>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::air_board::AirBoardStrokePoint> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::air_board::AirBoardStrokePoint>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::gaze_calibration::GazeCalibrationSample> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::gaze_calibration::GazeCalibrationSample>::sse_encode(item, serializer);
         }
     }
 }

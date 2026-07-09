@@ -3,9 +3,13 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/air_board.dart';
 import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
+import 'api/exam_behavior.dart';
+import 'api/eye_intelligence.dart';
+import 'api/gaze_calibration.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
 import 'api/proctoring.dart';
@@ -72,7 +76,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 107546562;
+  int get rustContentHash => -1659212297;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -96,6 +100,10 @@ abstract class BrainCoreApiApi extends BaseApi {
     required PlatformInt64 nowMs,
   });
 
+  AirBoardActivitySummary crateApiAirBoardAnalyzeAirBoardContext({
+    required AirBoardContext context,
+  });
+
   NativeAudioIntelligenceResult? crateApiAudioIntelligenceAnalyzeAudioPcm16({
     required List<int> bytes,
     required int sampleRate,
@@ -107,6 +115,14 @@ abstract class BrainCoreApiApi extends BaseApi {
     required double lightingScore,
     required bool rotationCovered,
     required List<String> forbiddenKeywords,
+  });
+
+  ExamBehaviourDecision crateApiExamBehaviorAnalyzeExamBehaviourContext({
+    required ExamBehaviourContext context,
+  });
+
+  EyeIntelligenceResult crateApiEyeIntelligenceAnalyzeEyeRegionSignal({
+    required EyeRegionSignal signal,
   });
 
   FaceAnalysisDecision crateApiProctoringAnalyzeFaceState({
@@ -192,6 +208,16 @@ abstract class BrainCoreApiApi extends BaseApi {
 
   String crateApiAttemptRecoveryAttemptChecksum({required String payloadJson});
 
+  String crateApiAirBoardBuildAirBoardEvidenceManifest({
+    required String sessionId,
+    required String attemptId,
+    required AirBoardActivitySummary summary,
+  });
+
+  GazeCalibrationProfile crateApiGazeCalibrationBuildGazeCalibrationProfile({
+    required List<GazeCalibrationSample> samples,
+  });
+
   void crateApiProctoringClearVisionModel();
 
   Future<int?> crateApiLockdownCollectLockdownDisplayCount({
@@ -220,6 +246,10 @@ abstract class BrainCoreApiApi extends BaseApi {
     required List<String> classNames,
   });
 
+  String crateApiEyeIntelligenceDescribeEyeZoneForStudent({
+    required String zone,
+  });
+
   double crateApiProctoringEstimateLightingFromLuma({
     required List<int> lumaBytes,
     required int sampleStride,
@@ -230,6 +260,15 @@ abstract class BrainCoreApiApi extends BaseApi {
   VisionModelStatus crateApiProctoringLoadVisionModel({
     required String manifestJson,
     required List<int> modelBytes,
+  });
+
+  GazeZonePrediction crateApiGazeCalibrationPredictCalibratedGazeZone({
+    required GazeCalibrationProfile profile,
+    required double eyeX,
+    required double eyeY,
+    required double headYaw,
+    required double headPitch,
+    required double signalConfidence,
   });
 
   AcousticSampleDecision crateApiProctoringProcessAcousticSample({
@@ -365,6 +404,34 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  AirBoardActivitySummary crateApiAirBoardAnalyzeAirBoardContext({
+    required AirBoardContext context,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_air_board_context(context, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_air_board_activity_summary,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAirBoardAnalyzeAirBoardContextConstMeta,
+        argValues: [context],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAirBoardAnalyzeAirBoardContextConstMeta =>
+      const TaskConstMeta(
+        debugName: "analyze_air_board_context",
+        argNames: ["context"],
+      );
+
+  @override
   NativeAudioIntelligenceResult? crateApiAudioIntelligenceAnalyzeAudioPcm16({
     required List<int> bytes,
     required int sampleRate,
@@ -377,7 +444,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_i_32(sampleRate, serializer);
           sse_encode_opt_String(previousFingerprint, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -412,7 +479,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lightingScore, serializer);
           sse_encode_bool(rotationCovered, serializer);
           sse_encode_list_String(forbiddenKeywords, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_environment_frame_decision,
@@ -439,6 +506,62 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           "rotationCovered",
           "forbiddenKeywords",
         ],
+      );
+
+  @override
+  ExamBehaviourDecision crateApiExamBehaviorAnalyzeExamBehaviourContext({
+    required ExamBehaviourContext context,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_exam_behaviour_context(context, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_exam_behaviour_decision,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExamBehaviorAnalyzeExamBehaviourContextConstMeta,
+        argValues: [context],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiExamBehaviorAnalyzeExamBehaviourContextConstMeta =>
+      const TaskConstMeta(
+        debugName: "analyze_exam_behaviour_context",
+        argNames: ["context"],
+      );
+
+  @override
+  EyeIntelligenceResult crateApiEyeIntelligenceAnalyzeEyeRegionSignal({
+    required EyeRegionSignal signal,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_eye_region_signal(signal, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_eye_intelligence_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiEyeIntelligenceAnalyzeEyeRegionSignalConstMeta,
+        argValues: [signal],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEyeIntelligenceAnalyzeEyeRegionSignalConstMeta =>
+      const TaskConstMeta(
+        debugName: "analyze_eye_region_signal",
+        argNames: ["signal"],
       );
 
   @override
@@ -474,7 +597,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_64(gazeWarningCooldownMs, serializer);
           sse_encode_f_64(yawThreshold, serializer);
           sse_encode_f_64(pitchThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_face_analysis_decision,
@@ -542,7 +665,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(previousYaw, serializer);
           sse_encode_f_64(previousPitch, serializer);
           sse_encode_f_64(previousRoll, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_box_autoadd_gaze_head_pose_decision,
@@ -604,7 +727,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(mouthY, serializer);
           sse_encode_f_32(faceWidth, serializer);
           sse_encode_f_32(faceHeight, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_head_pose_review_result,
@@ -678,7 +801,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_64(windowMs, serializer);
           sse_encode_u_32(burstCount, serializer);
           sse_encode_u_32(burstThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_motion_analysis_decision,
@@ -738,7 +861,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(width, serializer);
           sse_encode_i_32(height, serializer);
           sse_encode_list_prim_u_8_loose(rgbBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_vision_frame_quality,
@@ -774,7 +897,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_u_32(height, serializer);
           sse_encode_u_32(bytesPerRow, serializer);
           sse_encode_String(pixelFormat, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_scan_frame_decision,
@@ -812,7 +935,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(platformName, serializer);
           sse_encode_String(processReport, serializer);
           sse_encode_opt_box_autoadd_i_32(displayCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_secure_lockdown_review_result,
@@ -843,7 +966,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(report, serializer);
           sse_encode_String(platformName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_system_security_review_result,
@@ -870,7 +993,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(payloadJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -890,12 +1013,76 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  String crateApiAirBoardBuildAirBoardEvidenceManifest({
+    required String sessionId,
+    required String attemptId,
+    required AirBoardActivitySummary summary,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sessionId, serializer);
+          sse_encode_String(attemptId, serializer);
+          sse_encode_box_autoadd_air_board_activity_summary(
+            summary,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAirBoardBuildAirBoardEvidenceManifestConstMeta,
+        argValues: [sessionId, attemptId, summary],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAirBoardBuildAirBoardEvidenceManifestConstMeta =>
+      const TaskConstMeta(
+        debugName: "build_air_board_evidence_manifest",
+        argNames: ["sessionId", "attemptId", "summary"],
+      );
+
+  @override
+  GazeCalibrationProfile crateApiGazeCalibrationBuildGazeCalibrationProfile({
+    required List<GazeCalibrationSample> samples,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_gaze_calibration_sample(samples, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_gaze_calibration_profile,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiGazeCalibrationBuildGazeCalibrationProfileConstMeta,
+        argValues: [samples],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiGazeCalibrationBuildGazeCalibrationProfileConstMeta =>
+      const TaskConstMeta(
+        debugName: "build_gaze_calibration_profile",
+        argNames: ["samples"],
+      );
+
+  @override
   void crateApiProctoringClearVisionModel() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -923,7 +1110,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 19,
             port: port_,
           );
         },
@@ -956,7 +1143,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 20,
             port: port_,
           );
         },
@@ -989,7 +1176,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 21,
             port: port_,
           );
         },
@@ -1017,7 +1204,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -1061,7 +1248,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(iouThreshold, serializer);
           sse_encode_String(layout, serializer);
           sse_encode_list_String(classNames, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -1101,6 +1288,35 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  String crateApiEyeIntelligenceDescribeEyeZoneForStudent({
+    required String zone,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(zone, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiEyeIntelligenceDescribeEyeZoneForStudentConstMeta,
+        argValues: [zone],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiEyeIntelligenceDescribeEyeZoneForStudentConstMeta =>
+      const TaskConstMeta(
+        debugName: "describe_eye_zone_for_student",
+        argNames: ["zone"],
+      );
+
+  @override
   double crateApiProctoringEstimateLightingFromLuma({
     required List<int> lumaBytes,
     required int sampleStride,
@@ -1111,7 +1327,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(lumaBytes, serializer);
           sse_encode_u_32(sampleStride, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_64,
@@ -1137,7 +1353,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1167,7 +1383,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -1187,6 +1403,52 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  GazeZonePrediction crateApiGazeCalibrationPredictCalibratedGazeZone({
+    required GazeCalibrationProfile profile,
+    required double eyeX,
+    required double eyeY,
+    required double headYaw,
+    required double headPitch,
+    required double signalConfidence,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_gaze_calibration_profile(profile, serializer);
+          sse_encode_f_32(eyeX, serializer);
+          sse_encode_f_32(eyeY, serializer);
+          sse_encode_f_32(headYaw, serializer);
+          sse_encode_f_32(headPitch, serializer);
+          sse_encode_f_32(signalConfidence, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_gaze_zone_prediction,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiGazeCalibrationPredictCalibratedGazeZoneConstMeta,
+        argValues: [profile, eyeX, eyeY, headYaw, headPitch, signalConfidence],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiGazeCalibrationPredictCalibratedGazeZoneConstMeta =>
+      const TaskConstMeta(
+        debugName: "predict_calibrated_gaze_zone",
+        argNames: [
+          "profile",
+          "eyeX",
+          "eyeY",
+          "headYaw",
+          "headPitch",
+          "signalConfidence",
+        ],
+      );
+
+  @override
   AcousticSampleDecision crateApiProctoringProcessAcousticSample({
     required double dbfs,
     required double lossThresholdDbfs,
@@ -1201,7 +1463,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lossThresholdDbfs, serializer);
           sse_encode_u_32(lossStreak, serializer);
           sse_encode_u_32(lossSamplesToTrigger, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_acoustic_sample_decision,
@@ -1240,7 +1502,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(studentId, serializer);
           sse_encode_String(examId, serializer);
           sse_encode_String(attemptId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1270,7 +1532,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_native_vision_detection(detections, serializer);
           sse_encode_f_32(iouThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -1300,7 +1562,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1334,7 +1596,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1380,7 +1642,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1442,7 +1704,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -1492,7 +1754,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(payloadJson, serializer);
           sse_encode_String(checksum, serializer);
           sse_encode_String(recoveredFrom, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_attempt_recovery_check,
@@ -1548,9 +1810,112 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  AirBoardActivitySummary dco_decode_air_board_activity_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return AirBoardActivitySummary(
+      active: dco_decode_bool(arr[0]),
+      currentlyWriting: dco_decode_bool(arr[1]),
+      strokeCount: dco_decode_i_32(arr[2]),
+      pageCount: dco_decode_i_32(arr[3]),
+      activePageIndex: dco_decode_i_32(arr[4]),
+      totalPoints: dco_decode_i_32(arr[5]),
+      activeDurationMs: dco_decode_i_64(arr[6]),
+      idleDurationMs: dco_decode_i_64(arr[7]),
+      attentionLevel: dco_decode_String(arr[8]),
+      reason: dco_decode_String(arr[9]),
+    );
+  }
+
+  @protected
+  AirBoardContext dco_decode_air_board_context(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return AirBoardContext(
+      isOpen: dco_decode_bool(arr[0]),
+      activePageIndex: dco_decode_i_32(arr[1]),
+      pageCount: dco_decode_i_32(arr[2]),
+      strokes: dco_decode_list_air_board_stroke(arr[3]),
+      lastActivityAtMs: dco_decode_i_64(arr[4]),
+      openedAtMs: dco_decode_i_64(arr[5]),
+      nowMs: dco_decode_i_64(arr[6]),
+    );
+  }
+
+  @protected
+  AirBoardStroke dco_decode_air_board_stroke(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return AirBoardStroke(
+      strokeId: dco_decode_String(arr[0]),
+      pageIndex: dco_decode_i_32(arr[1]),
+      tool: dco_decode_String(arr[2]),
+      points: dco_decode_list_air_board_stroke_point(arr[3]),
+      startedAtMs: dco_decode_i_64(arr[4]),
+      endedAtMs: dco_decode_i_64(arr[5]),
+    );
+  }
+
+  @protected
+  AirBoardStrokePoint dco_decode_air_board_stroke_point(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return AirBoardStrokePoint(
+      x: dco_decode_f_32(arr[0]),
+      y: dco_decode_f_32(arr[1]),
+      pressure: dco_decode_f_32(arr[2]),
+      timestampMs: dco_decode_i_64(arr[3]),
+    );
+  }
+
+  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  AirBoardActivitySummary dco_decode_box_autoadd_air_board_activity_summary(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_air_board_activity_summary(raw);
+  }
+
+  @protected
+  AirBoardContext dco_decode_box_autoadd_air_board_context(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_air_board_context(raw);
+  }
+
+  @protected
+  ExamBehaviourContext dco_decode_box_autoadd_exam_behaviour_context(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_exam_behaviour_context(raw);
+  }
+
+  @protected
+  EyeRegionSignal dco_decode_box_autoadd_eye_region_signal(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_eye_region_signal(raw);
+  }
+
+  @protected
+  GazeCalibrationProfile dco_decode_box_autoadd_gaze_calibration_profile(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_gaze_calibration_profile(raw);
   }
 
   @protected
@@ -1594,6 +1959,80 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ExamBehaviourContext dco_decode_exam_behaviour_context(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return ExamBehaviourContext(
+      gaze: dco_decode_gaze_zone_prediction(arr[0]),
+      airBoard: dco_decode_air_board_activity_summary(arr[1]),
+      headPoseAttentionLevel: dco_decode_String(arr[2]),
+      audioAttentionLevel: dco_decode_String(arr[3]),
+      screenAttentionLevel: dco_decode_String(arr[4]),
+      externalVoiceDetected: dco_decode_bool(arr[5]),
+      screenLeft: dco_decode_bool(arr[6]),
+      nowMs: dco_decode_i_64(arr[7]),
+    );
+  }
+
+  @protected
+  ExamBehaviourDecision dco_decode_exam_behaviour_decision(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ExamBehaviourDecision(
+      behaviourLabel: dco_decode_String(arr[0]),
+      attentionLevel: dco_decode_String(arr[1]),
+      normalCalculationBehaviour: dco_decode_bool(arr[2]),
+      reviewRequired: dco_decode_bool(arr[3]),
+      suggestedStudentMessage: dco_decode_String(arr[4]),
+      reviewerSummary: dco_decode_String(arr[5]),
+    );
+  }
+
+  @protected
+  EyeIntelligenceResult dco_decode_eye_intelligence_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return EyeIntelligenceResult(
+      usable: dco_decode_bool(arr[0]),
+      eyeX: dco_decode_f_32(arr[1]),
+      eyeY: dco_decode_f_32(arr[2]),
+      opennessScore: dco_decode_f_32(arr[3]),
+      signalConfidence: dco_decode_f_32(arr[4]),
+      headStable: dco_decode_bool(arr[5]),
+      attentionLevel: dco_decode_String(arr[6]),
+      reason: dco_decode_String(arr[7]),
+    );
+  }
+
+  @protected
+  EyeRegionSignal dco_decode_eye_region_signal(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return EyeRegionSignal(
+      leftEyeOpen: dco_decode_f_32(arr[0]),
+      rightEyeOpen: dco_decode_f_32(arr[1]),
+      leftIrisX: dco_decode_f_32(arr[2]),
+      leftIrisY: dco_decode_f_32(arr[3]),
+      rightIrisX: dco_decode_f_32(arr[4]),
+      rightIrisY: dco_decode_f_32(arr[5]),
+      faceConfidence: dco_decode_f_32(arr[6]),
+      landmarkConfidence: dco_decode_f_32(arr[7]),
+      frameBrightness: dco_decode_f_32(arr[8]),
+      headYaw: dco_decode_f_32(arr[9]),
+      headPitch: dco_decode_f_32(arr[10]),
+      headRoll: dco_decode_f_32(arr[11]),
+    );
+  }
+
+  @protected
   double dco_decode_f_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
@@ -1621,6 +2060,43 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  GazeCalibrationProfile dco_decode_gaze_calibration_profile(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return GazeCalibrationProfile(
+      usable: dco_decode_bool(arr[0]),
+      sampleCount: dco_decode_i_32(arr[1]),
+      zones: dco_decode_list_String(arr[2]),
+      centerEyeX: dco_decode_f_32(arr[3]),
+      centerEyeY: dco_decode_f_32(arr[4]),
+      yawBias: dco_decode_f_32(arr[5]),
+      pitchBias: dco_decode_f_32(arr[6]),
+      qualityScore: dco_decode_f_32(arr[7]),
+      reason: dco_decode_String(arr[8]),
+    );
+  }
+
+  @protected
+  GazeCalibrationSample dco_decode_gaze_calibration_sample(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return GazeCalibrationSample(
+      zone: dco_decode_String(arr[0]),
+      eyeX: dco_decode_f_32(arr[1]),
+      eyeY: dco_decode_f_32(arr[2]),
+      headYaw: dco_decode_f_32(arr[3]),
+      headPitch: dco_decode_f_32(arr[4]),
+      headRoll: dco_decode_f_32(arr[5]),
+      confidence: dco_decode_f_32(arr[6]),
+      timestampMs: dco_decode_i_64(arr[7]),
+    );
+  }
+
+  @protected
   GazeHeadPoseDecision dco_decode_gaze_head_pose_decision(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1641,6 +2117,21 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  GazeZonePrediction dco_decode_gaze_zone_prediction(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return GazeZonePrediction(
+      zone: dco_decode_String(arr[0]),
+      confidence: dco_decode_f_32(arr[1]),
+      calibrated: dco_decode_bool(arr[2]),
+      attentionLevel: dco_decode_String(arr[3]),
+      reason: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
   int dco_decode_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -1656,6 +2147,32 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<AirBoardStroke> dco_decode_list_air_board_stroke(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_air_board_stroke).toList();
+  }
+
+  @protected
+  List<AirBoardStrokePoint> dco_decode_list_air_board_stroke_point(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_air_board_stroke_point)
+        .toList();
+  }
+
+  @protected
+  List<GazeCalibrationSample> dco_decode_list_gaze_calibration_sample(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_gaze_calibration_sample)
+        .toList();
   }
 
   @protected
@@ -2032,9 +2549,135 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  AirBoardActivitySummary sse_decode_air_board_activity_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_active = sse_decode_bool(deserializer);
+    var var_currentlyWriting = sse_decode_bool(deserializer);
+    var var_strokeCount = sse_decode_i_32(deserializer);
+    var var_pageCount = sse_decode_i_32(deserializer);
+    var var_activePageIndex = sse_decode_i_32(deserializer);
+    var var_totalPoints = sse_decode_i_32(deserializer);
+    var var_activeDurationMs = sse_decode_i_64(deserializer);
+    var var_idleDurationMs = sse_decode_i_64(deserializer);
+    var var_attentionLevel = sse_decode_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return AirBoardActivitySummary(
+      active: var_active,
+      currentlyWriting: var_currentlyWriting,
+      strokeCount: var_strokeCount,
+      pageCount: var_pageCount,
+      activePageIndex: var_activePageIndex,
+      totalPoints: var_totalPoints,
+      activeDurationMs: var_activeDurationMs,
+      idleDurationMs: var_idleDurationMs,
+      attentionLevel: var_attentionLevel,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  AirBoardContext sse_decode_air_board_context(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_isOpen = sse_decode_bool(deserializer);
+    var var_activePageIndex = sse_decode_i_32(deserializer);
+    var var_pageCount = sse_decode_i_32(deserializer);
+    var var_strokes = sse_decode_list_air_board_stroke(deserializer);
+    var var_lastActivityAtMs = sse_decode_i_64(deserializer);
+    var var_openedAtMs = sse_decode_i_64(deserializer);
+    var var_nowMs = sse_decode_i_64(deserializer);
+    return AirBoardContext(
+      isOpen: var_isOpen,
+      activePageIndex: var_activePageIndex,
+      pageCount: var_pageCount,
+      strokes: var_strokes,
+      lastActivityAtMs: var_lastActivityAtMs,
+      openedAtMs: var_openedAtMs,
+      nowMs: var_nowMs,
+    );
+  }
+
+  @protected
+  AirBoardStroke sse_decode_air_board_stroke(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_strokeId = sse_decode_String(deserializer);
+    var var_pageIndex = sse_decode_i_32(deserializer);
+    var var_tool = sse_decode_String(deserializer);
+    var var_points = sse_decode_list_air_board_stroke_point(deserializer);
+    var var_startedAtMs = sse_decode_i_64(deserializer);
+    var var_endedAtMs = sse_decode_i_64(deserializer);
+    return AirBoardStroke(
+      strokeId: var_strokeId,
+      pageIndex: var_pageIndex,
+      tool: var_tool,
+      points: var_points,
+      startedAtMs: var_startedAtMs,
+      endedAtMs: var_endedAtMs,
+    );
+  }
+
+  @protected
+  AirBoardStrokePoint sse_decode_air_board_stroke_point(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_x = sse_decode_f_32(deserializer);
+    var var_y = sse_decode_f_32(deserializer);
+    var var_pressure = sse_decode_f_32(deserializer);
+    var var_timestampMs = sse_decode_i_64(deserializer);
+    return AirBoardStrokePoint(
+      x: var_x,
+      y: var_y,
+      pressure: var_pressure,
+      timestampMs: var_timestampMs,
+    );
+  }
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  AirBoardActivitySummary sse_decode_box_autoadd_air_board_activity_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_air_board_activity_summary(deserializer));
+  }
+
+  @protected
+  AirBoardContext sse_decode_box_autoadd_air_board_context(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_air_board_context(deserializer));
+  }
+
+  @protected
+  ExamBehaviourContext sse_decode_box_autoadd_exam_behaviour_context(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_exam_behaviour_context(deserializer));
+  }
+
+  @protected
+  EyeRegionSignal sse_decode_box_autoadd_eye_region_signal(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_eye_region_signal(deserializer));
+  }
+
+  @protected
+  GazeCalibrationProfile sse_decode_box_autoadd_gaze_calibration_profile(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_gaze_calibration_profile(deserializer));
   }
 
   @protected
@@ -2082,6 +2725,108 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ExamBehaviourContext sse_decode_exam_behaviour_context(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_gaze = sse_decode_gaze_zone_prediction(deserializer);
+    var var_airBoard = sse_decode_air_board_activity_summary(deserializer);
+    var var_headPoseAttentionLevel = sse_decode_String(deserializer);
+    var var_audioAttentionLevel = sse_decode_String(deserializer);
+    var var_screenAttentionLevel = sse_decode_String(deserializer);
+    var var_externalVoiceDetected = sse_decode_bool(deserializer);
+    var var_screenLeft = sse_decode_bool(deserializer);
+    var var_nowMs = sse_decode_i_64(deserializer);
+    return ExamBehaviourContext(
+      gaze: var_gaze,
+      airBoard: var_airBoard,
+      headPoseAttentionLevel: var_headPoseAttentionLevel,
+      audioAttentionLevel: var_audioAttentionLevel,
+      screenAttentionLevel: var_screenAttentionLevel,
+      externalVoiceDetected: var_externalVoiceDetected,
+      screenLeft: var_screenLeft,
+      nowMs: var_nowMs,
+    );
+  }
+
+  @protected
+  ExamBehaviourDecision sse_decode_exam_behaviour_decision(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_behaviourLabel = sse_decode_String(deserializer);
+    var var_attentionLevel = sse_decode_String(deserializer);
+    var var_normalCalculationBehaviour = sse_decode_bool(deserializer);
+    var var_reviewRequired = sse_decode_bool(deserializer);
+    var var_suggestedStudentMessage = sse_decode_String(deserializer);
+    var var_reviewerSummary = sse_decode_String(deserializer);
+    return ExamBehaviourDecision(
+      behaviourLabel: var_behaviourLabel,
+      attentionLevel: var_attentionLevel,
+      normalCalculationBehaviour: var_normalCalculationBehaviour,
+      reviewRequired: var_reviewRequired,
+      suggestedStudentMessage: var_suggestedStudentMessage,
+      reviewerSummary: var_reviewerSummary,
+    );
+  }
+
+  @protected
+  EyeIntelligenceResult sse_decode_eye_intelligence_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_usable = sse_decode_bool(deserializer);
+    var var_eyeX = sse_decode_f_32(deserializer);
+    var var_eyeY = sse_decode_f_32(deserializer);
+    var var_opennessScore = sse_decode_f_32(deserializer);
+    var var_signalConfidence = sse_decode_f_32(deserializer);
+    var var_headStable = sse_decode_bool(deserializer);
+    var var_attentionLevel = sse_decode_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return EyeIntelligenceResult(
+      usable: var_usable,
+      eyeX: var_eyeX,
+      eyeY: var_eyeY,
+      opennessScore: var_opennessScore,
+      signalConfidence: var_signalConfidence,
+      headStable: var_headStable,
+      attentionLevel: var_attentionLevel,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  EyeRegionSignal sse_decode_eye_region_signal(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_leftEyeOpen = sse_decode_f_32(deserializer);
+    var var_rightEyeOpen = sse_decode_f_32(deserializer);
+    var var_leftIrisX = sse_decode_f_32(deserializer);
+    var var_leftIrisY = sse_decode_f_32(deserializer);
+    var var_rightIrisX = sse_decode_f_32(deserializer);
+    var var_rightIrisY = sse_decode_f_32(deserializer);
+    var var_faceConfidence = sse_decode_f_32(deserializer);
+    var var_landmarkConfidence = sse_decode_f_32(deserializer);
+    var var_frameBrightness = sse_decode_f_32(deserializer);
+    var var_headYaw = sse_decode_f_32(deserializer);
+    var var_headPitch = sse_decode_f_32(deserializer);
+    var var_headRoll = sse_decode_f_32(deserializer);
+    return EyeRegionSignal(
+      leftEyeOpen: var_leftEyeOpen,
+      rightEyeOpen: var_rightEyeOpen,
+      leftIrisX: var_leftIrisX,
+      leftIrisY: var_leftIrisY,
+      rightIrisX: var_rightIrisX,
+      rightIrisY: var_rightIrisY,
+      faceConfidence: var_faceConfidence,
+      landmarkConfidence: var_landmarkConfidence,
+      frameBrightness: var_frameBrightness,
+      headYaw: var_headYaw,
+      headPitch: var_headPitch,
+      headRoll: var_headRoll,
+    );
+  }
+
+  @protected
   double sse_decode_f_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat32();
@@ -2115,6 +2860,58 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  GazeCalibrationProfile sse_decode_gaze_calibration_profile(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_usable = sse_decode_bool(deserializer);
+    var var_sampleCount = sse_decode_i_32(deserializer);
+    var var_zones = sse_decode_list_String(deserializer);
+    var var_centerEyeX = sse_decode_f_32(deserializer);
+    var var_centerEyeY = sse_decode_f_32(deserializer);
+    var var_yawBias = sse_decode_f_32(deserializer);
+    var var_pitchBias = sse_decode_f_32(deserializer);
+    var var_qualityScore = sse_decode_f_32(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return GazeCalibrationProfile(
+      usable: var_usable,
+      sampleCount: var_sampleCount,
+      zones: var_zones,
+      centerEyeX: var_centerEyeX,
+      centerEyeY: var_centerEyeY,
+      yawBias: var_yawBias,
+      pitchBias: var_pitchBias,
+      qualityScore: var_qualityScore,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  GazeCalibrationSample sse_decode_gaze_calibration_sample(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_zone = sse_decode_String(deserializer);
+    var var_eyeX = sse_decode_f_32(deserializer);
+    var var_eyeY = sse_decode_f_32(deserializer);
+    var var_headYaw = sse_decode_f_32(deserializer);
+    var var_headPitch = sse_decode_f_32(deserializer);
+    var var_headRoll = sse_decode_f_32(deserializer);
+    var var_confidence = sse_decode_f_32(deserializer);
+    var var_timestampMs = sse_decode_i_64(deserializer);
+    return GazeCalibrationSample(
+      zone: var_zone,
+      eyeX: var_eyeX,
+      eyeY: var_eyeY,
+      headYaw: var_headYaw,
+      headPitch: var_headPitch,
+      headRoll: var_headRoll,
+      confidence: var_confidence,
+      timestampMs: var_timestampMs,
+    );
+  }
+
+  @protected
   GazeHeadPoseDecision sse_decode_gaze_head_pose_decision(
     SseDeserializer deserializer,
   ) {
@@ -2144,6 +2941,25 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  GazeZonePrediction sse_decode_gaze_zone_prediction(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_zone = sse_decode_String(deserializer);
+    var var_confidence = sse_decode_f_32(deserializer);
+    var var_calibrated = sse_decode_bool(deserializer);
+    var var_attentionLevel = sse_decode_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return GazeZonePrediction(
+      zone: var_zone,
+      confidence: var_confidence,
+      calibrated: var_calibrated,
+      attentionLevel: var_attentionLevel,
+      reason: var_reason,
+    );
+  }
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
@@ -2163,6 +2979,48 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AirBoardStroke> sse_decode_list_air_board_stroke(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AirBoardStroke>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_air_board_stroke(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AirBoardStrokePoint> sse_decode_list_air_board_stroke_point(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AirBoardStrokePoint>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_air_board_stroke_point(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<GazeCalibrationSample> sse_decode_list_gaze_calibration_sample(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <GazeCalibrationSample>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_gaze_calibration_sample(deserializer));
     }
     return ans_;
   }
@@ -2636,9 +3494,113 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_air_board_activity_summary(
+    AirBoardActivitySummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.active, serializer);
+    sse_encode_bool(self.currentlyWriting, serializer);
+    sse_encode_i_32(self.strokeCount, serializer);
+    sse_encode_i_32(self.pageCount, serializer);
+    sse_encode_i_32(self.activePageIndex, serializer);
+    sse_encode_i_32(self.totalPoints, serializer);
+    sse_encode_i_64(self.activeDurationMs, serializer);
+    sse_encode_i_64(self.idleDurationMs, serializer);
+    sse_encode_String(self.attentionLevel, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_air_board_context(
+    AirBoardContext self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.isOpen, serializer);
+    sse_encode_i_32(self.activePageIndex, serializer);
+    sse_encode_i_32(self.pageCount, serializer);
+    sse_encode_list_air_board_stroke(self.strokes, serializer);
+    sse_encode_i_64(self.lastActivityAtMs, serializer);
+    sse_encode_i_64(self.openedAtMs, serializer);
+    sse_encode_i_64(self.nowMs, serializer);
+  }
+
+  @protected
+  void sse_encode_air_board_stroke(
+    AirBoardStroke self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.strokeId, serializer);
+    sse_encode_i_32(self.pageIndex, serializer);
+    sse_encode_String(self.tool, serializer);
+    sse_encode_list_air_board_stroke_point(self.points, serializer);
+    sse_encode_i_64(self.startedAtMs, serializer);
+    sse_encode_i_64(self.endedAtMs, serializer);
+  }
+
+  @protected
+  void sse_encode_air_board_stroke_point(
+    AirBoardStrokePoint self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.x, serializer);
+    sse_encode_f_32(self.y, serializer);
+    sse_encode_f_32(self.pressure, serializer);
+    sse_encode_i_64(self.timestampMs, serializer);
+  }
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_air_board_activity_summary(
+    AirBoardActivitySummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_air_board_activity_summary(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_air_board_context(
+    AirBoardContext self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_air_board_context(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_exam_behaviour_context(
+    ExamBehaviourContext self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_exam_behaviour_context(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_eye_region_signal(
+    EyeRegionSignal self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_eye_region_signal(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_gaze_calibration_profile(
+    GazeCalibrationProfile self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_gaze_calibration_profile(self, serializer);
   }
 
   @protected
@@ -2686,6 +3648,72 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_exam_behaviour_context(
+    ExamBehaviourContext self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_gaze_zone_prediction(self.gaze, serializer);
+    sse_encode_air_board_activity_summary(self.airBoard, serializer);
+    sse_encode_String(self.headPoseAttentionLevel, serializer);
+    sse_encode_String(self.audioAttentionLevel, serializer);
+    sse_encode_String(self.screenAttentionLevel, serializer);
+    sse_encode_bool(self.externalVoiceDetected, serializer);
+    sse_encode_bool(self.screenLeft, serializer);
+    sse_encode_i_64(self.nowMs, serializer);
+  }
+
+  @protected
+  void sse_encode_exam_behaviour_decision(
+    ExamBehaviourDecision self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.behaviourLabel, serializer);
+    sse_encode_String(self.attentionLevel, serializer);
+    sse_encode_bool(self.normalCalculationBehaviour, serializer);
+    sse_encode_bool(self.reviewRequired, serializer);
+    sse_encode_String(self.suggestedStudentMessage, serializer);
+    sse_encode_String(self.reviewerSummary, serializer);
+  }
+
+  @protected
+  void sse_encode_eye_intelligence_result(
+    EyeIntelligenceResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.usable, serializer);
+    sse_encode_f_32(self.eyeX, serializer);
+    sse_encode_f_32(self.eyeY, serializer);
+    sse_encode_f_32(self.opennessScore, serializer);
+    sse_encode_f_32(self.signalConfidence, serializer);
+    sse_encode_bool(self.headStable, serializer);
+    sse_encode_String(self.attentionLevel, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_eye_region_signal(
+    EyeRegionSignal self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.leftEyeOpen, serializer);
+    sse_encode_f_32(self.rightEyeOpen, serializer);
+    sse_encode_f_32(self.leftIrisX, serializer);
+    sse_encode_f_32(self.leftIrisY, serializer);
+    sse_encode_f_32(self.rightIrisX, serializer);
+    sse_encode_f_32(self.rightIrisY, serializer);
+    sse_encode_f_32(self.faceConfidence, serializer);
+    sse_encode_f_32(self.landmarkConfidence, serializer);
+    sse_encode_f_32(self.frameBrightness, serializer);
+    sse_encode_f_32(self.headYaw, serializer);
+    sse_encode_f_32(self.headPitch, serializer);
+    sse_encode_f_32(self.headRoll, serializer);
+  }
+
+  @protected
   void sse_encode_f_32(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat32(self);
@@ -2714,6 +3742,39 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_gaze_calibration_profile(
+    GazeCalibrationProfile self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.usable, serializer);
+    sse_encode_i_32(self.sampleCount, serializer);
+    sse_encode_list_String(self.zones, serializer);
+    sse_encode_f_32(self.centerEyeX, serializer);
+    sse_encode_f_32(self.centerEyeY, serializer);
+    sse_encode_f_32(self.yawBias, serializer);
+    sse_encode_f_32(self.pitchBias, serializer);
+    sse_encode_f_32(self.qualityScore, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_gaze_calibration_sample(
+    GazeCalibrationSample self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.zone, serializer);
+    sse_encode_f_32(self.eyeX, serializer);
+    sse_encode_f_32(self.eyeY, serializer);
+    sse_encode_f_32(self.headYaw, serializer);
+    sse_encode_f_32(self.headPitch, serializer);
+    sse_encode_f_32(self.headRoll, serializer);
+    sse_encode_f_32(self.confidence, serializer);
+    sse_encode_i_64(self.timestampMs, serializer);
+  }
+
+  @protected
   void sse_encode_gaze_head_pose_decision(
     GazeHeadPoseDecision self,
     SseSerializer serializer,
@@ -2729,6 +3790,19 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_bool(self.stableHeadPose, serializer);
     sse_encode_bool(self.lookingAway, serializer);
     sse_encode_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_gaze_zone_prediction(
+    GazeZonePrediction self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.zone, serializer);
+    sse_encode_f_32(self.confidence, serializer);
+    sse_encode_bool(self.calibrated, serializer);
+    sse_encode_String(self.attentionLevel, serializer);
+    sse_encode_String(self.reason, serializer);
   }
 
   @protected
@@ -2749,6 +3823,42 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_air_board_stroke(
+    List<AirBoardStroke> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_air_board_stroke(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_air_board_stroke_point(
+    List<AirBoardStrokePoint> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_air_board_stroke_point(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_gaze_calibration_sample(
+    List<GazeCalibrationSample> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_gaze_calibration_sample(item, serializer);
     }
   }
 

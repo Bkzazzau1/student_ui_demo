@@ -6,8 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `analyse_pcm16`, `decode_pcm16`, `make_fingerprint`, `quantize`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `analyse_pcm16`, `band_energy`, `classification`, `classify_audio`, `decode_pcm16`, `envelope_variation`, `extract_features`, `goertzel_power`, `make_fingerprint`, `quantize`, `tonal_score`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AudioClassification`, `AudioFeatures`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`
 
 NativeAudioIntelligenceResult? analyzeAudioPcm16({
   required List<int> bytes,

@@ -3,9 +3,13 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/air_board.dart';
 import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
+import 'api/exam_behavior.dart';
+import 'api/eye_intelligence.dart';
+import 'api/gaze_calibration.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
 import 'api/proctoring.dart';
@@ -35,7 +39,40 @@ abstract class BrainCoreApiApiImplPlatform
   AcousticSampleDecision dco_decode_acoustic_sample_decision(dynamic raw);
 
   @protected
+  AirBoardActivitySummary dco_decode_air_board_activity_summary(dynamic raw);
+
+  @protected
+  AirBoardContext dco_decode_air_board_context(dynamic raw);
+
+  @protected
+  AirBoardStroke dco_decode_air_board_stroke(dynamic raw);
+
+  @protected
+  AirBoardStrokePoint dco_decode_air_board_stroke_point(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  AirBoardActivitySummary dco_decode_box_autoadd_air_board_activity_summary(
+    dynamic raw,
+  );
+
+  @protected
+  AirBoardContext dco_decode_box_autoadd_air_board_context(dynamic raw);
+
+  @protected
+  ExamBehaviourContext dco_decode_box_autoadd_exam_behaviour_context(
+    dynamic raw,
+  );
+
+  @protected
+  EyeRegionSignal dco_decode_box_autoadd_eye_region_signal(dynamic raw);
+
+  @protected
+  GazeCalibrationProfile dco_decode_box_autoadd_gaze_calibration_profile(
+    dynamic raw,
+  );
 
   @protected
   GazeHeadPoseDecision dco_decode_box_autoadd_gaze_head_pose_decision(
@@ -56,6 +93,18 @@ abstract class BrainCoreApiApiImplPlatform
   EnvironmentFrameDecision dco_decode_environment_frame_decision(dynamic raw);
 
   @protected
+  ExamBehaviourContext dco_decode_exam_behaviour_context(dynamic raw);
+
+  @protected
+  ExamBehaviourDecision dco_decode_exam_behaviour_decision(dynamic raw);
+
+  @protected
+  EyeIntelligenceResult dco_decode_eye_intelligence_result(dynamic raw);
+
+  @protected
+  EyeRegionSignal dco_decode_eye_region_signal(dynamic raw);
+
+  @protected
   double dco_decode_f_32(dynamic raw);
 
   @protected
@@ -65,7 +114,16 @@ abstract class BrainCoreApiApiImplPlatform
   FaceAnalysisDecision dco_decode_face_analysis_decision(dynamic raw);
 
   @protected
+  GazeCalibrationProfile dco_decode_gaze_calibration_profile(dynamic raw);
+
+  @protected
+  GazeCalibrationSample dco_decode_gaze_calibration_sample(dynamic raw);
+
+  @protected
   GazeHeadPoseDecision dco_decode_gaze_head_pose_decision(dynamic raw);
+
+  @protected
+  GazeZonePrediction dco_decode_gaze_zone_prediction(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -75,6 +133,17 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<AirBoardStroke> dco_decode_list_air_board_stroke(dynamic raw);
+
+  @protected
+  List<AirBoardStrokePoint> dco_decode_list_air_board_stroke_point(dynamic raw);
+
+  @protected
+  List<GazeCalibrationSample> dco_decode_list_gaze_calibration_sample(
+    dynamic raw,
+  );
 
   @protected
   List<NativeLockdownFinding> dco_decode_list_native_lockdown_finding(
@@ -186,7 +255,48 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  AirBoardActivitySummary sse_decode_air_board_activity_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AirBoardContext sse_decode_air_board_context(SseDeserializer deserializer);
+
+  @protected
+  AirBoardStroke sse_decode_air_board_stroke(SseDeserializer deserializer);
+
+  @protected
+  AirBoardStrokePoint sse_decode_air_board_stroke_point(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  AirBoardActivitySummary sse_decode_box_autoadd_air_board_activity_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AirBoardContext sse_decode_box_autoadd_air_board_context(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExamBehaviourContext sse_decode_box_autoadd_exam_behaviour_context(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EyeRegionSignal sse_decode_box_autoadd_eye_region_signal(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  GazeCalibrationProfile sse_decode_box_autoadd_gaze_calibration_profile(
+    SseDeserializer deserializer,
+  );
 
   @protected
   GazeHeadPoseDecision sse_decode_box_autoadd_gaze_head_pose_decision(
@@ -211,6 +321,24 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  ExamBehaviourContext sse_decode_exam_behaviour_context(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExamBehaviourDecision sse_decode_exam_behaviour_decision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EyeIntelligenceResult sse_decode_eye_intelligence_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EyeRegionSignal sse_decode_eye_region_signal(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_f_32(SseDeserializer deserializer);
 
   @protected
@@ -222,7 +350,22 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  GazeCalibrationProfile sse_decode_gaze_calibration_profile(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  GazeCalibrationSample sse_decode_gaze_calibration_sample(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   GazeHeadPoseDecision sse_decode_gaze_head_pose_decision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  GazeZonePrediction sse_decode_gaze_zone_prediction(
     SseDeserializer deserializer,
   );
 
@@ -234,6 +377,21 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<AirBoardStroke> sse_decode_list_air_board_stroke(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<AirBoardStrokePoint> sse_decode_list_air_board_stroke_point(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<GazeCalibrationSample> sse_decode_list_gaze_calibration_sample(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<NativeLockdownFinding> sse_decode_list_native_lockdown_finding(
@@ -365,7 +523,61 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_air_board_activity_summary(
+    AirBoardActivitySummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_air_board_context(
+    AirBoardContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_air_board_stroke(
+    AirBoardStroke self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_air_board_stroke_point(
+    AirBoardStrokePoint self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_air_board_activity_summary(
+    AirBoardActivitySummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_air_board_context(
+    AirBoardContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_exam_behaviour_context(
+    ExamBehaviourContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_eye_region_signal(
+    EyeRegionSignal self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_gaze_calibration_profile(
+    GazeCalibrationProfile self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_gaze_head_pose_decision(
@@ -395,6 +607,30 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_exam_behaviour_context(
+    ExamBehaviourContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_exam_behaviour_decision(
+    ExamBehaviourDecision self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_eye_intelligence_result(
+    EyeIntelligenceResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_eye_region_signal(
+    EyeRegionSignal self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
 
   @protected
@@ -407,8 +643,26 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_gaze_calibration_profile(
+    GazeCalibrationProfile self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_gaze_calibration_sample(
+    GazeCalibrationSample self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_gaze_head_pose_decision(
     GazeHeadPoseDecision self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_gaze_zone_prediction(
+    GazeZonePrediction self,
     SseSerializer serializer,
   );
 
@@ -420,6 +674,24 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_air_board_stroke(
+    List<AirBoardStroke> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_air_board_stroke_point(
+    List<AirBoardStrokePoint> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_gaze_calibration_sample(
+    List<GazeCalibrationSample> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_native_lockdown_finding(
