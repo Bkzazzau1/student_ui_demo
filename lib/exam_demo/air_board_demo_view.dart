@@ -1,6 +1,6 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+
+import '../rust/api/air_board.dart' as rust_air;
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
@@ -19,35 +19,44 @@ class AirBoardDemoView extends StatefulWidget {
 }
 
 class _AirBoardDemoViewState extends State<AirBoardDemoView> {
+  final DateTime _openedAt = DateTime.now();
   final List<_AirBoardPage> _pages = <_AirBoardPage>[_AirBoardPage(index: 0)];
+
   int _activePageIndex = 0;
+  int _strokeCounter = 0;
   _AirBoardTool _tool = _AirBoardTool.pen;
   _BoardBackground _background = _BoardBackground.grid;
   _AirBoardStroke? _activeStroke;
-  int _strokeCounter = 0;
   DateTime? _lastActivityAt;
+  late rust_air.AirBoardActivitySummary _rustSummary;
+  late String _evidenceManifest;
 
   _AirBoardPage get _activePage => _pages[_activePageIndex];
-  bool get _hasWork => _pages.any((page) => page.strokes.isNotEmpty);
-  int get _strokeCount => _pages.fold<int>(0, (total, page) => total + page.strokes.length);
-  int get _pointCount => _pages.fold<int>(
-        0,
-        (total, page) => total + page.strokes.fold<int>(0, (sum, stroke) => sum + stroke.points.length),
-      );
+  List<_AirBoardStroke> get _allStrokes => [
+        for (final page in _pages) ...page.strokes,
+        if (_activeStroke != null) _activeStroke!,
+      ];
+
+  @override
+  void initState() {
+    super.initState();
+    _rustSummary = _analyzeWithRust();
+    _evidenceManifest = _buildManifest(_rustSummary);
+  }
 
   void _startStroke(Offset position) {
     final now = DateTime.now();
-    final stroke = _AirBoardStroke(
-      id: 'stroke-${++_strokeCounter}',
-      tool: _tool,
-      pageIndex: _activePageIndex,
-      points: <_AirBoardPoint>[_AirBoardPoint(position: position, timestamp: now)],
-      startedAt: now,
-      endedAt: now,
-    );
     setState(() {
-      _activeStroke = stroke;
+      _activeStroke = _AirBoardStroke(
+        id: 'stroke-${++_strokeCounter}',
+        tool: _tool,
+        pageIndex: _activePageIndex,
+        points: <_AirBoardPoint>[_AirBoardPoint(position: position, timestamp: now)],
+        startedAt: now,
+        endedAt: now,
+      );
       _lastActivityAt = now;
+      _refreshRustSummary();
     });
   }
 
@@ -59,19 +68,19 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       stroke.points.add(_AirBoardPoint(position: position, timestamp: now));
       stroke.endedAt = now;
       _lastActivityAt = now;
+      _refreshRustSummary();
     });
   }
 
   void _finishStroke() {
     final stroke = _activeStroke;
-    if (stroke == null || stroke.points.length < 2) {
-      setState(() => _activeStroke = null);
-      return;
-    }
     setState(() {
-      _activePage.strokes.add(stroke);
+      if (stroke != null && stroke.points.length >= 2) {
+        _activePage.strokes.add(stroke);
+        _lastActivityAt = DateTime.now();
+      }
       _activeStroke = null;
-      _lastActivityAt = DateTime.now();
+      _refreshRustSummary();
     });
   }
 
@@ -80,6 +89,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     setState(() {
       _activePage.strokes.removeLast();
       _lastActivityAt = DateTime.now();
+      _refreshRustSummary();
     });
   }
 
@@ -88,6 +98,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     setState(() {
       _activePage.strokes.clear();
       _lastActivityAt = DateTime.now();
+      _refreshRustSummary();
     });
   }
 
@@ -96,6 +107,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       _pages.add(_AirBoardPage(index: _pages.length));
       _activePageIndex = _pages.length - 1;
       _lastActivityAt = DateTime.now();
+      _refreshRustSummary();
     });
   }
 
@@ -103,7 +115,55 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     setState(() {
       _activePageIndex = index;
       _lastActivityAt = DateTime.now();
+      _refreshRustSummary();
     });
+  }
+
+  void _refreshRustSummary() {
+    _rustSummary = _analyzeWithRust();
+    _evidenceManifest = _buildManifest(_rustSummary);
+  }
+
+  rust_air.AirBoardActivitySummary _analyzeWithRust() {
+    final now = DateTime.now();
+    final context = rust_air.AirBoardContext(
+      isOpen: true,
+      activePageIndex: _activePageIndex,
+      pageCount: _pages.length,
+      strokes: _allStrokes.map(_toRustStroke).toList(growable: false),
+      lastActivityAtMs: (_lastActivityAt ?? _openedAt).millisecondsSinceEpoch,
+      openedAtMs: _openedAt.millisecondsSinceEpoch,
+      nowMs: now.millisecondsSinceEpoch,
+    );
+    return rust_air.analyzeAirBoardContext(context: context);
+  }
+
+  String _buildManifest(rust_air.AirBoardActivitySummary summary) {
+    return rust_air.buildAirBoardEvidenceManifest(
+      sessionId: 'student-air-board-demo',
+      attemptId: 'attempt-${_openedAt.millisecondsSinceEpoch}',
+      summary: summary,
+    );
+  }
+
+  rust_air.AirBoardStroke _toRustStroke(_AirBoardStroke stroke) {
+    return rust_air.AirBoardStroke(
+      strokeId: stroke.id,
+      pageIndex: stroke.pageIndex,
+      tool: stroke.tool.name,
+      points: stroke.points.map(_toRustPoint).toList(growable: false),
+      startedAtMs: stroke.startedAt.millisecondsSinceEpoch,
+      endedAtMs: stroke.endedAt.millisecondsSinceEpoch,
+    );
+  }
+
+  rust_air.AirBoardStrokePoint _toRustPoint(_AirBoardPoint point) {
+    return rust_air.AirBoardStrokePoint(
+      x: point.position.dx,
+      y: point.position.dy,
+      pressure: 1,
+      timestampMs: point.timestamp.millisecondsSinceEpoch,
+    );
   }
 
   @override
@@ -141,12 +201,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _AirBoardIntroCard(
-                      strokeCount: _strokeCount,
-                      pointCount: _pointCount,
-                      pageCount: _pages.length,
-                      hasWork: _hasWork,
-                    ),
+                    _AirBoardIntroCard(summary: _rustSummary),
                     const SizedBox(height: 14),
                     if (compact)
                       Column(
@@ -176,6 +231,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                             onMove: _appendPoint,
                             onEnd: _finishStroke,
                           ),
+                          const SizedBox(height: 12),
+                          _RustEvidenceCard(summary: _rustSummary, manifest: _evidenceManifest),
                         ],
                       )
                     else
@@ -183,7 +240,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(
-                            width: 300,
+                            width: 315,
                             child: Column(
                               children: [
                                 _AirBoardToolbar(
@@ -202,12 +259,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                                   onAdd: _addPage,
                                 ),
                                 const SizedBox(height: 12),
-                                _AirBoardEvidenceCard(
-                                  lastActivityAt: _lastActivityAt,
-                                  strokeCount: _strokeCount,
-                                  pointCount: _pointCount,
-                                  activePageIndex: _activePageIndex,
-                                ),
+                                _RustEvidenceCard(summary: _rustSummary, manifest: _evidenceManifest),
                               ],
                             ),
                           ),
@@ -225,15 +277,6 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                           ),
                         ],
                       ),
-                    if (compact) ...[
-                      const SizedBox(height: 12),
-                      _AirBoardEvidenceCard(
-                        lastActivityAt: _lastActivityAt,
-                        strokeCount: _strokeCount,
-                        pointCount: _pointCount,
-                        activePageIndex: _activePageIndex,
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -246,20 +289,13 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
 }
 
 class _AirBoardIntroCard extends StatelessWidget {
-  const _AirBoardIntroCard({
-    required this.strokeCount,
-    required this.pointCount,
-    required this.pageCount,
-    required this.hasWork,
-  });
+  const _AirBoardIntroCard({required this.summary});
 
-  final int strokeCount;
-  final int pointCount;
-  final int pageCount;
-  final bool hasWork;
+  final rust_air.AirBoardActivitySummary summary;
 
   @override
   Widget build(BuildContext context) {
+    final activeLabel = summary.active ? 'Active' : 'Ready';
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -269,9 +305,7 @@ class _AirBoardIntroCard extends StatelessWidget {
           colors: [_brandDark, Color(0xFF113A63), _brand],
         ),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(color: Color(0x160F172A), blurRadius: 22, offset: Offset(0, 12)),
-        ],
+        boxShadow: const [BoxShadow(color: Color(0x160F172A), blurRadius: 22, offset: Offset(0, 12))],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -279,14 +313,10 @@ class _AirBoardIntroCard extends StatelessWidget {
           final title = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
+              const Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: const [
-                  _WhiteTag('Exam area'),
-                  _WhiteTag('Rough work'),
-                  _WhiteTag('Saved for review'),
-                ],
+                children: [_WhiteTag('Exam area'), _WhiteTag('Rough work'), _WhiteTag('Rust brain_core')],
               ),
               const SizedBox(height: 12),
               Text(
@@ -299,13 +329,13 @@ class _AirBoardIntroCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Use this board for calculations, graphs, and notes. Your rough work stays inside the approved exam area so camera and attention checks can understand your activity fairly.',
+                'Your writing strokes are converted into Rust Air Board context so the AI engine can understand rough-work activity alongside gaze and head-position behaviour.',
                 style: TextStyle(color: Color(0xFFE2E8F0), height: 1.45, fontWeight: FontWeight.w600),
               ),
             ],
           );
           final stats = Container(
-            width: wide ? 250 : double.infinity,
+            width: wide ? 260 : double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.12),
@@ -315,13 +345,13 @@ class _AirBoardIntroCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _HeaderStat(label: 'Status', value: hasWork ? 'Active' : 'Ready'),
+                _HeaderStat(label: 'Status', value: activeLabel),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Pages', value: '$pageCount'),
+                _HeaderStat(label: 'Pages', value: '${summary.pageCount}'),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Strokes', value: '$strokeCount'),
+                _HeaderStat(label: 'Strokes', value: '${summary.strokeCount}'),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Points', value: '$pointCount'),
+                _HeaderStat(label: 'Rust level', value: _friendlyLevel(summary.attentionLevel)),
               ],
             ),
           );
@@ -381,21 +411,9 @@ class _AirBoardToolbar extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onUndo,
-                  icon: const Icon(Icons.undo_rounded),
-                  label: const Text('Undo'),
-                ),
-              ),
+              Expanded(child: OutlinedButton.icon(onPressed: onUndo, icon: const Icon(Icons.undo_rounded), label: const Text('Undo'))),
               const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onClear,
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  label: const Text('Clear'),
-                ),
-              ),
+              Expanded(child: OutlinedButton.icon(onPressed: onClear, icon: const Icon(Icons.delete_outline_rounded), label: const Text('Clear'))),
             ],
           ),
         ],
@@ -405,12 +423,7 @@ class _AirBoardToolbar extends StatelessWidget {
 }
 
 class _BoardPageTabs extends StatelessWidget {
-  const _BoardPageTabs({
-    required this.pages,
-    required this.activePageIndex,
-    required this.onSelect,
-    required this.onAdd,
-  });
+  const _BoardPageTabs({required this.pages, required this.activePageIndex, required this.onSelect, required this.onAdd});
 
   final List<_AirBoardPage> pages;
   final int activePageIndex;
@@ -436,11 +449,7 @@ class _BoardPageTabs extends StatelessWidget {
                   hasWork: page.strokes.isNotEmpty,
                   onTap: () => onSelect(page.index),
                 ),
-              OutlinedButton.icon(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Add'),
-              ),
+              OutlinedButton.icon(onPressed: onAdd, icon: const Icon(Icons.add_rounded, size: 18), label: const Text('Add')),
             ],
           ),
         ],
@@ -476,9 +485,7 @@ class _BoardCanvasCard extends StatelessWidget {
         color: _surface,
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
-        ],
+        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,10 +495,7 @@ class _BoardCanvasCard extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(14)),
                 child: const Icon(Icons.border_color_outlined, color: _brand),
               ),
               const SizedBox(width: 10),
@@ -513,25 +517,17 @@ class _BoardCanvasCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: AspectRatio(
               aspectRatio: 16 / 10,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Listener(
-                    onPointerDown: (event) => onStart(event.localPosition),
-                    onPointerMove: (event) => onMove(event.localPosition),
-                    onPointerUp: (_) => onEnd(),
-                    onPointerCancel: (_) => onEnd(),
-                    child: RepaintBoundary(
-                      child: CustomPaint(
-                        painter: _AirBoardPainter(
-                          page: page,
-                          activeStroke: activeStroke,
-                          background: background,
-                        ),
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                  );
-                },
+              child: Listener(
+                onPointerDown: (event) => onStart(event.localPosition),
+                onPointerMove: (event) => onMove(event.localPosition),
+                onPointerUp: (_) => onEnd(),
+                onPointerCancel: (_) => onEnd(),
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: _AirBoardPainter(page: page, activeStroke: activeStroke, background: background),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
               ),
             ),
           ),
@@ -541,18 +537,11 @@ class _BoardCanvasCard extends StatelessWidget {
   }
 }
 
-class _AirBoardEvidenceCard extends StatelessWidget {
-  const _AirBoardEvidenceCard({
-    required this.lastActivityAt,
-    required this.strokeCount,
-    required this.pointCount,
-    required this.activePageIndex,
-  });
+class _RustEvidenceCard extends StatelessWidget {
+  const _RustEvidenceCard({required this.summary, required this.manifest});
 
-  final DateTime? lastActivityAt;
-  final int strokeCount;
-  final int pointCount;
-  final int activePageIndex;
+  final rust_air.AirBoardActivitySummary summary;
+  final String manifest;
 
   @override
   Widget build(BuildContext context) {
@@ -560,36 +549,28 @@ class _AirBoardEvidenceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(icon: Icons.fact_check_outlined, title: 'Saved rough-work record'),
+          const _PanelTitle(icon: Icons.memory_outlined, title: 'Rust Air Board result'),
           const SizedBox(height: 12),
-          _EvidenceLine(label: 'Active page', value: 'Page ${activePageIndex + 1}'),
-          _EvidenceLine(label: 'Strokes', value: '$strokeCount'),
-          _EvidenceLine(label: 'Points', value: '$pointCount'),
-          _EvidenceLine(label: 'Last activity', value: lastActivityAt == null ? 'Not started' : _formatClock(lastActivityAt!)),
+          _EvidenceLine(label: 'Currently writing', value: summary.currentlyWriting ? 'Yes' : 'No'),
+          _EvidenceLine(label: 'Active page', value: 'Page ${summary.activePageIndex + 1}'),
+          _EvidenceLine(label: 'Strokes', value: '${summary.strokeCount}'),
+          _EvidenceLine(label: 'Points', value: '${summary.totalPoints}'),
+          _EvidenceLine(label: 'Attention', value: _friendlyLevel(summary.attentionLevel)),
           const SizedBox(height: 10),
-          const Text(
-            'Next step: connect this activity summary to the Rust Air Board API so gaze and rough-work behaviour can be understood together.',
-            style: TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600),
+          Text(summary.reason, style: const TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          SelectableText(
+            manifest,
+            style: const TextStyle(color: _brandDark, fontSize: 11, fontWeight: FontWeight.w700),
           ),
         ],
       ),
     );
   }
-
-  static String _formatClock(DateTime value) {
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    final second = value.second.toString().padLeft(2, '0');
-    return '$hour:$minute:$second';
-  }
 }
 
 class _AirBoardPainter extends CustomPainter {
-  const _AirBoardPainter({
-    required this.page,
-    required this.activeStroke,
-    required this.background,
-  });
+  const _AirBoardPainter({required this.page, required this.activeStroke, required this.background});
 
   final _AirBoardPage page;
   final _AirBoardStroke? activeStroke;
@@ -597,8 +578,7 @@ class _AirBoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bg = Paint()..color = Colors.white;
-    canvas.drawRect(Offset.zero & size, bg);
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
     _drawBackground(canvas, size);
     for (final stroke in page.strokes) {
       _drawStroke(canvas, stroke);
@@ -612,10 +592,8 @@ class _AirBoardPainter extends CustomPainter {
       ..color = const Color(0xFFE2E8F0)
       ..strokeWidth = 1;
     if (background == _BoardBackground.plain) return;
-    if (background == _BoardBackground.lined || background == _BoardBackground.grid) {
-      for (var y = 32.0; y < size.height; y += 32) {
-        canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-      }
+    for (var y = 32.0; y < size.height; y += 32) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
     if (background == _BoardBackground.grid) {
       for (var x = 32.0; x < size.width; x += 32) {
@@ -643,9 +621,7 @@ class _AirBoardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _AirBoardPainter oldDelegate) {
-    return oldDelegate.page != page || oldDelegate.activeStroke != activeStroke || oldDelegate.background != background;
-  }
+  bool shouldRepaint(covariant _AirBoardPainter oldDelegate) => true;
 }
 
 class _PanelCard extends StatelessWidget {
@@ -661,9 +637,7 @@ class _PanelCard extends StatelessWidget {
         color: _surface,
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
-        ],
+        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10))],
       ),
       child: child,
     );
@@ -682,9 +656,7 @@ class _PanelTitle extends StatelessWidget {
       children: [
         Icon(icon, color: _brand, size: 20),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 16)),
-        ),
+        Expanded(child: Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 16))),
       ],
     );
   }
@@ -800,12 +772,24 @@ class _SmallStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: _warning.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
+      decoration: BoxDecoration(color: _warning.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
       child: Text(label, style: const TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w900, fontSize: 12)),
     );
+  }
+}
+
+String _friendlyLevel(String value) {
+  switch (value) {
+    case 'normal':
+      return 'Normal';
+    case 'medium_attention_required':
+      return 'Attention needed';
+    case 'high_attention_required':
+      return 'Review needed';
+    case 'urgent_review_required':
+      return 'Urgent review';
+    default:
+      return value.replaceAll('_', ' ');
   }
 }
 
