@@ -5,19 +5,30 @@ class LiveStatusPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return Card(
       elevation: 0,
       child: Padding(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            const Text(
               'Live exam checks active',
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
-            SizedBox(height: 8),
-            Text('Camera, sound, clear face view, and system checks remain required.'),
+            const SizedBox(height: 8),
+            const Text('Camera, sound, clear face view, and system checks remain required.'),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).pushNamed('/air-board'),
+              icon: const Icon(Icons.border_color_outlined, size: 18),
+              label: const Text('Open rough-work board'),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Use the board for calculations and notes inside the exam screen.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
