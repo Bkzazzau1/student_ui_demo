@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../proctoring_demo/camera_runtime_coordinator.dart';
 import '../rust/api/air_board.dart' as rust_air;
+import '../rust/api/hand_air_board.dart' as rust_hand;
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
@@ -28,11 +29,14 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     'KSLAS_USE_NATIVE_AIR_BOARD',
     defaultValue: false,
   );
+  static const bool _useNativeHandAirBoard = bool.fromEnvironment(
+    'KSLAS_USE_NATIVE_HAND_AIR_BOARD',
+    defaultValue: false,
+  );
 
   final DateTime _openedAt = DateTime.now();
   final List<_AirBoardPage> _pages = <_AirBoardPage>[_AirBoardPage(index: 0)];
-  final CameraRuntimeCoordinator _cameraRuntime =
-      CameraRuntimeCoordinator.instance;
+  final CameraRuntimeCoordinator _cameraRuntime = CameraRuntimeCoordinator.instance;
 
   int _activePageIndex = 0;
   int _strokeCounter = 0;
@@ -41,6 +45,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
   _AirBoardStroke? _activeStroke;
   DateTime? _lastActivityAt;
   late rust_air.AirBoardActivitySummary _rustSummary;
+  late rust_hand.HandRegionSignal _handSignal;
+  late rust_hand.HandAirBoardDecision _handDecision;
   late String _evidenceManifest;
   CameraController? _camera;
   bool _ownsCameraLease = false;
@@ -56,8 +62,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
   @override
   void initState() {
     super.initState();
-    _rustSummary = _analyzeWithRust();
-    _evidenceManifest = _buildManifest(_rustSummary);
+    _refreshRustSummary();
     unawaited(_startCameraPreview());
   }
 
@@ -84,6 +89,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       setState(() {
         _cameraStatus =
             'Camera is already active for $activeOwner. Your monitoring camera remains running while you use the board.';
+        _refreshRustSummary();
       });
       return;
     }
@@ -92,6 +98,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     setState(() {
       _openingCamera = true;
       _cameraStatus = 'Opening camera preview...';
+      _refreshRustSummary();
     });
 
     try {
@@ -99,8 +106,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       if (cameras.isEmpty) {
         if (!mounted) return;
         setState(() {
-          _cameraStatus =
-              'No camera was found. Connect or enable your webcam, then reopen the board.';
+          _cameraStatus = 'No camera was found. Connect or enable your webcam, then reopen the board.';
+          _refreshRustSummary();
         });
         return;
       }
@@ -123,16 +130,21 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       setState(() {
         _camera = controller;
         _cameraStatus = 'Camera preview active';
+        _refreshRustSummary();
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _cameraStatus =
             'Camera preview could not open. Close other apps using the camera and try again. $error';
+        _refreshRustSummary();
       });
     } finally {
       if (mounted) {
-        setState(() => _openingCamera = false);
+        setState(() {
+          _openingCamera = false;
+          _refreshRustSummary();
+        });
       }
     }
   }
@@ -214,6 +226,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
 
   void _refreshRustSummary() {
     _rustSummary = _analyzeWithRust();
+    _handSignal = _buildHandSignal(DateTime.now());
+    _handDecision = _analyzeHandAirBoard();
     _evidenceManifest = _buildManifest(_rustSummary);
   }
 
@@ -236,20 +250,124 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     }
   }
 
+  rust_hand.HandRegionSignal _buildHandSignal(DateTime now) {
+    final cameraReady = _camera != null && _camera!.value.isInitialized;
+    final monitoringCameraAlreadyActive = _cameraStatus.contains('already active');
+    final writingNow = _rustSummary.currentlyWriting || _activeStroke != null;
+    final hasRoughWork = _rustSummary.totalPoints > 0;
+
+    return rust_hand.HandRegionSignal(
+      handVisible: cameraReady || monitoringCameraAlreadyActive,
+      handCount: cameraReady || monitoringCameraAlreadyActive ? 1 : 0,
+      primaryHandX: writingNow ? 0.56 : 0.50,
+      primaryHandY: writingNow ? 0.78 : 0.72,
+      handConfidence: cameraReady
+          ? 0.70
+          : monitoringCameraAlreadyActive
+              ? 0.55
+              : 0.20,
+      nearKeyboard: !writingNow && hasRoughWork,
+      nearMouseOrStylusArea: writingNow,
+      nearFace: false,
+      belowDeskLine: false,
+      timestampMs: now.millisecondsSinceEpoch,
+    );
+  }
+
+  rust_hand.HandAirBoardDecision _analyzeHandAirBoard() {
+    final context = rust_hand.HandAirBoardContext(
+      airBoard: _rustSummary,
+      hand: _handSignal,
+      gazeZone: _rustSummary.currentlyWriting ? 'air_board' : 'answer_area',
+      screenZone: 'air_board',
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    if (_useNativeHandAirBoard) {
+      try {
+        return rust_hand.analyzeHandAirBoardContext(context: context);
+      } catch (_) {}
+    }
+    return _analyzeHandAirBoardWithDart(context);
+  }
+
+  rust_hand.HandAirBoardDecision _analyzeHandAirBoardWithDart(
+    rust_hand.HandAirBoardContext context,
+  ) {
+    final handReliable = context.hand.handVisible && context.hand.handConfidence >= 0.45;
+    final handInExpectedWorkArea = context.hand.nearKeyboard || context.hand.nearMouseOrStylusArea;
+    final airBoardWriting = context.airBoard.currentlyWriting;
+
+    if (airBoardWriting && handReliable && handInExpectedWorkArea && !context.hand.nearFace && !context.hand.belowDeskLine) {
+      return const rust_hand.HandAirBoardDecision(
+        behaviourLabel: 'hand_matches_rough_work',
+        attentionLevel: 'normal',
+        handMatchesAirBoard: true,
+        reviewRequired: false,
+        studentMessage: 'Your rough-work board is active. Please continue solving inside the exam screen.',
+        reviewerSummary: 'Camera hand signal matches active rough-work activity on the Air Board.',
+      );
+    }
+
+    if (airBoardWriting && !handReliable) {
+      return const rust_hand.HandAirBoardDecision(
+        behaviourLabel: 'rough_work_active_hand_not_clear',
+        attentionLevel: 'medium_attention_required',
+        handMatchesAirBoard: false,
+        reviewRequired: true,
+        studentMessage: 'Please keep your hands and writing area clearly visible while using the rough-work board.',
+        reviewerSummary: 'Air Board writing was active, but the camera hand signal was not reliable enough.',
+      );
+    }
+
+    if (airBoardWriting && context.hand.belowDeskLine) {
+      return const rust_hand.HandAirBoardDecision(
+        behaviourLabel: 'rough_work_active_hand_below_desk',
+        attentionLevel: 'high_attention_required',
+        handMatchesAirBoard: false,
+        reviewRequired: true,
+        studentMessage: 'Please keep your hands visible and continue inside the exam screen.',
+        reviewerSummary: 'Air Board writing was active while the hand appeared below the desk line. Human review is recommended.',
+      );
+    }
+
+    if (context.airBoard.active && handReliable && handInExpectedWorkArea) {
+      return const rust_hand.HandAirBoardDecision(
+        behaviourLabel: 'hand_ready_for_rough_work',
+        attentionLevel: 'normal',
+        handMatchesAirBoard: true,
+        reviewRequired: false,
+        studentMessage: 'Your rough-work board is ready. You may continue solving inside the exam screen.',
+        reviewerSummary: 'Hand activity is within the expected keyboard, mouse, stylus, or writing area.',
+      );
+    }
+
+    return const rust_hand.HandAirBoardDecision(
+      behaviourLabel: 'hand_air_board_neutral',
+      attentionLevel: 'normal',
+      handMatchesAirBoard: false,
+      reviewRequired: false,
+      studentMessage: 'Please continue your exam carefully.',
+      reviewerSummary: 'No hand and Air Board concern was detected from the available signals.',
+    );
+  }
+
   String _buildManifest(rust_air.AirBoardActivitySummary summary) {
+    final handPart = ':hand=${_handDecision.behaviourLabel}:hand_attention=${_handDecision.attentionLevel}';
     if (_useNativeAirBoard) {
       try {
         return rust_air.buildAirBoardEvidenceManifest(
-          sessionId: 'student-air-board-demo',
-          attemptId: 'attempt-${_openedAt.millisecondsSinceEpoch}',
-          summary: summary,
-        );
+              sessionId: 'student-air-board-demo',
+              attemptId: 'attempt-${_openedAt.millisecondsSinceEpoch}',
+              summary: summary,
+            ) +
+            handPart;
       } catch (_) {}
     }
     return 'air_board:student-air-board-demo:attempt-${_openedAt.millisecondsSinceEpoch}:'
         'active=${summary.active}:strokes=${summary.strokeCount}:'
         'points=${summary.totalPoints}:duration_ms=${summary.activeDurationMs}:'
-        'attention=${summary.attentionLevel}';
+        'attention=${summary.attentionLevel}$handPart';
   }
 
   rust_air.AirBoardActivitySummary _analyzeWithDart(
@@ -266,8 +384,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     final idleDurationMs = context.lastActivityAtMs > 0
         ? (context.nowMs - context.lastActivityAtMs).clamp(0, 1 << 62).toInt()
         : activeDurationMs;
-    final currentlyWriting =
-        context.isOpen && idleDurationMs <= 4000 && totalPoints > 0;
+    final currentlyWriting = context.isOpen && idleDurationMs <= 4000 && totalPoints > 0;
 
     late final String attentionLevel;
     late final String reason;
@@ -293,8 +410,7 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       currentlyWriting: currentlyWriting,
       strokeCount: strokeCount,
       pageCount: context.pageCount < 0 ? 0 : context.pageCount,
-      activePageIndex:
-          context.activePageIndex < 0 ? 0 : context.activePageIndex,
+      activePageIndex: context.activePageIndex < 0 ? 0 : context.activePageIndex,
       totalPoints: totalPoints,
       activeDurationMs: activeDurationMs,
       idleDurationMs: idleDurationMs,
@@ -358,12 +474,14 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _AirBoardIntroCard(summary: _rustSummary),
+                    _AirBoardIntroCard(summary: _rustSummary, handDecision: _handDecision),
                     const SizedBox(height: 14),
                     _AirBoardCameraPanel(
                       controller: _camera,
                       status: _cameraStatus,
                       opening: _openingCamera,
+                      handSignal: _handSignal,
+                      handDecision: _handDecision,
                     ),
                     const SizedBox(height: 14),
                     if (compact)
@@ -395,7 +513,12 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                             onEnd: _finishStroke,
                           ),
                           const SizedBox(height: 12),
-                          _RustEvidenceCard(summary: _rustSummary, manifest: _evidenceManifest),
+                          _RustEvidenceCard(
+                            summary: _rustSummary,
+                            manifest: _evidenceManifest,
+                            handDecision: _handDecision,
+                            handSignal: _handSignal,
+                          ),
                         ],
                       )
                     else
@@ -422,7 +545,12 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                                   onAdd: _addPage,
                                 ),
                                 const SizedBox(height: 12),
-                                _RustEvidenceCard(summary: _rustSummary, manifest: _evidenceManifest),
+                                _RustEvidenceCard(
+                                  summary: _rustSummary,
+                                  manifest: _evidenceManifest,
+                                  handDecision: _handDecision,
+                                  handSignal: _handSignal,
+                                ),
                               ],
                             ),
                           ),
@@ -452,9 +580,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
 }
 
 class _AirBoardIntroCard extends StatelessWidget {
-  const _AirBoardIntroCard({required this.summary});
+  const _AirBoardIntroCard({required this.summary, required this.handDecision});
 
   final rust_air.AirBoardActivitySummary summary;
+  final rust_hand.HandAirBoardDecision handDecision;
 
   @override
   Widget build(BuildContext context) {
@@ -479,7 +608,7 @@ class _AirBoardIntroCard extends StatelessWidget {
               const Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [_WhiteTag('Exam area'), _WhiteTag('Rough work'), _WhiteTag('Rust brain_core')],
+                children: [_WhiteTag('Exam area'), _WhiteTag('Camera hand check'), _WhiteTag('Rust brain_core')],
               ),
               const SizedBox(height: 12),
               Text(
@@ -492,7 +621,7 @@ class _AirBoardIntroCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Your writing strokes are converted into Rust Air Board context so the AI engine can understand rough-work activity alongside gaze and head-position behaviour.',
+                'Your writing strokes and camera hand signal are converted into Rust context so the AI engine can understand whether hand activity matches rough work.',
                 style: TextStyle(color: Color(0xFFE2E8F0), height: 1.45, fontWeight: FontWeight.w600),
               ),
             ],
@@ -510,11 +639,11 @@ class _AirBoardIntroCard extends StatelessWidget {
               children: [
                 _HeaderStat(label: 'Status', value: activeLabel),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Pages', value: '${summary.pageCount}'),
-                const SizedBox(height: 8),
                 _HeaderStat(label: 'Strokes', value: '${summary.strokeCount}'),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Rust level', value: _friendlyLevel(summary.attentionLevel)),
+                _HeaderStat(label: 'Air Board', value: _friendlyLevel(summary.attentionLevel)),
+                const SizedBox(height: 8),
+                _HeaderStat(label: 'Hand match', value: handDecision.handMatchesAirBoard ? 'Matched' : 'Watching'),
               ],
             ),
           );
@@ -531,11 +660,15 @@ class _AirBoardCameraPanel extends StatelessWidget {
     required this.controller,
     required this.status,
     required this.opening,
+    required this.handSignal,
+    required this.handDecision,
   });
 
   final CameraController? controller;
   final String status;
   final bool opening;
+  final rust_hand.HandRegionSignal handSignal;
+  final rust_hand.HandAirBoardDecision handDecision;
 
   @override
   Widget build(BuildContext context) {
@@ -561,9 +694,7 @@ class _AirBoardCameraPanel extends StatelessWidget {
                       ),
                     )
                   : Icon(
-                      opening
-                          ? Icons.hourglass_top_rounded
-                          : Icons.videocam_off_outlined,
+                      opening ? Icons.hourglass_top_rounded : Icons.videocam_off_outlined,
                       color: Colors.white,
                       size: 30,
                     ),
@@ -574,18 +705,21 @@ class _AirBoardCameraPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _PanelTitle(
-                  icon: Icons.photo_camera_front_outlined,
-                  title: 'Camera monitor',
-                ),
+                const _PanelTitle(icon: Icons.photo_camera_front_outlined, title: 'Camera hand monitor'),
                 const SizedBox(height: 8),
+                Text(status, style: const TextStyle(color: _muted, fontWeight: FontWeight.w700, height: 1.4)),
+                const SizedBox(height: 8),
+                _EvidenceLine(label: 'Hand signal', value: handSignal.handVisible ? 'Visible' : 'Not clear'),
+                _EvidenceLine(label: 'Hand confidence', value: '${(handSignal.handConfidence * 100).round()}%'),
+                _EvidenceLine(label: 'Hand/Air Board', value: _friendlyLevel(handDecision.attentionLevel)),
                 Text(
-                  status,
-                  style: const TextStyle(
-                    color: _muted,
-                    fontWeight: FontWeight.w700,
-                    height: 1.4,
-                  ),
+                  handDecision.studentMessage,
+                  style: const TextStyle(color: _brandDark, height: 1.4, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Note: this currently uses the camera availability and board activity as the hand signal source. Real hand landmark detection will replace this placeholder.',
+                  style: TextStyle(color: _muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -771,10 +905,17 @@ class _BoardCanvasCard extends StatelessWidget {
 }
 
 class _RustEvidenceCard extends StatelessWidget {
-  const _RustEvidenceCard({required this.summary, required this.manifest});
+  const _RustEvidenceCard({
+    required this.summary,
+    required this.manifest,
+    required this.handDecision,
+    required this.handSignal,
+  });
 
   final rust_air.AirBoardActivitySummary summary;
   final String manifest;
+  final rust_hand.HandAirBoardDecision handDecision;
+  final rust_hand.HandRegionSignal handSignal;
 
   @override
   Widget build(BuildContext context) {
@@ -788,9 +929,16 @@ class _RustEvidenceCard extends StatelessWidget {
           _EvidenceLine(label: 'Active page', value: 'Page ${summary.activePageIndex + 1}'),
           _EvidenceLine(label: 'Strokes', value: '${summary.strokeCount}'),
           _EvidenceLine(label: 'Points', value: '${summary.totalPoints}'),
-          _EvidenceLine(label: 'Attention', value: _friendlyLevel(summary.attentionLevel)),
+          _EvidenceLine(label: 'Air Board', value: _friendlyLevel(summary.attentionLevel)),
+          const Divider(height: 20, color: _line),
+          _EvidenceLine(label: 'Hand visible', value: handSignal.handVisible ? 'Yes' : 'No'),
+          _EvidenceLine(label: 'Hand match', value: handDecision.handMatchesAirBoard ? 'Matched' : 'Not confirmed'),
+          _EvidenceLine(label: 'Hand review', value: handDecision.reviewRequired ? 'Review' : 'Normal'),
+          _EvidenceLine(label: 'Hand level', value: _friendlyLevel(handDecision.attentionLevel)),
           const SizedBox(height: 10),
           Text(summary.reason, style: const TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text(handDecision.reviewerSummary, style: const TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
           SelectableText(
             manifest,
