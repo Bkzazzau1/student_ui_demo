@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1659212297;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1203170315;
 
 // Section: executor
 
@@ -367,6 +367,39 @@ fn wire__crate__api__proctoring__analyze_gaze_head_pose_frame_impl(
                         api_previous_pitch,
                         api_previous_roll,
                     ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__hand_air_board__analyze_hand_air_board_context_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_hand_air_board_context",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_context =
+                <crate::api::hand_air_board::HandAirBoardContext>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::hand_air_board::analyze_hand_air_board_context(api_context),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -1830,6 +1863,73 @@ impl SseDecode for crate::api::gaze_calibration::GazeZonePrediction {
     }
 }
 
+impl SseDecode for crate::api::hand_air_board::HandAirBoardContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_airBoard =
+            <crate::api::air_board::AirBoardActivitySummary>::sse_decode(deserializer);
+        let mut var_hand = <crate::api::hand_air_board::HandRegionSignal>::sse_decode(deserializer);
+        let mut var_gazeZone = <String>::sse_decode(deserializer);
+        let mut var_screenZone = <String>::sse_decode(deserializer);
+        let mut var_nowMs = <i64>::sse_decode(deserializer);
+        return crate::api::hand_air_board::HandAirBoardContext {
+            air_board: var_airBoard,
+            hand: var_hand,
+            gaze_zone: var_gazeZone,
+            screen_zone: var_screenZone,
+            now_ms: var_nowMs,
+        };
+    }
+}
+
+impl SseDecode for crate::api::hand_air_board::HandAirBoardDecision {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_behaviourLabel = <String>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_handMatchesAirBoard = <bool>::sse_decode(deserializer);
+        let mut var_reviewRequired = <bool>::sse_decode(deserializer);
+        let mut var_studentMessage = <String>::sse_decode(deserializer);
+        let mut var_reviewerSummary = <String>::sse_decode(deserializer);
+        return crate::api::hand_air_board::HandAirBoardDecision {
+            behaviour_label: var_behaviourLabel,
+            attention_level: var_attentionLevel,
+            hand_matches_air_board: var_handMatchesAirBoard,
+            review_required: var_reviewRequired,
+            student_message: var_studentMessage,
+            reviewer_summary: var_reviewerSummary,
+        };
+    }
+}
+
+impl SseDecode for crate::api::hand_air_board::HandRegionSignal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_handVisible = <bool>::sse_decode(deserializer);
+        let mut var_handCount = <i32>::sse_decode(deserializer);
+        let mut var_primaryHandX = <f32>::sse_decode(deserializer);
+        let mut var_primaryHandY = <f32>::sse_decode(deserializer);
+        let mut var_handConfidence = <f32>::sse_decode(deserializer);
+        let mut var_nearKeyboard = <bool>::sse_decode(deserializer);
+        let mut var_nearMouseOrStylusArea = <bool>::sse_decode(deserializer);
+        let mut var_nearFace = <bool>::sse_decode(deserializer);
+        let mut var_belowDeskLine = <bool>::sse_decode(deserializer);
+        let mut var_timestampMs = <i64>::sse_decode(deserializer);
+        return crate::api::hand_air_board::HandRegionSignal {
+            hand_visible: var_handVisible,
+            hand_count: var_handCount,
+            primary_hand_x: var_primaryHandX,
+            primary_hand_y: var_primaryHandY,
+            hand_confidence: var_handConfidence,
+            near_keyboard: var_nearKeyboard,
+            near_mouse_or_stylus_area: var_nearMouseOrStylusArea,
+            near_face: var_nearFace,
+            below_desk_line: var_belowDeskLine,
+            timestamp_ms: var_timestampMs,
+        };
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2325,31 +2425,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        19 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        20 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        21 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__system_security__collect_system_security_report_impl(
+        22 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        33 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__system_security__run_system_security_review_impl(
+        34 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2397,85 +2497,90 @@ fn pde_ffi_dispatcher_sync_impl(
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
+        9 => wire__crate__api__hand_air_board__analyze_hand_air_board_context_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
+        10 => wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
+        11 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__system_security__analyze_system_security_report_impl(
+        13 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => {
+        15 => wire__crate__api__system_security__analyze_system_security_report_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        16 => {
             wire__crate__api__attempt_recovery__attempt_checksum_impl(ptr, rust_vec_len, data_len)
         }
-        16 => wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
+        17 => wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
+        18 => wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        19 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__proctoring__current_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
+        24 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+        26 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => {
+        27 => {
             wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
         }
-        27 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
+        28 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => {
+        30 => {
             wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
         }
-        30 => {
+        31 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        31 => wire__crate__api__native_vision__review_object_detections_impl(
+        32 => wire__crate__api__native_vision__review_object_detections_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => {
+        35 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        35 => {
+        36 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        36 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+        37 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -2908,6 +3013,84 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::gaze_calibration::GazeZonePre
     for crate::api::gaze_calibration::GazeZonePrediction
 {
     fn into_into_dart(self) -> crate::api::gaze_calibration::GazeZonePrediction {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::hand_air_board::HandAirBoardContext {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.air_board.into_into_dart().into_dart(),
+            self.hand.into_into_dart().into_dart(),
+            self.gaze_zone.into_into_dart().into_dart(),
+            self.screen_zone.into_into_dart().into_dart(),
+            self.now_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::hand_air_board::HandAirBoardContext
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_air_board::HandAirBoardContext>
+    for crate::api::hand_air_board::HandAirBoardContext
+{
+    fn into_into_dart(self) -> crate::api::hand_air_board::HandAirBoardContext {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::hand_air_board::HandAirBoardDecision {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.behaviour_label.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.hand_matches_air_board.into_into_dart().into_dart(),
+            self.review_required.into_into_dart().into_dart(),
+            self.student_message.into_into_dart().into_dart(),
+            self.reviewer_summary.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::hand_air_board::HandAirBoardDecision
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_air_board::HandAirBoardDecision>
+    for crate::api::hand_air_board::HandAirBoardDecision
+{
+    fn into_into_dart(self) -> crate::api::hand_air_board::HandAirBoardDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::hand_air_board::HandRegionSignal {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.hand_visible.into_into_dart().into_dart(),
+            self.hand_count.into_into_dart().into_dart(),
+            self.primary_hand_x.into_into_dart().into_dart(),
+            self.primary_hand_y.into_into_dart().into_dart(),
+            self.hand_confidence.into_into_dart().into_dart(),
+            self.near_keyboard.into_into_dart().into_dart(),
+            self.near_mouse_or_stylus_area.into_into_dart().into_dart(),
+            self.near_face.into_into_dart().into_dart(),
+            self.below_desk_line.into_into_dart().into_dart(),
+            self.timestamp_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::hand_air_board::HandRegionSignal
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_air_board::HandRegionSignal>
+    for crate::api::hand_air_board::HandRegionSignal
+{
+    fn into_into_dart(self) -> crate::api::hand_air_board::HandRegionSignal {
         self
     }
 }
@@ -3492,6 +3675,45 @@ impl SseEncode for crate::api::gaze_calibration::GazeZonePrediction {
         <bool>::sse_encode(self.calibrated, serializer);
         <String>::sse_encode(self.attention_level, serializer);
         <String>::sse_encode(self.reason, serializer);
+    }
+}
+
+impl SseEncode for crate::api::hand_air_board::HandAirBoardContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::air_board::AirBoardActivitySummary>::sse_encode(self.air_board, serializer);
+        <crate::api::hand_air_board::HandRegionSignal>::sse_encode(self.hand, serializer);
+        <String>::sse_encode(self.gaze_zone, serializer);
+        <String>::sse_encode(self.screen_zone, serializer);
+        <i64>::sse_encode(self.now_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::hand_air_board::HandAirBoardDecision {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.behaviour_label, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <bool>::sse_encode(self.hand_matches_air_board, serializer);
+        <bool>::sse_encode(self.review_required, serializer);
+        <String>::sse_encode(self.student_message, serializer);
+        <String>::sse_encode(self.reviewer_summary, serializer);
+    }
+}
+
+impl SseEncode for crate::api::hand_air_board::HandRegionSignal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.hand_visible, serializer);
+        <i32>::sse_encode(self.hand_count, serializer);
+        <f32>::sse_encode(self.primary_hand_x, serializer);
+        <f32>::sse_encode(self.primary_hand_y, serializer);
+        <f32>::sse_encode(self.hand_confidence, serializer);
+        <bool>::sse_encode(self.near_keyboard, serializer);
+        <bool>::sse_encode(self.near_mouse_or_stylus_area, serializer);
+        <bool>::sse_encode(self.near_face, serializer);
+        <bool>::sse_encode(self.below_desk_line, serializer);
+        <i64>::sse_encode(self.timestamp_ms, serializer);
     }
 }
 

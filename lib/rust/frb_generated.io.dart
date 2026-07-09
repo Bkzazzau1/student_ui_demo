@@ -10,6 +10,7 @@ import 'api/evidence_vault.dart';
 import 'api/exam_behavior.dart';
 import 'api/eye_intelligence.dart';
 import 'api/gaze_calibration.dart';
+import 'api/hand_air_board.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
 import 'api/proctoring.dart';
@@ -80,6 +81,11 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  HandAirBoardContext dco_decode_box_autoadd_hand_air_board_context(
+    dynamic raw,
+  );
+
+  @protected
   int dco_decode_box_autoadd_i_32(dynamic raw);
 
   @protected
@@ -124,6 +130,15 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   GazeZonePrediction dco_decode_gaze_zone_prediction(dynamic raw);
+
+  @protected
+  HandAirBoardContext dco_decode_hand_air_board_context(dynamic raw);
+
+  @protected
+  HandAirBoardDecision dco_decode_hand_air_board_decision(dynamic raw);
+
+  @protected
+  HandRegionSignal dco_decode_hand_region_signal(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -304,6 +319,11 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  HandAirBoardContext sse_decode_box_autoadd_hand_air_board_context(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
@@ -368,6 +388,19 @@ abstract class BrainCoreApiApiImplPlatform
   GazeZonePrediction sse_decode_gaze_zone_prediction(
     SseDeserializer deserializer,
   );
+
+  @protected
+  HandAirBoardContext sse_decode_hand_air_board_context(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  HandAirBoardDecision sse_decode_hand_air_board_decision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  HandRegionSignal sse_decode_hand_region_signal(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -586,6 +619,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_box_autoadd_hand_air_board_context(
+    HandAirBoardContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
 
   @protected
@@ -663,6 +702,24 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_gaze_zone_prediction(
     GazeZonePrediction self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_air_board_context(
+    HandAirBoardContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_air_board_decision(
+    HandAirBoardDecision self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_region_signal(
+    HandRegionSignal self,
     SseSerializer serializer,
   );
 
