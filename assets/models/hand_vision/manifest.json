@@ -1,0 +1,16 @@
+{
+  "modelName": "kslas-local-hand-detector",
+  "inputWidth": 320,
+  "inputHeight": 320,
+  "inputChannels": 3,
+  "numPredictions": 2100,
+  "numClasses": 3,
+  "outputLayout": "channels_first_yolov8",
+  "classNames": [
+    "hand",
+    "left_hand",
+    "right_hand"
+  ],
+  "confidenceThreshold": 0.35,
+  "iouThreshold": 0.45
+}
