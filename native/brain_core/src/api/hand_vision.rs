@@ -2,7 +2,7 @@ use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
 
 use super::hand_air_board::HandRegionSignal;
-use super::native_vision::NativeVisionDetection;
+use super::native_vision::{decode_yolo_output, NativeVisionDetection};
 
 #[frb]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -26,6 +26,41 @@ pub struct HandVisionResult {
     pub usable: bool,
     pub attention_level: String,
     pub reason: String,
+}
+
+#[frb(sync)]
+pub fn review_hand_model_output(
+    output: Vec<f32>,
+    num_predictions: i32,
+    num_classes: i32,
+    image_width: i32,
+    image_height: i32,
+    confidence_threshold: f32,
+    iou_threshold: f32,
+    layout: String,
+    class_names: Vec<String>,
+    zones: HandVisionZones,
+    timestamp_ms: i64,
+) -> HandVisionResult {
+    let decoded = decode_yolo_output(
+        output,
+        num_predictions,
+        num_classes,
+        image_width,
+        image_height,
+        confidence_threshold,
+        iou_threshold,
+        layout,
+        class_names,
+    );
+
+    review_hand_detections(
+        decoded.detections,
+        image_width,
+        image_height,
+        zones,
+        timestamp_ms,
+    )
 }
 
 #[frb(sync)]
