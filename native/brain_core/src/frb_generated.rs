@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1203170315;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1585802039;
 
 // Section: executor
 
@@ -1237,6 +1237,51 @@ fn wire__crate__api__evidence_vault__read_evidence_bundle_impl(
         },
     )
 }
+fn wire__crate__api__hand_vision__review_hand_detections_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "review_hand_detections",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_detections =
+                <Vec<crate::api::native_vision::NativeVisionDetection>>::sse_decode(
+                    &mut deserializer,
+                );
+            let api_image_width = <i32>::sse_decode(&mut deserializer);
+            let api_image_height = <i32>::sse_decode(&mut deserializer);
+            let api_zones =
+                <crate::api::hand_vision::HandVisionZones>::sse_decode(&mut deserializer);
+            let api_timestamp_ms = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::hand_vision::review_hand_detections(
+                        api_detections,
+                        api_image_width,
+                        api_image_height,
+                        api_zones,
+                        api_timestamp_ms,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__native_vision__review_object_detections_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1930,6 +1975,52 @@ impl SseDecode for crate::api::hand_air_board::HandRegionSignal {
     }
 }
 
+impl SseDecode for crate::api::hand_vision::HandVisionResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_signal =
+            <crate::api::hand_air_board::HandRegionSignal>::sse_decode(deserializer);
+        let mut var_detections =
+            <Vec<crate::api::native_vision::NativeVisionDetection>>::sse_decode(deserializer);
+        let mut var_usable = <bool>::sse_decode(deserializer);
+        let mut var_attentionLevel = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::hand_vision::HandVisionResult {
+            signal: var_signal,
+            detections: var_detections,
+            usable: var_usable,
+            attention_level: var_attentionLevel,
+            reason: var_reason,
+        };
+    }
+}
+
+impl SseDecode for crate::api::hand_vision::HandVisionZones {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_keyboardYMin = <f32>::sse_decode(deserializer);
+        let mut var_stylusXMin = <f32>::sse_decode(deserializer);
+        let mut var_stylusXMax = <f32>::sse_decode(deserializer);
+        let mut var_stylusYMin = <f32>::sse_decode(deserializer);
+        let mut var_faceXMin = <f32>::sse_decode(deserializer);
+        let mut var_faceXMax = <f32>::sse_decode(deserializer);
+        let mut var_faceYMin = <f32>::sse_decode(deserializer);
+        let mut var_faceYMax = <f32>::sse_decode(deserializer);
+        let mut var_deskLineY = <f32>::sse_decode(deserializer);
+        return crate::api::hand_vision::HandVisionZones {
+            keyboard_y_min: var_keyboardYMin,
+            stylus_x_min: var_stylusXMin,
+            stylus_x_max: var_stylusXMax,
+            stylus_y_min: var_stylusYMin,
+            face_x_min: var_faceXMin,
+            face_x_max: var_faceXMax,
+            face_y_min: var_faceYMin,
+            face_y_max: var_faceYMax,
+            desk_line_y: var_deskLineY,
+        };
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2443,13 +2534,13 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        34 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__system_security__run_system_security_review_impl(
+        35 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2569,18 +2660,21 @@ fn pde_ffi_dispatcher_sync_impl(
         31 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        32 => wire__crate__api__native_vision__review_object_detections_impl(
+        32 => {
+            wire__crate__api__hand_vision__review_hand_detections_impl(ptr, rust_vec_len, data_len)
+        }
+        33 => wire__crate__api__native_vision__review_object_detections_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => {
+        36 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        36 => {
+        37 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        37 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+        38 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -3091,6 +3185,58 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_air_board::HandRegionSig
     for crate::api::hand_air_board::HandRegionSignal
 {
     fn into_into_dart(self) -> crate::api::hand_air_board::HandRegionSignal {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::hand_vision::HandVisionResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.signal.into_into_dart().into_dart(),
+            self.detections.into_into_dart().into_dart(),
+            self.usable.into_into_dart().into_dart(),
+            self.attention_level.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::hand_vision::HandVisionResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_vision::HandVisionResult>
+    for crate::api::hand_vision::HandVisionResult
+{
+    fn into_into_dart(self) -> crate::api::hand_vision::HandVisionResult {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::hand_vision::HandVisionZones {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.keyboard_y_min.into_into_dart().into_dart(),
+            self.stylus_x_min.into_into_dart().into_dart(),
+            self.stylus_x_max.into_into_dart().into_dart(),
+            self.stylus_y_min.into_into_dart().into_dart(),
+            self.face_x_min.into_into_dart().into_dart(),
+            self.face_x_max.into_into_dart().into_dart(),
+            self.face_y_min.into_into_dart().into_dart(),
+            self.face_y_max.into_into_dart().into_dart(),
+            self.desk_line_y.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::hand_vision::HandVisionZones
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_vision::HandVisionZones>
+    for crate::api::hand_vision::HandVisionZones
+{
+    fn into_into_dart(self) -> crate::api::hand_vision::HandVisionZones {
         self
     }
 }
@@ -3714,6 +3860,35 @@ impl SseEncode for crate::api::hand_air_board::HandRegionSignal {
         <bool>::sse_encode(self.near_face, serializer);
         <bool>::sse_encode(self.below_desk_line, serializer);
         <i64>::sse_encode(self.timestamp_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::hand_vision::HandVisionResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::hand_air_board::HandRegionSignal>::sse_encode(self.signal, serializer);
+        <Vec<crate::api::native_vision::NativeVisionDetection>>::sse_encode(
+            self.detections,
+            serializer,
+        );
+        <bool>::sse_encode(self.usable, serializer);
+        <String>::sse_encode(self.attention_level, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
+impl SseEncode for crate::api::hand_vision::HandVisionZones {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f32>::sse_encode(self.keyboard_y_min, serializer);
+        <f32>::sse_encode(self.stylus_x_min, serializer);
+        <f32>::sse_encode(self.stylus_x_max, serializer);
+        <f32>::sse_encode(self.stylus_y_min, serializer);
+        <f32>::sse_encode(self.face_x_min, serializer);
+        <f32>::sse_encode(self.face_x_max, serializer);
+        <f32>::sse_encode(self.face_y_min, serializer);
+        <f32>::sse_encode(self.face_y_max, serializer);
+        <f32>::sse_encode(self.desk_line_y, serializer);
     }
 }
 

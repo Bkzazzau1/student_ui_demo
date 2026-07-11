@@ -11,6 +11,7 @@ import 'api/exam_behavior.dart';
 import 'api/eye_intelligence.dart';
 import 'api/gaze_calibration.dart';
 import 'api/hand_air_board.dart';
+import 'api/hand_vision.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
 import 'api/proctoring.dart';
@@ -77,7 +78,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1203170315;
+  int get rustContentHash => -1585802039;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -288,6 +289,14 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String studentId,
     required String examId,
     required String attemptId,
+  });
+
+  HandVisionResult crateApiHandVisionReviewHandDetections({
+    required List<NativeVisionDetection> detections,
+    required int imageWidth,
+    required int imageHeight,
+    required HandVisionZones zones,
+    required PlatformInt64 timestampMs,
   });
 
   NativeObjectReviewResult crateApiNativeVisionReviewObjectDetections({
@@ -1555,6 +1564,48 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  HandVisionResult crateApiHandVisionReviewHandDetections({
+    required List<NativeVisionDetection> detections,
+    required int imageWidth,
+    required int imageHeight,
+    required HandVisionZones zones,
+    required PlatformInt64 timestampMs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_native_vision_detection(detections, serializer);
+          sse_encode_i_32(imageWidth, serializer);
+          sse_encode_i_32(imageHeight, serializer);
+          sse_encode_box_autoadd_hand_vision_zones(zones, serializer);
+          sse_encode_i_64(timestampMs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_hand_vision_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiHandVisionReviewHandDetectionsConstMeta,
+        argValues: [detections, imageWidth, imageHeight, zones, timestampMs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHandVisionReviewHandDetectionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "review_hand_detections",
+        argNames: [
+          "detections",
+          "imageWidth",
+          "imageHeight",
+          "zones",
+          "timestampMs",
+        ],
+      );
+
+  @override
   NativeObjectReviewResult crateApiNativeVisionReviewObjectDetections({
     required List<NativeVisionDetection> detections,
     required double iouThreshold,
@@ -1565,7 +1616,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_native_vision_detection(detections, serializer);
           sse_encode_f_32(iouThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -1595,7 +1646,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1629,7 +1680,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1675,7 +1726,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1737,7 +1788,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -1787,7 +1838,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(payloadJson, serializer);
           sse_encode_String(checksum, serializer);
           sse_encode_String(recoveredFrom, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_attempt_recovery_check,
@@ -1965,6 +2016,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_hand_air_board_context(raw);
+  }
+
+  @protected
+  HandVisionZones dco_decode_box_autoadd_hand_vision_zones(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_hand_vision_zones(raw);
   }
 
   @protected
@@ -2220,6 +2277,40 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       nearFace: dco_decode_bool(arr[7]),
       belowDeskLine: dco_decode_bool(arr[8]),
       timestampMs: dco_decode_i_64(arr[9]),
+    );
+  }
+
+  @protected
+  HandVisionResult dco_decode_hand_vision_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return HandVisionResult(
+      signal: dco_decode_hand_region_signal(arr[0]),
+      detections: dco_decode_list_native_vision_detection(arr[1]),
+      usable: dco_decode_bool(arr[2]),
+      attentionLevel: dco_decode_String(arr[3]),
+      reason: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  HandVisionZones dco_decode_hand_vision_zones(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return HandVisionZones(
+      keyboardYMin: dco_decode_f_32(arr[0]),
+      stylusXMin: dco_decode_f_32(arr[1]),
+      stylusXMax: dco_decode_f_32(arr[2]),
+      stylusYMin: dco_decode_f_32(arr[3]),
+      faceXMin: dco_decode_f_32(arr[4]),
+      faceXMax: dco_decode_f_32(arr[5]),
+      faceYMin: dco_decode_f_32(arr[6]),
+      faceYMax: dco_decode_f_32(arr[7]),
+      deskLineY: dco_decode_f_32(arr[8]),
     );
   }
 
@@ -2789,6 +2880,14 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  HandVisionZones sse_decode_box_autoadd_hand_vision_zones(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_hand_vision_zones(deserializer));
+  }
+
+  @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_32(deserializer));
@@ -3123,6 +3222,48 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       nearFace: var_nearFace,
       belowDeskLine: var_belowDeskLine,
       timestampMs: var_timestampMs,
+    );
+  }
+
+  @protected
+  HandVisionResult sse_decode_hand_vision_result(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_signal = sse_decode_hand_region_signal(deserializer);
+    var var_detections = sse_decode_list_native_vision_detection(deserializer);
+    var var_usable = sse_decode_bool(deserializer);
+    var var_attentionLevel = sse_decode_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return HandVisionResult(
+      signal: var_signal,
+      detections: var_detections,
+      usable: var_usable,
+      attentionLevel: var_attentionLevel,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  HandVisionZones sse_decode_hand_vision_zones(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_keyboardYMin = sse_decode_f_32(deserializer);
+    var var_stylusXMin = sse_decode_f_32(deserializer);
+    var var_stylusXMax = sse_decode_f_32(deserializer);
+    var var_stylusYMin = sse_decode_f_32(deserializer);
+    var var_faceXMin = sse_decode_f_32(deserializer);
+    var var_faceXMax = sse_decode_f_32(deserializer);
+    var var_faceYMin = sse_decode_f_32(deserializer);
+    var var_faceYMax = sse_decode_f_32(deserializer);
+    var var_deskLineY = sse_decode_f_32(deserializer);
+    return HandVisionZones(
+      keyboardYMin: var_keyboardYMin,
+      stylusXMin: var_stylusXMin,
+      stylusXMax: var_stylusXMax,
+      stylusYMin: var_stylusYMin,
+      faceXMin: var_faceXMin,
+      faceXMax: var_faceXMax,
+      faceYMin: var_faceYMin,
+      faceYMax: var_faceYMax,
+      deskLineY: var_deskLineY,
     );
   }
 
@@ -3789,6 +3930,15 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_hand_vision_zones(
+    HandVisionZones self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_hand_vision_zones(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self, serializer);
@@ -4024,6 +4174,36 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_bool(self.nearFace, serializer);
     sse_encode_bool(self.belowDeskLine, serializer);
     sse_encode_i_64(self.timestampMs, serializer);
+  }
+
+  @protected
+  void sse_encode_hand_vision_result(
+    HandVisionResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_hand_region_signal(self.signal, serializer);
+    sse_encode_list_native_vision_detection(self.detections, serializer);
+    sse_encode_bool(self.usable, serializer);
+    sse_encode_String(self.attentionLevel, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_hand_vision_zones(
+    HandVisionZones self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.keyboardYMin, serializer);
+    sse_encode_f_32(self.stylusXMin, serializer);
+    sse_encode_f_32(self.stylusXMax, serializer);
+    sse_encode_f_32(self.stylusYMin, serializer);
+    sse_encode_f_32(self.faceXMin, serializer);
+    sse_encode_f_32(self.faceXMax, serializer);
+    sse_encode_f_32(self.faceYMin, serializer);
+    sse_encode_f_32(self.faceYMax, serializer);
+    sse_encode_f_32(self.deskLineY, serializer);
   }
 
   @protected

@@ -14,6 +14,7 @@ import 'api/exam_behavior.dart';
 import 'api/eye_intelligence.dart';
 import 'api/gaze_calibration.dart';
 import 'api/hand_air_board.dart';
+import 'api/hand_vision.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
 import 'api/proctoring.dart';
@@ -88,6 +89,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  HandVisionZones dco_decode_box_autoadd_hand_vision_zones(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_i_32(dynamic raw);
 
   @protected
@@ -141,6 +145,12 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   HandRegionSignal dco_decode_hand_region_signal(dynamic raw);
+
+  @protected
+  HandVisionResult dco_decode_hand_vision_result(dynamic raw);
+
+  @protected
+  HandVisionZones dco_decode_hand_vision_zones(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -326,6 +336,11 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  HandVisionZones sse_decode_box_autoadd_hand_vision_zones(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
@@ -403,6 +418,12 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   HandRegionSignal sse_decode_hand_region_signal(SseDeserializer deserializer);
+
+  @protected
+  HandVisionResult sse_decode_hand_vision_result(SseDeserializer deserializer);
+
+  @protected
+  HandVisionZones sse_decode_hand_vision_zones(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -627,6 +648,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_box_autoadd_hand_vision_zones(
+    HandVisionZones self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
 
   @protected
@@ -722,6 +749,18 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_hand_region_signal(
     HandRegionSignal self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_vision_result(
+    HandVisionResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_vision_zones(
+    HandVisionZones self,
     SseSerializer serializer,
   );
 
