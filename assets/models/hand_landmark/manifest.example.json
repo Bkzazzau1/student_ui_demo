@@ -1,0 +1,11 @@
+{
+  "modelName": "kslas-local-hand-landmark",
+  "modelPath": "assets/models/hand_landmark/hand_landmark.onnx",
+  "inputWidth": 224,
+  "inputHeight": 224,
+  "inputChannels": 3,
+  "landmarkCount": 21,
+  "outputLayout": "flat_xyz",
+  "coordinateMode": "normalized",
+  "confidenceIndex": null
+}
