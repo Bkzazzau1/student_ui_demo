@@ -14,6 +14,7 @@ import 'api/exam_behavior.dart';
 import 'api/eye_intelligence.dart';
 import 'api/gaze_calibration.dart';
 import 'api/hand_air_board.dart';
+import 'api/hand_gesture.dart';
 import 'api/hand_vision.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
@@ -89,6 +90,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  HandGestureInput dco_decode_box_autoadd_hand_gesture_input(dynamic raw);
+
+  @protected
   HandVisionZones dco_decode_box_autoadd_hand_vision_zones(dynamic raw);
 
   @protected
@@ -144,6 +148,15 @@ abstract class BrainCoreApiApiImplPlatform
   HandAirBoardDecision dco_decode_hand_air_board_decision(dynamic raw);
 
   @protected
+  HandGestureInput dco_decode_hand_gesture_input(dynamic raw);
+
+  @protected
+  HandGestureResult dco_decode_hand_gesture_result(dynamic raw);
+
+  @protected
+  HandLandmarkPoint dco_decode_hand_landmark_point(dynamic raw);
+
+  @protected
   HandRegionSignal dco_decode_hand_region_signal(dynamic raw);
 
   @protected
@@ -174,6 +187,9 @@ abstract class BrainCoreApiApiImplPlatform
   List<GazeCalibrationSample> dco_decode_list_gaze_calibration_sample(
     dynamic raw,
   );
+
+  @protected
+  List<HandLandmarkPoint> dco_decode_list_hand_landmark_point(dynamic raw);
 
   @protected
   List<NativeLockdownFinding> dco_decode_list_native_lockdown_finding(
@@ -339,6 +355,11 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  HandGestureInput sse_decode_box_autoadd_hand_gesture_input(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   HandVisionZones sse_decode_box_autoadd_hand_vision_zones(
     SseDeserializer deserializer,
   );
@@ -420,6 +441,19 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  HandGestureInput sse_decode_hand_gesture_input(SseDeserializer deserializer);
+
+  @protected
+  HandGestureResult sse_decode_hand_gesture_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  HandLandmarkPoint sse_decode_hand_landmark_point(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   HandRegionSignal sse_decode_hand_region_signal(SseDeserializer deserializer);
 
   @protected
@@ -454,6 +488,11 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   List<GazeCalibrationSample> sse_decode_list_gaze_calibration_sample(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<HandLandmarkPoint> sse_decode_list_hand_landmark_point(
     SseDeserializer deserializer,
   );
 
@@ -656,6 +695,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_box_autoadd_hand_gesture_input(
+    HandGestureInput self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_hand_vision_zones(
     HandVisionZones self,
     SseSerializer serializer,
@@ -755,6 +800,24 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_hand_gesture_input(
+    HandGestureInput self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_gesture_result(
+    HandGestureResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_landmark_point(
+    HandLandmarkPoint self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_hand_region_signal(
     HandRegionSignal self,
     SseSerializer serializer,
@@ -802,6 +865,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_list_gaze_calibration_sample(
     List<GazeCalibrationSample> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_hand_landmark_point(
+    List<HandLandmarkPoint> self,
     SseSerializer serializer,
   );
 

@@ -50,7 +50,8 @@ pub fn analyze_hand_landmarks(input: HandGestureInput) -> HandGestureResult {
     let mut points: Vec<Option<HandLandmarkPoint>> = vec![None; 21];
     for point in input.landmarks {
         if (0..21).contains(&point.index) {
-            points[point.index as usize] = Some(point);
+            let index = point.index as usize;
+            points[index] = Some(point);
         }
     }
 
