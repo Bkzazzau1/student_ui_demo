@@ -1,6 +1,8 @@
 {
   "modelName": "kslas-local-hand-landmark",
   "modelPath": "assets/models/hand_landmark/hand_landmark.onnx",
+  "sourceModel": "PINTO0309/hand_landmark hand_landmark_sparse_Nx3x224x224.onnx",
+  "sourceUrl": "https://github.com/PINTO0309/hand_landmark/releases/tag/1.0.0",
   "inputWidth": 224,
   "inputHeight": 224,
   "inputChannels": 3,

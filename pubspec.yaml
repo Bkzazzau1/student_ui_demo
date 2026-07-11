@@ -35,3 +35,4 @@ flutter:
     - assets/models/optimized_vision_runtime/
     - assets/models/yolo_exam_review/
     - assets/models/hand_vision/
+    - assets/models/hand_landmark/

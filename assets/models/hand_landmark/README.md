@@ -36,4 +36,14 @@ Gesture mapping:
 - Index and middle fingers: erase
 - Closed hand: pause
 
-Do not add a model until its source, licence, input tensor, output tensor, coordinate convention, and redistribution terms are documented.
+Installed model:
+
+- Source: `PINTO0309/hand_landmark` release `1.0.0`
+- File: `hand_landmark_sparse_Nx3x224x224.onnx`
+- URL: `https://github.com/PINTO0309/hand_landmark/releases/tag/1.0.0`
+- Local path: `assets/models/hand_landmark/hand_landmark.onnx`
+- Input: `N x 3 x 224 x 224`
+- Primary output: `xyz_x21`, shape `N x 63`
+- Additional outputs: `hand_score`, `lefthand_0_or_righthand_1`
+
+The current Rust runtime reads the first output as a flattened 21-point xyz tensor.

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import '../proctoring_demo/camera_runtime_coordinator.dart';
 import '../rust/api/hand_gesture.dart' as rust_gesture;
 import '../rust/api/hand_landmark_runtime.dart' as rust_landmark;
 import '../rust/api/hand_vision.dart' as rust_vision;
+import '../rust/api/native_vision.dart' as rust_native;
 
 const _brand = Color(0xFF0F4C81);
 const _ink = Color(0xFF0B1220);
@@ -241,7 +241,7 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
     }
   }
 
-  _HandCrop? _cropHand(img.Image frame, rust_vision.NativeVisionDetection detection) {
+  _HandCrop? _cropHand(img.Image frame, rust_native.NativeVisionDetection detection) {
     final padX = detection.width * 0.28;
     final padY = detection.height * 0.28;
     final left = math.max(0, (detection.xMin - padX).floor());
@@ -556,12 +556,18 @@ class _GestureBoardPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
     final grid = Paint()..color = const Color(0xFFE2E8F0)..strokeWidth = 1;
-    for (var x = 40.0; x < size.width; x += 40) canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
-    for (var y = 40.0; y < size.height; y += 40) canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    for (var x = 40.0; x < size.width; x += 40) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
+    }
+    for (var y = 40.0; y < size.height; y += 40) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
     for (final stroke in <_GestureStroke>[...strokes, if (activeStroke != null) activeStroke!]) {
       if (stroke.points.length < 2) continue;
       final path = Path()..moveTo(stroke.points.first.dx, stroke.points.first.dy);
-      for (var i = 1; i < stroke.points.length; i++) path.lineTo(stroke.points[i].dx, stroke.points[i].dy);
+      for (var i = 1; i < stroke.points.length; i++) {
+        path.lineTo(stroke.points[i].dx, stroke.points[i].dy);
+      }
       canvas.drawPath(path, Paint()..color = _ink..strokeWidth = 3.2..strokeCap = StrokeCap.round..strokeJoin = StrokeJoin.round..style = PaintingStyle.stroke);
     }
     final normalized = cursor;
