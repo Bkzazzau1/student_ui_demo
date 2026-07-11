@@ -304,7 +304,7 @@ fn run_landmark_model(
         .first()
         .ok_or_else(|| "hand landmark model returned no output".to_string())?;
     let view = first
-        .to_array_view::<f32>()
+        .to_dense_array_view::<f32>()
         .map_err(|error| format!("hand landmark output type failed: {error}"))?;
 
     Ok((view.iter().copied().collect(), runtime.manifest.clone()))

@@ -12,6 +12,7 @@ import 'api/eye_intelligence.dart';
 import 'api/gaze_calibration.dart';
 import 'api/hand_air_board.dart';
 import 'api/hand_gesture.dart';
+import 'api/hand_landmark_runtime.dart';
 import 'api/hand_vision.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
@@ -150,6 +151,14 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   HandGestureResult dco_decode_hand_gesture_result(dynamic raw);
+
+  @protected
+  HandLandmarkInferenceResult dco_decode_hand_landmark_inference_result(
+    dynamic raw,
+  );
+
+  @protected
+  HandLandmarkModelStatus dco_decode_hand_landmark_model_status(dynamic raw);
 
   @protected
   HandLandmarkPoint dco_decode_hand_landmark_point(dynamic raw);
@@ -443,6 +452,16 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   HandGestureResult sse_decode_hand_gesture_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  HandLandmarkInferenceResult sse_decode_hand_landmark_inference_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  HandLandmarkModelStatus sse_decode_hand_landmark_model_status(
     SseDeserializer deserializer,
   );
 
@@ -806,6 +825,18 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_hand_gesture_result(
     HandGestureResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_landmark_inference_result(
+    HandLandmarkInferenceResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_landmark_model_status(
+    HandLandmarkModelStatus self,
     SseSerializer serializer,
   );
 
