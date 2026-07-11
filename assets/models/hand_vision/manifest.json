@@ -1,15 +1,16 @@
 {
-  "modelName": "kslas-local-hand-detector",
+  "modelName": "kslas-local-hand-detector-yolov8n",
+  "modelPath": "assets/models/hand_vision/hand_detector.onnx",
+  "sourceModel": "Bingsu/adetailer hand_yolov8n.pt",
+  "sourceUrl": "https://huggingface.co/Bingsu/adetailer",
   "inputWidth": 320,
   "inputHeight": 320,
   "inputChannels": 3,
   "numPredictions": 2100,
-  "numClasses": 3,
+  "numClasses": 1,
   "outputLayout": "channels_first_yolov8",
   "classNames": [
-    "hand",
-    "left_hand",
-    "right_hand"
+    "hand"
   ],
   "confidenceThreshold": 0.35,
   "iouThreshold": 0.45
