@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 
 import 'auth/student_login_view.dart';
-import 'exam_demo/air_board_demo_view.dart';
+import 'exam_demo/air_board_live_hand_view.dart';
 import 'rust/frb_generated.dart';
 
 Future<void> main() async {
@@ -29,7 +29,7 @@ class StudentsUiDemoApp extends StatelessWidget {
         ),
       ),
       routes: <String, WidgetBuilder>{
-        '/air-board': (_) => const AirBoardDemoView(),
+        '/air-board': (_) => const AirBoardLiveHandView(),
       },
       home: const StudentLoginView(),
     );
