@@ -11,6 +11,32 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These functions are ignored because they are not marked as `pub`: `empty_result`, `normalize_coordinate`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`
 
+HandVisionResult reviewHandModelOutput({
+  required List<double> output,
+  required int numPredictions,
+  required int numClasses,
+  required int imageWidth,
+  required int imageHeight,
+  required double confidenceThreshold,
+  required double iouThreshold,
+  required String layout,
+  required List<String> classNames,
+  required HandVisionZones zones,
+  required PlatformInt64 timestampMs,
+}) => BrainCoreApi.instance.api.crateApiHandVisionReviewHandModelOutput(
+  output: output,
+  numPredictions: numPredictions,
+  numClasses: numClasses,
+  imageWidth: imageWidth,
+  imageHeight: imageHeight,
+  confidenceThreshold: confidenceThreshold,
+  iouThreshold: iouThreshold,
+  layout: layout,
+  classNames: classNames,
+  zones: zones,
+  timestampMs: timestampMs,
+);
+
 HandVisionResult reviewHandDetections({
   required List<NativeVisionDetection> detections,
   required int imageWidth,

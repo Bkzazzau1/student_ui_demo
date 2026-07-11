@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1585802039;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2129962911;
 
 // Section: executor
 
@@ -1274,6 +1274,60 @@ fn wire__crate__api__hand_vision__review_hand_detections_impl(
                         api_detections,
                         api_image_width,
                         api_image_height,
+                        api_zones,
+                        api_timestamp_ms,
+                    ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__hand_vision__review_hand_model_output_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "review_hand_model_output",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_output = <Vec<f32>>::sse_decode(&mut deserializer);
+            let api_num_predictions = <i32>::sse_decode(&mut deserializer);
+            let api_num_classes = <i32>::sse_decode(&mut deserializer);
+            let api_image_width = <i32>::sse_decode(&mut deserializer);
+            let api_image_height = <i32>::sse_decode(&mut deserializer);
+            let api_confidence_threshold = <f32>::sse_decode(&mut deserializer);
+            let api_iou_threshold = <f32>::sse_decode(&mut deserializer);
+            let api_layout = <String>::sse_decode(&mut deserializer);
+            let api_class_names = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_zones =
+                <crate::api::hand_vision::HandVisionZones>::sse_decode(&mut deserializer);
+            let api_timestamp_ms = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::hand_vision::review_hand_model_output(
+                        api_output,
+                        api_num_predictions,
+                        api_num_classes,
+                        api_image_width,
+                        api_image_height,
+                        api_confidence_threshold,
+                        api_iou_threshold,
+                        api_layout,
+                        api_class_names,
                         api_zones,
                         api_timestamp_ms,
                     ))?;
@@ -2534,13 +2588,13 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        35 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__system_security__run_system_security_review_impl(
+        36 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2663,18 +2717,23 @@ fn pde_ffi_dispatcher_sync_impl(
         32 => {
             wire__crate__api__hand_vision__review_hand_detections_impl(ptr, rust_vec_len, data_len)
         }
-        33 => wire__crate__api__native_vision__review_object_detections_impl(
+        33 => wire__crate__api__hand_vision__review_hand_model_output_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => {
+        34 => wire__crate__api__native_vision__review_object_detections_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        37 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        37 => {
+        38 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        38 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+        39 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
             ptr,
             rust_vec_len,
             data_len,

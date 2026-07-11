@@ -78,7 +78,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1585802039;
+  int get rustContentHash => 2129962911;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -295,6 +295,20 @@ abstract class BrainCoreApiApi extends BaseApi {
     required List<NativeVisionDetection> detections,
     required int imageWidth,
     required int imageHeight,
+    required HandVisionZones zones,
+    required PlatformInt64 timestampMs,
+  });
+
+  HandVisionResult crateApiHandVisionReviewHandModelOutput({
+    required List<double> output,
+    required int numPredictions,
+    required int numClasses,
+    required int imageWidth,
+    required int imageHeight,
+    required double confidenceThreshold,
+    required double iouThreshold,
+    required String layout,
+    required List<String> classNames,
     required HandVisionZones zones,
     required PlatformInt64 timestampMs,
   });
@@ -1606,6 +1620,78 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  HandVisionResult crateApiHandVisionReviewHandModelOutput({
+    required List<double> output,
+    required int numPredictions,
+    required int numClasses,
+    required int imageWidth,
+    required int imageHeight,
+    required double confidenceThreshold,
+    required double iouThreshold,
+    required String layout,
+    required List<String> classNames,
+    required HandVisionZones zones,
+    required PlatformInt64 timestampMs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_f_32_loose(output, serializer);
+          sse_encode_i_32(numPredictions, serializer);
+          sse_encode_i_32(numClasses, serializer);
+          sse_encode_i_32(imageWidth, serializer);
+          sse_encode_i_32(imageHeight, serializer);
+          sse_encode_f_32(confidenceThreshold, serializer);
+          sse_encode_f_32(iouThreshold, serializer);
+          sse_encode_String(layout, serializer);
+          sse_encode_list_String(classNames, serializer);
+          sse_encode_box_autoadd_hand_vision_zones(zones, serializer);
+          sse_encode_i_64(timestampMs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_hand_vision_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiHandVisionReviewHandModelOutputConstMeta,
+        argValues: [
+          output,
+          numPredictions,
+          numClasses,
+          imageWidth,
+          imageHeight,
+          confidenceThreshold,
+          iouThreshold,
+          layout,
+          classNames,
+          zones,
+          timestampMs,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiHandVisionReviewHandModelOutputConstMeta =>
+      const TaskConstMeta(
+        debugName: "review_hand_model_output",
+        argNames: [
+          "output",
+          "numPredictions",
+          "numClasses",
+          "imageWidth",
+          "imageHeight",
+          "confidenceThreshold",
+          "iouThreshold",
+          "layout",
+          "classNames",
+          "zones",
+          "timestampMs",
+        ],
+      );
+
+  @override
   NativeObjectReviewResult crateApiNativeVisionReviewObjectDetections({
     required List<NativeVisionDetection> detections,
     required double iouThreshold,
@@ -1616,7 +1702,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_native_vision_detection(detections, serializer);
           sse_encode_f_32(iouThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -1646,7 +1732,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1680,7 +1766,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 36,
             port: port_,
           );
         },
@@ -1726,7 +1812,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1788,7 +1874,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -1838,7 +1924,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(payloadJson, serializer);
           sse_encode_String(checksum, serializer);
           sse_encode_String(recoveredFrom, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_attempt_recovery_check,
