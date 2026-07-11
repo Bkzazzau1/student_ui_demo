@@ -8,8 +8,37 @@ import 'hand_air_board.dart';
 import 'native_vision.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `empty_result`, `normalize_coordinate`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `empty_result`, `load_hand_vision_model_inner`, `normalize_coordinate`, `resize_rgb_chw`, `run_hand_model`, `status_from_manifest`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `HandVisionManifest`, `HandVisionRuntime`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+HandVisionModelStatus loadHandVisionModel({
+  required String manifestJson,
+  required List<int> modelBytes,
+}) => BrainCoreApi.instance.api.crateApiHandVisionLoadHandVisionModel(
+  manifestJson: manifestJson,
+  modelBytes: modelBytes,
+);
+
+void clearHandVisionModel() =>
+    BrainCoreApi.instance.api.crateApiHandVisionClearHandVisionModel();
+
+HandVisionModelStatus currentHandVisionModelStatus() =>
+    BrainCoreApi.instance.api.crateApiHandVisionCurrentHandVisionModelStatus();
+
+HandVisionResult analyzeHandRgbFrame({
+  required List<int> rgbBytes,
+  required int imageWidth,
+  required int imageHeight,
+  required HandVisionZones zones,
+  required PlatformInt64 timestampMs,
+}) => BrainCoreApi.instance.api.crateApiHandVisionAnalyzeHandRgbFrame(
+  rgbBytes: rgbBytes,
+  imageWidth: imageWidth,
+  imageHeight: imageHeight,
+  zones: zones,
+  timestampMs: timestampMs,
+);
 
 HandVisionResult reviewHandModelOutput({
   required List<double> output,
@@ -50,6 +79,49 @@ HandVisionResult reviewHandDetections({
   zones: zones,
   timestampMs: timestampMs,
 );
+
+class HandVisionModelStatus {
+  final bool loaded;
+  final String modelName;
+  final int inputWidth;
+  final int inputHeight;
+  final double confidenceThreshold;
+  final double iouThreshold;
+  final String message;
+
+  const HandVisionModelStatus({
+    required this.loaded,
+    required this.modelName,
+    required this.inputWidth,
+    required this.inputHeight,
+    required this.confidenceThreshold,
+    required this.iouThreshold,
+    required this.message,
+  });
+
+  @override
+  int get hashCode =>
+      loaded.hashCode ^
+      modelName.hashCode ^
+      inputWidth.hashCode ^
+      inputHeight.hashCode ^
+      confidenceThreshold.hashCode ^
+      iouThreshold.hashCode ^
+      message.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HandVisionModelStatus &&
+          runtimeType == other.runtimeType &&
+          loaded == other.loaded &&
+          modelName == other.modelName &&
+          inputWidth == other.inputWidth &&
+          inputHeight == other.inputHeight &&
+          confidenceThreshold == other.confidenceThreshold &&
+          iouThreshold == other.iouThreshold &&
+          message == other.message;
+}
 
 class HandVisionResult {
   final HandRegionSignal signal;

@@ -147,6 +147,9 @@ abstract class BrainCoreApiApiImplPlatform
   HandRegionSignal dco_decode_hand_region_signal(dynamic raw);
 
   @protected
+  HandVisionModelStatus dco_decode_hand_vision_model_status(dynamic raw);
+
+  @protected
   HandVisionResult dco_decode_hand_vision_result(dynamic raw);
 
   @protected
@@ -418,6 +421,11 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   HandRegionSignal sse_decode_hand_region_signal(SseDeserializer deserializer);
+
+  @protected
+  HandVisionModelStatus sse_decode_hand_vision_model_status(
+    SseDeserializer deserializer,
+  );
 
   @protected
   HandVisionResult sse_decode_hand_vision_result(SseDeserializer deserializer);
@@ -749,6 +757,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_hand_region_signal(
     HandRegionSignal self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_hand_vision_model_status(
+    HandVisionModelStatus self,
     SseSerializer serializer,
   );
 

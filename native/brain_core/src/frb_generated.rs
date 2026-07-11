@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2129962911;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 891626636;
 
 // Section: executor
 
@@ -400,6 +400,48 @@ fn wire__crate__api__hand_air_board__analyze_hand_air_board_context_impl(
                 let output_ok = Result::<_, ()>::Ok(
                     crate::api::hand_air_board::analyze_hand_air_board_context(api_context),
                 )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__hand_vision__analyze_hand_rgb_frame_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "analyze_hand_rgb_frame",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_rgb_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_image_width = <i32>::sse_decode(&mut deserializer);
+            let api_image_height = <i32>::sse_decode(&mut deserializer);
+            let api_zones =
+                <crate::api::hand_vision::HandVisionZones>::sse_decode(&mut deserializer);
+            let api_timestamp_ms = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::hand_vision::analyze_hand_rgb_frame(
+                        api_rgb_bytes,
+                        api_image_width,
+                        api_image_height,
+                        api_zones,
+                        api_timestamp_ms,
+                    ))?;
                 Ok(output_ok)
             })())
         },
@@ -768,6 +810,37 @@ fn wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
         },
     )
 }
+fn wire__crate__api__hand_vision__clear_hand_vision_model_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "clear_hand_vision_model",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok({
+                    crate::api::hand_vision::clear_hand_vision_model();
+                })?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__proctoring__clear_vision_model_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -899,6 +972,37 @@ fn wire__crate__api__system_security__collect_system_security_report_impl(
                     Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__hand_vision__current_hand_vision_model_status_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "current_hand_vision_model_status",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::hand_vision::current_hand_vision_model_status(),
+                )?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -1075,6 +1179,41 @@ fn wire__crate__api__evidence_vault__evidence_sha256_hex_impl(
                 let output_ok = Result::<_, ()>::Ok(
                     crate::api::evidence_vault::evidence_sha256_hex(api_bytes),
                 )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__hand_vision__load_hand_vision_model_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "load_hand_vision_model",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_manifest_json = <String>::sse_decode(&mut deserializer);
+            let api_model_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::hand_vision::load_hand_vision_model(
+                        api_manifest_json,
+                        api_model_bytes,
+                    ))?;
                 Ok(output_ok)
             })())
         },
@@ -2029,6 +2168,28 @@ impl SseDecode for crate::api::hand_air_board::HandRegionSignal {
     }
 }
 
+impl SseDecode for crate::api::hand_vision::HandVisionModelStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_loaded = <bool>::sse_decode(deserializer);
+        let mut var_modelName = <String>::sse_decode(deserializer);
+        let mut var_inputWidth = <i32>::sse_decode(deserializer);
+        let mut var_inputHeight = <i32>::sse_decode(deserializer);
+        let mut var_confidenceThreshold = <f32>::sse_decode(deserializer);
+        let mut var_iouThreshold = <f32>::sse_decode(deserializer);
+        let mut var_message = <String>::sse_decode(deserializer);
+        return crate::api::hand_vision::HandVisionModelStatus {
+            loaded: var_loaded,
+            model_name: var_modelName,
+            input_width: var_inputWidth,
+            input_height: var_inputHeight,
+            confidence_threshold: var_confidenceThreshold,
+            iou_threshold: var_iouThreshold,
+            message: var_message,
+        };
+    }
+}
+
 impl SseDecode for crate::api::hand_vision::HandVisionResult {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2570,31 +2731,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        20 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        22 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        23 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__system_security__collect_system_security_report_impl(
+        24 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        39 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__system_security__run_system_security_review_impl(
+        40 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2647,93 +2808,107 @@ fn pde_ffi_dispatcher_sync_impl(
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
+        10 => {
+            wire__crate__api__hand_vision__analyze_hand_rgb_frame_impl(ptr, rust_vec_len, data_len)
+        }
+        11 => wire__crate__api__native_vision__analyze_head_pose_geometry_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
+        12 => wire__crate__api__proctoring__analyze_motion_sample_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__native_vision__analyze_rgb_frame_quality_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
+        14 => wire__crate__api__proctoring__analyze_scan_frame_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__lockdown__analyze_secure_lockdown_report_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => wire__crate__api__system_security__analyze_system_security_report_impl(
+        16 => wire__crate__api__system_security__analyze_system_security_report_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => {
+        17 => {
             wire__crate__api__attempt_recovery__attempt_checksum_impl(ptr, rust_vec_len, data_len)
         }
-        17 => wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
+        18 => wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
+        19 => wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__proctoring__current_vision_model_status_impl(
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        24 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        26 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        27 => {
-            wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
+        20 => {
+            wire__crate__api__hand_vision__clear_hand_vision_model_impl(ptr, rust_vec_len, data_len)
         }
-        28 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
+        21 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__hand_vision__current_hand_vision_model_status_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        26 => wire__crate__api__proctoring__current_vision_model_status_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        27 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        29 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
         30 => {
-            wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
+            wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
         }
         31 => {
+            wire__crate__api__hand_vision__load_hand_vision_model_impl(ptr, rust_vec_len, data_len)
+        }
+        32 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        34 => {
+            wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
+        }
+        35 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        32 => {
+        36 => {
             wire__crate__api__hand_vision__review_hand_detections_impl(ptr, rust_vec_len, data_len)
         }
-        33 => wire__crate__api__hand_vision__review_hand_model_output_impl(
+        37 => wire__crate__api__hand_vision__review_hand_model_output_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__native_vision__review_object_detections_impl(
+        38 => wire__crate__api__native_vision__review_object_detections_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        37 => {
+        41 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        38 => {
+        42 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        39 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+        43 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -3244,6 +3419,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_air_board::HandRegionSig
     for crate::api::hand_air_board::HandRegionSignal
 {
     fn into_into_dart(self) -> crate::api::hand_air_board::HandRegionSignal {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::hand_vision::HandVisionModelStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.loaded.into_into_dart().into_dart(),
+            self.model_name.into_into_dart().into_dart(),
+            self.input_width.into_into_dart().into_dart(),
+            self.input_height.into_into_dart().into_dart(),
+            self.confidence_threshold.into_into_dart().into_dart(),
+            self.iou_threshold.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::hand_vision::HandVisionModelStatus
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::hand_vision::HandVisionModelStatus>
+    for crate::api::hand_vision::HandVisionModelStatus
+{
+    fn into_into_dart(self) -> crate::api::hand_vision::HandVisionModelStatus {
         self
     }
 }
@@ -3919,6 +4120,19 @@ impl SseEncode for crate::api::hand_air_board::HandRegionSignal {
         <bool>::sse_encode(self.near_face, serializer);
         <bool>::sse_encode(self.below_desk_line, serializer);
         <i64>::sse_encode(self.timestamp_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::hand_vision::HandVisionModelStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.loaded, serializer);
+        <String>::sse_encode(self.model_name, serializer);
+        <i32>::sse_encode(self.input_width, serializer);
+        <i32>::sse_encode(self.input_height, serializer);
+        <f32>::sse_encode(self.confidence_threshold, serializer);
+        <f32>::sse_encode(self.iou_threshold, serializer);
+        <String>::sse_encode(self.message, serializer);
     }
 }
 

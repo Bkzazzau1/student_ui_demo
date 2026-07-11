@@ -330,7 +330,7 @@ fn load_hand_vision_model_inner(
     let status = status_from_manifest(&manifest, "loaded");
     let runtime = HandVisionRuntime {
         manifest,
-        model: Arc::new(model),
+        model,
     };
     let mut guard = HAND_VISION_RUNTIME
         .lock()
