@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1080482470;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1492084440;
 
 // Section: executor
 
@@ -812,6 +812,39 @@ fn wire__crate__api__attempt_recovery__attempt_checksum_impl(
         },
     )
 }
+fn wire__crate__api__ai_action_policy__authorize_ai_action_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "authorize_ai_action",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_action = <String>::sse_decode(&mut deserializer);
+            let api_exam_active = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::ai_action_policy::authorize_ai_action(api_action, api_exam_active),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -879,6 +912,54 @@ fn wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
             transform_result_sse::<_, ()>((move || {
                 let output_ok = Result::<_, ()>::Ok(
                     crate::api::gaze_calibration::build_gaze_calibration_profile(api_samples),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__face_verification__build_portable_face_template_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "build_portable_face_template",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_student_id = <String>::sse_decode(&mut deserializer);
+            let api_enrollment_id = <String>::sse_decode(&mut deserializer);
+            let api_model_id = <String>::sse_decode(&mut deserializer);
+            let api_model_sha256 = <String>::sse_decode(&mut deserializer);
+            let api_preprocessing_version = <String>::sse_decode(&mut deserializer);
+            let api_embeddings = <Vec<Vec<f32>>>::sse_decode(&mut deserializer);
+            let api_quality_score = <f32>::sse_decode(&mut deserializer);
+            let api_created_at_ms = <i64>::sse_decode(&mut deserializer);
+            let api_expires_at_ms = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::face_verification::build_portable_face_template(
+                    api_student_id,
+                    api_enrollment_id,
+                    api_model_id,
+                    api_model_sha256,
+                    api_preprocessing_version,
+                    api_embeddings,
+                    api_quality_score,
+                    api_created_at_ms,
+                    api_expires_at_ms,
                 )?;
                 Ok(output_ok)
             })())
@@ -1901,6 +1982,48 @@ fn wire__crate__api__proctoring__update_rotation_progress_impl(
         },
     )
 }
+fn wire__crate__api__face_verification__validate_portable_face_template_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "validate_portable_face_template",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_template_json = <String>::sse_decode(&mut deserializer);
+            let api_expected_student_id = <String>::sse_decode(&mut deserializer);
+            let api_expected_model_id = <String>::sse_decode(&mut deserializer);
+            let api_expected_model_sha256 = <String>::sse_decode(&mut deserializer);
+            let api_now_ms = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::face_verification::validate_portable_face_template(
+                        api_template_json,
+                        api_expected_student_id,
+                        api_expected_model_id,
+                        api_expected_model_sha256,
+                        api_now_ms,
+                    ),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1933,6 +2056,48 @@ fn wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
                         api_checksum,
                         api_recovered_from,
                     ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__face_verification__verify_face_embedding_1_to_1_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "verify_face_embedding_1_to_1",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_template_json = <String>::sse_decode(&mut deserializer);
+            let api_probe_embedding = <Vec<f32>>::sse_decode(&mut deserializer);
+            let api_signal_quality = <f32>::sse_decode(&mut deserializer);
+            let api_match_threshold = <f32>::sse_decode(&mut deserializer);
+            let api_now_ms = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::face_verification::verify_face_embedding_1_to_1(
+                        api_template_json,
+                        api_probe_embedding,
+                        api_signal_quality,
+                        api_match_threshold,
+                        api_now_ms,
+                    ),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -1981,6 +2146,22 @@ impl SseDecode for crate::api::proctoring::AcousticSampleDecision {
             updated_loss_streak: var_updatedLossStreak,
             should_trigger_scan: var_shouldTriggerScan,
             normalized_tether_signal: var_normalizedTetherSignal,
+        };
+    }
+}
+
+impl SseDecode for crate::api::ai_action_policy::AiActionAuthorization {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_action = <String>::sse_decode(deserializer);
+        let mut var_allowed = <bool>::sse_decode(deserializer);
+        let mut var_requiresUserConsent = <bool>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::ai_action_policy::AiActionAuthorization {
+            action: var_action,
+            allowed: var_allowed,
+            requires_user_consent: var_requiresUserConsent,
+            reason: var_reason,
         };
     }
 }
@@ -2224,6 +2405,54 @@ impl SseDecode for crate::api::proctoring::FaceAnalysisDecision {
             updated_last_multi_face_strike_at_ms: var_updatedLastMultiFaceStrikeAtMs,
             updated_last_gaze_warning_at_ms: var_updatedLastGazeWarningAtMs,
             updated_gaze_away_started_at_ms: var_updatedGazeAwayStartedAtMs,
+        };
+    }
+}
+
+impl SseDecode for crate::api::face_verification::FaceTemplateStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_valid = <bool>::sse_decode(deserializer);
+        let mut var_studentId = <String>::sse_decode(deserializer);
+        let mut var_enrollmentId = <String>::sse_decode(deserializer);
+        let mut var_modelId = <String>::sse_decode(deserializer);
+        let mut var_modelSha256 = <String>::sse_decode(deserializer);
+        let mut var_embeddingDimension = <i32>::sse_decode(deserializer);
+        let mut var_sampleCount = <i32>::sse_decode(deserializer);
+        let mut var_qualityScore = <f32>::sse_decode(deserializer);
+        let mut var_templateSha256 = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::face_verification::FaceTemplateStatus {
+            valid: var_valid,
+            student_id: var_studentId,
+            enrollment_id: var_enrollmentId,
+            model_id: var_modelId,
+            model_sha256: var_modelSha256,
+            embedding_dimension: var_embeddingDimension,
+            sample_count: var_sampleCount,
+            quality_score: var_qualityScore,
+            template_sha256: var_templateSha256,
+            reason: var_reason,
+        };
+    }
+}
+
+impl SseDecode for crate::api::face_verification::FaceVerificationResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_state = <String>::sse_decode(deserializer);
+        let mut var_similarity = <f32>::sse_decode(deserializer);
+        let mut var_threshold = <f32>::sse_decode(deserializer);
+        let mut var_signalQuality = <f32>::sse_decode(deserializer);
+        let mut var_reliable = <bool>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::face_verification::FaceVerificationResult {
+            state: var_state,
+            similarity: var_similarity,
+            threshold: var_threshold,
+            signal_quality: var_signalQuality,
+            reliable: var_reliable,
+            reason: var_reason,
         };
     }
 }
@@ -2641,6 +2870,18 @@ impl SseDecode for Vec<crate::api::hand_gesture::HandLandmarkPoint> {
             ans_.push(<crate::api::hand_gesture::HandLandmarkPoint>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<Vec<f32>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<Vec<f32>>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -3073,31 +3314,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        25 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        27 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        28 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__system_security__collect_system_security_report_impl(
+        29 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        47 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        46 => wire__crate__api__system_security__run_system_security_review_impl(
+        48 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -3186,99 +3427,119 @@ fn pde_ffi_dispatcher_sync_impl(
         19 => {
             wire__crate__api__attempt_recovery__attempt_checksum_impl(ptr, rust_vec_len, data_len)
         }
-        20 => wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
+        20 => wire__crate__api__ai_action_policy__authorize_ai_action_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
+        21 => wire__crate__api__air_board__build_air_board_evidence_manifest_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__hand_landmark_runtime__clear_hand_landmark_model_impl(
+        22 => wire__crate__api__gaze_calibration__build_gaze_calibration_profile_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => {
+        23 => wire__crate__api__face_verification__build_portable_face_template_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        24 => wire__crate__api__hand_landmark_runtime__clear_hand_landmark_model_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        25 => {
             wire__crate__api__hand_vision__clear_hand_vision_model_impl(ptr, rust_vec_len, data_len)
         }
-        24 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__hand_landmark_runtime__current_hand_landmark_model_status_impl(
+        26 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__hand_landmark_runtime__current_hand_landmark_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__api__hand_vision__current_hand_vision_model_status_impl(
+        31 => wire__crate__api__hand_vision__current_hand_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        32 => wire__crate__api__proctoring__current_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
+        33 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        34 => {
-            wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
-        }
-        35 => wire__crate__api__hand_landmark_runtime__load_hand_landmark_model_impl(
+        35 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
         36 => {
+            wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
+        }
+        37 => wire__crate__api__hand_landmark_runtime__load_hand_landmark_model_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        38 => {
             wire__crate__api__hand_vision__load_hand_vision_model_impl(ptr, rust_vec_len, data_len)
         }
-        37 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
+        39 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        39 => {
+        41 => {
             wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
         }
-        40 => {
+        42 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        41 => {
+        43 => {
             wire__crate__api__hand_vision__review_hand_detections_impl(ptr, rust_vec_len, data_len)
         }
-        42 => wire__crate__api__hand_landmark_runtime__review_hand_landmark_output_impl(
+        44 => wire__crate__api__hand_landmark_runtime__review_hand_landmark_output_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        43 => wire__crate__api__hand_vision__review_hand_model_output_impl(
+        45 => wire__crate__api__hand_vision__review_hand_model_output_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        44 => wire__crate__api__native_vision__review_object_detections_impl(
+        46 => wire__crate__api__native_vision__review_object_detections_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => {
+        49 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        48 => {
+        50 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        49 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+        51 => wire__crate__api__face_verification__validate_portable_face_template_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        52 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        53 => wire__crate__api__face_verification__verify_face_embedding_1_to_1_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -3336,6 +3597,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::AcousticSampleDec
     for crate::api::proctoring::AcousticSampleDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::AcousticSampleDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ai_action_policy::AiActionAuthorization {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.action.into_into_dart().into_dart(),
+            self.allowed.into_into_dart().into_dart(),
+            self.requires_user_consent.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ai_action_policy::AiActionAuthorization
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ai_action_policy::AiActionAuthorization>
+    for crate::api::ai_action_policy::AiActionAuthorization
+{
+    fn into_into_dart(self) -> crate::api::ai_action_policy::AiActionAuthorization {
         self
     }
 }
@@ -3603,6 +3887,60 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::FaceAnalysisDecis
     for crate::api::proctoring::FaceAnalysisDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::FaceAnalysisDecision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::face_verification::FaceTemplateStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.valid.into_into_dart().into_dart(),
+            self.student_id.into_into_dart().into_dart(),
+            self.enrollment_id.into_into_dart().into_dart(),
+            self.model_id.into_into_dart().into_dart(),
+            self.model_sha256.into_into_dart().into_dart(),
+            self.embedding_dimension.into_into_dart().into_dart(),
+            self.sample_count.into_into_dart().into_dart(),
+            self.quality_score.into_into_dart().into_dart(),
+            self.template_sha256.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::face_verification::FaceTemplateStatus
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::face_verification::FaceTemplateStatus>
+    for crate::api::face_verification::FaceTemplateStatus
+{
+    fn into_into_dart(self) -> crate::api::face_verification::FaceTemplateStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::face_verification::FaceVerificationResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.state.into_into_dart().into_dart(),
+            self.similarity.into_into_dart().into_dart(),
+            self.threshold.into_into_dart().into_dart(),
+            self.signal_quality.into_into_dart().into_dart(),
+            self.reliable.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::face_verification::FaceVerificationResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::face_verification::FaceVerificationResult>
+    for crate::api::face_verification::FaceVerificationResult
+{
+    fn into_into_dart(self) -> crate::api::face_verification::FaceVerificationResult {
         self
     }
 }
@@ -4378,6 +4716,16 @@ impl SseEncode for crate::api::proctoring::AcousticSampleDecision {
     }
 }
 
+impl SseEncode for crate::api::ai_action_policy::AiActionAuthorization {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.action, serializer);
+        <bool>::sse_encode(self.allowed, serializer);
+        <bool>::sse_encode(self.requires_user_consent, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
 impl SseEncode for crate::api::air_board::AirBoardActivitySummary {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4525,6 +4873,34 @@ impl SseEncode for crate::api::proctoring::FaceAnalysisDecision {
         <i64>::sse_encode(self.updated_last_multi_face_strike_at_ms, serializer);
         <i64>::sse_encode(self.updated_last_gaze_warning_at_ms, serializer);
         <Option<i64>>::sse_encode(self.updated_gaze_away_started_at_ms, serializer);
+    }
+}
+
+impl SseEncode for crate::api::face_verification::FaceTemplateStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.valid, serializer);
+        <String>::sse_encode(self.student_id, serializer);
+        <String>::sse_encode(self.enrollment_id, serializer);
+        <String>::sse_encode(self.model_id, serializer);
+        <String>::sse_encode(self.model_sha256, serializer);
+        <i32>::sse_encode(self.embedding_dimension, serializer);
+        <i32>::sse_encode(self.sample_count, serializer);
+        <f32>::sse_encode(self.quality_score, serializer);
+        <String>::sse_encode(self.template_sha256, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
+impl SseEncode for crate::api::face_verification::FaceVerificationResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.state, serializer);
+        <f32>::sse_encode(self.similarity, serializer);
+        <f32>::sse_encode(self.threshold, serializer);
+        <f32>::sse_encode(self.signal_quality, serializer);
+        <bool>::sse_encode(self.reliable, serializer);
+        <String>::sse_encode(self.reason, serializer);
     }
 }
 
@@ -4786,6 +5162,16 @@ impl SseEncode for Vec<crate::api::hand_gesture::HandLandmarkPoint> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::hand_gesture::HandLandmarkPoint>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<Vec<f32>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <Vec<f32>>::sse_encode(item, serializer);
         }
     }
 }

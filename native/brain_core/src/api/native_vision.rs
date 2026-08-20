@@ -53,7 +53,11 @@ pub struct NativeHeadPoseReviewResult {
 }
 
 #[frb(sync)]
-pub fn analyze_rgb_frame_quality(width: i32, height: i32, rgb_bytes: Vec<u8>) -> NativeVisionFrameQuality {
+pub fn analyze_rgb_frame_quality(
+    width: i32,
+    height: i32,
+    rgb_bytes: Vec<u8>,
+) -> NativeVisionFrameQuality {
     if width <= 0 || height <= 0 {
         return frame_quality(false, 0.0, 0.0, 0.0, "invalid frame dimensions");
     }
@@ -153,7 +157,15 @@ pub fn analyze_head_pose_geometry(
 ) -> NativeHeadPoseReviewResult {
     let _ = mouth_x;
     if face_width <= 0.0 || face_height <= 0.0 {
-        return head_pose(false, true, 1.0, 1.0, 1.0, "urgent_review_required", "invalid face geometry");
+        return head_pose(
+            false,
+            true,
+            1.0,
+            1.0,
+            1.0,
+            "urgent_review_required",
+            "invalid face geometry",
+        );
     }
 
     let eye_mid_x = (left_eye_x + right_eye_x) / 2.0;
@@ -187,7 +199,15 @@ pub fn analyze_head_pose_geometry(
         "head pose is within expected range"
     };
 
-    head_pose(true, looking_away, yaw_score, pitch_score, roll_score, attention_level, reason)
+    head_pose(
+        true,
+        looking_away,
+        yaw_score,
+        pitch_score,
+        roll_score,
+        attention_level,
+        reason,
+    )
 }
 
 fn decode_predictions(
@@ -241,7 +261,8 @@ fn decode_predictions(
             continue;
         }
 
-        let (x_center, y_center, box_width, box_height) = normalize_box(cx, cy, width, height, image_width, image_height);
+        let (x_center, y_center, box_width, box_height) =
+            normalize_box(cx, cy, width, height, image_width, image_height);
         let x_min = (x_center - box_width / 2.0).clamp(0.0, image_width);
         let y_min = (y_center - box_height / 2.0).clamp(0.0, image_height);
         let x_max = (x_center + box_width / 2.0).clamp(0.0, image_width);
@@ -276,7 +297,12 @@ fn gather_row(output: &[f32], index: usize, attributes: usize) -> Vec<f32> {
     output[start..end].to_vec()
 }
 
-fn gather_channels_first(output: &[f32], index: usize, num_predictions: usize, attributes: usize) -> Vec<f32> {
+fn gather_channels_first(
+    output: &[f32],
+    index: usize,
+    num_predictions: usize,
+    attributes: usize,
+) -> Vec<f32> {
     let mut row = Vec::with_capacity(attributes);
     for attr in 0..attributes {
         let offset = attr.saturating_mul(num_predictions).saturating_add(index);
@@ -288,7 +314,14 @@ fn gather_channels_first(output: &[f32], index: usize, num_predictions: usize, a
     row
 }
 
-fn normalize_box(cx: f32, cy: f32, width: f32, height: f32, image_width: f32, image_height: f32) -> (f32, f32, f32, f32) {
+fn normalize_box(
+    cx: f32,
+    cy: f32,
+    width: f32,
+    height: f32,
+    image_width: f32,
+    image_height: f32,
+) -> (f32, f32, f32, f32) {
     if cx <= 1.5 && cy <= 1.5 && width <= 1.5 && height <= 1.5 {
         (
             cx * image_width,
@@ -301,12 +334,20 @@ fn normalize_box(cx: f32, cy: f32, width: f32, height: f32, image_width: f32, im
     }
 }
 
-fn non_max_suppression(mut detections: Vec<NativeVisionDetection>, iou_threshold: f32) -> Vec<NativeVisionDetection> {
-    detections.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+fn non_max_suppression(
+    mut detections: Vec<NativeVisionDetection>,
+    iou_threshold: f32,
+) -> Vec<NativeVisionDetection> {
+    detections.sort_by(|a, b| {
+        b.confidence
+            .partial_cmp(&a.confidence)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let mut kept: Vec<NativeVisionDetection> = Vec::new();
     'candidate: for detection in detections {
         for existing in &kept {
-            if detection.class_id == existing.class_id && iou(&detection, existing) > iou_threshold {
+            if detection.class_id == existing.class_id && iou(&detection, existing) > iou_threshold
+            {
                 continue 'candidate;
             }
         }
@@ -329,7 +370,10 @@ fn iou(a: &NativeVisionDetection, b: &NativeVisionDetection) -> f32 {
     intersection / (area_a + area_b - intersection).max(0.0001)
 }
 
-fn object_review(detections: Vec<NativeVisionDetection>, default_reason: &str) -> NativeObjectReviewResult {
+fn object_review(
+    detections: Vec<NativeVisionDetection>,
+    default_reason: &str,
+) -> NativeObjectReviewResult {
     let people_count = detections.iter().filter(|d| is_person(&d.label)).count() as i32;
     let phone_count = detections.iter().filter(|d| is_phone(&d.label)).count() as i32;
     let book_count = detections.iter().filter(|d| is_book(&d.label)).count() as i32;
@@ -401,10 +445,20 @@ fn approximate_sharpness(luma: &[f32], width: usize, height: usize) -> f32 {
             count += 1;
         }
     }
-    if count == 0 { 0.0 } else { total / count as f32 }
+    if count == 0 {
+        0.0
+    } else {
+        total / count as f32
+    }
 }
 
-fn frame_quality(is_usable: bool, brightness: f32, contrast: f32, sharpness: f32, reason: &str) -> NativeVisionFrameQuality {
+fn frame_quality(
+    is_usable: bool,
+    brightness: f32,
+    contrast: f32,
+    sharpness: f32,
+    reason: &str,
+) -> NativeVisionFrameQuality {
     NativeVisionFrameQuality {
         is_usable,
         brightness,

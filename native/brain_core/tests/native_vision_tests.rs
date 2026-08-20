@@ -1,6 +1,6 @@
 use brain_core::api::{
-    analyze_head_pose_geometry, analyze_rgb_frame_quality, decode_yolo_output,
-    review_object_detections, NativeVisionDetection,
+    NativeVisionDetection, analyze_head_pose_geometry, analyze_rgb_frame_quality,
+    decode_yolo_output, review_object_detections,
 };
 
 #[test]
@@ -35,8 +35,7 @@ fn yolo_rows_decode_detects_phone_and_person() {
         "book".to_string(),
     ];
     let output = vec![
-        320.0, 240.0, 100.0, 180.0, 0.92, 0.04, 0.02,
-        100.0, 120.0, 40.0, 60.0, 0.05, 0.91, 0.02,
+        320.0, 240.0, 100.0, 180.0, 0.92, 0.04, 0.02, 100.0, 120.0, 40.0, 60.0, 0.05, 0.91, 0.02,
     ];
 
     let result = decode_yolo_output(
@@ -61,12 +60,7 @@ fn yolo_rows_decode_detects_phone_and_person() {
 fn yolo_channels_first_decode_is_supported() {
     let class_names = vec!["person".to_string(), "cell phone".to_string()];
     let output = vec![
-        0.5, 0.2,
-        0.5, 0.3,
-        0.2, 0.1,
-        0.4, 0.1,
-        0.95, 0.01,
-        0.02, 0.9,
+        0.5, 0.2, 0.5, 0.3, 0.2, 0.1, 0.4, 0.1, 0.95, 0.01, 0.02, 0.9,
     ];
 
     let result = decode_yolo_output(
@@ -103,14 +97,8 @@ fn nms_removes_overlapping_same_class_detection() {
 
 #[test]
 fn head_pose_flags_large_yaw() {
-    let result = analyze_head_pose_geometry(
-        40.0, 40.0,
-        80.0, 40.0,
-        74.0, 60.0,
-        60.0, 90.0,
-        100.0,
-        120.0,
-    );
+    let result =
+        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 74.0, 60.0, 60.0, 90.0, 100.0, 120.0);
 
     assert!(result.usable);
     assert!(result.looking_away);
@@ -119,20 +107,22 @@ fn head_pose_flags_large_yaw() {
 
 #[test]
 fn head_pose_accepts_centered_face() {
-    let result = analyze_head_pose_geometry(
-        40.0, 40.0,
-        80.0, 40.0,
-        60.0, 60.0,
-        60.0, 92.0,
-        100.0,
-        120.0,
-    );
+    let result =
+        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 60.0, 60.0, 60.0, 92.0, 100.0, 120.0);
 
     assert!(result.usable);
     assert!(!result.looking_away);
 }
 
-fn detection(class_id: i32, label: &str, confidence: f32, cx: f32, cy: f32, width: f32, height: f32) -> NativeVisionDetection {
+fn detection(
+    class_id: i32,
+    label: &str,
+    confidence: f32,
+    cx: f32,
+    cy: f32,
+    width: f32,
+    height: f32,
+) -> NativeVisionDetection {
     NativeVisionDetection {
         class_id,
         label: label.to_string(),

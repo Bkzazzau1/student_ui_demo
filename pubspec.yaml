@@ -32,6 +32,8 @@ flutter:
   assets:
     - assets/models/
     - assets/models/face_landmarker/
+    - assets/models/face_landmarker_windows/
+    - assets/models/face_embedding_sface/
     - assets/models/optimized_vision_runtime/
     - assets/models/yolo_exam_review/
     - assets/models/hand_vision/

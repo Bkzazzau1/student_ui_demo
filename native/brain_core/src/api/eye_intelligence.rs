@@ -48,7 +48,12 @@ pub fn analyze_eye_region_signal(signal: EyeRegionSignal) -> EyeIntelligenceResu
     };
 
     let head_motion_score = 1.0
-        - (signal.head_yaw.abs().max(signal.head_pitch.abs()).max(signal.head_roll.abs()) / 1.2)
+        - (signal
+            .head_yaw
+            .abs()
+            .max(signal.head_pitch.abs())
+            .max(signal.head_roll.abs())
+            / 1.2)
             .clamp(0.0, 1.0);
     let head_stable = head_motion_score >= 0.35;
 
@@ -67,9 +72,15 @@ pub fn analyze_eye_region_signal(signal: EyeRegionSignal) -> EyeIntelligenceResu
     } else if openness_score < 0.18 {
         ("medium_attention_required", "eyes are not clearly visible")
     } else if !head_stable {
-        ("medium_attention_required", "head position is not stable enough for reliable eye analysis")
+        (
+            "medium_attention_required",
+            "head position is not stable enough for reliable eye analysis",
+        )
     } else if !usable {
-        ("medium_attention_required", "eye signal needs better camera quality")
+        (
+            "medium_attention_required",
+            "eye signal needs better camera quality",
+        )
     } else {
         ("normal", "eye signal is usable")
     };
@@ -89,7 +100,10 @@ pub fn analyze_eye_region_signal(signal: EyeRegionSignal) -> EyeIntelligenceResu
 #[frb(sync)]
 pub fn describe_eye_zone_for_student(zone: String) -> String {
     match zone.as_str() {
-        "air_board" => "Your rough-work board is active. Please continue solving inside the exam screen.".to_string(),
+        "air_board" => {
+            "Your rough-work board is active. Please continue solving inside the exam screen."
+                .to_string()
+        }
         "question_area" => "Please continue reading the question carefully.".to_string(),
         "answer_area" => "Please continue your answer inside the exam screen.".to_string(),
         "downward_gaze" => "Please keep your work inside the exam screen.".to_string(),

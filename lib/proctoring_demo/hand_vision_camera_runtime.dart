@@ -115,6 +115,7 @@ class HandVisionCameraRuntime {
             .catchError((Object error) {
               _lastError = 'Hand frame analysis failed: $error';
               onStatus?.call(_lastError!);
+              return null;
             })
             .whenComplete(() => _processing = false),
       );

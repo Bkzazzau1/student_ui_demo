@@ -2,6 +2,12 @@
 
 Student-facing secure assessment app for K-SLAS proctored examinations.
 
+The application now includes a dependency-free Python edge-AI foundation in
+`ai_runtime/`. Python produces explainable review recommendations, while Rust
+remains responsible for memory, evidence, permissions, and device control. See
+`docs/python_edge_ai_architecture.md` for the trust boundaries and integration
+sequence.
+
 This repository is no longer treated as a static presentation mockup. It is the foundation for the real student exam flow: assessment selection, Face ID setup, 360 room scan, audio review, system review, security review, live exam attempt, continuous camera monitoring, submission, and result summary.
 
 The student screens must use plain language only: identity check, room scan, audio review, system review, security review, evidence record, and invigilator review.
@@ -14,6 +20,13 @@ flutter pub get
 flutter analyze
 flutter test
 flutter run -d windows
+```
+
+Run the local AI protocol and its tests with:
+
+```bash
+python -m ai_runtime
+python -m unittest discover -s ai_runtime/tests -v
 ```
 
 ## Student exam flow

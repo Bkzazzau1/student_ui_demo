@@ -14,17 +14,22 @@ import 'audio_live_event_mapper.dart';
 import 'camera_evidence_capture_service.dart';
 import 'camera_event_evidence_policy.dart';
 import 'camera_runtime_coordinator.dart';
+import 'calibrated_gaze_service.dart';
 import 'continuous_biometric_liveness_service.dart';
+import 'edge_ai_review_coordinator.dart';
+import 'gaze_head_pose_estimator.dart';
 import 'landmark_gaze_runtime_selector.dart';
 import 'live_camera_frame_bus.dart';
 import 'live_event_cooldown_gate.dart';
 import 'live_monitoring_profile.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
+import 'native_edge_ai_action_authorizer.dart';
 import 'object_review_event_mapper.dart';
 import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
 import 'proctoring_risk_policy.dart';
+import 'python_edge_ai_service.dart';
 import 'snapshot_gaze_fallback_service.dart';
 import 'vision_compute_budget_service.dart';
 import 'visual_reflection_shadow_service.dart';
@@ -58,7 +63,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   static const int _secondPersonPauseStreak = 7;
   static const int _gazeReviewStreak = 5;
   static const int _gazePauseStreak = 8;
-  static const double _gazeConfidenceThreshold = 0.72;
   static const int _farVoiceWarningStreak = 3;
   static const int _deviceRecoverySeconds = 30;
   static const int _deviceRetryEverySeconds = 5;
@@ -115,6 +119,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       SnapshotGazeFallbackService();
   final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
   final ObjectModelFrameGate _objectFrameGate = ObjectModelFrameGate();
+  late final EdgeAiReviewCoordinator _edgeAi;
+  late final CalibratedGazeService _calibratedGaze;
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -173,6 +179,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       widget.assessmentType,
       reviewAudience: widget.reviewAudience,
     );
+    _calibratedGaze = CalibratedGazeService(attemptId: widget.attemptId)
+      ..load();
+    _edgeAi = EdgeAiReviewCoordinator(
+      reviewer: PythonEdgeAiService(
+        workingDirectory: _edgeAiWorkingDirectory(),
+      ),
+      authorizer: NativeEdgeAiActionAuthorizer(),
+      onApprovedAction: _executeApprovedAiAction,
+    );
     unawaited(_startYoloHealthCheck());
     unawaited(_startObjectModelGate());
     unawaited(_startCamera());
@@ -187,15 +202,59 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _cameraRecoveryTimer?.cancel();
     _microphoneRecoveryTimer?.cancel();
     final camera = _camera;
-    if (camera != null && camera.value.isStreamingImages) {
-      unawaited(camera.stopImageStream());
-    }
-    camera?.dispose();
+    _camera = null;
+    unawaited(_disposeCameraAndReleaseLease(camera));
     unawaited(_objectFrameGate.stop());
-    _releaseCameraLease();
     _microphone.dispose();
     _events.dispose();
+    unawaited(_disposeEdgeAi());
     super.dispose();
+  }
+
+  Future<void> _disposeEdgeAi() async {
+    try {
+      await _edgeAi.clearAttempt(widget.attemptId);
+    } catch (_) {
+      // The runtime may never have started or may already have exited.
+    }
+    await _edgeAi.dispose();
+  }
+
+  String _edgeAiWorkingDirectory() {
+    const configured = String.fromEnvironment(
+      'KSLAS_PYTHON_AI_WORKING_DIRECTORY',
+    );
+    if (configured.trim().isNotEmpty) return configured.trim();
+
+    final candidates = <Directory>[Directory.current];
+    var executableDirectory = File(Platform.resolvedExecutable).parent;
+    for (var depth = 0; depth < 7; depth++) {
+      candidates.add(executableDirectory);
+      executableDirectory = executableDirectory.parent;
+    }
+    for (final candidate in candidates) {
+      if (Directory(
+        '${candidate.path}${Platform.pathSeparator}ai_runtime',
+      ).existsSync()) {
+        return candidate.path;
+      }
+    }
+    return Directory.current.path;
+  }
+
+  Future<void> _disposeCameraAndReleaseLease(CameraController? camera) async {
+    try {
+      if (camera != null) {
+        if (camera.value.isStreamingImages) {
+          await camera.stopImageStream();
+        }
+        await camera.dispose();
+      }
+    } catch (_) {
+      // Keep shutdown fail-soft so route changes cannot crash the exam shell.
+    } finally {
+      _releaseCameraLease();
+    }
   }
 
   Future<void> _startCamera() async {
@@ -236,6 +295,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _livenessStatus = 'Starting presence check...';
       _visualStatus = 'Starting camera view check...';
     });
+    CameraController? openingController;
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
@@ -265,6 +325,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         _cameraResolution,
         enableAudio: false,
       );
+      openingController = controller;
       await controller.initialize();
       var streamReady = false;
       try {
@@ -301,11 +362,18 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           _visualStatus = 'Snapshot camera view check active';
         }
       });
+      openingController = null;
       _clearCameraRecovery();
       if (!streamReady) {
         _startSnapshotCameraChecks(controller);
       }
     } catch (e) {
+      final failedController = openingController;
+      if (failedController != null) {
+        try {
+          await failedController.dispose();
+        } catch (_) {}
+      }
       _beginCameraRecovery(
         'Camera connection is unstable. Please keep your face visible while it reconnects.',
         metadata: <String, Object?>{'error': e.toString()},
@@ -448,13 +516,17 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         final result = _snapshotGazeFallback.analyseJpeg(bytes);
         _snapshotChecksProcessed++;
         unawaited(_runSnapshotYolo(bytes));
+        final landmarkGaze = await _analyseSnapshotLandmarks(bytes);
+        if (landmarkGaze != null) {
+          _handleLandmarkGaze(landmarkGaze);
+          return;
+        }
         if (result == null) return;
 
-        if (result.ready && result.headPoseShiftLikely) {
-          _gazeRiskStreak++;
-        } else {
-          _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
-        }
+        // Snapshot/luminance analysis is not a true landmark gaze signal. It
+        // remains useful for camera diagnostics but cannot accumulate a gaze
+        // violation or pause an exam.
+        _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
 
         if (result.ready && result.multiplePeopleLikely) {
           _multiplePeopleRiskStreak++;
@@ -471,10 +543,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             _visualReady = true;
             _livenessReady = true;
             _gazeStatus = !result.ready
-                ? '1-second gaze/head check learning normal position'
-                : result.headPoseShiftLikely
-                ? 'Focus reminder shown ($_gazeRiskStreak/$_gazePauseStreak)'
-                : '1-second gaze/head check stable';
+                ? 'Snapshot camera check learning normal position'
+                : 'Snapshot-only signal • observation only';
             _visualStatus = result.multiplePeopleLikely
                 ? 'Camera view needs review ($_multiplePeopleRiskStreak/$_secondPersonPauseStreak)'
                 : 'Snapshot camera view check clear';
@@ -730,50 +800,93 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
       final gaze = await _gazeEstimator.analyse(image);
       if (gaze == null) return;
-      if (gaze.lookingAway && gaze.confidence >= _gazeConfidenceThreshold) {
-        _gazeRiskStreak++;
-      } else {
-        _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
-      }
-      if (mounted) {
-        setState(() {
-          _gazeReady = true;
-          _gazeStatus =
-              gaze.lookingAway && gaze.confidence >= _gazeConfidenceThreshold
-              ? 'Focus reminder shown ($_gazeRiskStreak/$_gazePauseStreak)'
-              : 'Focused forward • gaze/head pose stable';
-        });
-      }
-      if (_gazeRiskStreak == _gazeReviewStreak) {
-        unawaited(
-          _raiseEvent(
-            eventType: 'gaze_head_pose_deviation',
-            severity: 'warning',
-            message: 'Please keep your face visible and focus on the screen.',
-            metadata: <String, Object?>{
-              ...gaze.toJson(),
-              'gaze_streak': _gazeRiskStreak,
-            },
-          ),
-        );
-      }
-      if (_gazeRiskStreak >= _gazePauseStreak) {
-        _gazeRiskStreak = 0;
-        unawaited(
-          _raiseEvent(
-            eventType: 'sustained_gaze_head_pose_deviation',
-            severity: 'high',
-            message: 'Sustained head or gaze movement needs review.',
-            metadata: <String, Object?>{
-              ...gaze.toJson(),
-              'gaze_streak': _gazePauseStreak,
-            },
-          ),
-        );
-      }
+      _handleLandmarkGaze(gaze);
     } finally {
       _visionBudget.recordWork(DateTime.now().difference(started));
       _analysingFrame = false;
+    }
+  }
+
+  Future<GazeHeadPoseResult?> _analyseSnapshotLandmarks(Uint8List jpeg) async {
+    final decoded = img.decodeImage(jpeg);
+    if (decoded == null || decoded.width <= 0 || decoded.height <= 0) {
+      return null;
+    }
+    final rgb = Uint8List(decoded.width * decoded.height * 3);
+    var offset = 0;
+    for (var y = 0; y < decoded.height; y++) {
+      for (var x = 0; x < decoded.width; x++) {
+        final pixel = decoded.getPixel(x, y);
+        rgb[offset++] = pixel.r.toInt();
+        rgb[offset++] = pixel.g.toInt();
+        rgb[offset++] = pixel.b.toInt();
+      }
+    }
+    return _gazeEstimator.analyseRgb(
+      rgbBytes: rgb,
+      width: decoded.width,
+      height: decoded.height,
+    );
+  }
+
+  void _handleLandmarkGaze(GazeHeadPoseResult gaze) {
+    final calibrated = _calibratedGaze.observe(
+      gaze,
+      landmarkRuntimeReady: _gazeEstimator.modelRuntimeReady,
+    );
+    unawaited(
+      _edgeAi.observeGaze(
+        attemptId: widget.attemptId,
+        observation: <String, Object?>{
+          ...gaze.toJson(),
+          ...calibrated.toJson(),
+          'observed_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      ),
+    );
+    if (calibrated.deviating) {
+      _gazeRiskStreak++;
+    } else {
+      _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
+    }
+    if (mounted) {
+      setState(() {
+        _gazeReady = true;
+        _gazeStatus = calibrated.deviating
+            ? 'Focus reminder shown ($_gazeRiskStreak/$_gazePauseStreak)'
+            : calibrated.calibrated
+            ? 'Focused forward • ${calibrated.zone}'
+            : calibrated.reason;
+      });
+    }
+    if (_gazeRiskStreak == _gazeReviewStreak) {
+      unawaited(
+        _raiseEvent(
+          eventType: 'gaze_head_pose_deviation',
+          severity: 'warning',
+          message: 'Please keep your face visible and focus on the screen.',
+          metadata: <String, Object?>{
+            ...gaze.toJson(),
+            ...calibrated.toJson(),
+            'gaze_streak': _gazeRiskStreak,
+          },
+        ),
+      );
+    }
+    if (_gazeRiskStreak >= _gazePauseStreak) {
+      _gazeRiskStreak = 0;
+      unawaited(
+        _raiseEvent(
+          eventType: 'sustained_gaze_head_pose_deviation',
+          severity: 'high',
+          message: 'Sustained head or gaze movement needs review.',
+          metadata: <String, Object?>{
+            ...gaze.toJson(),
+            ...calibrated.toJson(),
+            'gaze_streak': _gazePauseStreak,
+          },
+        ),
+      );
     }
   }
 
@@ -1158,6 +1271,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       reviewAudience: widget.reviewAudience,
     );
     final synced = await _events.send(event);
+    unawaited(_reviewEventWithEdgeAi(event));
     if (!mounted) return;
     setState(() {
       _eventsSent.insert(
@@ -1180,6 +1294,50 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         synced ? message : '$message Please wait for review.',
       );
     }
+  }
+
+  Future<void> _reviewEventWithEdgeAi(LiveProctoringEvent event) async {
+    try {
+      final result = await _edgeAi.process(event, examActive: mounted);
+      if (!mounted) return;
+      if (!result.decision.requiresHumanReview &&
+          result.executedActions.isEmpty) {
+        return;
+      }
+      final reviewSummary = result.decision.requiresHumanReview
+          ? 'AI review requested (${result.decision.riskLevel}, ${result.decision.riskScore})'
+          : 'AI action completed';
+      setState(() {
+        _eventsSent.insert(0, reviewSummary);
+        if (_eventsSent.length > 5) _eventsSent.removeLast();
+      });
+    } catch (_) {
+      // Local AI is advisory. Event delivery and exam continuity must not fail
+      // when Python is unavailable, restarting, or not packaged yet.
+    }
+  }
+
+  Future<void> _executeApprovedAiAction(
+    String action,
+    LiveProctoringEvent sourceEvent,
+    EdgeAiReviewDecision decision,
+  ) async {
+    if (action != 'capture_review_snapshot' || !mounted) return;
+    await _cameraEvidence.saveRecentCameraEvidence(
+      studentId: widget.studentId,
+      examId: widget.examId,
+      attemptId: widget.attemptId,
+      eventType: sourceEvent.eventType,
+      reviewReason: decision.reasons.join('; '),
+      controller: _camera,
+      frameBus: _frameBus,
+      metadata: <String, Object?>{
+        'source': 'python_edge_ai',
+        'risk_score': decision.riskScore,
+        'risk_level': decision.riskLevel,
+        'disposition': decision.disposition,
+      },
+    );
   }
 
   bool _shouldPauseAttempt({

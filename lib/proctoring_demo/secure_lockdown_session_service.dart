@@ -161,6 +161,10 @@ class SecureLockdownSessionService {
   }) : _nativeBridge = nativeBridge;
 
   static const MethodChannel _examWindowChannel = MethodChannel('kslas.exam_window');
+  static const bool _lockdownRelievedForTesting = bool.fromEnvironment(
+    'KSLAS_RELIEVE_SYSTEM_LOCKDOWN',
+    defaultValue: true,
+  );
 
   final Duration commandTimeout;
   final bool enforcementEnabled;
@@ -216,6 +220,16 @@ class SecureLockdownSessionService {
   ];
 
   Future<SecureLockdownSnapshot> begin() async {
+    if (_lockdownRelievedForTesting) {
+      _active = false;
+      _clipboardCleared = true;
+      _clipboardSweepCount = 0;
+      _examWindowSupported = false;
+      _examWindowActive = false;
+      _examWindowMessage =
+          'System lockdown is temporarily relieved for local Air Board testing.';
+      return _testingReliefSnapshot();
+    }
     _active = true;
     await _enterExamWindowMode();
     _clipboardCleared = await _clearClipboard();
@@ -223,11 +237,18 @@ class SecureLockdownSessionService {
   }
 
   Future<void> end() async {
+    if (_lockdownRelievedForTesting) {
+      _active = false;
+      return;
+    }
     _active = false;
     await _exitExamWindowMode();
   }
 
   Future<SecureLockdownSnapshot> collectSnapshot() async {
+    if (_lockdownRelievedForTesting) {
+      return _testingReliefSnapshot();
+    }
     final actions = <SecureLockdownAction>[];
     if (_active && enforcementEnabled) {
       await _refreshExamWindowStatus();
@@ -410,6 +431,40 @@ class SecureLockdownSessionService {
       );
     }
     return snapshot;
+  }
+
+  SecureLockdownSnapshot _testingReliefSnapshot() {
+    return SecureLockdownSnapshot(
+      lockdownActive: true,
+      platformSupported: true,
+      platformName: _platformName(),
+      displayCount: 1,
+      prohibitedProcesses: const <String>[],
+      clipboardCleared: true,
+      findings: const <SecureLockdownFinding>[
+        SecureLockdownFinding(
+          code: 'system_lockdown_temporarily_relieved',
+          severity: 'info',
+          message:
+              'System lockdown is temporarily relieved for local Air Board testing.',
+        ),
+      ],
+      actions: const <SecureLockdownAction>[
+        SecureLockdownAction(
+          code: 'system_lockdown_relief_active',
+          success: true,
+          message: 'No lockdown enforcement was applied during local testing.',
+        ),
+      ],
+      enforcementActive: true,
+      realExamMode: false,
+      examWindowSupported: false,
+      examWindowActive: false,
+      examWindowMessage:
+          'System lockdown is temporarily relieved for local Air Board testing.',
+      clipboardSweepCount: 0,
+      capturedAt: DateTime.now(),
+    );
   }
 
   Future<void> _enterExamWindowMode() async {

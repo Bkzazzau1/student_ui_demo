@@ -3,12 +3,14 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/ai_action_policy.dart';
 import 'api/air_board.dart';
 import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/exam_behavior.dart';
 import 'api/eye_intelligence.dart';
+import 'api/face_verification.dart';
 import 'api/gaze_calibration.dart';
 import 'api/hand_air_board.dart';
 import 'api/hand_gesture.dart';
@@ -80,7 +82,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1080482470;
+  int get rustContentHash => 1492084440;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -237,6 +239,11 @@ abstract class BrainCoreApiApi extends BaseApi {
 
   String crateApiAttemptRecoveryAttemptChecksum({required String payloadJson});
 
+  AiActionAuthorization crateApiAiActionPolicyAuthorizeAiAction({
+    required String action,
+    required bool examActive,
+  });
+
   String crateApiAirBoardBuildAirBoardEvidenceManifest({
     required String sessionId,
     required String attemptId,
@@ -245,6 +252,18 @@ abstract class BrainCoreApiApi extends BaseApi {
 
   GazeCalibrationProfile crateApiGazeCalibrationBuildGazeCalibrationProfile({
     required List<GazeCalibrationSample> samples,
+  });
+
+  String crateApiFaceVerificationBuildPortableFaceTemplate({
+    required String studentId,
+    required String enrollmentId,
+    required String modelId,
+    required String modelSha256,
+    required String preprocessingVersion,
+    required List<Float32List> embeddings,
+    required double qualityScore,
+    required PlatformInt64 createdAtMs,
+    required PlatformInt64 expiresAtMs,
   });
 
   void crateApiHandLandmarkRuntimeClearHandLandmarkModel();
@@ -402,10 +421,26 @@ abstract class BrainCoreApiApi extends BaseApi {
     required double targetAccumulated,
   });
 
+  FaceTemplateStatus crateApiFaceVerificationValidatePortableFaceTemplate({
+    required String templateJson,
+    required String expectedStudentId,
+    required String expectedModelId,
+    required String expectedModelSha256,
+    required PlatformInt64 nowMs,
+  });
+
   NativeAttemptRecoveryCheck crateApiAttemptRecoveryVerifyAttemptSnapshot({
     required String payloadJson,
     required String checksum,
     required String recoveredFrom,
+  });
+
+  FaceVerificationResult crateApiFaceVerificationVerifyFaceEmbedding1To1({
+    required String templateJson,
+    required List<double> probeEmbedding,
+    required double signalQuality,
+    required double matchThreshold,
+    required PlatformInt64 nowMs,
   });
 }
 
@@ -1239,6 +1274,36 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  AiActionAuthorization crateApiAiActionPolicyAuthorizeAiAction({
+    required String action,
+    required bool examActive,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(action, serializer);
+          sse_encode_bool(examActive, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ai_action_authorization,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAiActionPolicyAuthorizeAiActionConstMeta,
+        argValues: [action, examActive],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAiActionPolicyAuthorizeAiActionConstMeta =>
+      const TaskConstMeta(
+        debugName: "authorize_ai_action",
+        argNames: ["action", "examActive"],
+      );
+
+  @override
   String crateApiAirBoardBuildAirBoardEvidenceManifest({
     required String sessionId,
     required String attemptId,
@@ -1254,7 +1319,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
             summary,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1282,7 +1347,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_gaze_calibration_sample(samples, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_gaze_calibration_profile,
@@ -1303,12 +1368,77 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  String crateApiFaceVerificationBuildPortableFaceTemplate({
+    required String studentId,
+    required String enrollmentId,
+    required String modelId,
+    required String modelSha256,
+    required String preprocessingVersion,
+    required List<Float32List> embeddings,
+    required double qualityScore,
+    required PlatformInt64 createdAtMs,
+    required PlatformInt64 expiresAtMs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(studentId, serializer);
+          sse_encode_String(enrollmentId, serializer);
+          sse_encode_String(modelId, serializer);
+          sse_encode_String(modelSha256, serializer);
+          sse_encode_String(preprocessingVersion, serializer);
+          sse_encode_list_list_prim_f_32_strict(embeddings, serializer);
+          sse_encode_f_32(qualityScore, serializer);
+          sse_encode_i_64(createdAtMs, serializer);
+          sse_encode_i_64(expiresAtMs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFaceVerificationBuildPortableFaceTemplateConstMeta,
+        argValues: [
+          studentId,
+          enrollmentId,
+          modelId,
+          modelSha256,
+          preprocessingVersion,
+          embeddings,
+          qualityScore,
+          createdAtMs,
+          expiresAtMs,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiFaceVerificationBuildPortableFaceTemplateConstMeta =>
+      const TaskConstMeta(
+        debugName: "build_portable_face_template",
+        argNames: [
+          "studentId",
+          "enrollmentId",
+          "modelId",
+          "modelSha256",
+          "preprocessingVersion",
+          "embeddings",
+          "qualityScore",
+          "createdAtMs",
+          "expiresAtMs",
+        ],
+      );
+
+  @override
   void crateApiHandLandmarkRuntimeClearHandLandmarkModel() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1331,7 +1461,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1353,7 +1483,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1381,7 +1511,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1414,7 +1544,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1447,7 +1577,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1476,7 +1606,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_landmark_model_status,
@@ -1503,7 +1633,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_model_status,
@@ -1528,7 +1658,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -1572,7 +1702,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(iouThreshold, serializer);
           sse_encode_String(layout, serializer);
           sse_encode_list_String(classNames, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -1620,7 +1750,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(zone, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1651,7 +1781,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(lumaBytes, serializer);
           sse_encode_u_32(sampleStride, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_64,
@@ -1677,7 +1807,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1707,7 +1837,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_landmark_model_status,
@@ -1738,7 +1868,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_model_status,
@@ -1768,7 +1898,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -1806,7 +1936,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(headYaw, serializer);
           sse_encode_f_32(headPitch, serializer);
           sse_encode_f_32(signalConfidence, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_gaze_zone_prediction,
@@ -1848,7 +1978,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lossThresholdDbfs, serializer);
           sse_encode_u_32(lossStreak, serializer);
           sse_encode_u_32(lossSamplesToTrigger, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_acoustic_sample_decision,
@@ -1887,7 +2017,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(studentId, serializer);
           sse_encode_String(examId, serializer);
           sse_encode_String(attemptId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1923,7 +2053,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(imageHeight, serializer);
           sse_encode_box_autoadd_hand_vision_zones(zones, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_result,
@@ -1974,7 +2104,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(frameHeight, serializer);
           sse_encode_bool(mirrored, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_landmark_inference_result,
@@ -2044,7 +2174,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_list_String(classNames, serializer);
           sse_encode_box_autoadd_hand_vision_zones(zones, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_result,
@@ -2098,7 +2228,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_native_vision_detection(detections, serializer);
           sse_encode_f_32(iouThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -2128,7 +2258,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 45,
+            funcId: 47,
             port: port_,
           );
         },
@@ -2162,7 +2292,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 48,
             port: port_,
           );
         },
@@ -2208,7 +2338,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 49)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -2270,7 +2400,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 50)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -2308,6 +2438,56 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  FaceTemplateStatus crateApiFaceVerificationValidatePortableFaceTemplate({
+    required String templateJson,
+    required String expectedStudentId,
+    required String expectedModelId,
+    required String expectedModelSha256,
+    required PlatformInt64 nowMs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(templateJson, serializer);
+          sse_encode_String(expectedStudentId, serializer);
+          sse_encode_String(expectedModelId, serializer);
+          sse_encode_String(expectedModelSha256, serializer);
+          sse_encode_i_64(nowMs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 51)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_face_template_status,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiFaceVerificationValidatePortableFaceTemplateConstMeta,
+        argValues: [
+          templateJson,
+          expectedStudentId,
+          expectedModelId,
+          expectedModelSha256,
+          nowMs,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiFaceVerificationValidatePortableFaceTemplateConstMeta =>
+      const TaskConstMeta(
+        debugName: "validate_portable_face_template",
+        argNames: [
+          "templateJson",
+          "expectedStudentId",
+          "expectedModelId",
+          "expectedModelSha256",
+          "nowMs",
+        ],
+      );
+
+  @override
   NativeAttemptRecoveryCheck crateApiAttemptRecoveryVerifyAttemptSnapshot({
     required String payloadJson,
     required String checksum,
@@ -2320,7 +2500,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(payloadJson, serializer);
           sse_encode_String(checksum, serializer);
           sse_encode_String(recoveredFrom, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 49)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 52)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_attempt_recovery_check,
@@ -2337,6 +2517,54 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       const TaskConstMeta(
         debugName: "verify_attempt_snapshot",
         argNames: ["payloadJson", "checksum", "recoveredFrom"],
+      );
+
+  @override
+  FaceVerificationResult crateApiFaceVerificationVerifyFaceEmbedding1To1({
+    required String templateJson,
+    required List<double> probeEmbedding,
+    required double signalQuality,
+    required double matchThreshold,
+    required PlatformInt64 nowMs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(templateJson, serializer);
+          sse_encode_list_prim_f_32_loose(probeEmbedding, serializer);
+          sse_encode_f_32(signalQuality, serializer);
+          sse_encode_f_32(matchThreshold, serializer);
+          sse_encode_i_64(nowMs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 53)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_face_verification_result,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiFaceVerificationVerifyFaceEmbedding1To1ConstMeta,
+        argValues: [
+          templateJson,
+          probeEmbedding,
+          signalQuality,
+          matchThreshold,
+          nowMs,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFaceVerificationVerifyFaceEmbedding1To1ConstMeta =>
+      const TaskConstMeta(
+        debugName: "verify_face_embedding_1_to_1",
+        argNames: [
+          "templateJson",
+          "probeEmbedding",
+          "signalQuality",
+          "matchThreshold",
+          "nowMs",
+        ],
       );
 
   @protected
@@ -2372,6 +2600,20 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       updatedLossStreak: dco_decode_u_32(arr[0]),
       shouldTriggerScan: dco_decode_bool(arr[1]),
       normalizedTetherSignal: dco_decode_f_64(arr[2]),
+    );
+  }
+
+  @protected
+  AiActionAuthorization dco_decode_ai_action_authorization(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return AiActionAuthorization(
+      action: dco_decode_String(arr[0]),
+      allowed: dco_decode_bool(arr[1]),
+      requiresUserConsent: dco_decode_bool(arr[2]),
+      reason: dco_decode_String(arr[3]),
     );
   }
 
@@ -2642,6 +2884,42 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       updatedLastMultiFaceStrikeAtMs: dco_decode_i_64(arr[2]),
       updatedLastGazeWarningAtMs: dco_decode_i_64(arr[3]),
       updatedGazeAwayStartedAtMs: dco_decode_opt_box_autoadd_i_64(arr[4]),
+    );
+  }
+
+  @protected
+  FaceTemplateStatus dco_decode_face_template_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return FaceTemplateStatus(
+      valid: dco_decode_bool(arr[0]),
+      studentId: dco_decode_String(arr[1]),
+      enrollmentId: dco_decode_String(arr[2]),
+      modelId: dco_decode_String(arr[3]),
+      modelSha256: dco_decode_String(arr[4]),
+      embeddingDimension: dco_decode_i_32(arr[5]),
+      sampleCount: dco_decode_i_32(arr[6]),
+      qualityScore: dco_decode_f_32(arr[7]),
+      templateSha256: dco_decode_String(arr[8]),
+      reason: dco_decode_String(arr[9]),
+    );
+  }
+
+  @protected
+  FaceVerificationResult dco_decode_face_verification_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return FaceVerificationResult(
+      state: dco_decode_String(arr[0]),
+      similarity: dco_decode_f_32(arr[1]),
+      threshold: dco_decode_f_32(arr[2]),
+      signalQuality: dco_decode_f_32(arr[3]),
+      reliable: dco_decode_bool(arr[4]),
+      reason: dco_decode_String(arr[5]),
     );
   }
 
@@ -2950,6 +3228,14 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   List<HandLandmarkPoint> dco_decode_list_hand_landmark_point(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_hand_landmark_point).toList();
+  }
+
+  @protected
+  List<Float32List> dco_decode_list_list_prim_f_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_list_prim_f_32_strict)
+        .toList();
   }
 
   @protected
@@ -3326,6 +3612,23 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  AiActionAuthorization sse_decode_ai_action_authorization(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_action = sse_decode_String(deserializer);
+    var var_allowed = sse_decode_bool(deserializer);
+    var var_requiresUserConsent = sse_decode_bool(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return AiActionAuthorization(
+      action: var_action,
+      allowed: var_allowed,
+      requiresUserConsent: var_requiresUserConsent,
+      reason: var_reason,
+    );
+  }
+
+  @protected
   AirBoardActivitySummary sse_decode_air_board_activity_summary(
     SseDeserializer deserializer,
   ) {
@@ -3657,6 +3960,56 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       updatedLastMultiFaceStrikeAtMs: var_updatedLastMultiFaceStrikeAtMs,
       updatedLastGazeWarningAtMs: var_updatedLastGazeWarningAtMs,
       updatedGazeAwayStartedAtMs: var_updatedGazeAwayStartedAtMs,
+    );
+  }
+
+  @protected
+  FaceTemplateStatus sse_decode_face_template_status(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_valid = sse_decode_bool(deserializer);
+    var var_studentId = sse_decode_String(deserializer);
+    var var_enrollmentId = sse_decode_String(deserializer);
+    var var_modelId = sse_decode_String(deserializer);
+    var var_modelSha256 = sse_decode_String(deserializer);
+    var var_embeddingDimension = sse_decode_i_32(deserializer);
+    var var_sampleCount = sse_decode_i_32(deserializer);
+    var var_qualityScore = sse_decode_f_32(deserializer);
+    var var_templateSha256 = sse_decode_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return FaceTemplateStatus(
+      valid: var_valid,
+      studentId: var_studentId,
+      enrollmentId: var_enrollmentId,
+      modelId: var_modelId,
+      modelSha256: var_modelSha256,
+      embeddingDimension: var_embeddingDimension,
+      sampleCount: var_sampleCount,
+      qualityScore: var_qualityScore,
+      templateSha256: var_templateSha256,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  FaceVerificationResult sse_decode_face_verification_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_state = sse_decode_String(deserializer);
+    var var_similarity = sse_decode_f_32(deserializer);
+    var var_threshold = sse_decode_f_32(deserializer);
+    var var_signalQuality = sse_decode_f_32(deserializer);
+    var var_reliable = sse_decode_bool(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return FaceVerificationResult(
+      state: var_state,
+      similarity: var_similarity,
+      threshold: var_threshold,
+      signalQuality: var_signalQuality,
+      reliable: var_reliable,
+      reason: var_reason,
     );
   }
 
@@ -4073,6 +4426,20 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     var ans_ = <HandLandmarkPoint>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_hand_landmark_point(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<Float32List> sse_decode_list_list_prim_f_32_strict(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Float32List>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_list_prim_f_32_strict(deserializer));
     }
     return ans_;
   }
@@ -4546,6 +4913,18 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_ai_action_authorization(
+    AiActionAuthorization self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.action, serializer);
+    sse_encode_bool(self.allowed, serializer);
+    sse_encode_bool(self.requiresUserConsent, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
   void sse_encode_air_board_activity_summary(
     AirBoardActivitySummary self,
     SseSerializer serializer,
@@ -4818,6 +5197,38 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       self.updatedGazeAwayStartedAtMs,
       serializer,
     );
+  }
+
+  @protected
+  void sse_encode_face_template_status(
+    FaceTemplateStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.valid, serializer);
+    sse_encode_String(self.studentId, serializer);
+    sse_encode_String(self.enrollmentId, serializer);
+    sse_encode_String(self.modelId, serializer);
+    sse_encode_String(self.modelSha256, serializer);
+    sse_encode_i_32(self.embeddingDimension, serializer);
+    sse_encode_i_32(self.sampleCount, serializer);
+    sse_encode_f_32(self.qualityScore, serializer);
+    sse_encode_String(self.templateSha256, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_face_verification_result(
+    FaceVerificationResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.state, serializer);
+    sse_encode_f_32(self.similarity, serializer);
+    sse_encode_f_32(self.threshold, serializer);
+    sse_encode_f_32(self.signalQuality, serializer);
+    sse_encode_bool(self.reliable, serializer);
+    sse_encode_String(self.reason, serializer);
   }
 
   @protected
@@ -5111,6 +5522,18 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_hand_landmark_point(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_list_prim_f_32_strict(
+    List<Float32List> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_list_prim_f_32_strict(item, serializer);
     }
   }
 

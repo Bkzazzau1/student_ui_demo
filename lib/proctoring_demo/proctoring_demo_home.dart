@@ -161,6 +161,23 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
     super.dispose();
   }
 
+  Future<void> _releaseCameraBeforeLeaving() async {
+    _stopAutoCaptureLoop();
+    final controller = _controller;
+    _controller = null;
+    if (controller == null) return;
+    try {
+      await _frameSource.stop(controller);
+    } catch (_) {}
+    try {
+      await controller.dispose();
+    } catch (_) {}
+    // Media Foundation releases the physical webcam asynchronously after the
+    // controller future completes. Give it a short handoff window before the
+    // exam route creates its monitoring controller.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+  }
+
   Future<void> _openCamera() async {
     if (_openingCamera) return;
     setState(() {
@@ -814,6 +831,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
       });
       await _showReviewDecisionDialog(result);
       if (!mounted) return;
+      await _releaseCameraBeforeLeaving();
+      if (!mounted) return;
       if (result.approvedToStart && widget.onStartApproved != null) {
         widget.onStartApproved!(manifest, result);
       } else if (result.approved && widget.onApproved != null) {
@@ -857,6 +876,8 @@ class _ProctoringDemoHomeState extends State<ProctoringDemoHome> {
           ..add(_studentReviewEvent(result));
       });
       await _showReviewDecisionDialog(result);
+      if (!mounted) return;
+      await _releaseCameraBeforeLeaving();
       if (!mounted) return;
       if (result.approvedToStart && widget.onStartApproved != null) {
         widget.onStartApproved!(manifest, result);

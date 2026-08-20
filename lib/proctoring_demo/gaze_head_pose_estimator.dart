@@ -16,6 +16,7 @@ class GazeHeadPoseResult {
     required this.stableHeadPose,
     required this.lookingAway,
     required this.label,
+    this.landmarkBased = false,
   });
 
   final double gazeX;
@@ -28,23 +29,21 @@ class GazeHeadPoseResult {
   final bool stableHeadPose;
   final bool lookingAway;
   final String label;
+  final bool landmarkBased;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'gaze_vector': <String, double>{
-          'x': gazeX,
-          'y': gazeY,
-          'z': gazeZ,
-        },
-        'head_pose_proxy': <String, double>{
-          'yaw': yawProxy,
-          'pitch': pitchProxy,
-          'roll': rollProxy,
-        },
-        'confidence': confidence,
-        'stable_head_pose': stableHeadPose,
-        'looking_away': lookingAway,
-        'label': label,
-      };
+    'gaze_vector': <String, double>{'x': gazeX, 'y': gazeY, 'z': gazeZ},
+    'head_pose_proxy': <String, double>{
+      'yaw': yawProxy,
+      'pitch': pitchProxy,
+      'roll': rollProxy,
+    },
+    'confidence': confidence,
+    'stable_head_pose': stableHeadPose,
+    'looking_away': lookingAway,
+    'label': label,
+    'landmark_based': landmarkBased,
+  };
 }
 
 class GazeHeadPoseEstimator {
@@ -57,7 +56,9 @@ class GazeHeadPoseEstimator {
   GazeHeadPoseResult? analyse(CameraImage image) {
     _frameCounter++;
     if (_frameCounter % 6 != 0) return null;
-    if (image.planes.isEmpty || image.width <= 0 || image.height <= 0) return null;
+    if (image.planes.isEmpty || image.width <= 0 || image.height <= 0) {
+      return null;
+    }
 
     final plane = image.planes.first;
     final width = image.width;
@@ -90,6 +91,7 @@ class GazeHeadPoseEstimator {
         stableHeadPose: rustResult.stableHeadPose,
         lookingAway: rustResult.lookingAway,
         label: rustResult.label,
+        landmarkBased: false,
       );
     }
 
@@ -146,21 +148,30 @@ class GazeHeadPoseEstimator {
     final yaw = ((right - left) / total).clamp(-1.0, 1.0);
     final pitch = ((bottom - top) / total).clamp(-1.0, 1.0);
     final roll = ((diagonalA - diagonalB) / total).clamp(-1.0, 1.0);
-    final movement = ((yaw - _lastYaw).abs() + (pitch - _lastPitch).abs() + (roll - _lastRoll).abs()) / 3.0;
+    final movement =
+        ((yaw - _lastYaw).abs() +
+            (pitch - _lastPitch).abs() +
+            (roll - _lastRoll).abs()) /
+        3.0;
     _lastYaw = yaw;
     _lastPitch = pitch;
     _lastRoll = roll;
 
     final gazeMagnitude = math.sqrt(gazeX * gazeX + gazeY * gazeY);
     final headMagnitude = math.sqrt(yaw * yaw + pitch * pitch + roll * roll);
-    final lookingAway = gazeMagnitude > 0.34 || yaw.abs() > 0.30 || pitch.abs() > 0.34;
+    final lookingAway =
+        gazeMagnitude > 0.34 || yaw.abs() > 0.30 || pitch.abs() > 0.34;
     final stableHeadPose = movement < 0.18 && headMagnitude < 0.68;
-    final confidence = (0.55 + math.min(total / 220.0, 0.40) - math.min(movement, 0.22)).clamp(0.0, 1.0);
+    final confidence =
+        (0.55 + math.min(total / 220.0, 0.40) - math.min(movement, 0.22)).clamp(
+          0.0,
+          1.0,
+        );
     final label = lookingAway
         ? 'possible_looking_away'
         : stableHeadPose
-            ? 'focused_forward'
-            : 'head_motion_detected';
+        ? 'focused_forward'
+        : 'head_motion_detected';
 
     return GazeHeadPoseResult(
       gazeX: gazeX.clamp(-1.0, 1.0),
@@ -173,6 +184,7 @@ class GazeHeadPoseEstimator {
       stableHeadPose: stableHeadPose,
       lookingAway: lookingAway,
       label: label,
+      landmarkBased: false,
     );
   }
 }

@@ -44,16 +44,26 @@ pub fn analyze_hand_air_board_context(context: HandAirBoardContext) -> HandAirBo
     let hand_reliable = context.hand.hand_visible && context.hand.hand_confidence >= 0.45;
     let air_board_active = context.air_board.active;
     let air_board_writing = context.air_board.currently_writing;
-    let hand_in_expected_work_area = context.hand.near_keyboard || context.hand.near_mouse_or_stylus_area;
+    let hand_in_expected_work_area =
+        context.hand.near_keyboard || context.hand.near_mouse_or_stylus_area;
 
-    if air_board_writing && hand_reliable && hand_in_expected_work_area && !context.hand.near_face && !context.hand.below_desk_line {
+    if air_board_writing
+        && hand_reliable
+        && hand_in_expected_work_area
+        && !context.hand.near_face
+        && !context.hand.below_desk_line
+    {
         return HandAirBoardDecision {
             behaviour_label: "hand_matches_rough_work".to_string(),
             attention_level: "normal".to_string(),
             hand_matches_air_board: true,
             review_required: false,
-            student_message: "Your rough-work board is active. Please continue solving inside the exam screen.".to_string(),
-            reviewer_summary: "Camera hand signal matches active rough-work activity on the Air Board.".to_string(),
+            student_message:
+                "Your rough-work board is active. Please continue solving inside the exam screen."
+                    .to_string(),
+            reviewer_summary:
+                "Camera hand signal matches active rough-work activity on the Air Board."
+                    .to_string(),
         };
     }
 
@@ -85,8 +95,12 @@ pub fn analyze_hand_air_board_context(context: HandAirBoardContext) -> HandAirBo
             attention_level: "medium_attention_required".to_string(),
             hand_matches_air_board: false,
             review_required: true,
-            student_message: "Please keep your hands in the writing area while using the rough-work board.".to_string(),
-            reviewer_summary: "Air Board writing was active while the hand appeared near the face area.".to_string(),
+            student_message:
+                "Please keep your hands in the writing area while using the rough-work board."
+                    .to_string(),
+            reviewer_summary:
+                "Air Board writing was active while the hand appeared near the face area."
+                    .to_string(),
         };
     }
 
@@ -96,8 +110,12 @@ pub fn analyze_hand_air_board_context(context: HandAirBoardContext) -> HandAirBo
             attention_level: "normal".to_string(),
             hand_matches_air_board: true,
             review_required: false,
-            student_message: "Your rough-work board is ready. You may continue solving inside the exam screen.".to_string(),
-            reviewer_summary: "Hand activity is within the expected keyboard, mouse, stylus, or writing area.".to_string(),
+            student_message:
+                "Your rough-work board is ready. You may continue solving inside the exam screen."
+                    .to_string(),
+            reviewer_summary:
+                "Hand activity is within the expected keyboard, mouse, stylus, or writing area."
+                    .to_string(),
         };
     }
 
@@ -108,7 +126,8 @@ pub fn analyze_hand_air_board_context(context: HandAirBoardContext) -> HandAirBo
             hand_matches_air_board: false,
             review_required: true,
             student_message: "Please keep your hands visible in the exam area.".to_string(),
-            reviewer_summary: "Hand appeared below the desk line while the Air Board was not active.".to_string(),
+            reviewer_summary:
+                "Hand appeared below the desk line while the Air Board was not active.".to_string(),
         };
     }
 
@@ -118,6 +137,7 @@ pub fn analyze_hand_air_board_context(context: HandAirBoardContext) -> HandAirBo
         hand_matches_air_board: false,
         review_required: false,
         student_message: "Please continue your exam carefully.".to_string(),
-        reviewer_summary: "No hand and Air Board concern was detected from the available signals.".to_string(),
+        reviewer_summary: "No hand and Air Board concern was detected from the available signals."
+            .to_string(),
     }
 }

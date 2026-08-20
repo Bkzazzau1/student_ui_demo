@@ -1,9 +1,11 @@
+pub mod ai_action_policy;
 pub mod air_board;
 pub mod attempt_recovery;
 pub mod audio_intelligence;
 pub mod evidence_vault;
 pub mod exam_behavior;
 pub mod eye_intelligence;
+pub mod face_verification;
 pub mod gaze_calibration;
 pub mod hand_air_board;
 pub mod hand_gesture;
@@ -14,12 +16,14 @@ pub mod native_vision;
 pub mod proctoring;
 pub mod system_security;
 
+pub use ai_action_policy::*;
 pub use air_board::*;
 pub use attempt_recovery::*;
 pub use audio_intelligence::*;
 pub use evidence_vault::*;
 pub use exam_behavior::*;
 pub use eye_intelligence::*;
+pub use face_verification::*;
 pub use gaze_calibration::*;
 pub use hand_air_board::*;
 pub use hand_gesture::*;

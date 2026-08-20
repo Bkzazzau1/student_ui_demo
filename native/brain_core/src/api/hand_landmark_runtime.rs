@@ -6,7 +6,9 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tract_onnx::prelude::*;
 
-use super::hand_gesture::{analyze_hand_landmarks, HandGestureInput, HandGestureResult, HandLandmarkPoint};
+use super::hand_gesture::{
+    HandGestureInput, HandGestureResult, HandLandmarkPoint, analyze_hand_landmarks,
+};
 
 #[frb]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -246,8 +248,8 @@ fn load_model_inner(
             f32::fact([1, channels, manifest.input_height, manifest.input_width]).into(),
         )
         .map_err(|error| format!("hand landmark input fact failed: {error}"))?
-        .into_optimized()
-        .map_err(|error| format!("hand landmark optimize failed: {error}"))?
+        .into_typed()
+        .map_err(|error| format!("hand landmark type analysis failed: {error}"))?
         .into_runnable()
         .map_err(|error| format!("hand landmark runnable build failed: {error}"))?;
 
@@ -324,9 +326,13 @@ fn resize_rgb_chw(
         let source_y = target_y.saturating_mul(source_height) / target_height.max(1);
         for target_x in 0..target_width {
             let source_x = target_x.saturating_mul(source_width) / target_width.max(1);
-            let source_index = (source_y.saturating_mul(source_width).saturating_add(source_x))
-                .saturating_mul(3);
-            let target_index = target_y.saturating_mul(target_width).saturating_add(target_x);
+            let source_index = (source_y
+                .saturating_mul(source_width)
+                .saturating_add(source_x))
+            .saturating_mul(3);
+            let target_index = target_y
+                .saturating_mul(target_width)
+                .saturating_add(target_x);
             if source_index + 2 >= rgb.len() || target_index >= plane_size {
                 continue;
             }

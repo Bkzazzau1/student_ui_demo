@@ -3,12 +3,14 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/ai_action_policy.dart';
 import 'api/air_board.dart';
 import 'api/attempt_recovery.dart';
 import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/exam_behavior.dart';
 import 'api/eye_intelligence.dart';
+import 'api/face_verification.dart';
 import 'api/gaze_calibration.dart';
 import 'api/hand_air_board.dart';
 import 'api/hand_gesture.dart';
@@ -41,6 +43,9 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   AcousticSampleDecision dco_decode_acoustic_sample_decision(dynamic raw);
+
+  @protected
+  AiActionAuthorization dco_decode_ai_action_authorization(dynamic raw);
 
   @protected
   AirBoardActivitySummary dco_decode_air_board_activity_summary(dynamic raw);
@@ -129,6 +134,12 @@ abstract class BrainCoreApiApiImplPlatform
   FaceAnalysisDecision dco_decode_face_analysis_decision(dynamic raw);
 
   @protected
+  FaceTemplateStatus dco_decode_face_template_status(dynamic raw);
+
+  @protected
+  FaceVerificationResult dco_decode_face_verification_result(dynamic raw);
+
+  @protected
   GazeCalibrationProfile dco_decode_gaze_calibration_profile(dynamic raw);
 
   @protected
@@ -197,6 +208,9 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   List<HandLandmarkPoint> dco_decode_list_hand_landmark_point(dynamic raw);
+
+  @protected
+  List<Float32List> dco_decode_list_list_prim_f_32_strict(dynamic raw);
 
   @protected
   List<NativeLockdownFinding> dco_decode_list_native_lockdown_finding(
@@ -304,6 +318,11 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   AcousticSampleDecision sse_decode_acoustic_sample_decision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AiActionAuthorization sse_decode_ai_action_authorization(
     SseDeserializer deserializer,
   );
 
@@ -418,6 +437,16 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  FaceTemplateStatus sse_decode_face_template_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FaceVerificationResult sse_decode_face_verification_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   GazeCalibrationProfile sse_decode_gaze_calibration_profile(
     SseDeserializer deserializer,
   );
@@ -510,6 +539,11 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   List<HandLandmarkPoint> sse_decode_list_hand_landmark_point(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<Float32List> sse_decode_list_list_prim_f_32_strict(
     SseDeserializer deserializer,
   );
 
@@ -639,6 +673,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_acoustic_sample_decision(
     AcousticSampleDecision self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_ai_action_authorization(
+    AiActionAuthorization self,
     SseSerializer serializer,
   );
 
@@ -781,6 +821,18 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_face_template_status(
+    FaceTemplateStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_face_verification_result(
+    FaceVerificationResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_gaze_calibration_profile(
     GazeCalibrationProfile self,
     SseSerializer serializer,
@@ -900,6 +952,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_list_hand_landmark_point(
     List<HandLandmarkPoint> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_list_prim_f_32_strict(
+    List<Float32List> self,
     SseSerializer serializer,
   );
 

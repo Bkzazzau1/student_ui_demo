@@ -11,14 +11,20 @@ class NativeFaceLandmarkerRuntime {
   NativeFaceLandmarkerRuntime({
     MethodChannel? channel,
     NativeHeadPoseGeometryService? headPoseGeometry,
-    this.assetPath = 'assets/models/face_landmarker/face_landmarker.task',
-  })  : _channel = channel ?? const MethodChannel('kslas.face_landmarker'),
-        _headPoseGeometry =
-            headPoseGeometry ?? const NativeHeadPoseGeometryService();
+    String? assetPath,
+  }) : _channel = channel ?? const MethodChannel('kslas.face_landmarker'),
+       _headPoseGeometry =
+           headPoseGeometry ?? const NativeHeadPoseGeometryService(),
+       _configuredAssetPath = assetPath;
 
   final MethodChannel _channel;
   final NativeHeadPoseGeometryService _headPoseGeometry;
-  final String assetPath;
+  final String? _configuredAssetPath;
+  String get assetPath =>
+      _configuredAssetPath ??
+      (Platform.isWindows
+          ? 'assets/models/face_landmarker_windows/face_landmarks.onnx'
+          : 'assets/models/face_landmarker/face_landmarker.task');
   bool _ready = false;
   bool _failed = false;
   String? _runtimeModelPath;
@@ -38,7 +44,8 @@ class NativeFaceLandmarkerRuntime {
       if (!await modelDir.exists()) {
         await modelDir.create(recursive: true);
       }
-      final modelFile = File('${modelDir.path}/face_landmarker.task');
+      final extension = Platform.isWindows ? 'onnx' : 'task';
+      final modelFile = File('${modelDir.path}/face_landmarker.$extension');
       await modelFile.writeAsBytes(
         modelBytes.buffer.asUint8List(),
         flush: true,
@@ -83,43 +90,59 @@ class NativeFaceLandmarkerRuntime {
             'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
           });
       if (result == null) return null;
-      final gaze = Map<String, Object?>.from(
-        result['gaze_vector'] as Map? ?? const <String, Object?>{},
+      return _parseResult(result, image.width, image.height);
+    } on MissingPluginException {
+      _failed = true;
+      _ready = false;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<GazeHeadPoseResult?> analyseRgb({
+    required Uint8List rgbBytes,
+    required int width,
+    required int height,
+  }) async {
+    if (!_ready && !await initialize()) return null;
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'analyseRgb',
+        <String, Object?>{
+          'width': width,
+          'height': height,
+          'rgb_bytes': rgbBytes,
+        },
       );
-      final pose = Map<String, Object?>.from(
-        result['head_pose'] as Map? ?? const <String, Object?>{},
-      );
-      final landmarks = _readLandmarks(result['landmarks'] ?? result['face_landmarks']);
-      final rustHeadPose = _headPoseGeometry.analyzeLandmarks(
-        landmarks: landmarks,
-        imageWidth: image.width.toDouble(),
-        imageHeight: image.height.toDouble(),
-      );
-      final label = result['label']?.toString() ??
-          (rustHeadPose?.reason ?? 'landmark_runtime_result');
-      final confidence = _toDouble(
-        result['confidence'],
-        fallback: rustHeadPose == null ? 0.0 : 0.86,
-      ).clamp(0.0, 1.0).toDouble();
-      final rustLookingAway = rustHeadPose?.lookingAway;
-      final lookingAway = rustLookingAway ?? result['looking_away'] == true;
-      final stableHeadPose = rustHeadPose == null
-          ? result['stable_head_pose'] != false
-          : !rustHeadPose.lookingAway;
-      final yaw = rustHeadPose?.yawScore ?? _toDouble(pose['yaw']).clamp(-1.0, 1.0).toDouble();
-      final pitch = rustHeadPose?.pitchScore ?? _toDouble(pose['pitch']).clamp(-1.0, 1.0).toDouble();
-      final roll = rustHeadPose?.rollScore ?? _toDouble(pose['roll']).clamp(-1.0, 1.0).toDouble();
-      return GazeHeadPoseResult(
-        gazeX: _toDouble(gaze['x']).clamp(-1.0, 1.0).toDouble(),
-        gazeY: _toDouble(gaze['y']).clamp(-1.0, 1.0).toDouble(),
-        gazeZ: _toDouble(gaze['z'], fallback: 1.0).clamp(-1.0, 1.0).toDouble(),
-        yawProxy: yaw.clamp(-1.0, 1.0).toDouble(),
-        pitchProxy: pitch.clamp(-1.0, 1.0).toDouble(),
-        rollProxy: roll.clamp(-1.0, 1.0).toDouble(),
-        confidence: confidence,
-        stableHeadPose: stableHeadPose,
-        lookingAway: lookingAway,
-        label: rustHeadPose == null ? label : 'rust_head_pose_geometry',
+      if (result == null) return null;
+      return _parseResult(result, width, height);
+    } on MissingPluginException {
+      _failed = true;
+      _ready = false;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Returns the native landmark payload for enrollment/alignment code.
+  /// A null result means no reliable face was produced; callers must not
+  /// manufacture landmarks or embeddings in that case.
+  Future<Map<String, Object?>?> analyseRgbRaw({
+    required Uint8List rgbBytes,
+    required int width,
+    required int height,
+  }) async {
+    if (!_ready && !await initialize()) return null;
+    try {
+      return await _channel.invokeMapMethod<String, Object?>(
+        'analyseRgb',
+        <String, Object?>{
+          'width': width,
+          'height': height,
+          'rgb_bytes': rgbBytes,
+        },
       );
     } on MissingPluginException {
       _failed = true;
@@ -128,6 +151,61 @@ class NativeFaceLandmarkerRuntime {
     } catch (_) {
       return null;
     }
+  }
+
+  GazeHeadPoseResult _parseResult(
+    Map<String, Object?> result,
+    int imageWidth,
+    int imageHeight,
+  ) {
+    final gaze = Map<String, Object?>.from(
+      result['gaze_vector'] as Map? ?? const <String, Object?>{},
+    );
+    final pose = Map<String, Object?>.from(
+      result['head_pose'] as Map? ?? const <String, Object?>{},
+    );
+    final landmarks = _readLandmarks(
+      result['landmarks'] ?? result['face_landmarks'],
+    );
+    final rustHeadPose = _headPoseGeometry.analyzeLandmarks(
+      landmarks: landmarks,
+      imageWidth: imageWidth.toDouble(),
+      imageHeight: imageHeight.toDouble(),
+    );
+    final label =
+        result['label']?.toString() ??
+        (rustHeadPose?.reason ?? 'landmark_runtime_result');
+    final confidence = _toDouble(
+      result['confidence'],
+      fallback: rustHeadPose == null ? 0.0 : 0.86,
+    ).clamp(0.0, 1.0).toDouble();
+    final rustLookingAway = rustHeadPose?.lookingAway;
+    final lookingAway = rustLookingAway ?? result['looking_away'] == true;
+    final stableHeadPose = rustHeadPose == null
+        ? result['stable_head_pose'] != false
+        : !rustHeadPose.lookingAway;
+    final yaw =
+        rustHeadPose?.yawScore ??
+        _toDouble(pose['yaw']).clamp(-1.0, 1.0).toDouble();
+    final pitch =
+        rustHeadPose?.pitchScore ??
+        _toDouble(pose['pitch']).clamp(-1.0, 1.0).toDouble();
+    final roll =
+        rustHeadPose?.rollScore ??
+        _toDouble(pose['roll']).clamp(-1.0, 1.0).toDouble();
+    return GazeHeadPoseResult(
+      gazeX: _toDouble(gaze['x']).clamp(-1.0, 1.0).toDouble(),
+      gazeY: _toDouble(gaze['y']).clamp(-1.0, 1.0).toDouble(),
+      gazeZ: _toDouble(gaze['z'], fallback: 1.0).clamp(-1.0, 1.0).toDouble(),
+      yawProxy: yaw.clamp(-1.0, 1.0).toDouble(),
+      pitchProxy: pitch.clamp(-1.0, 1.0).toDouble(),
+      rollProxy: roll.clamp(-1.0, 1.0).toDouble(),
+      confidence: confidence,
+      stableHeadPose: stableHeadPose,
+      lookingAway: lookingAway,
+      label: rustHeadPose == null ? label : 'rust_head_pose_geometry',
+      landmarkBased: landmarks.isNotEmpty,
+    );
   }
 
   List<LandmarkPoint> _readLandmarks(Object? value) {

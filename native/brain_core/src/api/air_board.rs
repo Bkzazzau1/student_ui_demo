@@ -74,7 +74,10 @@ pub fn analyze_air_board_context(context: AirBoardContext) -> AirBoardActivitySu
     let (attention_level, reason) = if !context.is_open {
         ("normal", "rough-work board is closed")
     } else if currently_writing {
-        ("normal", "rough-work board is active and writing is in progress")
+        (
+            "normal",
+            "rough-work board is active and writing is in progress",
+        )
     } else if total_points == 0 && active_duration_ms > 60_000 {
         (
             "medium_attention_required",
@@ -86,7 +89,10 @@ pub fn analyze_air_board_context(context: AirBoardContext) -> AirBoardActivitySu
             "rough-work board is open but has been idle for a long time",
         )
     } else {
-        ("normal", "rough-work board activity is within expected range")
+        (
+            "normal",
+            "rough-work board activity is within expected range",
+        )
     };
 
     AirBoardActivitySummary {

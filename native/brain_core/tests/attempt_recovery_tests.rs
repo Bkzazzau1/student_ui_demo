@@ -25,11 +25,7 @@ fn verifies_valid_snapshot_checksum() {
 #[test]
 fn rejects_invalid_snapshot_checksum() {
     let payload = r#"{"attempt_id":"a1","answers":{"q1":"A"}}"#.to_string();
-    let result = verify_attempt_snapshot(
-        payload,
-        "bad_checksum".to_string(),
-        "backup".to_string(),
-    );
+    let result = verify_attempt_snapshot(payload, "bad_checksum".to_string(), "backup".to_string());
 
     assert_eq!(result.recovered_from, "backup");
     assert!(!result.checksum_valid);

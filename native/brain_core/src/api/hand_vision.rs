@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tract_onnx::prelude::*;
 
 use super::hand_air_board::HandRegionSignal;
-use super::native_vision::{decode_yolo_output, NativeVisionDetection};
+use super::native_vision::{NativeVisionDetection, decode_yolo_output};
 
 #[frb]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -68,8 +68,7 @@ struct HandVisionRuntime {
     model: HandVisionPlan,
 }
 
-static HAND_VISION_RUNTIME: Lazy<Mutex<Option<HandVisionRuntime>>> =
-    Lazy::new(|| Mutex::new(None));
+static HAND_VISION_RUNTIME: Lazy<Mutex<Option<HandVisionRuntime>>> = Lazy::new(|| Mutex::new(None));
 
 #[frb(sync)]
 pub fn load_hand_vision_model(
@@ -296,8 +295,8 @@ fn load_hand_vision_model_inner(
     manifest_json: String,
     model_bytes: Vec<u8>,
 ) -> Result<HandVisionModelStatus, String> {
-    let manifest: HandVisionManifest =
-        serde_json::from_str(&manifest_json).map_err(|error| format!("invalid hand manifest: {error}"))?;
+    let manifest: HandVisionManifest = serde_json::from_str(&manifest_json)
+        .map_err(|error| format!("invalid hand manifest: {error}"))?;
 
     if manifest.input_width == 0 || manifest.input_height == 0 {
         return Err("hand model input dimensions must be greater than zero".to_string());
@@ -328,10 +327,7 @@ fn load_hand_vision_model_inner(
         .map_err(|error| format!("hand ONNX runnable build failed: {error}"))?;
 
     let status = status_from_manifest(&manifest, "loaded");
-    let runtime = HandVisionRuntime {
-        manifest,
-        model,
-    };
+    let runtime = HandVisionRuntime { manifest, model };
     let mut guard = HAND_VISION_RUNTIME
         .lock()
         .map_err(|_| "hand vision runtime lock poisoned".to_string())?;

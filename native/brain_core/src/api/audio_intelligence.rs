@@ -127,12 +127,18 @@ fn extract_features(samples: &[f64], sample_rate: i32) -> AudioFeatures {
 
     let low_band_energy = band_energy(samples, sample_rate, &[80.0, 120.0, 180.0, 250.0]);
     let hum_band_energy = band_energy(samples, sample_rate, &[50.0, 60.0, 100.0, 120.0]);
-    let speech_band_energy = band_energy(samples, sample_rate, &[300.0, 500.0, 800.0, 1200.0, 1800.0, 2600.0]);
+    let speech_band_energy = band_energy(
+        samples,
+        sample_rate,
+        &[300.0, 500.0, 800.0, 1200.0, 1800.0, 2600.0],
+    );
     let high_band_energy = band_energy(samples, sample_rate, &[3500.0, 5200.0, 7000.0]);
     let tonal_score = tonal_score(
         samples,
         sample_rate,
-        &[60.0, 120.0, 250.0, 500.0, 1000.0, 1500.0, 2000.0, 3000.0, 4200.0],
+        &[
+            60.0, 120.0, 250.0, 500.0, 1000.0, 1500.0, 2000.0, 3000.0, 4200.0,
+        ],
     );
 
     AudioFeatures {
@@ -254,13 +260,31 @@ fn classify_audio(features: &AudioFeatures) -> AudioClassification {
         return classification("quiet_or_low_noise", voice_confidence, false, false, true);
     }
     if phone_ringtone {
-        return classification("phone_ringtone_like_sound", voice_confidence, false, false, false);
+        return classification(
+            "phone_ringtone_like_sound",
+            voice_confidence,
+            false,
+            false,
+            false,
+        );
     }
     if keyboard_or_typing {
-        return classification("keyboard_or_tapping_sound", voice_confidence, false, false, false);
+        return classification(
+            "keyboard_or_tapping_sound",
+            voice_confidence,
+            false,
+            false,
+            false,
+        );
     }
     if possible_multiple_voices {
-        return classification("possible_multiple_voices", voice_confidence, true, false, false);
+        return classification(
+            "possible_multiple_voices",
+            voice_confidence,
+            true,
+            false,
+            false,
+        );
     }
     if near_voice {
         return classification("near_voice", voice_confidence, true, false, false);
@@ -269,19 +293,43 @@ fn classify_audio(features: &AudioFeatures) -> AudioClassification {
         return classification("whisper_or_low_voice", voice_confidence, false, true, false);
     }
     if far_voice {
-        return classification("far_or_background_voice", voice_confidence, false, true, false);
+        return classification(
+            "far_or_background_voice",
+            voice_confidence,
+            false,
+            true,
+            false,
+        );
     }
     if fan_ambient {
         return classification("fan_ambient_sound", voice_confidence, false, false, true);
     }
     if generator_or_engine {
-        return classification("generator_or_engine_ambient", voice_confidence, false, false, features.rms < 0.060);
+        return classification(
+            "generator_or_engine_ambient",
+            voice_confidence,
+            false,
+            false,
+            features.rms < 0.060,
+        );
     }
     if vehicle_or_motorcycle {
-        return classification("vehicle_or_motorcycle_ambient", voice_confidence, false, false, false);
+        return classification(
+            "vehicle_or_motorcycle_ambient",
+            voice_confidence,
+            false,
+            false,
+            false,
+        );
     }
 
-    classification("unclear_environment_sound", voice_confidence, false, false, features.rms < 0.012)
+    classification(
+        "unclear_environment_sound",
+        voice_confidence,
+        false,
+        false,
+        features.rms < 0.012,
+    )
 }
 
 fn classification(
@@ -305,7 +353,9 @@ fn envelope_variation(samples: &[f64], sample_rate: i32) -> f64 {
         return 0.0;
     }
 
-    let frame_size = ((sample_rate.max(1) as usize) / 50).max(32).min(samples.len());
+    let frame_size = ((sample_rate.max(1) as usize) / 50)
+        .max(32)
+        .min(samples.len());
     if frame_size == 0 {
         return 0.0;
     }

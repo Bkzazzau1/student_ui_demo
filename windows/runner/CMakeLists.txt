@@ -8,6 +8,8 @@ project(runner LANGUAGES CXX)
 # Any new source files that you add to the application should be added here.
 add_executable(${BINARY_NAME} WIN32
   "exam_window_channel.cpp"
+  "face_landmarker_runtime_channel.cpp"
+  "face_embedding_runtime_channel.cpp"
   "flutter_window.cpp"
   "main.cpp"
   "optimized_vision_runtime_channel.cpp"
@@ -79,6 +81,29 @@ if(ONNXRUNTIME_ROOT)
         "$<TARGET_FILE_DIR:${BINARY_NAME}>/DirectML.dll")
   endif()
 endif()
+
+# Build and package the Rust core required by BrainCoreApi.init(). Flutter's
+# generated loader looks for brain_core.dll beside the Windows executable.
+set(BRAIN_CORE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../native/brain_core")
+set(BRAIN_CORE_DLL "${BRAIN_CORE_ROOT}/target/release/brain_core.dll")
+find_program(CARGO_EXECUTABLE cargo
+  HINTS "$ENV{USERPROFILE}/.cargo/bin"
+  REQUIRED)
+
+add_custom_target(brain_core_build ALL
+  COMMAND "${CARGO_EXECUTABLE}" build
+    --manifest-path "${BRAIN_CORE_ROOT}/Cargo.toml"
+    --release
+  BYPRODUCTS "${BRAIN_CORE_DLL}"
+  WORKING_DIRECTORY "${BRAIN_CORE_ROOT}"
+  COMMENT "Building Rust brain_core"
+  VERBATIM)
+add_dependencies(${BINARY_NAME} brain_core_build)
+add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${BRAIN_CORE_DLL}"
+    "$<TARGET_FILE_DIR:${BINARY_NAME}>/brain_core.dll"
+  COMMENT "Packaging Rust brain_core.dll")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)

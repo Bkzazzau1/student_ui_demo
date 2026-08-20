@@ -4,10 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class FaceIdentityEnrollmentApi {
-  FaceIdentityEnrollmentApi({
-    http.Client? client,
-    required this.baseUrl,
-  }) : _client = client ?? http.Client();
+  FaceIdentityEnrollmentApi({http.Client? client, required this.baseUrl})
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   final String baseUrl;
@@ -15,12 +13,15 @@ class FaceIdentityEnrollmentApi {
   Future<FaceIdentityEnrollmentResponse?> fetchLatest({
     required String studentId,
   }) async {
-    final uri = Uri.parse('$baseUrl/api/identity/face-enrollments/latest')
-        .replace(queryParameters: <String, String>{'student_id': studentId});
+    final uri = Uri.parse(
+      '$baseUrl/api/identity/face-enrollments/latest',
+    ).replace(queryParameters: <String, String>{'student_id': studentId});
     final response = await _client.get(uri);
     if (response.statusCode == 404) return null;
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Identity enrollment sync failed: ${response.statusCode}');
+      throw Exception(
+        'Identity enrollment sync failed: ${response.statusCode}',
+      );
     }
     return FaceIdentityEnrollmentResponse.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -78,7 +79,131 @@ class FaceIdentityEnrollmentApi {
     return FaceIdentityEnrollmentResponse.fromJson(body);
   }
 
+  Future<FaceTemplateDownload?> downloadTemplate({
+    required String studentId,
+    required String deviceId,
+    required String accessToken,
+  }) async {
+    if (accessToken.trim().isEmpty || deviceId.trim().isEmpty) {
+      throw ArgumentError('Authenticated device identity is required');
+    }
+    final uri = Uri.parse('$baseUrl/api/identity/face-template').replace(
+      queryParameters: <String, String>{
+        'student_id': studentId,
+        'device_id': deviceId,
+      },
+    );
+    final response = await _client.get(
+      uri,
+      headers: <String, String>{'Authorization': 'Bearer $accessToken'},
+    );
+    if (response.statusCode == 404) return null;
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Face template download failed: ${response.statusCode}');
+    }
+    return FaceTemplateDownload.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<FaceTemplateDownload> uploadTemplate({
+    required String studentId,
+    required String enrollmentId,
+    required String accessToken,
+    required String encryptedTemplate,
+    required String keyId,
+    required String modelId,
+    required String modelSha256,
+    required String templateSha256,
+  }) async {
+    if (accessToken.trim().isEmpty || encryptedTemplate.trim().isEmpty) {
+      throw ArgumentError(
+        'Authenticated encrypted template upload is required',
+      );
+    }
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/identity/face-template'),
+      headers: <String, String>{
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, Object?>{
+        'student_id': studentId,
+        'enrollment_id': enrollmentId,
+        'template_version': 1,
+        'model_id': modelId,
+        'model_sha256': modelSha256,
+        'template_sha256': templateSha256,
+        'encryption': 'envelope_v1',
+        'key_id': keyId,
+        'encrypted_template': encryptedTemplate,
+      }),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Face template upload failed: ${response.statusCode}');
+    }
+    return FaceTemplateDownload.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
   void dispose() => _client.close();
+}
+
+class FaceTemplateDownload {
+  const FaceTemplateDownload({
+    required this.studentId,
+    required this.enrollmentId,
+    required this.templateVersion,
+    required this.modelId,
+    required this.modelSha256,
+    required this.templateSha256,
+    required this.encryption,
+    required this.keyId,
+    required this.encryptedTemplate,
+    required this.expiresAt,
+  });
+
+  final String studentId;
+  final String enrollmentId;
+  final int templateVersion;
+  final String modelId;
+  final String modelSha256;
+  final String templateSha256;
+  final String encryption;
+  final String keyId;
+  final String encryptedTemplate;
+  final DateTime? expiresAt;
+
+  factory FaceTemplateDownload.fromJson(Map<String, dynamic> json) {
+    final package = json['template'] is Map
+        ? Map<String, dynamic>.from(json['template'] as Map)
+        : json;
+    return FaceTemplateDownload(
+      studentId: package['student_id']?.toString() ?? '',
+      enrollmentId: package['enrollment_id']?.toString() ?? '',
+      templateVersion:
+          int.tryParse(package['template_version']?.toString() ?? '') ?? 0,
+      modelId: package['model_id']?.toString() ?? '',
+      modelSha256: package['model_sha256']?.toString() ?? '',
+      templateSha256: package['template_sha256']?.toString() ?? '',
+      encryption: package['encryption']?.toString() ?? '',
+      keyId: package['key_id']?.toString() ?? '',
+      encryptedTemplate: package['encrypted_template']?.toString() ?? '',
+      expiresAt: DateTime.tryParse(package['expires_at']?.toString() ?? ''),
+    );
+  }
+
+  bool get structurallyValid =>
+      studentId.isNotEmpty &&
+      enrollmentId.isNotEmpty &&
+      templateVersion == 1 &&
+      modelId.isNotEmpty &&
+      modelSha256.length == 64 &&
+      templateSha256.length == 64 &&
+      encryption == 'envelope_v1' &&
+      keyId.isNotEmpty &&
+      encryptedTemplate.isNotEmpty;
 }
 
 class FaceIdentityEnrollmentImage {
@@ -122,7 +247,8 @@ class FaceEnrollmentRemoteImage {
       poseCode: json['pose_code']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       viewUrl: json['view_url']?.toString() ?? '',
-      qualityScore: double.tryParse(json['quality_score']?.toString() ?? '') ?? 0,
+      qualityScore:
+          double.tryParse(json['quality_score']?.toString() ?? '') ?? 0,
     );
   }
 }
@@ -148,23 +274,34 @@ class FaceIdentityEnrollmentResponse {
   final int uploadedImages;
   final List<FaceEnrollmentRemoteImage> images;
 
-  bool get activeLocked => locked && uploadedImages >= requiredImages && enrollmentId.isNotEmpty;
+  bool get activeLocked =>
+      locked && uploadedImages >= requiredImages && enrollmentId.isNotEmpty;
 
   factory FaceIdentityEnrollmentResponse.fromJson(Map<String, dynamic> json) {
     final images = ((json['images'] as List?) ?? const [])
         .whereType<Map>()
-        .map((item) => FaceEnrollmentRemoteImage.fromJson(Map<String, dynamic>.from(item)))
+        .map(
+          (item) => FaceEnrollmentRemoteImage.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
         .toList();
     return FaceIdentityEnrollmentResponse(
-      enrollmentId: json['enrollment_id']?.toString() ??
-          json['id']?.toString() ??
-          '',
+      enrollmentId:
+          json['enrollment_id']?.toString() ?? json['id']?.toString() ?? '',
       studentId: json['student_id']?.toString() ?? '',
       status: json['status']?.toString() ?? 'submitted',
-      locked: json['locked'] == true || json['status']?.toString() == 'active_locked',
-      message: json['message']?.toString() ?? 'Identity images submitted for review.',
-      requiredImages: int.tryParse(json['required_images']?.toString() ?? '') ?? 6,
-      uploadedImages: int.tryParse(json['uploaded_images']?.toString() ?? '') ?? images.length,
+      locked:
+          json['locked'] == true ||
+          json['status']?.toString() == 'active_locked',
+      message:
+          json['message']?.toString() ??
+          'Identity images submitted for review.',
+      requiredImages:
+          int.tryParse(json['required_images']?.toString() ?? '') ?? 6,
+      uploadedImages:
+          int.tryParse(json['uploaded_images']?.toString() ?? '') ??
+          images.length,
       images: images,
     );
   }

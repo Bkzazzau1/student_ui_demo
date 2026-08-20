@@ -24,35 +24,59 @@ fn detects_prohibited_processes() {
 
     assert!(result.platform_supported);
     assert!(!result.ready);
-    assert!(result.prohibited_processes.iter().any(|item| item == "anydesk"));
-    assert!(result.prohibited_processes.iter().any(|item| item == "obs64"));
-    assert!(result.prohibited_processes.iter().any(|item| item == "chrome.exe"));
-    assert!(result.prohibited_processes.iter().any(|item| item == "chatgpt"));
+    assert!(
+        result
+            .prohibited_processes
+            .iter()
+            .any(|item| item == "anydesk")
+    );
+    assert!(
+        result
+            .prohibited_processes
+            .iter()
+            .any(|item| item == "obs64")
+    );
+    assert!(
+        result
+            .prohibited_processes
+            .iter()
+            .any(|item| item == "chrome.exe")
+    );
+    assert!(
+        result
+            .prohibited_processes
+            .iter()
+            .any(|item| item == "chatgpt")
+    );
 }
 
 #[test]
 fn blocks_multiple_displays() {
-    let result = analyze_secure_lockdown_report(
-        "linux".to_string(),
-        "student_ui_demo".to_string(),
-        Some(2),
-    );
+    let result =
+        analyze_secure_lockdown_report("linux".to_string(), "student_ui_demo".to_string(), Some(2));
 
     assert!(result.platform_supported);
     assert!(!result.ready);
     assert_eq!(result.display_count, Some(2));
-    assert!(result.findings.iter().any(|finding| finding.code == "multiple_displays_detected"));
+    assert!(
+        result
+            .findings
+            .iter()
+            .any(|finding| finding.code == "multiple_displays_detected")
+    );
 }
 
 #[test]
 fn unsupported_platform_is_not_ready() {
-    let result = analyze_secure_lockdown_report(
-        "android".to_string(),
-        "student_ui_demo".to_string(),
-        None,
-    );
+    let result =
+        analyze_secure_lockdown_report("android".to_string(), "student_ui_demo".to_string(), None);
 
     assert!(!result.platform_supported);
     assert!(!result.ready);
-    assert!(result.findings.iter().any(|finding| finding.code == "unsupported_platform"));
+    assert!(
+        result
+            .findings
+            .iter()
+            .any(|finding| finding.code == "unsupported_platform")
+    );
 }

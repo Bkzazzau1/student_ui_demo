@@ -57,12 +57,13 @@ class AndroidFaceLandmarkerChannel(private val context: Context) {
                 )
             }
             val named = landmarks.withNamedReferencePoints()
+            val gaze = landmarks.irisRelativeGaze()
             mapOf(
                 "label" to "mediapipe_face_landmarker",
                 "confidence" to 0.92,
                 "looking_away" to false,
                 "stable_head_pose" to true,
-                "gaze_vector" to mapOf("x" to 0.0, "y" to 0.0, "z" to 1.0),
+                "gaze_vector" to gaze,
                 "head_pose" to mapOf("yaw" to 0.0, "pitch" to 0.0, "roll" to 0.0),
                 "landmarks" to named,
                 "face_landmarks" to landmarks,
@@ -97,6 +98,31 @@ class AndroidFaceLandmarkerChannel(private val context: Context) {
             .build()
     }
 }
+
+private fun List<Map<String, Any>>.irisRelativeGaze(): Map<String, Double> {
+    fun coordinate(index: Int, axis: String): Double? =
+        (getOrNull(index)?.get(axis) as? Number)?.toDouble()
+    fun normalized(iris: Int, inner: Int, outer: Int, axis: String): Double? {
+        val value = coordinate(iris, axis) ?: return null
+        val a = coordinate(inner, axis) ?: return null
+        val b = coordinate(outer, axis) ?: return null
+        val span = kotlin.math.abs(b - a)
+        if (span < 0.0001) return null
+        return ((value - minOf(a, b)) / span).coerceIn(0.0, 1.0)
+    }
+    // MediaPipe Face Landmarker iris centres: 468 (right), 473 (left).
+    val rightX = normalized(468, 33, 133, "x")
+    val leftX = normalized(473, 362, 263, "x")
+    val rightY = normalized(468, 159, 145, "y")
+    val leftY = normalized(473, 386, 374, "y")
+    val x = listOfNotNull(rightX, leftX).averageOrNull() ?: 0.5
+    val y = listOfNotNull(rightY, leftY).averageOrNull() ?: 0.5
+    return mapOf("x" to ((x - 0.5) * 2.0).coerceIn(-1.0, 1.0),
+        "y" to ((y - 0.5) * 2.0).coerceIn(-1.0, 1.0), "z" to 1.0)
+}
+
+private fun List<Double>.averageOrNull(): Double? =
+    if (isEmpty()) null else sum() / size
 
 private fun Map<*, *>?.stringValue(key: String, fallback: String): String {
     return this?.get(key)?.toString() ?: fallback

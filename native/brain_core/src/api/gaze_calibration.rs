@@ -39,7 +39,9 @@ pub struct GazeZonePrediction {
 }
 
 #[frb(sync)]
-pub fn build_gaze_calibration_profile(samples: Vec<GazeCalibrationSample>) -> GazeCalibrationProfile {
+pub fn build_gaze_calibration_profile(
+    samples: Vec<GazeCalibrationSample>,
+) -> GazeCalibrationProfile {
     let usable_samples: Vec<GazeCalibrationSample> = samples
         .into_iter()
         .filter(|sample| sample.confidence >= 0.45 && !sample.zone.trim().is_empty())
@@ -71,13 +73,34 @@ pub fn build_gaze_calibration_profile(samples: Vec<GazeCalibrationSample>) -> Ga
     };
 
     let divisor = anchor_samples.len().max(1) as f32;
-    let center_eye_x = anchor_samples.iter().map(|sample| sample.eye_x).sum::<f32>() / divisor;
-    let center_eye_y = anchor_samples.iter().map(|sample| sample.eye_y).sum::<f32>() / divisor;
-    let yaw_bias = anchor_samples.iter().map(|sample| sample.head_yaw).sum::<f32>() / divisor;
-    let pitch_bias = anchor_samples.iter().map(|sample| sample.head_pitch).sum::<f32>() / divisor;
-    let average_confidence = usable_samples.iter().map(|sample| sample.confidence).sum::<f32>() / sample_count as f32;
+    let center_eye_x = anchor_samples
+        .iter()
+        .map(|sample| sample.eye_x)
+        .sum::<f32>()
+        / divisor;
+    let center_eye_y = anchor_samples
+        .iter()
+        .map(|sample| sample.eye_y)
+        .sum::<f32>()
+        / divisor;
+    let yaw_bias = anchor_samples
+        .iter()
+        .map(|sample| sample.head_yaw)
+        .sum::<f32>()
+        / divisor;
+    let pitch_bias = anchor_samples
+        .iter()
+        .map(|sample| sample.head_pitch)
+        .sum::<f32>()
+        / divisor;
+    let average_confidence = usable_samples
+        .iter()
+        .map(|sample| sample.confidence)
+        .sum::<f32>()
+        / sample_count as f32;
     let zone_count = unique_zones(&usable_samples).len() as f32;
-    let quality_score = ((average_confidence * 0.7) + (zone_count.min(7.0) / 7.0 * 0.3)).clamp(0.0, 1.0);
+    let quality_score =
+        ((average_confidence * 0.7) + (zone_count.min(7.0) / 7.0 * 0.3)).clamp(0.0, 1.0);
 
     GazeCalibrationProfile {
         usable: quality_score >= 0.55,

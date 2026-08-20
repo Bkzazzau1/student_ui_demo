@@ -64,12 +64,21 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
     for (final timer in _timers) {
       timer.cancel();
     }
-    _camera?.dispose();
-    if (_ownsCameraLease) {
-      _cameraRuntime.release(_cameraOwner);
-    }
+    final camera = _camera;
+    _camera = null;
+    unawaited(_disposeCameraAndReleaseLease(camera));
     _events.dispose();
     super.dispose();
+  }
+
+  Future<void> _disposeCameraAndReleaseLease(CameraController? camera) async {
+    try {
+      await camera?.dispose();
+    } catch (_) {
+      // Keep route changes fail-soft during camera handoff.
+    } finally {
+      _releaseCameraLease();
+    }
   }
 
   Future<void> _prepareCameraAndSchedule() async {
@@ -81,7 +90,8 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
       await _sendEvent(
         eventType: 'review_clip_deferred_to_live_camera',
         severity: 'info',
-        message: 'Review clip camera access deferred to the live monitoring camera.',
+        message:
+            'Review clip camera access deferred to the live monitoring camera.',
         metadata: _cameraRuntime.currentState(),
       );
       if (!mounted) return;
@@ -168,7 +178,8 @@ class _ReviewClipSamplerState extends State<ReviewClipSampler> {
       await _sendEvent(
         eventType: 'review_clip_camera_busy',
         severity: 'info',
-        message: 'Scheduled review clip did not open a second camera controller.',
+        message:
+            'Scheduled review clip did not open a second camera controller.',
         metadata: <String, Object?>{
           'sample_number': sampleNumber,
           ..._cameraRuntime.currentState(),

@@ -63,6 +63,10 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   );
   static const bool _monitoringWarnOnly =
       _allowExamOverride || _allowMonitoringReviewOverride;
+  static const bool _relieveSystemLockdown = bool.fromEnvironment(
+    'KSLAS_RELIEVE_SYSTEM_LOCKDOWN',
+    defaultValue: true,
+  );
 
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
@@ -82,6 +86,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   bool _paused = false;
   bool _exitWarningShowing = false;
   bool _submitting = false;
+  bool _airBoardOpen = false;
   String _pauseMessage = '';
 
   @override
@@ -378,20 +383,29 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
         title: _monitoringProfile.mode == AssessmentMonitoringMode.strictExam
             ? 'Live exam monitoring'
             : 'Assessment monitoring',
-        subtitle: 'Camera, sound, device, and activity checks are running while you write.',
-      ),
-      const SizedBox(height: 12),
-      LiveExamMonitor(
-        studentId: widget.studentId,
-        examId: widget.assessment.id,
-        attemptId: widget.attemptId,
-        onCriticalEvent: _handleCriticalMonitoringEvent,
-        assessmentType: widget.assessment.assessmentType,
-        reviewAudience: _monitoringProfile.reviewAudience,
+        subtitle: _relieveSystemLockdown
+            ? 'Camera, sound, and activity checks are running. System lockdown is temporarily relieved.'
+            : 'Camera, sound, device, and activity checks are running while you write.',
       ),
     ];
 
-    if (_monitoringProfile.usesSystemSecurityPanel) {
+    if (!_airBoardOpen) {
+      panels.addAll([
+        const SizedBox(height: 12),
+        LiveExamMonitor(
+          studentId: widget.studentId,
+          examId: widget.assessment.id,
+          attemptId: widget.attemptId,
+          onCriticalEvent: _handleCriticalMonitoringEvent,
+          assessmentType: widget.assessment.assessmentType,
+          reviewAudience: _monitoringProfile.reviewAudience,
+        ),
+      ]);
+    }
+
+    if (!_airBoardOpen &&
+        _monitoringProfile.usesSystemSecurityPanel &&
+        !_relieveSystemLockdown) {
       panels.addAll([
         const SizedBox(height: 12),
         LiveSystemSecurityMonitor(
@@ -405,7 +419,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       ]);
     }
 
-    if (_monitoringProfile.usesReviewClipSampler) {
+    if (!_airBoardOpen && _monitoringProfile.usesReviewClipSampler) {
       panels.addAll([
         const SizedBox(height: 12),
         ReviewClipSampler(
@@ -419,7 +433,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       ]);
     }
 
-    if (_monitoringProfile.usesCompanionCamera) {
+    if (!_airBoardOpen && _monitoringProfile.usesCompanionCamera) {
       panels.addAll([
         const SizedBox(height: 12),
         CompanionCamPanel(
@@ -436,7 +450,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     if (_monitoringProfile.mode == AssessmentMonitoringMode.strictExam) {
       panels.addAll([
         const SizedBox(height: 12),
-        const LiveStatusPanel(),
+        LiveStatusPanel(onOpenAirBoard: _openAirBoard),
       ]);
     }
 
@@ -453,6 +467,22 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     ]);
 
     return panels;
+  }
+
+  Future<void> _openAirBoard() async {
+    if (_airBoardOpen) return;
+    setState(() => _airBoardOpen = true);
+
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+
+    try {
+      await Navigator.of(context).pushNamed('/air-board');
+    } finally {
+      if (mounted) {
+        setState(() => _airBoardOpen = false);
+      }
+    }
   }
 
   Future<void> _sendRuntimeSessionEvent({
@@ -609,9 +639,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
 
     final result = _score();
     unawaited(
-      _sendSubmissionEvent(result, autoSubmitted: autoSubmitted)
-          .timeout(const Duration(seconds: 3))
-          .catchError((_) {}),
+      _sendSubmissionEventBestEffort(result, autoSubmitted: autoSubmitted),
     );
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -652,6 +680,20 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
         },
       ),
     );
+  }
+
+  Future<void> _sendSubmissionEventBestEffort(
+    DemoExamResult result, {
+    required bool autoSubmitted,
+  }) async {
+    try {
+      await _sendSubmissionEvent(
+        result,
+        autoSubmitted: autoSubmitted,
+      ).timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Submission should not block the local result screen during testing.
+    }
   }
 
   DemoExamResult _score() {
@@ -703,7 +745,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
 
   String _studentFriendlyMessage(String message) {
     final trimmed = message.trim();
-    if (trimmed.isEmpty) return 'Your assessment needs attention before you continue.';
+    if (trimmed.isEmpty) {
+      return 'Your assessment needs attention before you continue.';
+    }
     return trimmed
         .replaceAll('proctoring', 'exam monitoring')
         .replaceAll('Proctoring', 'Exam monitoring')
@@ -762,8 +806,8 @@ class _TimerPill extends StatelessWidget {
     final color = paused
         ? _danger
         : warning
-            ? _warning
-            : _brand;
+        ? _warning
+        : _brand;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
@@ -774,7 +818,11 @@ class _TimerPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(paused ? Icons.pause_circle : Icons.timer_outlined, color: color, size: 18),
+          Icon(
+            paused ? Icons.pause_circle : Icons.timer_outlined,
+            color: color,
+            size: 18,
+          ),
           const SizedBox(width: 7),
           Text(
             text,
@@ -941,7 +989,10 @@ class _HeroTag extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -969,7 +1020,10 @@ class _HeaderStat extends StatelessWidget {
         ),
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ],
     );
@@ -1028,7 +1082,10 @@ class _QuestionNavigator extends StatelessWidget {
               ),
               Text(
                 '${currentIndex + 1}/${questions.length}',
-                style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  color: _muted,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),
@@ -1052,7 +1109,10 @@ class _QuestionNavigator extends StatelessWidget {
     );
 
     if (compact) return content;
-    return Container(color: _pageBg, child: SingleChildScrollView(child: content));
+    return Container(
+      color: _pageBg,
+      child: SingleChildScrollView(child: content),
+    );
   }
 }
 
@@ -1076,14 +1136,14 @@ class _QuestionNumberButton extends StatelessWidget {
     final color = selected
         ? _brand
         : answered
-            ? _success
-            : _muted;
+        ? _success
+        : _muted;
     return Material(
       color: selected
           ? _brand
           : answered
-              ? const Color(0xFFF0FDF4)
-              : _surfaceSoft,
+          ? const Color(0xFFF0FDF4)
+          : _surfaceSoft,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -1094,7 +1154,9 @@ class _QuestionNumberButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: selected ? 1 : 0.28)),
+            border: Border.all(
+              color: color.withValues(alpha: selected ? 1 : 0.28),
+            ),
           ),
           child: Text(
             '$number',
@@ -1191,7 +1253,9 @@ class _QuestionCardState extends State<_QuestionCard> {
     if (oldWidget.question.id != widget.question.id ||
         _controller.text != widget.value) {
       _controller.text = widget.value;
-      _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
     }
   }
 
@@ -1233,10 +1297,10 @@ class _QuestionCardState extends State<_QuestionCard> {
           Text(
             question.prompt,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                  height: 1.35,
-                ),
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: 20),
           if (question.section == DemoExamSection.objective)
@@ -1311,10 +1375,15 @@ class _ObjectiveOptions extends StatelessWidget {
                 option,
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               tileColor: _surfaceSoft,
               selectedTileColor: const Color(0xFFEFF6FF),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
+              ),
             ),
           ),
       ],
@@ -1363,7 +1432,11 @@ class _SmallBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -1415,7 +1488,10 @@ class _QuestionActions extends StatelessWidget {
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.task_alt_rounded),
             label: Text(submitting ? 'Submitting...' : 'Submit'),
@@ -1518,9 +1594,9 @@ class _MonitoringHeader extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: _brandDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: _brandDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1582,7 +1658,9 @@ class _ExamStatusPanel extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: paused ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF),
+                  color: paused
+                      ? const Color(0xFFFEF2F2)
+                      : const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -1610,13 +1688,29 @@ class _ExamStatusPanel extends StatelessWidget {
             color: _brand,
           ),
           if (profile.requiresCamera)
-            const _StatusLine(label: 'Camera check', value: 'Active', color: _success),
+            const _StatusLine(
+              label: 'Camera check',
+              value: 'Active',
+              color: _success,
+            ),
           if (profile.requiresMicrophone)
-            const _StatusLine(label: 'Microphone check', value: 'Active', color: _success),
+            const _StatusLine(
+              label: 'Microphone check',
+              value: 'Active',
+              color: _success,
+            ),
           if (profile.usesSystemSecurityPanel)
-            const _StatusLine(label: 'Device check', value: 'Active', color: _success),
+            const _StatusLine(
+              label: 'Device check',
+              value: 'Active',
+              color: _success,
+            ),
           if (!profile.showsLiveMonitor)
-            const _StatusLine(label: 'Access mode', value: 'Standard', color: _muted),
+            const _StatusLine(
+              label: 'Access mode',
+              value: 'Standard',
+              color: _muted,
+            ),
           const SizedBox(height: 12),
           Text(
             _helperText,
@@ -1643,7 +1737,9 @@ class _ExamStatusPanel extends StatelessWidget {
   }
 
   String get _helperText {
-    if (paused) return 'Please wait and follow the instruction shown on the screen.';
+    if (paused) {
+      return 'Please wait and follow the instruction shown on the screen.';
+    }
     if (profile.mode == AssessmentMonitoringMode.strictExam) {
       return 'Stay on this screen until you submit your work.';
     }
@@ -1677,12 +1773,18 @@ class _StatusLine extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: _muted, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900),
+            style: const TextStyle(
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ],
       ),
@@ -1711,7 +1813,9 @@ class _PauseBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              message.isEmpty ? 'Your assessment needs attention before you continue.' : message,
+              message.isEmpty
+                  ? 'Your assessment needs attention before you continue.'
+                  : message,
               style: const TextStyle(
                 color: Color(0xFF7F1D1D),
                 fontWeight: FontWeight.w800,
@@ -1770,16 +1874,20 @@ class _PausedQuestionLockCard extends StatelessWidget {
           Text(
             'Writing is paused',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             message.isEmpty
                 ? 'Please wait and follow the instruction shown on the screen.'
                 : message,
-            style: const TextStyle(color: _muted, height: 1.45, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: _muted,
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

@@ -28,7 +28,11 @@ pub fn analyze_secure_lockdown_report(
     process_report: String,
     display_count: Option<i32>,
 ) -> NativeSecureLockdownReviewResult {
-    analyse_lockdown(&normalized_platform(&platform_name), &process_report, display_count)
+    analyse_lockdown(
+        &normalized_platform(&platform_name),
+        &process_report,
+        display_count,
+    )
 }
 
 pub fn collect_lockdown_process_report(platform_name: String) -> Result<String, String> {
@@ -146,7 +150,9 @@ fn analyse_lockdown(
 
     let ready = prohibited_processes.is_empty()
         && display_count.map(|count| count <= 1).unwrap_or(true)
-        && !findings.iter().any(|finding| finding.severity == "critical");
+        && !findings
+            .iter()
+            .any(|finding| finding.severity == "critical");
 
     NativeSecureLockdownReviewResult {
         ready,

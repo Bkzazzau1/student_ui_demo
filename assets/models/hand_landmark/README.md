@@ -42,8 +42,9 @@ Installed model:
 - File: `hand_landmark_sparse_Nx3x224x224.onnx`
 - URL: `https://github.com/PINTO0309/hand_landmark/releases/tag/1.0.0`
 - Local path: `assets/models/hand_landmark/hand_landmark.onnx`
-- Input: `N x 3 x 224 x 224`
-- Primary output: `xyz_x21`, shape `N x 63`
+- Input: `1 x 3 x 224 x 224`
+- Primary output: `xyz_x21`, shape `1 x 63`
 - Additional outputs: `hand_score`, `lefthand_0_or_righthand_1`
 
 The current Rust runtime reads the first output as a flattened 21-point xyz tensor.
+The upstream model used a symbolic batch dimension; the local ONNX file is normalized to fixed batch `1` so `tract_onnx` can type-check and run it reliably.

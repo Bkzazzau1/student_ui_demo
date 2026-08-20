@@ -1,0 +1,11 @@
+{
+  "model_id": "kslas-sface-2021dec-v1",
+  "model_path": "assets/models/face_embedding_sface/face_recognition_sface_2021dec.onnx",
+  "model_sha256": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
+  "source": "OpenCV Zoo face_recognition_sface_2021dec.onnx",
+  "license": "Apache-2.0",
+  "input": "aligned RGB face, 112x112",
+  "preprocessing_version": "sface-bgr-minus-127.5-div-128-v1",
+  "embedding_dimension": 128,
+  "production_enforcement": false
+}

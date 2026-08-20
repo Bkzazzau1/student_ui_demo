@@ -17,8 +17,7 @@ fn rejects_empty_audio() {
 #[test]
 fn recognises_low_ambient_audio() {
     let samples = vec![80_i16; 512];
-    let result = analyze_audio_pcm16(pcm16_bytes(&samples), 44_100, None)
-        .expect("audio result");
+    let result = analyze_audio_pcm16(pcm16_bytes(&samples), 44_100, None).expect("audio result");
 
     assert!(result.ready);
     assert!(result.allowed_ambient_likely);
@@ -32,8 +31,7 @@ fn recognises_voice_like_audio() {
         let value = if i % 8 < 4 { 9000_i16 } else { -7000_i16 };
         samples.push(value);
     }
-    let result = analyze_audio_pcm16(pcm16_bytes(&samples), 44_100, None)
-        .expect("audio result");
+    let result = analyze_audio_pcm16(pcm16_bytes(&samples), 44_100, None).expect("audio result");
 
     assert!(result.ready);
     assert!(result.voice_confidence >= 0.46);
@@ -46,8 +44,7 @@ fn detects_repeated_fingerprint() {
     for i in 0..1024 {
         samples.push(if i % 2 == 0 { 3000_i16 } else { -3000_i16 });
     }
-    let first = analyze_audio_pcm16(pcm16_bytes(&samples), 44_100, None)
-        .expect("first result");
+    let first = analyze_audio_pcm16(pcm16_bytes(&samples), 44_100, None).expect("first result");
     let second = analyze_audio_pcm16(
         pcm16_bytes(&samples),
         44_100,

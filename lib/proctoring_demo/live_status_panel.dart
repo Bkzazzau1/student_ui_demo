@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class LiveStatusPanel extends StatelessWidget {
-  const LiveStatusPanel({super.key});
+  const LiveStatusPanel({super.key, this.onOpenAirBoard});
+
+  final VoidCallback? onOpenAirBoard;
 
   @override
   Widget build(BuildContext context) {
@@ -17,17 +19,25 @@ class LiveStatusPanel extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
-            const Text('Camera, sound, clear face view, and system checks remain required.'),
+            const Text(
+              'Camera, sound, clear face view, and system checks remain required.',
+            ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).pushNamed('/air-board'),
+              onPressed:
+                  onOpenAirBoard ??
+                  () => Navigator.of(context).pushNamed('/air-board'),
               icon: const Icon(Icons.border_color_outlined, size: 18),
               label: const Text('Open rough-work board'),
             ),
             const SizedBox(height: 6),
             const Text(
               'Use the board for calculations and notes inside the exam screen.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

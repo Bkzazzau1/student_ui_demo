@@ -1,10 +1,15 @@
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'demo_face_id_service.dart';
+import 'face_embedding_pipeline.dart';
 import 'face_identity_enrollment_api.dart';
+import 'native_face_embedding_runtime.dart';
+import '../rust/api/face_verification.dart';
 
 part 'demo_face_id_view_widgets.dart';
 
@@ -36,19 +41,22 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     _IdentityGuide(
       code: 'front_face',
       title: 'Front face',
-      instruction: 'Look straight at the camera and keep your face inside the guide.',
+      instruction:
+          'Look straight at the camera and keep your face inside the guide.',
       icon: Icons.face_retouching_natural,
     ),
     _IdentityGuide(
       code: 'left_angle',
       title: 'Left angle',
-      instruction: 'Turn your face slightly to the left. Keep both eyes visible.',
+      instruction:
+          'Turn your face slightly to the left. Keep both eyes visible.',
       icon: Icons.keyboard_arrow_left,
     ),
     _IdentityGuide(
       code: 'right_angle',
       title: 'Right angle',
-      instruction: 'Turn your face slightly to the right. Keep your chin level.',
+      instruction:
+          'Turn your face slightly to the right. Keep your chin level.',
       icon: Icons.keyboard_arrow_right,
     ),
     _IdentityGuide(
@@ -78,7 +86,11 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       defaultValue: 'http://127.0.0.1:8080',
     ),
   );
-  final List<FaceIdentityEnrollmentImage> _capturedImages = <FaceIdentityEnrollmentImage>[];
+  final List<FaceIdentityEnrollmentImage> _capturedImages =
+      <FaceIdentityEnrollmentImage>[];
+  final List<Float32List> _capturedEmbeddings = <Float32List>[];
+  final FaceEmbeddingPipeline _embeddingPipeline = FaceEmbeddingPipeline();
+  String? _portableTemplateJson;
 
   late DemoFaceIdSnapshot _snapshot;
   CameraController? _controller;
@@ -91,7 +103,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   String? _cameraError;
   String? _statusMessage;
 
-  _IdentityGuide get _currentGuide => _guides[math.min(_snapshot.capturedSamples, _guides.length - 1)];
+  _IdentityGuide get _currentGuide =>
+      _guides[math.min(_snapshot.capturedSamples, _guides.length - 1)];
 
   @override
   void initState() {
@@ -114,7 +127,9 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       _statusMessage = 'Checking your saved Face ID...';
     });
     try {
-      final latest = await _identityApi.fetchLatest(studentId: DemoFaceIdService.studentId);
+      final latest = await _identityApi.fetchLatest(
+        studentId: DemoFaceIdService.studentId,
+      );
       if (!mounted) return;
       if (latest != null && latest.activeLocked) {
         final synced = await _service.applyBackendEnrollment(latest);
@@ -134,14 +149,17 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         _syncing = false;
         _statusMessage = latest == null
             ? 'No saved Face ID found. We will capture your identity images automatically.'
-            : latest.message.replaceAll('Backend ', '').replaceAll('backend ', '');
+            : latest.message
+                  .replaceAll('Backend ', '')
+                  .replaceAll('backend ', '');
       });
       await _openCamera();
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _syncing = false;
-        _statusMessage = 'We could not check your saved Face ID. Capture will continue and save when connection is available.';
+        _statusMessage =
+            'We could not check your saved Face ID. Capture will continue and save when connection is available.';
       });
       await _openCamera();
     }
@@ -158,7 +176,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (cameras.isEmpty) {
         setState(() {
           _openingCamera = false;
-          _cameraError = 'No camera found. Face ID setup requires camera access.';
+          _cameraError =
+              'No camera found. Face ID setup requires camera access.';
         });
         return;
       }
@@ -166,14 +185,19 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(selected, ResolutionPreset.medium, enableAudio: false);
+      final controller = CameraController(
+        selected,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
       await _controller?.dispose();
       await controller.initialize();
       if (!mounted) return;
       setState(() {
         _controller = controller;
         _openingCamera = false;
-        _statusMessage = 'Automatic capture will start. Follow the guide on screen.';
+        _statusMessage =
+            'Automatic capture will start. Follow the guide on screen.';
       });
       _startAutomaticCapture();
     } catch (e) {
@@ -186,15 +210,23 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   }
 
   Future<void> _startAutomaticCapture() async {
-    if (_autoCaptureRunning || _autoCaptureStarted || _snapshot.locked || _snapshot.isComplete) return;
+    if (_autoCaptureRunning ||
+        _autoCaptureStarted ||
+        _snapshot.locked ||
+        _snapshot.isComplete) {
+      return;
+    }
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
     _autoCaptureStarted = true;
     _autoCaptureRunning = true;
-    while (mounted && !_snapshot.locked && _snapshot.capturedSamples < _snapshot.requiredSamples) {
+    while (mounted &&
+        !_snapshot.locked &&
+        _snapshot.capturedSamples < _snapshot.requiredSamples) {
       final guide = _currentGuide;
       setState(() {
-        _statusMessage = '${guide.title}: ${guide.instruction} Capturing automatically...';
+        _statusMessage =
+            '${guide.title}: ${guide.instruction} Capturing automatically...';
       });
       await Future<void>.delayed(const Duration(milliseconds: 1700));
       if (!mounted || _snapshot.locked || _submitting) break;
@@ -207,21 +239,43 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   }
 
   Future<void> _captureSample() async {
-    if (_snapshot.locked || _capturing || _snapshot.isComplete || _submitting || _syncing) return;
+    if (_snapshot.locked ||
+        _capturing ||
+        _snapshot.isComplete ||
+        _submitting ||
+        _syncing) {
+      return;
+    }
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
-      setState(() => _cameraError = 'Open the camera before Face ID setup can continue.');
+      setState(
+        () =>
+            _cameraError = 'Open the camera before Face ID setup can continue.',
+      );
       return;
     }
     final guide = _currentGuide;
     setState(() => _capturing = true);
     String imagePath;
-    var quality = 0.72 + math.Random().nextDouble() * 0.22;
+    var quality = 0.0;
     try {
       final file = await controller.takePicture();
       imagePath = file.path;
-      final size = await file.length();
-      quality = (0.68 + math.min(size / 900000, 0.25)).clamp(0.0, 1.0);
+      final embeddingResult = await _embeddingPipeline.processEncodedImage(
+        await File(imagePath).readAsBytes(),
+      );
+      if (embeddingResult == null || embeddingResult.quality < 0.65) {
+        if (!mounted) return;
+        setState(() {
+          _capturing = false;
+          _statusMessage =
+              'No reliable aligned face was detected. Improve the lighting, '
+              'keep both eyes visible, and hold still while we retry.';
+        });
+        return;
+      }
+      quality = embeddingResult.quality;
+      _capturedEmbeddings.add(Float32List.fromList(embeddingResult.embedding));
     } catch (e) {
       setState(() {
         _capturing = false;
@@ -256,7 +310,11 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   }
 
   Future<void> _submitIdentityGallery() async {
-    if (_submitting || _capturedImages.length < _guides.length || _snapshot.locked) return;
+    if (_submitting ||
+        _capturedImages.length < _guides.length ||
+        _snapshot.locked) {
+      return;
+    }
     setState(() {
       _submitting = true;
       _statusMessage = 'Saving your Face ID securely...';
@@ -266,6 +324,25 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         studentId: _snapshot.studentId,
         images: List<FaceIdentityEnrollmentImage>.from(_capturedImages),
       );
+      if (_capturedEmbeddings.length != _guides.length) {
+        throw StateError('Reliable embeddings are missing from enrollment');
+      }
+      final now = DateTime.now().toUtc();
+      _portableTemplateJson = buildPortableFaceTemplate(
+        studentId: _snapshot.studentId,
+        enrollmentId: response.enrollmentId,
+        modelId: NativeFaceEmbeddingRuntime.modelId,
+        modelSha256: NativeFaceEmbeddingRuntime.modelSha256,
+        preprocessingVersion: NativeFaceEmbeddingRuntime.preprocessingVersion,
+        embeddings: List<Float32List>.unmodifiable(_capturedEmbeddings),
+        qualityScore:
+            _capturedImages
+                .map((image) => image.qualityScore)
+                .reduce((a, b) => a + b) /
+            _capturedImages.length,
+        createdAtMs: now.millisecondsSinceEpoch,
+        expiresAtMs: now.add(const Duration(days: 365)).millisecondsSinceEpoch,
+      );
       final synced = await _service.applyBackendEnrollment(response);
       if (!mounted) return;
       await _controller?.dispose();
@@ -273,10 +350,9 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         _snapshot = synced;
         _controller = null;
         _submitting = false;
-        _statusMessage = response.message
-            .replaceAll('Backend ', '')
-            .replaceAll('backend ', '')
-            .replaceAll('locked', 'protected');
+        _statusMessage =
+            '${response.message.replaceAll('Backend ', '').replaceAll('backend ', '').replaceAll('locked', 'protected')} '
+            'A ${_portableTemplateJson == null ? 0 : 128}-dimension local identity template is ready.';
       });
       if (synced.isComplete) {
         widget.onComplete?.call();
@@ -285,14 +361,18 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _statusMessage = 'Face ID could not be saved. Check connection and try again.';
+        _statusMessage =
+            'Face ID could not be saved. Check connection and try again.';
       });
     }
   }
 
   Future<void> _reset() async {
     if (_snapshot.locked) {
-      setState(() => _statusMessage = 'Face ID is protected. It can only be reset by an authorized officer.');
+      setState(
+        () => _statusMessage =
+            'Face ID is protected. It can only be reset by an authorized officer.',
+      );
       return;
     }
     final next = await _service.resetLocalDraftOnly();
@@ -300,6 +380,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     setState(() {
       _snapshot = next;
       _capturedImages.clear();
+      _capturedEmbeddings.clear();
+      _portableTemplateJson = null;
       _autoCaptureStarted = false;
       _autoCaptureRunning = false;
       _statusMessage = 'Local draft cleared. Automatic capture will restart.';
@@ -333,7 +415,11 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Header(snapshot: _snapshot, progress: progress, compact: compact),
+                  _Header(
+                    snapshot: _snapshot,
+                    progress: progress,
+                    compact: compact,
+                  ),
                   const SizedBox(height: 14),
                   LayoutBuilder(
                     builder: (context, constraints) {
@@ -354,7 +440,13 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                         compact: !wide,
                       );
                       if (!wide) {
-                        return Column(children: [preview, const SizedBox(height: 14), status]);
+                        return Column(
+                          children: [
+                            preview,
+                            const SizedBox(height: 14),
+                            status,
+                          ],
+                        );
                       }
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,7 +467,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                       submitting: _submitting,
                       onCapture: _startAutomaticCapture,
                       onReset: _reset,
-                      onBack: () => Navigator.of(context).pop(_snapshot.isComplete),
+                      onBack: () =>
+                          Navigator.of(context).pop(_snapshot.isComplete),
                     )
                   else
                     FilledButton.icon(

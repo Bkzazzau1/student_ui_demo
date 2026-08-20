@@ -27,8 +27,12 @@ class AirBoardFingertipView extends StatefulWidget {
 
 class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
   static const _owner = 'air_board_fingertip';
-  static const _sampleInterval = Duration(milliseconds: 550);
+  static const _sampleInterval = Duration(milliseconds: 120);
   static const _gestureFramesRequired = 2;
+  static const _relaxedFingertipWriting = bool.fromEnvironment(
+    'KSLAS_RELAX_AIR_BOARD_GESTURE_GATE',
+    defaultValue: true,
+  );
 
   final _cameraRuntime = CameraRuntimeCoordinator.instance;
   final GlobalKey _canvasKey = GlobalKey();
@@ -36,6 +40,7 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
 
   CameraController? _camera;
   Timer? _snapshotTimer;
+  DateTime? _lastFrameAnalyzedAt;
   _GestureStroke? _activeStroke;
   rust_vision.HandVisionResult? _handVision;
   rust_landmark.HandLandmarkInferenceResult? _landmarkResult;
@@ -68,9 +73,19 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
     _snapshotTimer?.cancel();
     final camera = _camera;
     _camera = null;
-    if (camera != null) unawaited(camera.dispose());
+    unawaited(_disposeCamera(camera));
     if (_ownsLease) _cameraRuntime.release(_owner);
     super.dispose();
+  }
+
+  Future<void> _disposeCamera(CameraController? camera) async {
+    if (camera == null) return;
+    try {
+      if (camera.value.isStreamingImages) {
+        await camera.stopImageStream();
+      }
+      await camera.dispose();
+    } catch (_) {}
   }
 
   Future<void> _initialize() async {
@@ -126,10 +141,20 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
   }
 
   Future<void> _openCamera() async {
-    final lease = _cameraRuntime.tryAcquire(
-      owner: _owner,
-      purpose: 'air_board_fingertip_snapshot_inference',
-    );
+    CameraRuntimeLease? lease;
+    for (var attempt = 0; attempt < 16 && mounted; attempt++) {
+      lease = _cameraRuntime.tryAcquire(
+        owner: _owner,
+        purpose: 'air_board_fingertip_snapshot_inference',
+      );
+      if (lease != null) break;
+      if (attempt == 0) {
+        setState(() {
+          _cameraStatus = 'Waiting for exam camera to release...';
+        });
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
     if (lease == null) {
       if (!mounted) return;
       setState(() {
@@ -148,8 +173,9 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
       );
       final controller = CameraController(
         selected,
-        ResolutionPreset.medium,
+        ResolutionPreset.low,
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.bgra8888,
       );
       await controller.initialize();
       if (!mounted) {
@@ -157,20 +183,49 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
         return;
       }
       _camera = controller;
-      setState(() => _cameraStatus = 'Camera snapshot analysis active');
-      _snapshotTimer = Timer.periodic(
-        _sampleInterval,
-        (_) => unawaited(_captureAndAnalyze()),
+      var streamReady = false;
+      try {
+        await controller.startImageStream(_handleCameraFrame);
+        streamReady = true;
+      } catch (_) {
+        streamReady = false;
+      }
+      setState(
+        () => _cameraStatus = streamReady
+            ? 'Camera live analysis active'
+            : 'Camera snapshot analysis active',
       );
+      if (!streamReady) {
+        _snapshotTimer = Timer.periodic(
+          _sampleInterval,
+          (_) => unawaited(_captureAndAnalyze()),
+        );
+      }
     } catch (error) {
+      if (_ownsLease) {
+        _cameraRuntime.release(_owner);
+        _ownsLease = false;
+      }
       if (!mounted) return;
       setState(() => _cameraStatus = 'Camera could not start: $error');
     }
   }
 
+  void _handleCameraFrame(CameraImage image) {
+    if (_processing || !_detectorLoaded || _disposed) return;
+    final now = DateTime.now();
+    final previous = _lastFrameAnalyzedAt;
+    if (previous != null && now.difference(previous) < _sampleInterval) return;
+    _lastFrameAnalyzedAt = now;
+    unawaited(_analyzeCameraImage(image, now));
+  }
+
   Future<void> _captureAndAnalyze() async {
     final camera = _camera;
-    if (_processing || !_detectorLoaded || camera == null || !camera.value.isInitialized) {
+    if (_processing ||
+        !_detectorLoaded ||
+        camera == null ||
+        !camera.value.isInitialized) {
       return;
     }
     _processing = true;
@@ -178,60 +233,11 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
       final picture = await camera.takePicture();
       final encoded = await picture.readAsBytes();
       final frame = img.decodeImage(encoded);
-      if (frame == null) throw StateError('Camera snapshot could not be decoded.');
+      if (frame == null) {
+        throw StateError('Camera snapshot could not be decoded.');
+      }
       final rgb = _imageToRgb(frame);
-      final now = DateTime.now();
-      final handResult = rust_vision.analyzeHandRgbFrame(
-        rgbBytes: rgb,
-        imageWidth: frame.width,
-        imageHeight: frame.height,
-        zones: const rust_vision.HandVisionZones(
-          keyboardYMin: 0.66,
-          stylusXMin: 0.05,
-          stylusXMax: 0.95,
-          stylusYMin: 0.40,
-          faceXMin: 0.25,
-          faceXMax: 0.75,
-          faceYMin: 0.05,
-          faceYMax: 0.45,
-          deskLineY: 0.96,
-        ),
-        timestampMs: now.millisecondsSinceEpoch,
-      );
-      _handVision = handResult;
-
-      if (!_landmarkLoaded || handResult.detections.isEmpty) {
-        _handleNoGesture(
-          _landmarkLoaded
-              ? 'Keep one hand clearly visible to the camera.'
-              : 'Fingertip model is not installed yet.',
-        );
-        return;
-      }
-
-      final detection = handResult.detections.reduce(
-        (a, b) => a.confidence >= b.confidence ? a : b,
-      );
-      final crop = _cropHand(frame, detection);
-      if (crop == null) {
-        _handleNoGesture('Keep your full hand inside the camera view.');
-        return;
-      }
-
-      final landmarkResult = rust_landmark.analyzeHandLandmarkRgbCrop(
-        rgbBytes: _imageToRgb(crop.image),
-        cropWidth: crop.image.width,
-        cropHeight: crop.image.height,
-        mirrored: true,
-        timestampMs: now.millisecondsSinceEpoch,
-      );
-      _landmarkResult = landmarkResult;
-      final gesture = landmarkResult.gesture;
-      final frameTip = Offset(
-        (crop.left + gesture.indexTipX * crop.width) / frame.width,
-        (crop.top + gesture.indexTipY * crop.height) / frame.height,
-      );
-      _consumeGesture(gesture, frameTip);
+      _analyzeRgbFrame(frame, rgb, DateTime.now());
     } catch (error) {
       if (mounted) {
         setState(() => _cameraStatus = 'Local gesture analysis error: $error');
@@ -241,7 +247,79 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
     }
   }
 
-  _HandCrop? _cropHand(img.Image frame, rust_native.NativeVisionDetection detection) {
+  Future<void> _analyzeCameraImage(CameraImage image, DateTime now) async {
+    _processing = true;
+    try {
+      final frame = _cameraImageToRgbImage(image);
+      if (frame == null) return;
+      _analyzeRgbFrame(frame.image, frame.rgbBytes, now);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _cameraStatus = 'Local gesture analysis error: $error');
+      }
+    } finally {
+      _processing = false;
+    }
+  }
+
+  void _analyzeRgbFrame(img.Image frame, Uint8List rgb, DateTime now) {
+    final handResult = rust_vision.analyzeHandRgbFrame(
+      rgbBytes: rgb,
+      imageWidth: frame.width,
+      imageHeight: frame.height,
+      zones: const rust_vision.HandVisionZones(
+        keyboardYMin: 0.66,
+        stylusXMin: 0.05,
+        stylusXMax: 0.95,
+        stylusYMin: 0.40,
+        faceXMin: 0.25,
+        faceXMax: 0.75,
+        faceYMin: 0.05,
+        faceYMax: 0.45,
+        deskLineY: 0.96,
+      ),
+      timestampMs: now.millisecondsSinceEpoch,
+    );
+    _handVision = handResult;
+
+    if (!_landmarkLoaded || handResult.detections.isEmpty) {
+      _handleNoGesture(
+        _landmarkLoaded
+            ? 'Keep one hand clearly visible to the camera.'
+            : 'Fingertip model is not installed yet.',
+      );
+      return;
+    }
+
+    final detection = handResult.detections.reduce(
+      (a, b) => a.confidence >= b.confidence ? a : b,
+    );
+    final crop = _cropHand(frame, detection);
+    if (crop == null) {
+      _handleNoGesture('Keep your full hand inside the camera view.');
+      return;
+    }
+
+    final landmarkResult = rust_landmark.analyzeHandLandmarkRgbCrop(
+      rgbBytes: _imageToRgb(crop.image),
+      cropWidth: crop.image.width,
+      cropHeight: crop.image.height,
+      mirrored: true,
+      timestampMs: now.millisecondsSinceEpoch,
+    );
+    _landmarkResult = landmarkResult;
+    final gesture = landmarkResult.gesture;
+    final frameTip = Offset(
+      (crop.left + gesture.indexTipX * crop.width) / frame.width,
+      (crop.top + gesture.indexTipY * crop.height) / frame.height,
+    );
+    _consumeGesture(gesture, frameTip);
+  }
+
+  _HandCrop? _cropHand(
+    img.Image frame,
+    rust_native.NativeVisionDetection detection,
+  ) {
     final padX = detection.width * 0.28;
     final padY = detection.height * 0.28;
     final left = math.max(0, (detection.xMin - padX).floor());
@@ -271,7 +349,84 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
     return bytes;
   }
 
-  void _consumeGesture(rust_gesture.HandGestureResult gesture, Offset normalizedTip) {
+  _RgbFrame? _cameraImageToRgbImage(CameraImage image) {
+    if (image.format.group == ImageFormatGroup.bgra8888) {
+      return _bgraToRgbImage(image);
+    }
+    if (image.format.group == ImageFormatGroup.yuv420) {
+      return _yuv420ToRgbImage(image);
+    }
+    return null;
+  }
+
+  _RgbFrame? _bgraToRgbImage(CameraImage image) {
+    if (image.planes.isEmpty) return null;
+    final width = image.width;
+    final height = image.height;
+    final plane = image.planes.first;
+    final source = plane.bytes;
+    final bytesPerRow = plane.bytesPerRow;
+    final pixelStride = plane.bytesPerPixel ?? 4;
+    final rgb = Uint8List(width * height * 3);
+    final frame = img.Image(width: width, height: height);
+    var target = 0;
+    for (var y = 0; y < height; y++) {
+      final row = y * bytesPerRow;
+      for (var x = 0; x < width; x++) {
+        final sourceIndex = row + x * pixelStride;
+        if (sourceIndex + 2 >= source.length) return null;
+        final b = source[sourceIndex];
+        final g = source[sourceIndex + 1];
+        final r = source[sourceIndex + 2];
+        rgb[target++] = r;
+        rgb[target++] = g;
+        rgb[target++] = b;
+        frame.setPixelRgb(x, y, r, g, b);
+      }
+    }
+    return _RgbFrame(image: frame, rgbBytes: rgb);
+  }
+
+  _RgbFrame? _yuv420ToRgbImage(CameraImage image) {
+    if (image.planes.length < 3) return null;
+    final width = image.width;
+    final height = image.height;
+    final yPlane = image.planes[0];
+    final uPlane = image.planes[1];
+    final vPlane = image.planes[2];
+    final uvPixelStride = uPlane.bytesPerPixel ?? 1;
+    final rgb = Uint8List(width * height * 3);
+    final frame = img.Image(width: width, height: height);
+    var target = 0;
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final yIndex = y * yPlane.bytesPerRow + x;
+        final uvIndex =
+            (y ~/ 2) * uPlane.bytesPerRow + (x ~/ 2) * uvPixelStride;
+        if (yIndex >= yPlane.bytes.length ||
+            uvIndex >= uPlane.bytes.length ||
+            uvIndex >= vPlane.bytes.length) {
+          return null;
+        }
+        final yy = yPlane.bytes[yIndex].toDouble();
+        final uu = uPlane.bytes[uvIndex].toDouble() - 128.0;
+        final vv = vPlane.bytes[uvIndex].toDouble() - 128.0;
+        final r = (yy + 1.402 * vv).round().clamp(0, 255);
+        final g = (yy - 0.344136 * uu - 0.714136 * vv).round().clamp(0, 255);
+        final b = (yy + 1.772 * uu).round().clamp(0, 255);
+        rgb[target++] = r;
+        rgb[target++] = g;
+        rgb[target++] = b;
+        frame.setPixelRgb(x, y, r, g, b);
+      }
+    }
+    return _RgbFrame(image: frame, rgbBytes: rgb);
+  }
+
+  void _consumeGesture(
+    rust_gesture.HandGestureResult gesture,
+    Offset normalizedTip,
+  ) {
     if (!gesture.usable) {
       _handleNoGesture(gesture.studentMessage);
       return;
@@ -290,26 +445,43 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
     final smoothed = previous == null
         ? normalizedTip
         : Offset(
-            previous.dx * 0.62 + normalizedTip.dx * 0.38,
-            previous.dy * 0.62 + normalizedTip.dy * 0.38,
+            previous.dx * 0.25 + normalizedTip.dx * 0.75,
+            previous.dy * 0.25 + normalizedTip.dy * 0.75,
           );
     _smoothedTip = smoothed;
+
+    if (_relaxedFingertipWriting && !_boardArmed) {
+      _boardArmed = true;
+    }
 
     if (_stableGesture == 'open_palm') {
       _finishGestureStroke();
       if (mounted) {
         setState(() {
           _boardArmed = true;
-          _studentMessage = 'Air Board ready. Raise only your index finger to write.';
+          _studentMessage =
+              'Air Board ready. Raise only your index finger to write.';
         });
       }
       return;
     }
 
-    if (_stableGesture == 'index_only' && _boardArmed) {
+    final shouldWrite =
+        _boardArmed &&
+        (gesture.writingActive ||
+            (_relaxedFingertipWriting &&
+                _stableGesture != 'open_palm' &&
+                _stableGesture != 'two_fingers'));
+    if (shouldWrite) {
       final boardPoint = _toCanvasPoint(smoothed);
       if (boardPoint != null) _writeGesturePoint(boardPoint);
-      if (mounted) setState(() => _studentMessage = gesture.studentMessage);
+      if (mounted) {
+        setState(() {
+          _studentMessage = gesture.writingActive
+              ? gesture.studentMessage
+              : 'Writing mode active. Move your fingertip to write.';
+        });
+      }
       return;
     }
 
@@ -372,7 +544,9 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
   void _eraseNear(Offset point) {
     const radius = 34.0;
     _strokes.removeWhere(
-      (stroke) => stroke.points.any((candidate) => (candidate - point).distance <= radius),
+      (stroke) => stroke.points.any(
+        (candidate) => (candidate - point).distance <= radius,
+      ),
     );
     if (mounted) setState(() {});
   }
@@ -389,15 +563,23 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
     final camera = _camera;
     final cameraReady = camera != null && camera.value.isInitialized;
     final gesture = _landmarkResult?.gesture;
+    final writingActive =
+        gesture?.writingActive == true || _activeStroke != null;
 
     return Scaffold(
       backgroundColor: _page,
       appBar: AppBar(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Air Board', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Air Board',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         actions: [
-          IconButton(onPressed: _clear, icon: const Icon(Icons.delete_outline_rounded)),
+          IconButton(
+            onPressed: _clear,
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
           TextButton.icon(
             onPressed: () => Navigator.of(context).maybePop(),
             icon: const Icon(Icons.close_rounded),
@@ -421,10 +603,20 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
                 children: [
                   const Text(
                     'Camera-controlled rough work',
-                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  Text(_studentMessage, style: const TextStyle(color: Color(0xFFE2E8F0), fontWeight: FontWeight.w700)),
+                  Text(
+                    _studentMessage,
+                    style: const TextStyle(
+                      color: Color(0xFFE2E8F0),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -432,7 +624,9 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
                     children: [
                       _StatusChip(_modelStatus),
                       _StatusChip(_cameraStatus),
-                      _StatusChip(_boardArmed ? 'Board activated' : 'Show open palm'),
+                      _StatusChip(
+                        _boardArmed ? 'Board activated' : 'Show open palm',
+                      ),
                       _StatusChip('Gesture: ${gesture?.gesture ?? 'waiting'}'),
                     ],
                   ),
@@ -452,34 +646,69 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
                         border: Border.all(color: _line),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Camera hand monitor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 12),
-                          AspectRatio(
-                            aspectRatio: 4 / 3,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: ColoredBox(
-                                color: _ink,
-                                child: cameraReady ? CameraPreview(camera) : const Icon(Icons.videocam_off_outlined, color: Colors.white, size: 38),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Camera hand monitor',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          _InfoLine('Hands', '${_handVision?.signal.handCount ?? 0}'),
-                          _InfoLine('Gesture', gesture?.gesture ?? 'Waiting'),
-                          _InfoLine('Fingers', '${gesture?.fingerCount ?? 0}'),
-                          _InfoLine('Confidence', '${((gesture?.confidence ?? 0) * 100).round()}%'),
-                          _InfoLine('Writing', gesture?.writingActive == true ? 'Active' : 'Paused'),
-                          _InfoLine('Eraser', gesture?.erasingActive == true ? 'Active' : 'Paused'),
-                          const SizedBox(height: 14),
-                          const Text(
-                            'Open palm activates the board. One index finger writes. Two fingers erase. Closed hand pauses.',
-                            style: TextStyle(color: _muted, height: 1.45, fontWeight: FontWeight.w600),
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            AspectRatio(
+                              aspectRatio: 4 / 3,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: ColoredBox(
+                                  color: _ink,
+                                  child: cameraReady
+                                      ? CameraPreview(camera)
+                                      : const Icon(
+                                          Icons.videocam_off_outlined,
+                                          color: Colors.white,
+                                          size: 38,
+                                        ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _InfoLine(
+                              'Hands',
+                              '${_handVision?.signal.handCount ?? 0}',
+                            ),
+                            _InfoLine('Gesture', gesture?.gesture ?? 'Waiting'),
+                            _InfoLine(
+                              'Fingers',
+                              '${gesture?.fingerCount ?? 0}',
+                            ),
+                            _InfoLine(
+                              'Confidence',
+                              '${((gesture?.confidence ?? 0) * 100).round()}%',
+                            ),
+                            _InfoLine(
+                              'Writing',
+                              writingActive ? 'Active' : 'Paused',
+                            ),
+                            _InfoLine(
+                              'Eraser',
+                              gesture?.erasingActive == true
+                                  ? 'Active'
+                                  : 'Paused',
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              'Open palm activates the board. One index finger writes. Two fingers erase. Closed hand pauses.',
+                              style: TextStyle(
+                                color: _muted,
+                                height: 1.45,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -495,9 +724,21 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Digital rough work', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                          const Text(
+                            'Digital rough work',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          const Text('Move your raised index finger to write.', style: TextStyle(color: _muted, fontWeight: FontWeight.w600)),
+                          const Text(
+                            'Move your raised index finger to write.',
+                            style: TextStyle(
+                              color: _muted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           Expanded(
                             child: ClipRRect(
@@ -529,7 +770,13 @@ class _AirBoardFingertipViewState extends State<AirBoardFingertipView> {
 }
 
 class _HandCrop {
-  const _HandCrop({required this.image, required this.left, required this.top, required this.width, required this.height});
+  const _HandCrop({
+    required this.image,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+  });
   final img.Image image;
   final int left;
   final int top;
@@ -537,8 +784,20 @@ class _HandCrop {
   final int height;
 }
 
+class _RgbFrame {
+  const _RgbFrame({required this.image, required this.rgbBytes});
+
+  final img.Image image;
+  final Uint8List rgbBytes;
+}
+
 class _GestureStroke {
-  _GestureStroke({required this.id, required this.points, required this.startedAt, required this.endedAt});
+  _GestureStroke({
+    required this.id,
+    required this.points,
+    required this.startedAt,
+    required this.endedAt,
+  });
   final String id;
   final List<Offset> points;
   final DateTime startedAt;
@@ -546,7 +805,12 @@ class _GestureStroke {
 }
 
 class _GestureBoardPainter extends CustomPainter {
-  const _GestureBoardPainter({required this.strokes, required this.activeStroke, required this.cursor, required this.armed});
+  const _GestureBoardPainter({
+    required this.strokes,
+    required this.activeStroke,
+    required this.cursor,
+    required this.armed,
+  });
   final List<_GestureStroke> strokes;
   final _GestureStroke? activeStroke;
   final Offset? cursor;
@@ -555,25 +819,50 @@ class _GestureBoardPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = Colors.white);
-    final grid = Paint()..color = const Color(0xFFE2E8F0)..strokeWidth = 1;
+    final grid = Paint()
+      ..color = const Color(0xFFE2E8F0)
+      ..strokeWidth = 1;
     for (var x = 40.0; x < size.width; x += 40) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
     }
     for (var y = 40.0; y < size.height; y += 40) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
     }
-    for (final stroke in <_GestureStroke>[...strokes, if (activeStroke != null) activeStroke!]) {
+    for (final stroke in <_GestureStroke>[
+      ...strokes,
+      if (activeStroke != null) activeStroke!,
+    ]) {
+      if (stroke.points.length == 1) {
+        canvas.drawCircle(stroke.points.first, 3.2, Paint()..color = _ink);
+        continue;
+      }
       if (stroke.points.length < 2) continue;
-      final path = Path()..moveTo(stroke.points.first.dx, stroke.points.first.dy);
+      final path = Path()
+        ..moveTo(stroke.points.first.dx, stroke.points.first.dy);
       for (var i = 1; i < stroke.points.length; i++) {
         path.lineTo(stroke.points[i].dx, stroke.points[i].dy);
       }
-      canvas.drawPath(path, Paint()..color = _ink..strokeWidth = 3.2..strokeCap = StrokeCap.round..strokeJoin = StrokeJoin.round..style = PaintingStyle.stroke);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = _ink
+          ..strokeWidth = 3.2
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..style = PaintingStyle.stroke,
+      );
     }
     final normalized = cursor;
     if (normalized != null) {
-      final point = Offset(normalized.dx.clamp(0.0, 1.0) * size.width, normalized.dy.clamp(0.0, 1.0) * size.height);
-      canvas.drawCircle(point, armed ? 8 : 6, Paint()..color = armed ? _brand : _muted);
+      final point = Offset(
+        normalized.dx.clamp(0.0, 1.0) * size.width,
+        normalized.dy.clamp(0.0, 1.0) * size.height,
+      );
+      canvas.drawCircle(
+        point,
+        armed ? 8 : 6,
+        Paint()..color = armed ? _brand : _muted,
+      );
     }
   }
 
@@ -586,11 +875,20 @@ class _StatusChip extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) => Container(
-        constraints: const BoxConstraints(maxWidth: 420),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999), border: Border.all(color: Colors.white.withValues(alpha: 0.16))),
-        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-      );
+    constraints: const BoxConstraints(maxWidth: 420),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+    ),
+  );
 }
 
 class _InfoLine extends StatelessWidget {
@@ -599,7 +897,20 @@ class _InfoLine extends StatelessWidget {
   final String value;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 9),
-        child: Row(children: [Expanded(child: Text(label, style: const TextStyle(color: _muted, fontWeight: FontWeight.w700))), Text(value, style: const TextStyle(color: _ink, fontWeight: FontWeight.w900))]),
-      );
+    padding: const EdgeInsets.only(bottom: 9),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: _muted, fontWeight: FontWeight.w700),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(color: _ink, fontWeight: FontWeight.w900),
+        ),
+      ],
+    ),
+  );
 }
