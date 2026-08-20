@@ -30,23 +30,23 @@ class VisualReflectionShadowResult {
   final NativeVisionFrameQualitySnapshot? nativeFrameQuality;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'bright_hotspot_score': brightHotspotScore,
-        'shadow_shift_score': shadowShiftScore,
-        'lower_frame_activity': lowerFrameActivity,
-        'side_reflection_score': sideReflectionScore,
-        'screen_glow_likely': screenGlowLikely,
-        'mirror_or_glass_likely': mirrorOrGlassLikely,
-        'offscreen_interaction_likely': offscreenInteractionLikely,
-        'visual_risk_score': visualRiskScore,
-        'label': label,
-        if (nativeFrameQuality != null)
-          'native_frame_quality': nativeFrameQuality!.toJson(),
-      };
+    'bright_hotspot_score': brightHotspotScore,
+    'shadow_shift_score': shadowShiftScore,
+    'lower_frame_activity': lowerFrameActivity,
+    'side_reflection_score': sideReflectionScore,
+    'screen_glow_likely': screenGlowLikely,
+    'mirror_or_glass_likely': mirrorOrGlassLikely,
+    'offscreen_interaction_likely': offscreenInteractionLikely,
+    'visual_risk_score': visualRiskScore,
+    'label': label,
+    if (nativeFrameQuality != null)
+      'native_frame_quality': nativeFrameQuality!.toJson(),
+  };
 }
 
 class VisualReflectionShadowService {
   VisualReflectionShadowService({NativeVisionBridge? nativeVision})
-      : _nativeVision = nativeVision ?? const GeneratedNativeVisionBridge();
+    : _nativeVision = nativeVision ?? const GeneratedNativeVisionBridge();
 
   final NativeVisionBridge _nativeVision;
 
@@ -131,16 +131,18 @@ class VisualReflectionShadowService {
         ? 0.0
         : localContrastTotal / localContrastCount;
     final hotspotScore = (brightest - centerMean).clamp(0.0, 1.0).toDouble();
-    final sideReflectionScore =
-        (sideMean - centerMean).clamp(0.0, 1.0).toDouble();
+    final sideReflectionScore = (sideMean - centerMean)
+        .clamp(0.0, 1.0)
+        .toDouble();
     final lowerMotion = _lastGrid == null
         ? 0.0
         : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: true);
     final fullMotion = _lastGrid == null
         ? 0.0
         : _regionMotion(_lastGrid!, grid, gridW, gridH, lowerOnly: false);
-    final shadowShift =
-        ((brightest - darkest) * contrast).clamp(0.0, 1.0).toDouble();
+    final shadowShift = ((brightest - darkest) * contrast)
+        .clamp(0.0, 1.0)
+        .toDouble();
 
     _push(_hotspotHistory, hotspotScore, 18);
     _push(_shadowHistory, shadowShift, 18);
@@ -149,9 +151,12 @@ class VisualReflectionShadowService {
     final hotspotAverage = _average(_hotspotHistory);
     final shadowAverage = _average(_shadowHistory);
     final lowerAverage = _average(_lowerMotionHistory);
-    final suddenGlow = hotspotScore > 0.38 && hotspotScore > hotspotAverage + 0.12;
-    final sharpShadow = shadowShift > 0.12 && shadowShift > shadowAverage + 0.05;
-    final lowerInteraction = lowerAverage > 0.035 && lowerMotion > fullMotion * 1.35;
+    final suddenGlow =
+        hotspotScore > 0.38 && hotspotScore > hotspotAverage + 0.12;
+    final sharpShadow =
+        shadowShift > 0.12 && shadowShift > shadowAverage + 0.05;
+    final lowerInteraction =
+        lowerAverage > 0.035 && lowerMotion > fullMotion * 1.35;
     final sideReflection = sideReflectionScore > 0.18 && sideMean > 0.42;
 
     var risk = 0.0;
@@ -162,7 +167,8 @@ class VisualReflectionShadowService {
     if (lowerMean > centerMean + 0.16 && lowerMotion > 0.025) risk += 0.10;
     risk = risk.clamp(0.0, 1.0).toDouble();
 
-    final nativeQualityNeedsAttention = nativeQuality != null &&
+    final nativeQualityNeedsAttention =
+        nativeQuality != null &&
         !nativeQuality.isUsable &&
         (nativeQuality.reason.contains('dark') ||
             nativeQuality.reason.contains('overexposed') ||
@@ -172,14 +178,14 @@ class VisualReflectionShadowService {
     final label = suddenGlow
         ? 'possible_phone_screen_glow'
         : sideReflection
-            ? 'possible_mirror_or_glass_reflection'
-            : lowerInteraction
-                ? 'possible_offscreen_hand_or_phone_interaction'
-                : sharpShadow
-                    ? 'sharp_shadow_or_light_shift_detected'
-                    : nativeQualityNeedsAttention
-                        ? 'native_frame_quality_needs_attention'
-                        : 'visual_integrity_normal';
+        ? 'possible_mirror_or_glass_reflection'
+        : lowerInteraction
+        ? 'possible_offscreen_hand_or_phone_interaction'
+        : sharpShadow
+        ? 'sharp_shadow_or_light_shift_detected'
+        : nativeQualityNeedsAttention
+        ? 'native_frame_quality_needs_attention'
+        : 'visual_integrity_normal';
 
     _lastGrid = grid;
     return VisualReflectionShadowResult(

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 import '../rust/api/proctoring.dart' as native_proctoring;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 import 'camera_scan_frame_source.dart';
 
 class NativeScanFrameReviewResult {
@@ -27,14 +27,14 @@ class NativeScanFrameReviewResult {
   final String? message;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'available': available,
-        'lighting_score': lightingScore,
-        'object_labels': objectLabels,
-        'face_count': faceCount,
-        'estimated_yaw': estimatedYaw,
-        'estimated_pitch': estimatedPitch,
-        if (message != null) 'message': message,
-      };
+    'available': available,
+    'lighting_score': lightingScore,
+    'object_labels': objectLabels,
+    'face_count': faceCount,
+    'estimated_yaw': estimatedYaw,
+    'estimated_pitch': estimatedPitch,
+    if (message != null) 'message': message,
+  };
 }
 
 class NativeScanFrameReviewService {
@@ -42,7 +42,9 @@ class NativeScanFrameReviewService {
 
   static Future<bool>? _nativeReady;
 
-  Future<NativeScanFrameReviewResult?> analyse(DemoCameraScanFrame frame) async {
+  Future<NativeScanFrameReviewResult?> analyse(
+    DemoCameraScanFrame frame,
+  ) async {
     if (!await _ensureNativeReady()) {
       return const NativeScanFrameReviewResult(
         available: false,
@@ -121,7 +123,7 @@ class NativeScanFrameReviewService {
   static Future<bool> _ensureNativeReady() {
     return _nativeReady ??= () async {
       try {
-        await BrainCoreApi.init();
+        await BrainCoreRuntime.ensureInitialized();
         return true;
       } catch (_) {
         return false;

@@ -80,7 +80,9 @@ class _SecureLockdownStatusPanelState extends State<SecureLockdownStatusPanel> {
       final snapshot = await _lockdown.collectSnapshot();
       if (!mounted) return;
       setState(() => _snapshot = snapshot);
-      if (!snapshot.ready) await _send(snapshot, 'secure_lockdown_check_failed');
+      if (!snapshot.ready) {
+        await _send(snapshot, 'secure_lockdown_check_failed');
+      }
       _handle(snapshot);
     } finally {
       _checking = false;
@@ -139,7 +141,9 @@ class _SecureLockdownStatusPanelState extends State<SecureLockdownStatusPanel> {
               children: [
                 Icon(
                   ready ? Icons.lock : Icons.warning_amber_outlined,
-                  color: ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  color: ready
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFDC2626),
                 ),
                 const SizedBox(width: 8),
                 const Expanded(
@@ -155,36 +159,43 @@ class _SecureLockdownStatusPanelState extends State<SecureLockdownStatusPanel> {
               _checking
                   ? 'Checking secure lockdown...'
                   : ready
-                      ? 'Secure lockdown active'
-                      : 'Secure lockdown needs review',
+                  ? 'Secure lockdown active'
+                  : 'Secure lockdown needs review',
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
-                _LockdownChip(label: 'Platform', value: snapshot?.platformName ?? 'checking'),
+                _LockdownChip(
+                  label: 'Platform',
+                  value: snapshot?.platformName ?? 'checking',
+                ),
                 _LockdownChip(
                   label: 'Displays',
                   value: snapshot?.displayCount?.toString() ?? 'unknown',
                 ),
                 _LockdownChip(
                   label: 'Clipboard',
-                  value: snapshot?.clipboardCleared == true ? 'cleared' : 'unconfirmed',
+                  value: snapshot?.clipboardCleared == true
+                      ? 'cleared'
+                      : 'unconfirmed',
                 ),
               ],
             ),
             if (findings.isNotEmpty) ...[
               const SizedBox(height: 8),
-              ...findings.take(3).map(
-                (finding) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    '- ${finding.message}',
-                    style: Theme.of(context).textTheme.bodySmall,
+              ...findings
+                  .take(3)
+                  .map(
+                    (finding) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '- ${finding.message}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
                   ),
-                ),
-              ),
             ],
           ],
         ),

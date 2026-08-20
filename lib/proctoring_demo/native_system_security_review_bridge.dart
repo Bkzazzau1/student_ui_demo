@@ -1,5 +1,5 @@
 import '../rust/api/system_security.dart' as native_system_security;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 import 'system_security_review_service.dart';
 
 class NativeSystemSecurityReviewSnapshot {
@@ -131,7 +131,7 @@ class GeneratedNativeSystemSecurityReviewBridge
   static Future<bool> _ensureNativeReady() {
     return _nativeReady ??= () async {
       try {
-        await BrainCoreApi.init();
+        await BrainCoreRuntime.ensureInitialized();
         return true;
       } catch (_) {
         return false;

@@ -12,11 +12,11 @@ class EvidenceAttachment {
   final int? durationSeconds;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'kind': kind,
-        'local_path': localPath,
-        'created_at': createdAt.toUtc().toIso8601String(),
-        if (durationSeconds != null) 'duration_seconds': durationSeconds,
-      };
+    'kind': kind,
+    'local_path': localPath,
+    'created_at': createdAt.toUtc().toIso8601String(),
+    if (durationSeconds != null) 'duration_seconds': durationSeconds,
+  };
 }
 
 class EvidenceEventRecord {
@@ -39,12 +39,12 @@ class EvidenceEventRecord {
   final Map<String, Object?> metadata;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'event_type': eventType,
-        'student_id': studentId,
-        'exam_id': examId,
-        'attempt_id': attemptId,
-        'created_at': createdAt.toUtc().toIso8601String(),
-        'attachments': attachments.map((item) => item.toJson()).toList(),
-        if (metadata.isNotEmpty) 'metadata': metadata,
-      };
+    'event_type': eventType,
+    'student_id': studentId,
+    'exam_id': examId,
+    'attempt_id': attemptId,
+    'created_at': createdAt.toUtc().toIso8601String(),
+    'attachments': attachments.map((item) => item.toJson()).toList(),
+    if (metadata.isNotEmpty) 'metadata': metadata,
+  };
 }

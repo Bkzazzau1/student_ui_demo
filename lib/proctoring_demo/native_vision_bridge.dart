@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 
 import '../rust/api/native_vision.dart' as native_vision;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 
 class NativeVisionFrameQualitySnapshot {
   const NativeVisionFrameQualitySnapshot({
@@ -21,13 +21,13 @@ class NativeVisionFrameQualitySnapshot {
   final String reason;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'is_usable': isUsable,
-        'brightness': brightness,
-        'contrast': contrast,
-        'sharpness': sharpness,
-        'reason': reason,
-        'source': 'native_vision_frame_quality',
-      };
+    'is_usable': isUsable,
+    'brightness': brightness,
+    'contrast': contrast,
+    'sharpness': sharpness,
+    'reason': reason,
+    'source': 'native_vision_frame_quality',
+  };
 }
 
 class NativeVisionDetectionSnapshot {
@@ -58,18 +58,18 @@ class NativeVisionDetectionSnapshot {
   final double yMax;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'class_id': classId,
-        'label': label,
-        'confidence': confidence,
-        'x_center': xCenter,
-        'y_center': yCenter,
-        'width': width,
-        'height': height,
-        'x_min': xMin,
-        'y_min': yMin,
-        'x_max': xMax,
-        'y_max': yMax,
-      };
+    'class_id': classId,
+    'label': label,
+    'confidence': confidence,
+    'x_center': xCenter,
+    'y_center': yCenter,
+    'width': width,
+    'height': height,
+    'x_min': xMin,
+    'y_min': yMin,
+    'x_max': xMax,
+    'y_max': yMax,
+  };
 }
 
 class NativeObjectReviewSnapshot {
@@ -94,16 +94,16 @@ class NativeObjectReviewSnapshot {
   final String reason;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'detections': detections.map((item) => item.toJson()).toList(),
-        'people_count': peopleCount,
-        'phone_count': phoneCount,
-        'book_count': bookCount,
-        'paper_count': paperCount,
-        'needs_review': needsReview,
-        'attention_level': attentionLevel,
-        'reason': reason,
-        'source': 'native_vision_object_review',
-      };
+    'detections': detections.map((item) => item.toJson()).toList(),
+    'people_count': peopleCount,
+    'phone_count': phoneCount,
+    'book_count': bookCount,
+    'paper_count': paperCount,
+    'needs_review': needsReview,
+    'attention_level': attentionLevel,
+    'reason': reason,
+    'source': 'native_vision_object_review',
+  };
 }
 
 class NativeHeadPoseReviewSnapshot {
@@ -126,15 +126,15 @@ class NativeHeadPoseReviewSnapshot {
   final String reason;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'usable': usable,
-        'looking_away': lookingAway,
-        'yaw_score': yawScore,
-        'pitch_score': pitchScore,
-        'roll_score': rollScore,
-        'attention_level': attentionLevel,
-        'reason': reason,
-        'source': 'native_vision_head_pose',
-      };
+    'usable': usable,
+    'looking_away': lookingAway,
+    'yaw_score': yawScore,
+    'pitch_score': pitchScore,
+    'roll_score': rollScore,
+    'attention_level': attentionLevel,
+    'reason': reason,
+    'source': 'native_vision_head_pose',
+  };
 }
 
 abstract class NativeVisionBridge {
@@ -170,7 +170,8 @@ class DisabledNativeVisionBridge implements NativeVisionBridge {
   const DisabledNativeVisionBridge();
 
   @override
-  NativeVisionFrameQualitySnapshot? analyzeFrameQuality(CameraImage image) => null;
+  NativeVisionFrameQualitySnapshot? analyzeFrameQuality(CameraImage image) =>
+      null;
 
   @override
   NativeObjectReviewSnapshot? decodeYoloOutput({
@@ -314,7 +315,7 @@ class GeneratedNativeVisionBridge implements NativeVisionBridge {
 
   static Future<bool> _ensureNativeReady() async {
     try {
-      await BrainCoreApi.init();
+      await BrainCoreRuntime.ensureInitialized();
       return true;
     } catch (_) {
       return false;
@@ -373,11 +374,15 @@ _CompactRgbFrame? _cameraImageToCompactRgb(CameraImage image) {
   const targetMaxSide = 96;
   final step = _samplingStep(image.width, image.height, targetMaxSide);
   final outWidth = (image.width / step).floor().clamp(1, image.width).toInt();
-  final outHeight = (image.height / step).floor().clamp(1, image.height).toInt();
+  final outHeight = (image.height / step)
+      .floor()
+      .clamp(1, image.height)
+      .toInt();
   final out = Uint8List(outWidth * outHeight * 3);
 
   final format = image.format.group;
-  if (format == ImageFormatGroup.bgra8888 && image.planes.first.bytesPerRow > 0) {
+  if (format == ImageFormatGroup.bgra8888 &&
+      image.planes.first.bytesPerRow > 0) {
     _sampleBgra8888(image, step, outWidth, outHeight, out);
   } else {
     _sampleLumaAsRgb(image, step, outWidth, outHeight, out);

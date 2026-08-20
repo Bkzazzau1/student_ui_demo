@@ -20,14 +20,14 @@ class VisionComputeBudgetStatus {
   final bool throttled;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'target_utilization': targetUtilization,
-        'estimated_utilization': estimatedUtilization,
-        'average_work_ms': averageWorkMs,
-        'dynamic_interval_ms': dynamicIntervalMs,
-        'processed_frames': processedFrames,
-        'skipped_frames': skippedFrames,
-        'throttled': throttled,
-      };
+    'target_utilization': targetUtilization,
+    'estimated_utilization': estimatedUtilization,
+    'average_work_ms': averageWorkMs,
+    'dynamic_interval_ms': dynamicIntervalMs,
+    'processed_frames': processedFrames,
+    'skipped_frames': skippedFrames,
+    'throttled': throttled,
+  };
 }
 
 class VisionComputeBudgetService {
@@ -50,7 +50,8 @@ class VisionComputeBudgetService {
   bool shouldProcessFrame() {
     final now = DateTime.now();
     final last = _lastWorkAt;
-    if (last != null && now.difference(last).inMilliseconds < _dynamicIntervalMs) {
+    if (last != null &&
+        now.difference(last).inMilliseconds < _dynamicIntervalMs) {
       _skippedFrames++;
       return false;
     }
@@ -61,7 +62,9 @@ class VisionComputeBudgetService {
   void recordWork(Duration duration) {
     final workMs = duration.inMicroseconds / 1000.0;
     _processedFrames++;
-    _emaWorkMs = _emaWorkMs == 0 ? workMs : (_emaWorkMs * 0.82) + (workMs * 0.18);
+    _emaWorkMs = _emaWorkMs == 0
+        ? workMs
+        : (_emaWorkMs * 0.82) + (workMs * 0.18);
     final estimated = _estimatedUtilization();
     if (estimated > targetUtilization) {
       _dynamicIntervalMs = math.min(maxIntervalMs, _dynamicIntervalMs + 150);

@@ -12,18 +12,19 @@ class HandVisionCameraRuntime {
     this.manifestAssetPath = 'assets/models/hand_vision/manifest.json',
     this.modelAssetPath = 'assets/models/hand_vision/hand_detector.onnx',
     rust_hand_vision.HandVisionZones? zones,
-  }) : zones = zones ??
-            const rust_hand_vision.HandVisionZones(
-              keyboardYMin: 0.68,
-              stylusXMin: 0.30,
-              stylusXMax: 0.95,
-              stylusYMin: 0.58,
-              faceXMin: 0.24,
-              faceXMax: 0.76,
-              faceYMin: 0.05,
-              faceYMax: 0.52,
-              deskLineY: 0.94,
-            );
+  }) : zones =
+           zones ??
+           const rust_hand_vision.HandVisionZones(
+             keyboardYMin: 0.68,
+             stylusXMin: 0.30,
+             stylusXMax: 0.95,
+             stylusYMin: 0.58,
+             faceXMin: 0.24,
+             faceXMax: 0.76,
+             faceYMin: 0.05,
+             faceYMax: 0.52,
+             deskLineY: 0.94,
+           );
 
   final Duration sampleInterval;
   final String manifestAssetPath;
@@ -80,7 +81,9 @@ class HandVisionCameraRuntime {
   }) async {
     if (_running) return;
     if (!controller.value.isInitialized) {
-      throw StateError('Camera must be initialized before starting hand vision.');
+      throw StateError(
+        'Camera must be initialized before starting hand vision.',
+      );
     }
 
     _controller = controller;
@@ -142,7 +145,9 @@ class HandVisionCameraRuntime {
   ) async {
     final rgb = _cameraImageToRgb(image);
     if (rgb == null) {
-      throw StateError('Unsupported camera image format: ${image.format.group.name}');
+      throw StateError(
+        'Unsupported camera image format: ${image.format.group.name}',
+      );
     }
 
     return rust_hand_vision.analyzeHandRgbFrame(
@@ -207,7 +212,9 @@ class HandVisionCameraRuntime {
       for (var x = 0; x < image.width; x++) {
         final yIndex = yRow + x;
         final uvIndex = uvRow + (x >> 1) * uvPixelStride;
-        if (yIndex >= yBytes.length || uvIndex >= uBytes.length || uvIndex >= vBytes.length) {
+        if (yIndex >= yBytes.length ||
+            uvIndex >= uBytes.length ||
+            uvIndex >= vBytes.length) {
           return null;
         }
 
@@ -216,8 +223,9 @@ class HandVisionCameraRuntime {
         final vValue = vBytes[uvIndex].toDouble() - 128.0;
 
         final red = (yValue + 1.402 * vValue).round().clamp(0, 255);
-        final green =
-            (yValue - 0.344136 * uValue - 0.714136 * vValue).round().clamp(0, 255);
+        final green = (yValue - 0.344136 * uValue - 0.714136 * vValue)
+            .round()
+            .clamp(0, 255);
         final blue = (yValue + 1.772 * uValue).round().clamp(0, 255);
 
         output[outputIndex++] = red;

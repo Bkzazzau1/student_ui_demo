@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import '../rust/api/audio_intelligence.dart' as native_audio;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 
 class NativeAudioIntelligenceSnapshot {
   const NativeAudioIntelligenceSnapshot({
@@ -107,7 +107,7 @@ class GeneratedNativeAudioIntelligenceBridge
 
   static Future<bool> _ensureNativeReady() async {
     try {
-      await BrainCoreApi.init();
+      await BrainCoreRuntime.ensureInitialized();
       return true;
     } catch (_) {
       return false;

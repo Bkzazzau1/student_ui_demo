@@ -1,5 +1,5 @@
 import '../rust/api/lockdown.dart' as native_lockdown;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 
 class NativeLockdownFindingSnapshot {
   const NativeLockdownFindingSnapshot({
@@ -95,7 +95,7 @@ class GeneratedNativeSecureLockdownReviewBridge
   static Future<bool> _ensureNativeReady() {
     return _nativeReady ??= () async {
       try {
-        await BrainCoreApi.init();
+        await BrainCoreRuntime.ensureInitialized();
         return true;
       } catch (_) {
         return false;

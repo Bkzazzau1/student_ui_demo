@@ -10,10 +10,10 @@ class CameraRuntimeLease {
   final DateTime acquiredAt;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'owner': owner,
-        'purpose': purpose,
-        'acquired_at': acquiredAt.toUtc().toIso8601String(),
-      };
+    'owner': owner,
+    'purpose': purpose,
+    'acquired_at': acquiredAt.toUtc().toIso8601String(),
+  };
 }
 
 /// Coordinates webcam ownership inside the exam runtime.

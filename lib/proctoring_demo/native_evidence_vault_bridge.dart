@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import '../rust/api/evidence_vault.dart' as native_evidence_vault;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 
 abstract class NativeEvidenceVaultBridge {
   Future<String?> saveBytes({
@@ -111,7 +111,7 @@ class GeneratedNativeEvidenceVaultBridge implements NativeEvidenceVaultBridge {
   static Future<bool> _ensureNativeReady() {
     return _nativeReady ??= () async {
       try {
-        await BrainCoreApi.init();
+        await BrainCoreRuntime.ensureInitialized();
         return true;
       } catch (_) {
         return false;

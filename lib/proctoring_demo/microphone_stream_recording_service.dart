@@ -19,7 +19,8 @@ class MicrophoneStreamRecordingService {
 
   bool get isRunning => _running;
   int get sampleRate => _sampleRate;
-  int get bufferedBytes => _chunks.fold<int>(0, (sum, item) => sum + item.length);
+  int get bufferedBytes =>
+      _chunks.fold<int>(0, (sum, item) => sum + item.length);
   double get bufferedSeconds => bufferedBytes / math.max(1, _sampleRate * 2);
 
   Future<bool> hasPermission() => _recorder.hasPermission();

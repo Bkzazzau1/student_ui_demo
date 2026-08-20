@@ -1,12 +1,12 @@
 import '../rust/api/ai_action_policy.dart' as native;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 import 'edge_ai_review_coordinator.dart';
 
 class NativeEdgeAiActionAuthorizer implements EdgeAiActionAuthorizer {
   Future<void>? _initialization;
 
   Future<void> _ensureInitialized() {
-    return _initialization ??= BrainCoreApi.init();
+    return _initialization ??= BrainCoreRuntime.ensureInitialized();
   }
 
   @override

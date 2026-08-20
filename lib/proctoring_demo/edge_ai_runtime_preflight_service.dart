@@ -4,7 +4,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 
 import '../face_demo/native_face_embedding_runtime.dart';
-import '../rust/frb_generated.dart';
+import '../rust/api/ai_action_policy.dart' as native_action;
+import '../rust/brain_core_runtime.dart';
 import 'native_face_landmarker_runtime.dart';
 import 'python_edge_ai_service.dart';
 import 'yolo_runtime_health_check.dart';
@@ -115,7 +116,14 @@ class EdgeAiRuntimePreflightService {
 
   Future<EdgeAiComponentStatus> _checkRust() async {
     try {
-      await BrainCoreApi.init();
+      await BrainCoreRuntime.ensureInitialized();
+      // Exercise a real native call as a health probe. Unknown actions are
+      // deliberately denied by Rust; successful invocation proves the bridge
+      // and native policy core are responsive.
+      native_action.authorizeAiAction(
+        action: 'runtime_health_probe',
+        examActive: false,
+      );
       return const EdgeAiComponentStatus(
         name: 'Rust security core',
         ready: true,

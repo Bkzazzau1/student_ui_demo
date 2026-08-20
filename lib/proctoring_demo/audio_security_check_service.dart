@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../rust/api/proctoring.dart' as native_proctoring;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 import 'microphone_stream_recording_service.dart';
 
 class AudioSecurityCheckResult {
@@ -57,35 +57,35 @@ class AudioSecurityCheckResult {
   final String? message;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'microphone_available': microphoneAvailable,
-        'permission_granted': permissionGranted,
-        'input_level_ok': inputLevelOk,
-        'average_rms': averageRms,
-        'peak_rms': peakRms,
-        'noise_floor_rms': noiseFloorRms,
-        'zero_crossing_rate': zeroCrossingRate,
-        'dynamic_variation': dynamicVariation,
-        'voice_confidence': voiceConfidence,
-        'environment_label': environmentLabel,
-        'dominant_noise_class': dominantNoiseClass,
-        'sound_profile': soundProfile,
-        'environment_description': environmentDescription,
-        'recommended_action': recommendedAction,
-        'human_voice_detected': humanVoiceDetected,
-        'phone_ring_detected': phoneRingDetected,
-        'notification_detected': notificationDetected,
-        'tv_or_radio_voice_detected': tvOrRadioVoiceDetected,
-        'ambient_noise_allowed': ambientNoiseAllowed,
-        'sample_duration_seconds': sampleDurationSeconds,
-        'environment_learning_completed': sampleDurationSeconds >= 15,
-        if (clipPath != null) 'clip_path': clipPath,
-        if (message != null) 'message': message,
-      };
+    'microphone_available': microphoneAvailable,
+    'permission_granted': permissionGranted,
+    'input_level_ok': inputLevelOk,
+    'average_rms': averageRms,
+    'peak_rms': peakRms,
+    'noise_floor_rms': noiseFloorRms,
+    'zero_crossing_rate': zeroCrossingRate,
+    'dynamic_variation': dynamicVariation,
+    'voice_confidence': voiceConfidence,
+    'environment_label': environmentLabel,
+    'dominant_noise_class': dominantNoiseClass,
+    'sound_profile': soundProfile,
+    'environment_description': environmentDescription,
+    'recommended_action': recommendedAction,
+    'human_voice_detected': humanVoiceDetected,
+    'phone_ring_detected': phoneRingDetected,
+    'notification_detected': notificationDetected,
+    'tv_or_radio_voice_detected': tvOrRadioVoiceDetected,
+    'ambient_noise_allowed': ambientNoiseAllowed,
+    'sample_duration_seconds': sampleDurationSeconds,
+    'environment_learning_completed': sampleDurationSeconds >= 15,
+    if (clipPath != null) 'clip_path': clipPath,
+    if (message != null) 'message': message,
+  };
 }
 
 class AudioSecurityCheckService {
   AudioSecurityCheckService({MicrophoneStreamRecordingService? microphone})
-      : _microphone = microphone ?? MicrophoneStreamRecordingService();
+    : _microphone = microphone ?? MicrophoneStreamRecordingService();
 
   static const double _minimumLiveInputPeakRms = 0.002;
 
@@ -102,7 +102,9 @@ class AudioSecurityCheckService {
   }) async {
     if (_allowAudioReviewOverride) {
       final clipPath = await _writeTestingOverrideWav(
-        duration: duration.inSeconds <= 0 ? const Duration(seconds: 15) : duration,
+        duration: duration.inSeconds <= 0
+            ? const Duration(seconds: 15)
+            : duration,
       );
       return AudioSecurityCheckResult(
         microphoneAvailable: true,
@@ -117,19 +119,18 @@ class AudioSecurityCheckService {
         environmentLabel: 'testing_audio_override',
         dominantNoiseClass: 'quiet_room',
         soundProfile: 'testing_audio_override',
-        environmentDescription:
-            'Room sound check passed.',
-        recommendedAction:
-            'Keep the room quiet until the assessment starts.',
+        environmentDescription: 'Room sound check passed.',
+        recommendedAction: 'Keep the room quiet until the assessment starts.',
         humanVoiceDetected: false,
         phoneRingDetected: false,
         notificationDetected: false,
         tvOrRadioVoiceDetected: false,
         ambientNoiseAllowed: true,
-        sampleDurationSeconds: duration.inSeconds <= 0 ? 15 : duration.inSeconds,
+        sampleDurationSeconds: duration.inSeconds <= 0
+            ? 15
+            : duration.inSeconds,
         clipPath: clipPath,
-        message:
-            'Room sound check passed. Continue to the next step.',
+        message: 'Room sound check passed. Continue to the next step.',
       );
     }
 
@@ -149,7 +150,8 @@ class AudioSecurityCheckService {
         dominantNoiseClass: 'unclassified',
         soundProfile: 'microphone_unavailable',
         environmentDescription: 'Microphone permission is not available.',
-        recommendedAction: 'Allow microphone access and run the sound review again.',
+        recommendedAction:
+            'Allow microphone access and run the sound review again.',
         humanVoiceDetected: false,
         phoneRingDetected: false,
         notificationDetected: false,
@@ -229,8 +231,10 @@ class AudioSecurityCheckService {
         environmentLabel: 'microphone_check_failed',
         dominantNoiseClass: 'unclassified',
         soundProfile: 'microphone_check_failed',
-        environmentDescription: 'The app could not complete the room sound learning process.',
-        recommendedAction: 'Check microphone access and run the sound review again.',
+        environmentDescription:
+            'The app could not complete the room sound learning process.',
+        recommendedAction:
+            'Check microphone access and run the sound review again.',
         humanVoiceDetected: false,
         phoneRingDetected: false,
         notificationDetected: false,
@@ -251,9 +255,10 @@ class AudioSecurityCheckService {
     final sortedRms = List<double>.from(samples)..sort();
     final noiseFloor = sortedRms.isEmpty
         ? 0.0
-        : sortedRms[(sortedRms.length * 0.20)
-            .floor()
-            .clamp(0, sortedRms.length - 1)];
+        : sortedRms[(sortedRms.length * 0.20).floor().clamp(
+            0,
+            sortedRms.length - 1,
+          )];
     final zcr = _average(zcrSamples);
     final slope = _average(slopeSamples);
     final inputLevelOk =
@@ -292,7 +297,8 @@ class AudioSecurityCheckService {
       variation: rmsVariation,
       slope: slope,
     );
-    final tvOrRadioVoiceDetected = humanVoiceDetected &&
+    final tvOrRadioVoiceDetected =
+        humanVoiceDetected &&
         rmsVariation < 0.065 &&
         (average > 0.02 || nativeActivitySignal > 0.55);
     final soundProfile = _soundProfile(
@@ -311,7 +317,8 @@ class AudioSecurityCheckService {
       soundProfile: soundProfile,
       inputLevelOk: inputLevelOk,
     );
-    final ambientAllowed = inputLevelOk &&
+    final ambientAllowed =
+        inputLevelOk &&
         !humanVoiceDetected &&
         !phoneRingDetected &&
         !notificationDetected &&
@@ -371,7 +378,7 @@ class AudioSecurityCheckService {
   static Future<bool> _ensureNativeReady() {
     return _nativeReady ??= () async {
       try {
-        await BrainCoreApi.init();
+        await BrainCoreRuntime.ensureInitialized();
         return true;
       } catch (_) {
         return false;
@@ -379,9 +386,7 @@ class AudioSecurityCheckService {
     }();
   }
 
-  Future<String> _writeTestingOverrideWav({
-    required Duration duration,
-  }) async {
+  Future<String> _writeTestingOverrideWav({required Duration duration}) async {
     const sampleRate = 44100;
     const numChannels = 1;
     const bitsPerSample = 16;
@@ -477,8 +482,7 @@ class AudioSecurityCheckService {
       peak = math.max(peak, absSample);
       total += sample * sample;
       if (previousSet) {
-        if ((sample >= 0 && previous < 0) ||
-            (sample < 0 && previous >= 0)) {
+        if ((sample >= 0 && previous < 0) || (sample < 0 && previous >= 0)) {
           zeroCrossings++;
         }
         final diff = sample - previous;
@@ -493,8 +497,9 @@ class AudioSecurityCheckService {
       rms: math.sqrt(total / count).clamp(0.0, 1.0),
       peak: peak.clamp(0.0, 1.0),
       zeroCrossingRate: (zeroCrossings / count).clamp(0.0, 1.0),
-      slopeEnergy:
-          math.sqrt(slopeEnergy / math.max(1, count - 1)).clamp(0.0, 1.0),
+      slopeEnergy: math
+          .sqrt(slopeEnergy / math.max(1, count - 1))
+          .clamp(0.0, 1.0),
     );
   }
 
@@ -525,11 +530,12 @@ class AudioSecurityCheckService {
   }
 
   bool _speechLikeChunk(_AudioChunkFeatures features) {
-    final speechZcr = features.zeroCrossingRate >= 0.018 &&
-        features.zeroCrossingRate <= 0.26;
+    final speechZcr =
+        features.zeroCrossingRate >= 0.018 && features.zeroCrossingRate <= 0.26;
     final speechTexture = features.slopeEnergy >= 0.0025;
     final speechBurst = features.peak >= 0.018 && features.rms >= 0.0012;
-    final strongBurst = features.peak >= 0.035 && features.slopeEnergy >= 0.0014;
+    final strongBurst =
+        features.peak >= 0.035 && features.slopeEnergy >= 0.0014;
     return speechZcr && speechTexture && (speechBurst || strongBurst);
   }
 
@@ -580,7 +586,10 @@ class AudioSecurityCheckService {
     required double variation,
     required double slope,
   }) {
-    return peakRms >= 0.20 && zcr >= 0.18 && variation >= 0.010 && slope >= 0.020;
+    return peakRms >= 0.20 &&
+        zcr >= 0.18 &&
+        variation >= 0.010 &&
+        slope >= 0.020;
   }
 
   bool _notificationLikely({
@@ -589,7 +598,10 @@ class AudioSecurityCheckService {
     required double variation,
     required double slope,
   }) {
-    return peakRms >= 0.14 && zcr >= 0.22 && variation >= 0.008 && slope >= 0.026;
+    return peakRms >= 0.14 &&
+        zcr >= 0.22 &&
+        variation >= 0.008 &&
+        slope >= 0.026;
   }
 
   String _soundProfile({
@@ -612,7 +624,10 @@ class AudioSecurityCheckService {
     if (variation < 0.025 && zcr < 0.20 && noiseFloorRms > 0.018) {
       return 'steady_fan_ac_generator_hum';
     }
-    if (variation >= 0.025 && variation < 0.11 && peakRms < 0.60 && zcr < 0.28) {
+    if (variation >= 0.025 &&
+        variation < 0.11 &&
+        peakRms < 0.60 &&
+        zcr < 0.28) {
       return 'traffic_or_open_environment_noise';
     }
     if (peakRms >= 0.65 && variation >= 0.060) {

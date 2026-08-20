@@ -92,7 +92,9 @@ class _LiveCameraMonitorState extends State<LiveCameraMonitor> {
               children: [
                 Icon(
                   ready ? Icons.videocam : Icons.videocam_off_outlined,
-                  color: ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  color: ready
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFDC2626),
                 ),
                 const SizedBox(width: 8),
                 Expanded(

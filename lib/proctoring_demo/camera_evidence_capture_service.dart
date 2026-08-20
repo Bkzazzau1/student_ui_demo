@@ -55,7 +55,9 @@ class CameraEvidenceCaptureService {
   }) async {
     final camera = controller;
     if (camera == null || !camera.value.isInitialized) return null;
-    if (camera.value.isTakingPicture || camera.value.isRecordingVideo) return null;
+    if (camera.value.isTakingPicture || camera.value.isRecordingVideo) {
+      return null;
+    }
     if (camera.value.isStreamingImages) return null;
 
     try {

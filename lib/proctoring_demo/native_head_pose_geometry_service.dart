@@ -3,9 +3,8 @@ import 'native_vision_bridge.dart';
 typedef LandmarkPoint = Map<String, Object?>;
 
 class NativeHeadPoseGeometryService {
-  const NativeHeadPoseGeometryService({
-    NativeVisionBridge? nativeVision,
-  }) : _nativeVision = nativeVision ?? const GeneratedNativeVisionBridge();
+  const NativeHeadPoseGeometryService({NativeVisionBridge? nativeVision})
+    : _nativeVision = nativeVision ?? const GeneratedNativeVisionBridge();
 
   final NativeVisionBridge _nativeVision;
 
@@ -114,8 +113,10 @@ class NativeHeadPoseGeometryService {
     }
 
     if (points.isEmpty) return null;
-    final x = points.fold<double>(0, (sum, item) => sum + item.x) / points.length;
-    final y = points.fold<double>(0, (sum, item) => sum + item.y) / points.length;
+    final x =
+        points.fold<double>(0, (sum, item) => sum + item.x) / points.length;
+    final y =
+        points.fold<double>(0, (sum, item) => sum + item.y) / points.length;
     return _Point(x, y);
   }
 

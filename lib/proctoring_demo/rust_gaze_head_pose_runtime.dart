@@ -39,27 +39,29 @@ final class _FfiGazeHeadPoseDecision extends ffi.Struct {
   external int labelCode;
 }
 
-typedef _NativeAnalyzeGaze = _FfiGazeHeadPoseDecision Function(
-  ffi.Pointer<ffi.Uint8> planePtr,
-  ffi.UintPtr planeLen,
-  ffi.Uint32 width,
-  ffi.Uint32 height,
-  ffi.Uint32 bytesPerRow,
-  ffi.Double previousYaw,
-  ffi.Double previousPitch,
-  ffi.Double previousRoll,
-);
+typedef _NativeAnalyzeGaze =
+    _FfiGazeHeadPoseDecision Function(
+      ffi.Pointer<ffi.Uint8> planePtr,
+      ffi.UintPtr planeLen,
+      ffi.Uint32 width,
+      ffi.Uint32 height,
+      ffi.Uint32 bytesPerRow,
+      ffi.Double previousYaw,
+      ffi.Double previousPitch,
+      ffi.Double previousRoll,
+    );
 
-typedef _DartAnalyzeGaze = _FfiGazeHeadPoseDecision Function(
-  ffi.Pointer<ffi.Uint8> planePtr,
-  int planeLen,
-  int width,
-  int height,
-  int bytesPerRow,
-  double previousYaw,
-  double previousPitch,
-  double previousRoll,
-);
+typedef _DartAnalyzeGaze =
+    _FfiGazeHeadPoseDecision Function(
+      ffi.Pointer<ffi.Uint8> planePtr,
+      int planeLen,
+      int width,
+      int height,
+      int bytesPerRow,
+      double previousYaw,
+      double previousPitch,
+      double previousRoll,
+    );
 
 class RustGazeHeadPoseRuntime {
   _DartAnalyzeGaze? _analyze;
@@ -126,10 +128,9 @@ class RustGazeHeadPoseRuntime {
     for (final path in _libraryPathCandidates()) {
       try {
         final library = ffi.DynamicLibrary.open(path);
-        _analyze = library
-            .lookupFunction<_NativeAnalyzeGaze, _DartAnalyzeGaze>(
-              'brain_core_analyze_gaze_head_pose_luma',
-            );
+        _analyze = library.lookupFunction<_NativeAnalyzeGaze, _DartAnalyzeGaze>(
+          'brain_core_analyze_gaze_head_pose_luma',
+        );
         return;
       } catch (_) {
         _analyze = null;

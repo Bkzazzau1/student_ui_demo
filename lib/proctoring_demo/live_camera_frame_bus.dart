@@ -24,14 +24,14 @@ class LiveCameraFrame {
   String get formatGroup => image.format.group.name;
 
   Map<String, Object?> toMetadata() => <String, Object?>{
-        'frame_sequence': sequence,
-        'frame_owner': owner,
-        'frame_purpose': purpose,
-        'frame_width': width,
-        'frame_height': height,
-        'frame_format': formatGroup,
-        'captured_at': capturedAt.toUtc().toIso8601String(),
-      };
+    'frame_sequence': sequence,
+    'frame_owner': owner,
+    'frame_purpose': purpose,
+    'frame_width': width,
+    'frame_height': height,
+    'frame_format': formatGroup,
+    'captured_at': capturedAt.toUtc().toIso8601String(),
+  };
 }
 
 /// Single in-process frame bus for the exam camera.
@@ -75,10 +75,10 @@ class LiveCameraFrameBus {
   }
 
   Map<String, Object?> currentState() => <String, Object?>{
-        'latest_frame_sequence': _latestFrame?.sequence,
-        'latest_frame_at': _latestFrame?.capturedAt.toUtc().toIso8601String(),
-        'has_listeners': hasListeners,
-      };
+    'latest_frame_sequence': _latestFrame?.sequence,
+    'latest_frame_at': _latestFrame?.capturedAt.toUtc().toIso8601String(),
+    'has_listeners': hasListeners,
+  };
 }
 
 class ObjectModelRuntimeConfig {
@@ -110,13 +110,13 @@ class ObjectModelRuntimeStatus {
   final String message;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'asset_path': assetPath,
-        'asset_present': assetPresent,
-        'inference_ready': inferenceReady,
-        'running': running,
-        'last_frame_sequence': lastFrameSequence,
-        'message': message,
-      };
+    'asset_path': assetPath,
+    'asset_present': assetPresent,
+    'inference_ready': inferenceReady,
+    'running': running,
+    'last_frame_sequence': lastFrameSequence,
+    'message': message,
+  };
 }
 
 class ObjectModelFrameGate {
@@ -144,7 +144,9 @@ class ObjectModelFrameGate {
 
     _assetPresent = await _assetExists(config.assetPath);
     if (!_assetPresent) {
-      return status('Object model asset not found. Frame gate remains disabled.');
+      return status(
+        'Object model asset not found. Frame gate remains disabled.',
+      );
     }
 
     _running = true;
@@ -164,13 +166,13 @@ class ObjectModelFrameGate {
   }
 
   ObjectModelRuntimeStatus status(String message) => ObjectModelRuntimeStatus(
-        assetPath: config.assetPath,
-        assetPresent: _assetPresent,
-        inferenceReady: false,
-        running: _running,
-        lastFrameSequence: _lastFrameSequence,
-        message: message,
-      );
+    assetPath: config.assetPath,
+    assetPresent: _assetPresent,
+    inferenceReady: false,
+    running: _running,
+    lastFrameSequence: _lastFrameSequence,
+    message: message,
+  );
 
   Future<bool> _assetExists(String assetPath) async {
     try {

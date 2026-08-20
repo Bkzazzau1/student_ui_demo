@@ -16,17 +16,17 @@ class YoloRuntimeHealthCheckResult {
   final String message;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'ready': ready,
-        'model_path': modelPath,
-        'class_count': classCount,
-        'layout': layout,
-        'message': message,
-      };
+    'ready': ready,
+    'model_path': modelPath,
+    'class_count': classCount,
+    'layout': layout,
+    'message': message,
+  };
 }
 
 class YoloRuntimeHealthCheck {
   YoloRuntimeHealthCheck({OptimizedVisionRuntimeBridge? runtime})
-      : _runtime = runtime ?? OptimizedVisionRuntimeBridge();
+    : _runtime = runtime ?? OptimizedVisionRuntimeBridge();
 
   final OptimizedVisionRuntimeBridge _runtime;
 

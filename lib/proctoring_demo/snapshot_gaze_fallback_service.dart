@@ -45,26 +45,26 @@ class SnapshotGazeFallbackResult {
   final String label;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'ready': ready,
-        'center_x': centerX,
-        'center_y': centerY,
-        'baseline_x': baselineX,
-        'baseline_y': baselineY,
-        'shift_x': shiftX,
-        'shift_y': shiftY,
-        'shift_score': shiftScore,
-        'asymmetry': asymmetry,
-        'baseline_asymmetry': baselineAsymmetry,
-        'asymmetry_shift': asymmetryShift,
-        'horizontal_spread': horizontalSpread,
-        'vertical_spread': verticalSpread,
-        'profile_score': profileScore,
-        'person_count': personCount,
-        'multiple_people_likely': multiplePeopleLikely,
-        'head_pose_shift_likely': headPoseShiftLikely,
-        'label': label,
-        'source': 'snapshot_fallback',
-      };
+    'ready': ready,
+    'center_x': centerX,
+    'center_y': centerY,
+    'baseline_x': baselineX,
+    'baseline_y': baselineY,
+    'shift_x': shiftX,
+    'shift_y': shiftY,
+    'shift_score': shiftScore,
+    'asymmetry': asymmetry,
+    'baseline_asymmetry': baselineAsymmetry,
+    'asymmetry_shift': asymmetryShift,
+    'horizontal_spread': horizontalSpread,
+    'vertical_spread': verticalSpread,
+    'profile_score': profileScore,
+    'person_count': personCount,
+    'multiple_people_likely': multiplePeopleLikely,
+    'head_pose_shift_likely': headPoseShiftLikely,
+    'label': label,
+    'source': 'snapshot_fallback',
+  };
 }
 
 class SnapshotGazeFallbackService {
@@ -95,15 +95,18 @@ class SnapshotGazeFallbackService {
                   .map((item) => item.asymmetry)
                   .reduce((a, b) => a + b) /
               _baselineSamples.length,
-          horizontalSpread: _baselineSamples
+          horizontalSpread:
+              _baselineSamples
                   .map((item) => item.horizontalSpread)
                   .reduce((a, b) => a + b) /
               _baselineSamples.length,
-          verticalSpread: _baselineSamples
+          verticalSpread:
+              _baselineSamples
                   .map((item) => item.verticalSpread)
                   .reduce((a, b) => a + b) /
               _baselineSamples.length,
-          profileScore: _baselineSamples
+          profileScore:
+              _baselineSamples
                   .map((item) => item.profileScore)
                   .reduce((a, b) => a + b) /
               _baselineSamples.length,
@@ -141,15 +144,18 @@ class SnapshotGazeFallbackService {
     final shiftScore = math.sqrt((shiftX * shiftX) + (shiftY * shiftY));
     final asymmetryShift = signal.asymmetry - baseline.asymmetry;
     final spreadShift = signal.horizontalSpread - baseline.horizontalSpread;
-    final profileTurnLikely = asymmetryShift.abs() >= 0.16 ||
+    final profileTurnLikely =
+        asymmetryShift.abs() >= 0.16 ||
         signal.asymmetry.abs() >= 0.30 ||
         signal.profileScore >= 0.30 ||
         spreadShift.abs() >= 0.08;
-    final headPoseShiftLikely = shiftX.abs() >= 0.14 ||
+    final headPoseShiftLikely =
+        shiftX.abs() >= 0.14 ||
         shiftY.abs() >= 0.14 ||
         shiftScore >= 0.18 ||
         profileTurnLikely;
-    final multiplePeopleLikely = signal.multiplePeopleLikely && signal.personCount >= 2;
+    final multiplePeopleLikely =
+        signal.multiplePeopleLikely && signal.personCount >= 2;
 
     return SnapshotGazeFallbackResult(
       ready: true,
@@ -172,8 +178,8 @@ class SnapshotGazeFallbackService {
       label: multiplePeopleLikely
           ? 'possible_multiple_people'
           : headPoseShiftLikely
-              ? 'head_or_gaze_shift_detected'
-              : 'head_position_stable',
+          ? 'head_or_gaze_shift_detected'
+          : 'head_position_stable',
     );
   }
 
@@ -208,17 +214,23 @@ class SnapshotGazeFallbackService {
         final down = image.getPixel(x, y + 1);
 
         final luma = _luma(pixel);
-        final edge = ((_luma(left) - _luma(right)).abs() +
+        final edge =
+            ((_luma(left) - _luma(right)).abs() +
                 (_luma(up) - _luma(down)).abs()) /
             2.0;
         final saturation = _saturation(pixel);
-        final skinLike = saturation >= 0.09 && saturation <= 0.78 && luma >= 26 && luma <= 238;
+        final skinLike =
+            saturation >= 0.09 &&
+            saturation <= 0.78 &&
+            luma >= 26 &&
+            luma <= 238;
         final darkFeature = luma < 105 && edge > 8;
         if (!skinLike && !darkFeature) continue;
 
         final yBias = 1.0 - ((y / height) - 0.38).abs().clamp(0.0, 0.82);
         final xBias = 1.0 - ((x / width) - 0.5).abs().clamp(0.0, 0.5);
-        final weight = (edge * 0.62) +
+        final weight =
+            (edge * 0.62) +
             (skinLike ? 30.0 : 0.0) +
             (darkFeature ? 12.0 : 0.0);
         final normalizedX = x / width;
@@ -229,7 +241,10 @@ class SnapshotGazeFallbackService {
         weightedX2 += normalizedX * normalizedX * finalWeight;
         weightedY2 += normalizedY * normalizedY * finalWeight;
         totalWeight += finalWeight;
-        final binIndex = ((x / width) * bins.length).floor().clamp(0, bins.length - 1);
+        final binIndex = ((x / width) * bins.length).floor().clamp(
+          0,
+          bins.length - 1,
+        );
         bins[binIndex] += finalWeight;
         if (x < width / 2) {
           leftWeight += finalWeight;
@@ -245,22 +260,31 @@ class SnapshotGazeFallbackService {
     }
 
     if (totalWeight < 80) return null;
-    final asymmetry = ((rightWeight - leftWeight) / totalWeight).clamp(-1.0, 1.0);
+    final asymmetry = ((rightWeight - leftWeight) / totalWeight).clamp(
+      -1.0,
+      1.0,
+    );
     final meanX = (weightedX / totalWeight).clamp(0.0, 1.0);
     final meanY = (weightedY / totalWeight).clamp(0.0, 1.0);
-    final horizontalSpread =
-        math.sqrt(math.max(0.0, (weightedX2 / totalWeight) - (meanX * meanX)));
-    final verticalSpread =
-        math.sqrt(math.max(0.0, (weightedY2 / totalWeight) - (meanY * meanY)));
+    final horizontalSpread = math.sqrt(
+      math.max(0.0, (weightedX2 / totalWeight) - (meanX * meanX)),
+    );
+    final verticalSpread = math.sqrt(
+      math.max(0.0, (weightedY2 / totalWeight) - (meanY * meanY)),
+    );
     final skinAsymmetry = skinWeight <= 0
         ? 0.0
         : ((skinRight - skinLeft) / skinWeight).clamp(-1.0, 1.0);
     final featureAsymmetry =
-        ((darkRight - darkLeft) / math.max(1.0, darkLeft + darkRight))
-            .clamp(-1.0, 1.0);
+        ((darkRight - darkLeft) / math.max(1.0, darkLeft + darkRight)).clamp(
+          -1.0,
+          1.0,
+        );
     final narrowFaceSignal = (0.17 - horizontalSpread).clamp(0.0, 0.17) / 0.17;
     final profileScore =
-        ((skinAsymmetry.abs() * 0.55) + (featureAsymmetry.abs() * 0.25) + (narrowFaceSignal * 0.20))
+        ((skinAsymmetry.abs() * 0.55) +
+                (featureAsymmetry.abs() * 0.25) +
+                (narrowFaceSignal * 0.20))
             .clamp(0.0, 1.0);
     final personCount = _estimateSeparatedPersonClusters(bins, totalWeight);
     return _HeadSignal(
@@ -332,7 +356,8 @@ class SnapshotGazeFallbackService {
     final primary = candidates.first;
     for (final candidate in candidates.skip(1)) {
       final separated = (candidate.center - primary.center).abs() >= 4.0;
-      final strongEnough = candidate.weight >= primary.weight * 0.62 &&
+      final strongEnough =
+          candidate.weight >= primary.weight * 0.62 &&
           candidate.weight >= strongest * 0.72;
       if (separated && strongEnough) return 2;
     }

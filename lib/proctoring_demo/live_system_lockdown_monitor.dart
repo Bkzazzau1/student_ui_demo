@@ -26,13 +26,17 @@ class LiveSystemLockdownMonitor extends StatefulWidget {
   final String reviewAudience;
 
   @override
-  State<LiveSystemLockdownMonitor> createState() => _LiveSystemLockdownMonitorState();
+  State<LiveSystemLockdownMonitor> createState() =>
+      _LiveSystemLockdownMonitorState();
 }
 
 class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
-  final SystemSecurityReviewService _systemReview = SystemSecurityReviewService();
-  final SecureLockdownSessionService _secureSession = SecureLockdownSessionService();
-  final LiveEventLocalRecordService _localRecords = const LiveEventLocalRecordService();
+  final SystemSecurityReviewService _systemReview =
+      SystemSecurityReviewService();
+  final SecureLockdownSessionService _secureSession =
+      SecureLockdownSessionService();
+  final LiveEventLocalRecordService _localRecords =
+      const LiveEventLocalRecordService();
   final LiveProctoringEventService _events = LiveProctoringEventService(
     baseUrl: const String.fromEnvironment(
       'KSLAS_API_BASE_URL',
@@ -80,14 +84,18 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
         _secureSnapshot = secure;
         _message = ready
             ? (secure.realExamMode
-                ? 'Real exam secure mode active.'
-                : 'Secure exam mode active.')
+                  ? 'Real exam secure mode active.'
+                  : 'Secure exam mode active.')
             : _studentMessage(system, secure);
         _findings
           ..clear()
           ..addAll(system.findings)
           ..addAll(secure.findings.map((finding) => finding.message))
-          ..addAll(secure.actions.where((action) => !action.success).map((action) => action.message));
+          ..addAll(
+            secure.actions
+                .where((action) => !action.success)
+                .map((action) => action.message),
+          );
       });
       if (!ready) {
         widget.onReviewRequired(_studentMessage(system, secure));
@@ -134,8 +142,12 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
     if (secure.displayCount != null && secure.displayCount! > 1) {
       return 'Please disconnect extra display before continuing the exam.';
     }
-    if (!secure.clipboardCleared) return 'Secure exam mode needs review before continuing.';
-    if (!secure.ready) return 'Secure exam mode needs review before continuing.';
+    if (!secure.clipboardCleared) {
+      return 'Secure exam mode needs review before continuing.';
+    }
+    if (!secure.ready) {
+      return 'Secure exam mode needs review before continuing.';
+    }
     return 'Secure exam checks need review before continuing.';
   }
 
@@ -157,7 +169,9 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
     SecureLockdownSnapshot secure,
   ) async {
     final message = _studentMessage(system, secure);
-    final eventType = secure.ready ? 'system_device_check_failed' : 'secure_exam_mode_check_failed';
+    final eventType = secure.ready
+        ? 'system_device_check_failed'
+        : 'secure_exam_mode_check_failed';
     if (!_shouldSendReviewEvent(eventType)) return;
     final metadata = <String, Object?>{
       'system_review': system.toJson(),
@@ -203,13 +217,16 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
       ),
     );
     if (!mounted) return;
-    widget.onReviewRequired(synced ? message : '$message Please wait for review.');
+    widget.onReviewRequired(
+      synced ? message : '$message Please wait for review.',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final snapshot = _secureSnapshot;
-    final successfulActions = snapshot?.actions.where((action) => action.success).length ?? 0;
+    final successfulActions =
+        snapshot?.actions.where((action) => action.success).length ?? 0;
     return Card(
       elevation: 0,
       child: Padding(
@@ -221,7 +238,9 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
               children: [
                 Icon(
                   _ready ? Icons.check_circle : Icons.warning_amber_outlined,
-                  color: _ready ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  color: _ready
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFDC2626),
                 ),
                 const SizedBox(width: 8),
                 const Expanded(
@@ -240,25 +259,55 @@ class _LiveSystemLockdownMonitorState extends State<LiveSystemLockdownMonitor> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  _CheckChip(label: 'Real exam', value: snapshot.realExamMode ? (snapshot.realExamReady ? 'ready' : 'blocked') : 'test'),
+                  _CheckChip(
+                    label: 'Real exam',
+                    value: snapshot.realExamMode
+                        ? (snapshot.realExamReady ? 'ready' : 'blocked')
+                        : 'test',
+                  ),
                   _CheckChip(label: 'Platform', value: snapshot.platformName),
-                  _CheckChip(label: 'Window', value: snapshot.examWindowSupported ? (snapshot.examWindowActive ? 'active' : 'review') : 'not available'),
-                  _CheckChip(label: 'Displays', value: snapshot.displayCount?.toString() ?? 'unknown'),
-                  _CheckChip(label: 'Clipboard', value: snapshot.clipboardCleared ? 'active' : 'unconfirmed'),
-                  _CheckChip(label: 'Sweeps', value: snapshot.clipboardSweepCount.toString()),
-                  _CheckChip(label: 'Mode', value: snapshot.enforcementActive ? 'active' : 'inactive'),
-                  _CheckChip(label: 'Actions', value: '$successfulActions/${snapshot.actions.length}'),
+                  _CheckChip(
+                    label: 'Window',
+                    value: snapshot.examWindowSupported
+                        ? (snapshot.examWindowActive ? 'active' : 'review')
+                        : 'not available',
+                  ),
+                  _CheckChip(
+                    label: 'Displays',
+                    value: snapshot.displayCount?.toString() ?? 'unknown',
+                  ),
+                  _CheckChip(
+                    label: 'Clipboard',
+                    value: snapshot.clipboardCleared ? 'active' : 'unconfirmed',
+                  ),
+                  _CheckChip(
+                    label: 'Sweeps',
+                    value: snapshot.clipboardSweepCount.toString(),
+                  ),
+                  _CheckChip(
+                    label: 'Mode',
+                    value: snapshot.enforcementActive ? 'active' : 'inactive',
+                  ),
+                  _CheckChip(
+                    label: 'Actions',
+                    value: '$successfulActions/${snapshot.actions.length}',
+                  ),
                 ],
               ),
             ],
             if (_findings.isNotEmpty) ...[
               const SizedBox(height: 8),
-              ..._findings.take(5).map(
-                (finding) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text('- $finding', style: Theme.of(context).textTheme.bodySmall),
-                ),
-              ),
+              ..._findings
+                  .take(5)
+                  .map(
+                    (finding) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '- $finding',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
             ],
           ],
         ),
@@ -275,6 +324,9 @@ class _CheckChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(label: Text('$label: $value'), visualDensity: VisualDensity.compact);
+    return Chip(
+      label: Text('$label: $value'),
+      visualDensity: VisualDensity.compact,
+    );
   }
 }

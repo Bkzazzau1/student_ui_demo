@@ -36,19 +36,19 @@ class LocalEvidenceFileRecord {
   final Map<String, Object?> metadata;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'student_id': studentId,
-        'exam_id': examId,
-        'attempt_id': attemptId,
-        'event_type': eventType,
-        'file_type': fileType,
-        'file_path': filePath,
-        'sha256': sha256Digest,
-        'size_bytes': sizeBytes,
-        'created_at': createdAt.toUtc().toIso8601String(),
-        'review_reason': reviewReason,
-        'metadata': metadata,
-      };
+    'id': id,
+    'student_id': studentId,
+    'exam_id': examId,
+    'attempt_id': attemptId,
+    'event_type': eventType,
+    'file_type': fileType,
+    'file_path': filePath,
+    'sha256': sha256Digest,
+    'size_bytes': sizeBytes,
+    'created_at': createdAt.toUtc().toIso8601String(),
+    'review_reason': reviewReason,
+    'metadata': metadata,
+  };
 }
 
 class LocalEvidenceBundle {
@@ -69,21 +69,22 @@ class LocalEvidenceBundle {
   final DateTime updatedAt;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'student_id': studentId,
-        'exam_id': examId,
-        'attempt_id': attemptId,
-        'directory_path': directoryPath,
-        'records': records.map((record) => record.toJson()).toList(),
-        'updated_at': updatedAt.toUtc().toIso8601String(),
-      };
+    'student_id': studentId,
+    'exam_id': examId,
+    'attempt_id': attemptId,
+    'directory_path': directoryPath,
+    'records': records.map((record) => record.toJson()).toList(),
+    'updated_at': updatedAt.toUtc().toIso8601String(),
+  };
 }
 
 class LocalEvidenceVaultService {
   const LocalEvidenceVaultService({
     String? baseDirectoryPath,
-    NativeEvidenceVaultBridge nativeBridge = const GeneratedNativeEvidenceVaultBridge(),
-  })  : _baseDirectoryPath = baseDirectoryPath,
-        _nativeBridge = nativeBridge;
+    NativeEvidenceVaultBridge nativeBridge =
+        const GeneratedNativeEvidenceVaultBridge(),
+  }) : _baseDirectoryPath = baseDirectoryPath,
+       _nativeBridge = nativeBridge;
 
   final String? _baseDirectoryPath;
   final NativeEvidenceVaultBridge _nativeBridge;
@@ -180,7 +181,9 @@ class LocalEvidenceVaultService {
     final safeEvent = _safeName(eventType);
     final extension = _safeName(fileType).isEmpty ? 'bin' : _safeName(fileType);
     final id = '${now.microsecondsSinceEpoch}_$safeEvent';
-    final evidenceFile = File('${directory.path}${Platform.pathSeparator}$id.$extension');
+    final evidenceFile = File(
+      '${directory.path}${Platform.pathSeparator}$id.$extension',
+    );
     await evidenceFile.writeAsBytes(bytes, flush: true);
 
     final digest = sha256.convert(bytes).toString();
@@ -234,7 +237,9 @@ class LocalEvidenceVaultService {
       examId: examId,
       attemptId: attemptId,
     );
-    final manifest = File('${directory.path}${Platform.pathSeparator}manifest.json');
+    final manifest = File(
+      '${directory.path}${Platform.pathSeparator}manifest.json',
+    );
     if (!await manifest.exists()) {
       return LocalEvidenceBundle(
         studentId: studentId,
@@ -246,7 +251,8 @@ class LocalEvidenceVaultService {
       );
     }
 
-    final json = jsonDecode(await manifest.readAsString()) as Map<String, dynamic>;
+    final json =
+        jsonDecode(await manifest.readAsString()) as Map<String, dynamic>;
     return _bundleFromJson(
       json,
       fallbackStudentId: studentId,
@@ -260,14 +266,21 @@ class LocalEvidenceVaultService {
     required Directory directory,
     required LocalEvidenceFileRecord record,
   }) async {
-    final manifest = File('${directory.path}${Platform.pathSeparator}manifest.json');
+    final manifest = File(
+      '${directory.path}${Platform.pathSeparator}manifest.json',
+    );
     final records = <Map<String, Object?>>[];
     if (await manifest.exists()) {
       try {
-        final decoded = jsonDecode(await manifest.readAsString()) as Map<String, dynamic>;
+        final decoded =
+            jsonDecode(await manifest.readAsString()) as Map<String, dynamic>;
         final existingRecords = decoded['records'];
         if (existingRecords is List) {
-          records.addAll(existingRecords.whereType<Map>().map((item) => Map<String, Object?>.from(item)));
+          records.addAll(
+            existingRecords.whereType<Map>().map(
+              (item) => Map<String, Object?>.from(item),
+            ),
+          );
         }
       } catch (_) {
         records.clear();
@@ -283,7 +296,10 @@ class LocalEvidenceVaultService {
       'records': records,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
-    await manifest.writeAsString(const JsonEncoder.withIndent('  ').convert(bundle), flush: true);
+    await manifest.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(bundle),
+      flush: true,
+    );
   }
 
   LocalEvidenceBundle? _bundleFromManifestJson(
@@ -320,7 +336,9 @@ class LocalEvidenceVaultService {
     final records = <LocalEvidenceFileRecord>[];
     if (recordsJson is List) {
       for (final item in recordsJson) {
-        if (item is Map) records.add(_recordFromJson(Map<String, dynamic>.from(item)));
+        if (item is Map) {
+          records.add(_recordFromJson(Map<String, dynamic>.from(item)));
+        }
       }
     }
 
@@ -328,7 +346,8 @@ class LocalEvidenceVaultService {
       studentId: (json['student_id'] ?? fallbackStudentId).toString(),
       examId: (json['exam_id'] ?? fallbackExamId).toString(),
       attemptId: (json['attempt_id'] ?? fallbackAttemptId).toString(),
-      directoryPath: (json['directory_path'] ?? fallbackDirectoryPath).toString(),
+      directoryPath: (json['directory_path'] ?? fallbackDirectoryPath)
+          .toString(),
       records: records,
       updatedAt: _dateFromJson(json['updated_at'], json['updated_at_ms']),
     );
@@ -431,7 +450,9 @@ class LocalEvidenceVaultService {
 
   String _encodeJson(Object? value) {
     try {
-      return const JsonEncoder.withIndent('  ').convert(value ?? const <String, Object?>{});
+      return const JsonEncoder.withIndent(
+        '  ',
+      ).convert(value ?? const <String, Object?>{});
     } catch (_) {
       return '{}';
     }

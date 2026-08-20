@@ -13,15 +13,13 @@ class CameraEventEvidencePolicy {
     'camera_runtime_busy',
   };
 
-  bool shouldCapture({
-    required String eventType,
-    required String severity,
-  }) {
+  bool shouldCapture({required String eventType, required String severity}) {
     final type = eventType.trim().toLowerCase();
     if (defaultCameraEvidenceEvents.contains(type)) return true;
 
     final level = severity.trim().toLowerCase();
-    final visualType = type.contains('camera') ||
+    final visualType =
+        type.contains('camera') ||
         type.contains('gaze') ||
         type.contains('liveness') ||
         type.contains('object') ||

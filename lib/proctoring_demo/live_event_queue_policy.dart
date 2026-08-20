@@ -6,10 +6,7 @@ class LiveEventQueuePolicy {
   static const Duration flushInterval = Duration(seconds: 15);
 
   static bool shouldKeepEvent(String eventType) {
-    const lowValueEvents = <String>{
-      'heartbeat_ok',
-      'preview_frame_ok',
-    };
+    const lowValueEvents = <String>{'heartbeat_ok', 'preview_frame_ok'};
     return !lowValueEvents.contains(eventType);
   }
 }

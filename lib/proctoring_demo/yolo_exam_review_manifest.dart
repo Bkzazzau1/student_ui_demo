@@ -48,7 +48,8 @@ class YoloExamReviewManifest {
       inputWidth: _int(json['input_width'], 416),
       inputHeight: _int(json['input_height'], 416),
       inputChannels: _int(json['input_channels'], 3),
-      outputLayout: json['output_layout']?.toString() ?? 'channels_first_yolov8',
+      outputLayout:
+          json['output_layout']?.toString() ?? 'channels_first_yolov8',
       confidenceThreshold: _double(json['confidence_threshold'], 0.45),
       iouThreshold: _double(json['iou_threshold'], 0.45),
       targetFps: _int(json['target_fps'], 1),
@@ -74,15 +75,17 @@ class YoloExamReviewManifest {
 
   bool get isUsable =>
       modelFamily.trim().toLowerCase() == 'yolo' &&
-      selectedModelPath(const OptimizedVisionRuntimePolicy(
-        backend: VisionRuntimeBackend.onnxRuntimeCpu,
-        precision: VisionModelPrecision.int8,
-        targetUtilization: 0.15,
-        maxInputWidth: 416,
-        maxInputHeight: 416,
-        targetFps: 1,
-        batchSize: 1,
-      )).trim().isNotEmpty &&
+      selectedModelPath(
+        const OptimizedVisionRuntimePolicy(
+          backend: VisionRuntimeBackend.onnxRuntimeCpu,
+          precision: VisionModelPrecision.int8,
+          targetUtilization: 0.15,
+          maxInputWidth: 416,
+          maxInputHeight: 416,
+          targetFps: 1,
+          batchSize: 1,
+        ),
+      ).trim().isNotEmpty &&
       inputWidth > 0 &&
       inputHeight > 0 &&
       inputChannels > 0 &&

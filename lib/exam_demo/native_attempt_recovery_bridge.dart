@@ -1,5 +1,5 @@
 import '../rust/api/attempt_recovery.dart' as native_recovery;
-import '../rust/frb_generated.dart';
+import '../rust/brain_core_runtime.dart';
 
 class NativeAttemptRecoveryCheckSnapshot {
   const NativeAttemptRecoveryCheckSnapshot({
@@ -95,7 +95,7 @@ class GeneratedNativeAttemptRecoveryBridge
 
   static void _startNativeInit() {
     if (_nativeReady || _nativeFailed || _nativeInit != null) return;
-    _nativeInit = BrainCoreApi.init()
+    _nativeInit = BrainCoreRuntime.ensureInitialized()
         .then((_) {
           _nativeReady = true;
         })

@@ -15,19 +15,20 @@ class NativeVisionLiveFrameResult {
   final NativeVisionFrameQualitySnapshot quality;
 
   bool get isUsable => quality.isUsable;
-  bool get needsLightingGuidance => !quality.isUsable &&
+  bool get needsLightingGuidance =>
+      !quality.isUsable &&
       (quality.reason.contains('dark') ||
           quality.reason.contains('overexposed') ||
           quality.reason.contains('contrast') ||
           quality.reason.contains('blurry'));
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'frame_sequence': frameSequence,
-        'captured_at': capturedAt.toUtc().toIso8601String(),
-        'quality': quality.toJson(),
-        'is_usable': isUsable,
-        'needs_lighting_guidance': needsLightingGuidance,
-      };
+    'frame_sequence': frameSequence,
+    'captured_at': capturedAt.toUtc().toIso8601String(),
+    'quality': quality.toJson(),
+    'is_usable': isUsable,
+    'needs_lighting_guidance': needsLightingGuidance,
+  };
 }
 
 class NativeVisionLiveFrameService {
@@ -35,8 +36,8 @@ class NativeVisionLiveFrameService {
     LiveCameraFrameBus? frameBus,
     NativeVisionBridge? bridge,
     this.minimumFrameGap = 6,
-  })  : _frameBus = frameBus ?? LiveCameraFrameBus.instance,
-        _bridge = bridge ?? const GeneratedNativeVisionBridge();
+  }) : _frameBus = frameBus ?? LiveCameraFrameBus.instance,
+       _bridge = bridge ?? const GeneratedNativeVisionBridge();
 
   final LiveCameraFrameBus _frameBus;
   final NativeVisionBridge _bridge;

@@ -4,8 +4,8 @@ class LiveEventCooldownGate {
   LiveEventCooldownGate({
     Duration cooldown = const Duration(seconds: 15),
     EventClock? clock,
-  })  : _cooldown = cooldown,
-        _clock = clock ?? DateTime.now;
+  }) : _cooldown = cooldown,
+       _clock = clock ?? DateTime.now;
 
   final Duration _cooldown;
   final EventClock _clock;
@@ -30,7 +30,7 @@ class LiveEventCooldownGate {
   }
 
   Map<String, Object?> currentState() => <String, Object?>{
-        'cooldown_ms': _cooldown.inMilliseconds,
-        'tracked_event_types': _lastAcceptedAt.keys.toList()..sort(),
-      };
+    'cooldown_ms': _cooldown.inMilliseconds,
+    'tracked_event_types': _lastAcceptedAt.keys.toList()..sort(),
+  };
 }
