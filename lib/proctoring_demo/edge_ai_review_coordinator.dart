@@ -95,6 +95,11 @@ class EdgeAiReviewCoordinator {
     required Map<String, Object?> observation,
   }) => _reviewer.observeGaze(attemptId, observation);
 
+  Future<Map<String, Object?>> observeAudio({
+    required String attemptId,
+    required Map<String, Object?> observation,
+  }) => _reviewer.observeAudio(attemptId, observation);
+
   Future<void> dispose() => _reviewer.dispose();
 }
 

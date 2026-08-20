@@ -71,7 +71,9 @@ class LocalFirstEventPayloadPolicy {
         continue;
       }
       if (normalizedKey == 'local_record' && entry.value is Map) {
-        result[key] = _sanitizeLocalRecord(Map<Object?, Object?>.from(entry.value as Map));
+        result[key] = _sanitizeLocalRecord(
+          Map<Object?, Object?>.from(entry.value as Map),
+        );
         continue;
       }
       result[key] = _sanitizeValue(entry.value, depth: depth + 1);
@@ -82,7 +84,9 @@ class LocalFirstEventPayloadPolicy {
     return result;
   }
 
-  static Map<String, Object?> _sanitizeLocalRecord(Map<Object?, Object?> record) {
+  static Map<String, Object?> _sanitizeLocalRecord(
+    Map<Object?, Object?> record,
+  ) {
     final result = <String, Object?>{};
     for (final entry in record.entries) {
       final key = entry.key?.toString() ?? '';
@@ -108,9 +112,14 @@ class LocalFirstEventPayloadPolicy {
       return _sanitizeMap(Map<Object?, Object?>.from(value), depth: depth);
     }
     if (value is Iterable) {
-      final items = value.take(maxListItems).map((item) => _sanitizeValue(item, depth: depth + 1)).toList();
+      final items = value
+          .take(maxListItems)
+          .map((item) => _sanitizeValue(item, depth: depth + 1))
+          .toList();
       if (value.length > maxListItems) {
-        items.add(<String, Object?>{'truncated_list_items': value.length - maxListItems});
+        items.add(<String, Object?>{
+          'truncated_list_items': value.length - maxListItems,
+        });
       }
       return items;
     }
@@ -129,7 +138,9 @@ class LocalFirstEventPayloadPolicy {
 
   static bool _looksLikeEncodedMedia(String value) {
     final compact = value.trim();
-    if (compact.startsWith('data:image/') || compact.startsWith('data:audio/') || compact.startsWith('data:video/')) {
+    if (compact.startsWith('data:image/') ||
+        compact.startsWith('data:audio/') ||
+        compact.startsWith('data:video/')) {
       return true;
     }
     if (compact.length < 600) return false;
@@ -138,10 +149,20 @@ class LocalFirstEventPayloadPolicy {
 
   static bool _looksLikeLocalPath(String value) {
     final lower = value.toLowerCase();
-    if (lower.startsWith('/tmp/') || lower.startsWith('/var/') || lower.startsWith('/users/')) return true;
-    if (lower.startsWith('c:\\') || lower.startsWith('d:\\')) return true;
-    if (lower.contains('\\appdata\\') || lower.contains('/appdata/')) return true;
-    if (lower.contains('kslas_evidence') || lower.contains('local_evidence')) return true;
+    if (lower.startsWith('/tmp/') ||
+        lower.startsWith('/var/') ||
+        lower.startsWith('/users/')) {
+      return true;
+    }
+    if (lower.startsWith('c:\\') || lower.startsWith('d:\\')) {
+      return true;
+    }
+    if (lower.contains('\\appdata\\') || lower.contains('/appdata/')) {
+      return true;
+    }
+    if (lower.contains('kslas_evidence') || lower.contains('local_evidence')) {
+      return true;
+    }
     return false;
   }
 
@@ -197,8 +218,9 @@ class LiveProctoringEventService {
     http.Client? client,
     required this.baseUrl,
     GetStorage? storage,
-  })  : _client = client ?? http.Client(),
-        _storage = storage ?? GetStorage();
+    this.accessToken = const String.fromEnvironment('KSLAS_API_ACCESS_TOKEN'),
+  }) : _client = client ?? http.Client(),
+       _storage = storage ?? GetStorage();
 
   static const String _queueKey = 'kslas_live_proctoring_event_queue_v2';
   static const int _maxQueuedEvents = 250;
@@ -206,6 +228,7 @@ class LiveProctoringEventService {
   final http.Client _client;
   final GetStorage _storage;
   final String baseUrl;
+  final String accessToken;
 
   bool _flushing = false;
 
@@ -218,6 +241,35 @@ class LiveProctoringEventService {
 
     await _queue(payload);
     return false;
+  }
+
+  Future<bool> sendFusionDecision(
+    LiveProctoringEvent source,
+    Map<String, Object?> decision,
+  ) async {
+    final payload =
+        LocalFirstEventPayloadPolicy.sanitizePayload(<String, Object?>{
+          'student_id': source.studentId,
+          'exam_id': source.examId,
+          'attempt_id': source.attemptId,
+          'source_event_type': source.eventType,
+          ...decision,
+          'model_id': 'kslas-edge-ai',
+          'model_version': '1.0',
+          'occurred_at': DateTime.now().toUtc().toIso8601String(),
+        });
+    final body = _safeJsonEncode(payload);
+    if (body == null) return false;
+    try {
+      final response = await _client.post(
+        Uri.parse('$baseUrl/api/proctoring/fusion-decisions'),
+        headers: _headers,
+        body: body,
+      );
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<int> flushQueued({int maxEvents = 25}) async {
@@ -267,11 +319,7 @@ class LiveProctoringEventService {
 
     for (final uri in attempts) {
       try {
-        final response = await _client.post(
-          uri,
-          headers: const <String, String>{'Content-Type': 'application/json'},
-          body: body,
-        );
+        final response = await _client.post(uri, headers: _headers, body: body);
         if (response.statusCode >= 200 && response.statusCode < 300) {
           return true;
         }
@@ -282,12 +330,20 @@ class LiveProctoringEventService {
     return false;
   }
 
+  Map<String, String> get _headers => <String, String>{
+    'Content-Type': 'application/json',
+    if (accessToken.trim().isNotEmpty)
+      'Authorization': 'Bearer ${accessToken.trim()}',
+  };
+
   Future<void> _queue(Map<String, Object?> event) async {
     final queued = _readQueue();
-    queued.add(LocalFirstEventPayloadPolicy.sanitizePayload(<String, Object?>{
-      ...event,
-      'queued_at': DateTime.now().toUtc().toIso8601String(),
-    }));
+    queued.add(
+      LocalFirstEventPayloadPolicy.sanitizePayload(<String, Object?>{
+        ...event,
+        'queued_at': DateTime.now().toUtc().toIso8601String(),
+      }),
+    );
 
     final trimmed = queued.length > _maxQueuedEvents
         ? queued.sublist(queued.length - _maxQueuedEvents)
@@ -302,7 +358,11 @@ class LiveProctoringEventService {
       final decoded = jsonDecode(raw) as List<dynamic>;
       return decoded
           .whereType<Map>()
-          .map((item) => LocalFirstEventPayloadPolicy.sanitizePayload(Map<String, Object?>.from(item)))
+          .map(
+            (item) => LocalFirstEventPayloadPolicy.sanitizePayload(
+              Map<String, Object?>.from(item),
+            ),
+          )
           .toList();
     } catch (_) {
       return <Map<String, Object?>>[];

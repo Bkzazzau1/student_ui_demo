@@ -29,6 +29,11 @@ def handle_request(engine: EdgeAiEngine, request: dict[str, Any]) -> dict[str, A
         if not isinstance(payload, dict):
             raise ValueError("payload must be an object")
         result = engine.observe_gaze(payload)
+    elif request_type == "observe_audio":
+        payload = request.get("payload")
+        if not isinstance(payload, dict):
+            raise ValueError("payload must be an object")
+        result = engine.observe_audio(payload)
     elif request_type == "clear_attempt":
         payload = request.get("payload")
         if not isinstance(payload, dict):

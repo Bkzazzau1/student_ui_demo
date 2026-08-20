@@ -61,6 +61,39 @@ class AudioFingerprintIsolationService {
   final int sampleRate;
   final AudioCalibrationProfile? calibration;
 
+  Map<String, Object?> temporalObservation(AudioIsolationResult result) {
+    final profile = calibration;
+    final rmsScale = math.max(0.004, (profile?.noiseFloorRms ?? 0.004) * 2.5);
+    final variationScale = math.max(
+      0.006,
+      (profile?.dynamicVariation ?? 0.006) * 2.5,
+    );
+    final deviation = profile == null
+        ? 0.0
+        : math.max(
+            (result.rms - profile.averageRms).abs() / rmsScale,
+            (result.dynamicVariation - profile.dynamicVariation).abs() /
+                variationScale,
+          );
+    final signalQuality = result.peak < 0.002
+        ? 0.25
+        : result.peak >= 0.98
+        ? 0.35
+        : 0.90;
+    return <String, Object?>{
+      'label': result.label,
+      'voice_confidence': result.voiceConfidence,
+      'signal_quality': signalQuality,
+      'baseline_deviation': deviation,
+      'calibrated': profile?.usable == true,
+      'near_voice': result.nearVoiceLikely,
+      'background_voice': result.possibleFarVoiceLikely,
+      'allowed_ambient': result.allowedAmbientLikely,
+      'duration_ms': 1000,
+      'observed_at': DateTime.now().toUtc().toIso8601String(),
+    };
+  }
+
   final List<double> _recentRms = <double>[];
   final List<double> _recentPeak = <double>[];
   final List<double> _recentZcr = <double>[];

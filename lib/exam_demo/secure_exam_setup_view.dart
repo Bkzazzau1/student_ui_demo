@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../face_demo/demo_face_id_service.dart';
 import '../face_demo/demo_face_id_view.dart';
 import '../proctoring_demo/audio_system_review_view.dart';
 import '../proctoring_demo/audio_calibration_profile.dart';
+import '../proctoring_demo/edge_ai_runtime_preflight_service.dart';
 import '../proctoring_demo/gaze_calibration_view.dart';
 import '../proctoring_demo/proctoring_demo_home.dart';
 import '../rust/api/gaze_calibration.dart';
@@ -43,6 +46,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   final DemoFaceIdService _faceIdService = DemoFaceIdService();
   final AudioCalibrationProfileStore _audioProfileStore =
       AudioCalibrationProfileStore();
+  final EdgeAiRuntimePreflightService _aiPreflight =
+      EdgeAiRuntimePreflightService();
   late final ExamStartApprovalService _approvalService;
   late DemoFaceIdSnapshot _faceId;
   late String _attemptId;
@@ -59,6 +64,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   AudioSystemReviewResult? _audioSystemReview;
   ExamStartApprovalResult? _approvalResult;
   GazeCalibrationProfileV2? _gazeCalibration;
+  EdgeAiRuntimePreflightResult? _aiRuntimeResult;
+  bool _aiRuntimeChecking = false;
 
   @override
   void initState() {
@@ -66,6 +73,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     _faceId = _faceIdService.load();
     _attemptId = 'attempt-${DateTime.now().millisecondsSinceEpoch}';
     _approvalService = ExamStartApprovalService(baseUrl: _baseUrl);
+    if (_needsChecks) unawaited(_runAiPreflight());
   }
 
   @override
@@ -77,12 +85,18 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool get _needsChecks =>
       widget.assessment.isStrictExam && widget.assessment.remoteProctored;
   bool get _faceOk => !widget.assessment.graded || _faceId.isComplete;
+  bool get _runtimeOk => !_needsChecks || _aiRuntimeResult?.ready == true;
   bool get _roomOk => !_needsChecks || (_roomApproved && _manifestPath != null);
   bool get _audioOk => !_needsChecks || _audioApproved;
   bool get _systemOk => !_needsChecks || _systemApproved;
   bool get _calibrationOk => !_needsChecks || _gazeCalibration?.usable == true;
   bool get _allChecksReady =>
-      _faceOk && _calibrationOk && _roomOk && _audioOk && _systemOk;
+      _runtimeOk &&
+      _faceOk &&
+      _calibrationOk &&
+      _roomOk &&
+      _audioOk &&
+      _systemOk;
   bool get _approvalRequired =>
       widget.assessment.remoteProctored || widget.assessment.graded;
   bool get _approvalOk =>
@@ -120,6 +134,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   Widget build(BuildContext context) {
     final questions = DemoExamService.questionsFor(widget.assessment);
     final checksPassed = <bool>[
+      _runtimeOk,
       _faceOk,
       _calibrationOk,
       _roomOk,
@@ -127,6 +142,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       _systemOk,
     ].where((passed) => passed).length;
     final requiredChecks = <bool>[
+      _runtimeOk,
       _faceOk,
       _calibrationOk,
       _roomOk,
@@ -235,8 +251,31 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
   List<_SetupStepData> _buildSteps(BuildContext context) {
     final steps = <_SetupStepData>[
+      if (_needsChecks)
+        _SetupStepData(
+          number: 1,
+          title: 'Edge AI runtime',
+          subtitle: _aiRuntimeChecking
+              ? 'Checking native models, secure Rust services, and the local Python intelligence runtime.'
+              : _aiRuntimeResult?.ready == true
+              ? 'All required on-device AI components passed integrity and runtime checks.'
+              : _aiRuntimeResult?.blockingReasons.firstOrNull ??
+                    'Verify the on-device AI runtime before continuing.',
+          status: _aiRuntimeChecking
+              ? _StepStatus.running
+              : _runtimeOk
+              ? _StepStatus.complete
+              : _StepStatus.pending,
+          icon: Icons.memory_outlined,
+          actionLabel: _aiRuntimeChecking
+              ? 'Checking...'
+              : _runtimeOk
+              ? 'Check again'
+              : 'Run check',
+          onPressed: _aiRuntimeChecking ? null : _runAiPreflight,
+        ),
       _SetupStepData(
-        number: 1,
+        number: _needsChecks ? 2 : 1,
         title: 'Identity check',
         subtitle: widget.assessment.graded
             ? 'Confirm your student identity before continuing.'
@@ -244,11 +283,11 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         status: _faceOk ? _StepStatus.complete : _StepStatus.pending,
         icon: Icons.account_circle_outlined,
         actionLabel: _faceId.isComplete ? 'Review identity' : 'Set up identity',
-        onPressed: _openFaceId,
+        onPressed: _runtimeOk ? _openFaceId : null,
       ),
       if (_needsChecks)
         _SetupStepData(
-          number: 2,
+          number: 3,
           title: 'Personal gaze calibration',
           subtitle:
               'Follow five screen markers so monitoring can use your normal '
@@ -256,22 +295,22 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           status: _calibrationOk ? _StepStatus.complete : _StepStatus.pending,
           icon: Icons.center_focus_strong,
           actionLabel: _calibrationOk ? 'Calibrate again' : 'Start calibration',
-          onPressed: _openGazeCalibration,
+          onPressed: _runtimeOk ? _openGazeCalibration : null,
         ),
       if (_needsChecks)
         _SetupStepData(
-          number: 3,
+          number: 4,
           title: 'Camera and room check',
           subtitle:
               'Show your desk and exam area clearly before the exam begins.',
           status: _roomOk ? _StepStatus.complete : _StepStatus.pending,
           icon: Icons.photo_camera_front_outlined,
           actionLabel: _roomOk ? 'Check again' : 'Start check',
-          onPressed: _openRoomScan,
+          onPressed: _runtimeOk ? _openRoomScan : null,
         ),
       if (_needsChecks)
         _SetupStepData(
-          number: 4,
+          number: 5,
           title: 'Sound and device check',
           subtitle: _calibrationOk
               ? 'Confirm your microphone and device are ready for the assessment.'
@@ -281,11 +320,13 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               : _StepStatus.pending,
           icon: Icons.devices_outlined,
           actionLabel: _audioOk && _systemOk ? 'Check again' : 'Start check',
-          onPressed: _calibrationOk ? _openAudioSystemReview : null,
+          onPressed: _runtimeOk && _calibrationOk
+              ? _openAudioSystemReview
+              : null,
         ),
       if (_approvalRequired && !_allowExamOverride)
         _SetupStepData(
-          number: _needsChecks ? 5 : 2,
+          number: _needsChecks ? 6 : 2,
           title: 'Final readiness',
           subtitle: _allChecksReady
               ? 'Confirm that everything is ready before you start.'
@@ -319,6 +360,26 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       ];
     }
     return steps;
+  }
+
+  Future<void> _runAiPreflight() async {
+    if (_aiRuntimeChecking) return;
+    setState(() {
+      _aiRuntimeChecking = true;
+      _aiRuntimeResult = null;
+      _clearApproval('Edge AI readiness is being checked.');
+    });
+    final result = await _aiPreflight.run();
+    if (!mounted) return;
+    setState(() {
+      _aiRuntimeChecking = false;
+      _aiRuntimeResult = result;
+      if (!result.ready) {
+        _clearApproval(
+          'Edge AI is not ready: ${result.blockingReasons.firstOrNull ?? 'unknown runtime error'}',
+        );
+      }
+    });
   }
 
   Future<void> _openFaceId() async {

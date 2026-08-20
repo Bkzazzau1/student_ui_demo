@@ -12,6 +12,8 @@ class EdgeAiReviewDecision {
     required this.reasons,
     required this.proposedActions,
     required this.requiresHumanReview,
+    this.signalGroups = const <String>[],
+    this.windowSeconds = 120,
   });
 
   final int riskScore;
@@ -20,6 +22,20 @@ class EdgeAiReviewDecision {
   final List<String> reasons;
   final List<String> proposedActions;
   final bool requiresHumanReview;
+  final List<String> signalGroups;
+  final int windowSeconds;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'risk_score': riskScore,
+    'risk_level': riskLevel,
+    'disposition': disposition,
+    'reasons': reasons,
+    'proposed_actions': proposedActions,
+    'requires_human_review': requiresHumanReview,
+    'signal_groups': signalGroups,
+    'window_seconds': windowSeconds,
+    'observable_behaviour_only': true,
+  };
 
   factory EdgeAiReviewDecision.fromJson(Map<String, Object?> json) {
     return EdgeAiReviewDecision(
@@ -29,6 +45,8 @@ class EdgeAiReviewDecision {
       reasons: _stringList(json['reasons']),
       proposedActions: _stringList(json['proposed_actions']),
       requiresHumanReview: json['requires_human_review'] == true,
+      signalGroups: _stringList(json['signal_groups']),
+      windowSeconds: (json['window_seconds'] as num?)?.round() ?? 120,
     );
   }
 }
@@ -67,6 +85,10 @@ class PythonEdgeAiProtocol {
 abstract class EdgeAiReviewer {
   Future<EdgeAiReviewDecision> review(LiveProctoringEvent event);
   Future<void> observeGaze(String attemptId, Map<String, Object?> observation);
+  Future<Map<String, Object?>> observeAudio(
+    String attemptId,
+    Map<String, Object?> observation,
+  ) async => const <String, Object?>{};
   Future<bool> clearAttempt(String attemptId);
   Future<void> dispose();
 }
@@ -139,10 +161,18 @@ class PythonEdgeAiService implements EdgeAiReviewer {
         'attempt_id': event.attemptId,
         'event_type': event.eventType,
         'confidence': confidence.clamp(0.0, 1.0),
+        'signal_quality': _metadataConfidence(
+          event.metadata['signal_quality'],
+          confidence,
+        ),
         'occurred_at': event.createdAt.toUtc().toIso8601String(),
       },
     );
     return EdgeAiReviewDecision.fromJson(result);
+  }
+
+  double _metadataConfidence(Object? value, double fallback) {
+    return value is num ? value.toDouble().clamp(0.0, 1.0) : fallback;
   }
 
   @override
@@ -163,6 +193,18 @@ class PythonEdgeAiService implements EdgeAiReviewer {
     await start();
     await _request(
       'observe_gaze',
+      payload: <String, Object?>{'attempt_id': attemptId, ...observation},
+    );
+  }
+
+  @override
+  Future<Map<String, Object?>> observeAudio(
+    String attemptId,
+    Map<String, Object?> observation,
+  ) async {
+    await start();
+    return _request(
+      'observe_audio',
       payload: <String, Object?>{'attempt_id': attemptId, ...observation},
     );
   }

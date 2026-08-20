@@ -158,6 +158,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   bool _cameraQualityUpgraded = false;
   int _cameraRecoveryRemaining = 0;
   int _microphoneRecoveryRemaining = 0;
+  int _lastAudioAiObservationMs = 0;
+  int _lastAudioTemporalReviewMs = 0;
   int _lowLightStreak = 0;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
@@ -1152,6 +1154,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     final result = _audioIsolation.analysePcm16(chunk);
     if (result == null) return;
     final audioDecision = _audioEventMapper.map(result);
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (nowMs - _lastAudioAiObservationMs >= 1000) {
+      _lastAudioAiObservationMs = nowMs;
+      unawaited(_observeAudioTemporal(result));
+    }
 
     final nearVoiceDetected =
         audioDecision?.eventType == 'audio_voice_isolation_alert';
@@ -1223,6 +1230,33 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           metadata: result.toJson(),
         ),
       );
+    }
+  }
+
+  Future<void> _observeAudioTemporal(AudioIsolationResult result) async {
+    final observation = _audioIsolation.temporalObservation(result);
+    try {
+      final temporal = await _edgeAi.observeAudio(
+        attemptId: widget.attemptId,
+        observation: observation,
+      );
+      if (temporal['state'] != 'needs_review' || !mounted) return;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      if (nowMs - _lastAudioTemporalReviewMs < 30000) return;
+      _lastAudioTemporalReviewMs = nowMs;
+      await _raiseEvent(
+        eventType: 'audio_temporal_behaviour_review',
+        severity: 'warning',
+        message:
+            'A sustained change in the calibrated audio environment was observed.',
+        metadata: <String, Object?>{
+          ...observation,
+          'temporal_analysis': temporal,
+          'observable_behaviour_only': true,
+        },
+      );
+    } catch (_) {
+      // Audio capture continues if the optional Python reviewer is unavailable.
     }
   }
 
@@ -1379,13 +1413,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   Future<void> _reviewEventWithEdgeAi(LiveProctoringEvent event) async {
     try {
       final result = await _edgeAi.process(event, examActive: mounted);
+      unawaited(_events.sendFusionDecision(event, result.decision.toJson()));
       if (!mounted) return;
       if (!result.decision.requiresHumanReview &&
           result.executedActions.isEmpty) {
         return;
       }
       final reviewSummary = result.decision.requiresHumanReview
-          ? 'AI review requested (${result.decision.riskLevel}, ${result.decision.riskScore})'
+          ? 'AI review requested (${result.decision.signalGroups.join(' + ')}, ${result.decision.riskScore})'
           : 'AI action completed';
       setState(() {
         _eventsSent.insert(0, reviewSummary);

@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .identity_store import IdentityStore, Principal
+from .proctoring_store import ProctoringStore
 
 MAX_BODY_BYTES = 24 * 1024 * 1024
 
@@ -19,6 +20,7 @@ MAX_BODY_BYTES = 24 * 1024 * 1024
 class IdentityApiHandler(BaseHTTPRequestHandler):
     server_version = "KSLASIdentity/1.0"
     store: IdentityStore
+    proctoring_store: ProctoringStore
 
     def do_GET(self) -> None:
         try:
@@ -62,6 +64,12 @@ class IdentityApiHandler(BaseHTTPRequestHandler):
             student_id = self._required_query(query, "student_id")
             limit = int(query.get("limit", ["200"])[0])
             self._json(HTTPStatus.OK, {"events": self.store.audit_events(student_id, limit)})
+            return
+        if parsed.path == "/api/proctoring/attempt-timeline":
+            student_id = self._required_query(query, "student_id")
+            exam_id = self._required_query(query, "exam_id")
+            attempt_id = self._required_query(query, "attempt_id")
+            self._json(HTTPStatus.OK, self.proctoring_store.timeline(principal, student_id, exam_id, attempt_id))
             return
         self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
@@ -114,6 +122,15 @@ class IdentityApiHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/admin/identity/purge-expired":
             self._json(HTTPStatus.OK, self.store.purge_expired(principal))
+            return
+        if path == "/api/proctoring/live-events":
+            self._json(HTTPStatus.CREATED, self.proctoring_store.add_event(principal, payload))
+            return
+        if path == "/api/proctoring/fusion-decisions":
+            self._json(HTTPStatus.CREATED, self.proctoring_store.add_fusion_decision(principal, payload))
+            return
+        if path == "/api/admin/proctoring/purge-expired":
+            self._json(HTTPStatus.OK, self.proctoring_store.purge_expired(principal))
             return
         self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
 
@@ -216,7 +233,7 @@ class IdentityApiHandler(BaseHTTPRequestHandler):
 
 
 def create_server(host: str, port: int, store: IdentityStore) -> ThreadingHTTPServer:
-    handler = type("ConfiguredIdentityApiHandler", (IdentityApiHandler,), {"store": store})
+    handler = type("ConfiguredIdentityApiHandler", (IdentityApiHandler,), {"store": store, "proctoring_store": ProctoringStore(store)})
     return ThreadingHTTPServer((host, port), handler)
 
 

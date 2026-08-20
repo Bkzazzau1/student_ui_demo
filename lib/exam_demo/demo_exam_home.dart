@@ -894,8 +894,9 @@ class _WelcomeHeader extends StatelessWidget {
     final activityPart = activityCount == 1
         ? '1 activity'
         : '$activityCount activities';
-    if (activityCount == 0)
+    if (activityCount == 0) {
       return 'You have no assessment activity scheduled today.';
+    }
     if (examCount == 0) return 'You have $activityPart today.';
     return 'You have $examPart and $activityPart today.';
   }
@@ -1178,11 +1179,12 @@ class _NextAssessmentCard extends StatelessWidget {
             ),
             child: Text(_buttonLabelFor(assessment)),
           );
-          if (compact)
+          if (compact) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [details, const SizedBox(height: 18), action],
             );
+          }
           return Row(
             children: [
               Expanded(child: details),
@@ -1303,8 +1305,9 @@ class _AssessmentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (assessments.isEmpty)
+    if (assessments.isEmpty) {
       return _EmptyCard(title: emptyTitle, message: emptyMessage);
+    }
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -1443,11 +1446,12 @@ class _AssessmentRow extends StatelessWidget {
             ),
             child: Text(_buttonLabelFor(assessment)),
           );
-          if (compact)
+          if (compact) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [content, const SizedBox(height: 14), action],
             );
+          }
           return Row(
             children: [
               Expanded(child: content),
@@ -1476,8 +1480,9 @@ class _LearningUpdates extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (assignments.isEmpty && feedbackItems.isEmpty)
+    if (assignments.isEmpty && feedbackItems.isEmpty) {
       return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(

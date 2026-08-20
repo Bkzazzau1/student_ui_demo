@@ -106,5 +106,17 @@ add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
     "$<TARGET_FILE_DIR:${BINARY_NAME}>/brain_core.dll"
   COMMENT "Packaging Rust brain_core.dll")
 
+# Package the local Python temporal/fusion runtime with the Windows app. The
+# service still performs a startup health check and the exam remains locked if
+# a compatible Python interpreter is unavailable.
+set(KSLAS_AI_RUNTIME_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../ai_runtime")
+if(EXISTS "${KSLAS_AI_RUNTIME_ROOT}")
+  add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      "${KSLAS_AI_RUNTIME_ROOT}"
+      "$<TARGET_FILE_DIR:${BINARY_NAME}>/ai_runtime"
+    COMMENT "Packaging local Python edge AI runtime")
+endif()
+
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)

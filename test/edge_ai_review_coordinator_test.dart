@@ -80,6 +80,12 @@ class _FakeReviewer implements EdgeAiReviewer {
   ) async {}
 
   @override
+  Future<Map<String, Object?>> observeAudio(
+    String attemptId,
+    Map<String, Object?> observation,
+  ) async => const <String, Object?>{'state': 'normal'};
+
+  @override
   Future<EdgeAiReviewDecision> review(LiveProctoringEvent event) async =>
       EdgeAiReviewDecision(
         riskScore: 50,

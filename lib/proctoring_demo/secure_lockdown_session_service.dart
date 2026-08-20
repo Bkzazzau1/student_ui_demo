@@ -98,9 +98,13 @@ class SecureLockdownSnapshot {
     if (!realExamMode) return reasons;
     if (!lockdownActive) reasons.add('Secure exam mode is not active.');
     if (!platformSupported) reasons.add('Desktop platform is required.');
-    if (!enforcementActive) reasons.add('Secure exam enforcement is not active.');
+    if (!enforcementActive) {
+      reasons.add('Secure exam enforcement is not active.');
+    }
     if (platformName != 'windows') {
-      reasons.add('Real exam mode currently requires the Windows desktop build.');
+      reasons.add(
+        'Real exam mode currently requires the Windows desktop build.',
+      );
     }
     if (!examWindowSupported) {
       reasons.add('Native exam window support is required.');
@@ -160,7 +164,9 @@ class SecureLockdownSessionService {
         const GeneratedNativeSecureLockdownReviewBridge(),
   }) : _nativeBridge = nativeBridge;
 
-  static const MethodChannel _examWindowChannel = MethodChannel('kslas.exam_window');
+  static const MethodChannel _examWindowChannel = MethodChannel(
+    'kslas.exam_window',
+  );
   static const bool _lockdownRelievedForTesting = bool.fromEnvironment(
     'KSLAS_RELIEVE_SYSTEM_LOCKDOWN',
     defaultValue: true,
@@ -279,8 +285,12 @@ class SecureLockdownSessionService {
         ),
       );
 
-      final refreshed = actions.any((action) =>
-              action.code == 'prohibited_app_close_requested' && action.success)
+      final refreshed =
+          actions.any(
+            (action) =>
+                action.code == 'prohibited_app_close_requested' &&
+                action.success,
+          )
           ? await _nativeBridge.check()
           : nativeSnapshot;
       final source = refreshed ?? nativeSnapshot;
@@ -293,7 +303,11 @@ class SecureLockdownSessionService {
             ),
           )
           .toList(growable: true);
-      _appendLocalFindings(nativeFindings, source.displayCount, source.platformName);
+      _appendLocalFindings(
+        nativeFindings,
+        source.displayCount,
+        source.platformName,
+      );
 
       return _snapshot(
         platformSupported: source.platformSupported,
@@ -331,8 +345,10 @@ class SecureLockdownSessionService {
       ),
     );
 
-    if (actions.any((action) =>
-        action.code == 'prohibited_app_close_requested' && action.success)) {
+    if (actions.any(
+      (action) =>
+          action.code == 'prohibited_app_close_requested' && action.success,
+    )) {
       prohibitedProcesses = _detectProhibitedProcesses(await _processReport());
     }
 
@@ -490,14 +506,17 @@ class SecureLockdownSessionService {
 
   Future<void> _invokeExamWindow(String method) async {
     try {
-      final response = await _examWindowChannel.invokeMapMethod<Object?, Object?>(method);
+      final response = await _examWindowChannel
+          .invokeMapMethod<Object?, Object?>(method);
       _examWindowSupported = response?['supported'] == true;
       _examWindowActive = response?['active'] == true;
-      _examWindowMessage = response?['message']?.toString() ?? 'Exam window mode checked.';
+      _examWindowMessage =
+          response?['message']?.toString() ?? 'Exam window mode checked.';
     } on MissingPluginException {
       _examWindowSupported = false;
       _examWindowActive = false;
-      _examWindowMessage = 'Exam window mode is not available on this platform.';
+      _examWindowMessage =
+          'Exam window mode is not available on this platform.';
     } catch (error) {
       _examWindowSupported = false;
       _examWindowActive = false;
@@ -553,12 +572,13 @@ class SecureLockdownSessionService {
   Future<SecureLockdownAction> _requestCloseProhibitedApps(
     List<String> prohibitedProcesses,
   ) async {
-    final terms = prohibitedProcesses
-        .map(_safeProcessTerm)
-        .where((term) => term.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final terms =
+        prohibitedProcesses
+            .map(_safeProcessTerm)
+            .where((term) => term.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     if (terms.isEmpty) {
       return const SecureLockdownAction(
         code: 'prohibited_app_close_requested',
@@ -572,7 +592,8 @@ class SecureLockdownSessionService {
         final scriptTerms = terms
             .map((term) => "'${term.replaceAll("'", "''")}'")
             .join(',');
-        final script = """
+        final script =
+            """
 \$terms = @($scriptTerms)
 \$matched = Get-Process | Where-Object {
   \$name = \$_.ProcessName.ToLowerInvariant()
@@ -597,7 +618,8 @@ class SecureLockdownSessionService {
         return SecureLockdownAction(
           code: 'prohibited_app_close_requested',
           success: true,
-          message: 'Prohibited apps were requested to close for secure exam mode.',
+          message:
+              'Prohibited apps were requested to close for secure exam mode.',
           metadata: <String, Object?>{
             'terms': terms,
             'platform': 'windows',
@@ -610,8 +632,10 @@ class SecureLockdownSessionService {
         final closed = <String>[];
         for (final term in terms) {
           try {
-            await Process.run('pkill', <String>['-f', term])
-                .timeout(commandTimeout);
+            await Process.run('pkill', <String>[
+              '-f',
+              term,
+            ]).timeout(commandTimeout);
             closed.add(term);
           } catch (_) {
             // Some terms may not have running processes; continue safely.
@@ -620,7 +644,8 @@ class SecureLockdownSessionService {
         return SecureLockdownAction(
           code: 'prohibited_app_close_requested',
           success: true,
-          message: 'Prohibited apps were requested to close for secure exam mode.',
+          message:
+              'Prohibited apps were requested to close for secure exam mode.',
           metadata: <String, Object?>{
             'terms': terms,
             'platform': Platform.isMacOS ? 'macos' : 'linux',
@@ -640,7 +665,8 @@ class SecureLockdownSessionService {
     return const SecureLockdownAction(
       code: 'prohibited_app_close_requested',
       success: false,
-      message: 'Automatic prohibited app closure is not supported on this platform.',
+      message:
+          'Automatic prohibited app closure is not supported on this platform.',
     );
   }
 
@@ -654,7 +680,8 @@ class SecureLockdownSessionService {
         const SecureLockdownFinding(
           code: 'real_exam_windows_required',
           severity: 'critical',
-          message: 'Real exam mode currently requires the Windows desktop build.',
+          message:
+              'Real exam mode currently requires the Windows desktop build.',
         ),
       );
     }
@@ -681,7 +708,8 @@ class SecureLockdownSessionService {
         const SecureLockdownFinding(
           code: 'display_count_unconfirmed',
           severity: 'critical',
-          message: 'Display count must be confirmed before a real exam can continue.',
+          message:
+              'Display count must be confirmed before a real exam can continue.',
         ),
       );
     }
@@ -726,7 +754,7 @@ class SecureLockdownSessionService {
   Future<String> _processReport() async {
     try {
       if (Platform.isWindows) {
-        return _run('powershell', <String>[
+        return await _run('powershell', <String>[
           '-NoProfile',
           '-ExecutionPolicy',
           'Bypass',
@@ -734,7 +762,7 @@ class SecureLockdownSessionService {
           r"Get-Process | Select-Object ProcessName,Path | ConvertTo-Json -Compress -Depth 2",
         ]);
       }
-      return _run('sh', <String>['-c', 'ps -axo comm,args 2>/dev/null']);
+      return await _run('sh', <String>['-c', 'ps -axo comm,args 2>/dev/null']);
     } catch (_) {
       return '';
     }
