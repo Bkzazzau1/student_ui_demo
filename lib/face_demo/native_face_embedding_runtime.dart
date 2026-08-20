@@ -72,4 +72,43 @@ class NativeFaceEmbeddingRuntime {
       productionEnforcement: value['production_enforcement'] == true,
     );
   }
+
+  Future<bool> storeProtectedTemplate({
+    required String studentId,
+    required String templateJson,
+  }) async {
+    if (!Platform.isWindows || templateJson.isEmpty) return false;
+    final root = Platform.environment['LOCALAPPDATA'];
+    if (root == null || root.isEmpty) return false;
+    final directory = Directory(
+      '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}identity',
+    );
+    await directory.create(recursive: true);
+    final identityKey = sha256.convert(studentId.codeUnits).toString();
+    final path = '${directory.path}${Platform.pathSeparator}$identityKey.dpapi';
+    return await _channel
+            .invokeMethod<bool>('storeProtectedTemplate', <String, Object?>{
+              'path': path,
+              'template_json': templateJson,
+              'entropy': '$modelId:$modelSha256:$studentId',
+            }) ??
+        false;
+  }
+
+  Future<String?> loadProtectedTemplate({required String studentId}) async {
+    if (!Platform.isWindows) return null;
+    final root = Platform.environment['LOCALAPPDATA'];
+    if (root == null || root.isEmpty) return null;
+    final identityKey = sha256.convert(studentId.codeUnits).toString();
+    final path =
+        '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}'
+        'identity${Platform.pathSeparator}$identityKey.dpapi';
+    return _channel.invokeMethod<String>(
+      'loadProtectedTemplate',
+      <String, Object?>{
+        'path': path,
+        'entropy': '$modelId:$modelSha256:$studentId',
+      },
+    );
+  }
 }

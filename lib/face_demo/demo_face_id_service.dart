@@ -27,7 +27,8 @@ class DemoFaceIdSnapshot {
   final String status;
   final List<String> downloadedImageUrls;
 
-  bool get isComplete => backendSynced && locked && capturedSamples >= requiredSamples;
+  bool get isComplete =>
+      backendSynced && locked && capturedSamples >= requiredSamples;
 
   String get statusText {
     if (isComplete) {
@@ -94,11 +95,18 @@ class DemoFaceIdService {
     return load();
   }
 
-  Future<DemoFaceIdSnapshot> applyBackendEnrollment(FaceIdentityEnrollmentResponse response) async {
-    await _storage.write(_capturedKey, response.uploadedImages.clamp(0, requiredSamples));
+  Future<DemoFaceIdSnapshot> applyBackendEnrollment(
+    FaceIdentityEnrollmentResponse response,
+  ) async {
+    await _storage.write(
+      _capturedKey,
+      response.uploadedImages.clamp(0, requiredSamples),
+    );
     final bestQuality = response.images.isEmpty
         ? 0.0
-        : response.images.map((image) => image.qualityScore).reduce((a, b) => a > b ? a : b);
+        : response.images
+              .map((image) => image.qualityScore)
+              .reduce((a, b) => a > b ? a : b);
     await _storage.write(_qualityKey, bestQuality);
     await _storage.write(_updatedAtKey, DateTime.now().toIso8601String());
     await _storage.write(_backendSyncedKey, response.activeLocked);
@@ -107,7 +115,10 @@ class DemoFaceIdService {
     await _storage.write(_statusKey, response.status);
     await _storage.write(
       _imageUrlsKey,
-      response.images.map((image) => image.viewUrl).where((url) => url.isNotEmpty).toList(),
+      response.images
+          .map((image) => image.viewUrl)
+          .where((url) => url.isNotEmpty)
+          .toList(),
     );
     return load();
   }
@@ -122,6 +133,20 @@ class DemoFaceIdService {
     await _storage.remove(_lockedKey);
     await _storage.remove(_enrollmentIdKey);
     await _storage.remove(_statusKey);
+    await _storage.remove(_imageUrlsKey);
+    return load();
+  }
+
+  /// Starts a new device-local biometric enrollment without deleting or
+  /// changing the institution's backend enrollment record.
+  Future<DemoFaceIdSnapshot> beginDeviceEnrollment() async {
+    await _storage.remove(_capturedKey);
+    await _storage.remove(_qualityKey);
+    await _storage.remove(_updatedAtKey);
+    await _storage.remove(_backendSyncedKey);
+    await _storage.remove(_lockedKey);
+    await _storage.remove(_enrollmentIdKey);
+    await _storage.write(_statusKey, 'device_enrollment_required');
     await _storage.remove(_imageUrlsKey);
     return load();
   }

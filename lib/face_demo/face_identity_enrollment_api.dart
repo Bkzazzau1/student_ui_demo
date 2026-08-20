@@ -4,11 +4,19 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class FaceIdentityEnrollmentApi {
-  FaceIdentityEnrollmentApi({http.Client? client, required this.baseUrl})
-    : _client = client ?? http.Client();
+  FaceIdentityEnrollmentApi({
+    http.Client? client,
+    required this.baseUrl,
+    this.accessToken = '',
+  }) : _client = client ?? http.Client();
 
   final http.Client _client;
   final String baseUrl;
+  final String accessToken;
+
+  Map<String, String> get _authorizationHeaders => accessToken.trim().isEmpty
+      ? const <String, String>{}
+      : <String, String>{'Authorization': 'Bearer ${accessToken.trim()}'};
 
   Future<FaceIdentityEnrollmentResponse?> fetchLatest({
     required String studentId,
@@ -16,7 +24,7 @@ class FaceIdentityEnrollmentApi {
     final uri = Uri.parse(
       '$baseUrl/api/identity/face-enrollments/latest',
     ).replace(queryParameters: <String, String>{'student_id': studentId});
-    final response = await _client.get(uri);
+    final response = await _client.get(uri, headers: _authorizationHeaders);
     if (response.statusCode == 404) return null;
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
@@ -34,6 +42,7 @@ class FaceIdentityEnrollmentApi {
   }) async {
     final uri = Uri.parse('$baseUrl/api/identity/face-enrollment');
     final request = http.MultipartRequest('POST', uri);
+    request.headers.addAll(_authorizationHeaders);
     request.fields['manifest'] = jsonEncode(<String, Object?>{
       'student_id': studentId,
       'captured_at': DateTime.now().toUtc().toIso8601String(),
@@ -77,6 +86,31 @@ class FaceIdentityEnrollmentApi {
         ? <String, dynamic>{}
         : jsonDecode(response.body) as Map<String, dynamic>;
     return FaceIdentityEnrollmentResponse.fromJson(body);
+  }
+
+  Future<void> registerDevice({
+    required String deviceId,
+    required String platform,
+    String? publicKey,
+  }) async {
+    if (accessToken.trim().isEmpty) {
+      throw StateError('Authenticated device registration is required');
+    }
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/identity/devices/register'),
+      headers: <String, String>{
+        ..._authorizationHeaders,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, Object?>{
+        'device_id': deviceId,
+        'platform': platform,
+        if (publicKey != null && publicKey.isNotEmpty) 'public_key': publicKey,
+      }),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Device registration failed: ${response.statusCode}');
+    }
   }
 
   Future<FaceTemplateDownload?> downloadTemplate({

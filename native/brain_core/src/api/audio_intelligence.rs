@@ -196,7 +196,10 @@ fn classify_audio(features: &AudioFeatures) -> AudioClassification {
     if features.dynamic_variation >= 0.004 {
         voice_confidence += 0.08;
     }
-    if steady_envelope && low_ratio >= 0.45 {
+    // A steady amplitude alone is not enough to call a signal hum: voiced and
+    // speech-like waveforms can also have a stable envelope. Require low
+    // short-term slope energy before applying the ambient-hum penalty.
+    if steady_envelope && low_ratio >= 0.45 && features.slope_energy < 0.020 {
         voice_confidence -= 0.18;
     }
     if impulse_like {

@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 
 import 'audio_evidence_capture_service.dart';
 import 'audio_event_evidence_policy.dart';
+import 'audio_calibration_profile.dart';
 import 'audio_fingerprint_isolation_service.dart';
 import 'audio_live_event_mapper.dart';
 import 'camera_evidence_capture_service.dart';
@@ -19,6 +20,7 @@ import 'continuous_biometric_liveness_service.dart';
 import 'edge_ai_review_coordinator.dart';
 import 'gaze_head_pose_estimator.dart';
 import 'landmark_gaze_runtime_selector.dart';
+import 'landmark_liveness_challenge_service.dart';
 import 'live_camera_frame_bus.dart';
 import 'live_event_cooldown_gate.dart';
 import 'live_monitoring_profile.dart';
@@ -96,8 +98,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       MicrophoneStreamRecordingService();
   final LandmarkGazeRuntimeSelector _gazeEstimator =
       LandmarkGazeRuntimeSelector();
-  final AudioFingerprintIsolationService _audioIsolation =
-      AudioFingerprintIsolationService();
+  late final AudioFingerprintIsolationService _audioIsolation;
   final AudioLiveEventMapper _audioEventMapper = const AudioLiveEventMapper();
   final AudioEvidenceCaptureService _audioEvidence =
       const AudioEvidenceCaptureService();
@@ -121,6 +122,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   final ObjectModelFrameGate _objectFrameGate = ObjectModelFrameGate();
   late final EdgeAiReviewCoordinator _edgeAi;
   late final CalibratedGazeService _calibratedGaze;
+  late LivenessChallengeSession _activeLivenessChallenge;
 
   CameraController? _camera;
   Timer? _heartbeat;
@@ -162,6 +164,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _voiceRiskStreak = 0;
   int _farVoiceRiskStreak = 0;
   int _spoofRiskStreak = 0;
+  bool _livenessChallengeReported = false;
   int _visualRiskStreak = 0;
   int _multiplePeopleRiskStreak = 0;
   int _framesPublished = 0;
@@ -181,6 +184,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     );
     _calibratedGaze = CalibratedGazeService(attemptId: widget.attemptId)
       ..load();
+    _audioIsolation = AudioFingerprintIsolationService(
+      calibration: AudioCalibrationProfileStore.profileForAttempt(
+        widget.attemptId,
+      ),
+    );
+    _activeLivenessChallenge = LivenessChallengeSession.start();
+    _livenessStatus = _activeLivenessChallenge.instruction;
     _edgeAi = EdgeAiReviewCoordinator(
       reviewer: PythonEdgeAiService(
         workingDirectory: _edgeAiWorkingDirectory(),
@@ -191,8 +201,22 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     unawaited(_startYoloHealthCheck());
     unawaited(_startObjectModelGate());
     unawaited(_startCamera());
-    unawaited(_startAudio());
+    unawaited(_startAudioAfterCalibrationGate());
     _startHeartbeat();
+  }
+
+  Future<void> _startAudioAfterCalibrationGate() async {
+    if (!_calibratedGaze.ready) {
+      if (mounted) {
+        setState(() {
+          _audioReady = false;
+          _audioStatus =
+              'Sound monitoring is waiting for a valid gaze calibration.';
+        });
+      }
+      return;
+    }
+    await _startAudio();
   }
 
   @override
@@ -822,11 +846,67 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         rgb[offset++] = pixel.b.toInt();
       }
     }
+    final payload = await _gazeEstimator.analyseRgbPayload(
+      rgbBytes: rgb,
+      width: decoded.width,
+      height: decoded.height,
+    );
+    if (payload != null) {
+      _handleActiveLivenessChallenge(payload);
+    }
     return _gazeEstimator.analyseRgb(
       rgbBytes: rgb,
       width: decoded.width,
       height: decoded.height,
     );
+  }
+
+  void _handleActiveLivenessChallenge(Map<String, Object?> payload) {
+    if (_livenessChallengeReported) return;
+    final result = _activeLivenessChallenge.addLandmarkPayload(
+      payload,
+      timestampMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _livenessReady = result.completed;
+      _livenessStatus = result.completed
+          ? 'Live face challenge passed'
+          : result.state == 'possible_presentation_attack'
+          ? 'Live face signal needs another check'
+          : '${_activeLivenessChallenge.instruction} ${(result.progress * 100).round()}%';
+    });
+    if (result.completed) {
+      _livenessChallengeReported = true;
+      unawaited(
+        _raiseEvent(
+          eventType: 'liveness_challenge_passed',
+          severity: 'info',
+          message: 'Live face movement confirmed.',
+          metadata: <String, Object?>{
+            'challenge': result.challenge,
+            'usable_observations': result.usableObservations,
+            'spoof_risk_score': result.spoofRiskScore,
+          },
+        ),
+      );
+    } else if (result.state == 'possible_presentation_attack') {
+      _livenessChallengeReported = true;
+      unawaited(
+        _raiseEvent(
+          eventType: 'continuous_liveness_spoof_risk',
+          severity: 'warning',
+          message: 'Live face signal needs another check.',
+          metadata: <String, Object?>{
+            'challenge': result.challenge,
+            'observable_state': result.state,
+            'usable_observations': result.usableObservations,
+            'spoof_risk_score': result.spoofRiskScore,
+            'reason': result.reason,
+          },
+        ),
+      );
+    }
   }
 
   void _handleLandmarkGaze(GazeHeadPoseResult gaze) {

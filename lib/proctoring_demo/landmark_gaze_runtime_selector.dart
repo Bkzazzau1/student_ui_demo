@@ -44,4 +44,21 @@ class LandmarkGazeRuntimeSelector {
       height: height,
     );
   }
+
+  Future<Map<String, Object?>?> analyseRgbPayload({
+    required Uint8List rgbBytes,
+    required int width,
+    required int height,
+  }) async {
+    if (!_checked) {
+      _checked = true;
+      _ready = await _runtime.initialize();
+    }
+    if (!_ready) return null;
+    return _runtime.analyseRgbRaw(
+      rgbBytes: rgbBytes,
+      width: width,
+      height: height,
+    );
+  }
 }

@@ -74,6 +74,7 @@ class AudioLiveEventMapper {
     'generator_or_engine_ambient',
     'quiet_or_low_noise',
     'steady_allowed_ambient_noise',
+    'calibrated_allowed_ambient_noise',
   };
 
   String _normalize(String label) {

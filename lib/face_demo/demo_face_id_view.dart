@@ -85,6 +85,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       'KSLAS_API_BASE_URL',
       defaultValue: 'http://127.0.0.1:8080',
     ),
+    accessToken: const String.fromEnvironment('KSLAS_API_ACCESS_TOKEN'),
   );
   final List<FaceIdentityEnrollmentImage> _capturedImages =
       <FaceIdentityEnrollmentImage>[];
@@ -100,6 +101,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   bool _syncing = false;
   bool _autoCaptureRunning = false;
   bool _autoCaptureStarted = false;
+  bool _verificationRunning = false;
+  bool _testingExistingTemplate = false;
   String? _cameraError;
   String? _statusMessage;
 
@@ -127,6 +130,31 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       _statusMessage = 'Checking your saved Face ID...';
     });
     try {
+      final protectedTemplate = await NativeFaceEmbeddingRuntime()
+          .loadProtectedTemplate(studentId: _snapshot.studentId);
+      if (protectedTemplate != null && protectedTemplate.isNotEmpty) {
+        final status = validatePortableFaceTemplate(
+          templateJson: protectedTemplate,
+          expectedStudentId: _snapshot.studentId,
+          expectedModelId: NativeFaceEmbeddingRuntime.modelId,
+          expectedModelSha256: NativeFaceEmbeddingRuntime.modelSha256,
+          nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+        );
+        if (status.valid) {
+          if (!mounted) return;
+          setState(() {
+            _portableTemplateJson = protectedTemplate;
+            _testingExistingTemplate = true;
+            _syncing = false;
+            _statusMessage =
+                'A protected Face ID is stored on this device. You can test '
+                'it now with a new live capture.';
+          });
+          await _openCamera(forVerification: true);
+          await _askToVerifyEnrollment();
+          return;
+        }
+      }
       final latest = await _identityApi.fetchLatest(
         studentId: DemoFaceIdService.studentId,
       );
@@ -165,8 +193,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     }
   }
 
-  Future<void> _openCamera() async {
-    if (_snapshot.locked) return;
+  Future<void> _openCamera({bool forVerification = false}) async {
+    if (_snapshot.locked && !forVerification) return;
     setState(() {
       _openingCamera = true;
       _cameraError = null;
@@ -320,43 +348,20 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       _statusMessage = 'Saving your Face ID securely...';
     });
     try {
-      final response = await _identityApi.submit(
-        studentId: _snapshot.studentId,
-        images: List<FaceIdentityEnrollmentImage>.from(_capturedImages),
-      );
       if (_capturedEmbeddings.length != _guides.length) {
         throw StateError('Reliable embeddings are missing from enrollment');
       }
-      final now = DateTime.now().toUtc();
-      _portableTemplateJson = buildPortableFaceTemplate(
-        studentId: _snapshot.studentId,
-        enrollmentId: response.enrollmentId,
-        modelId: NativeFaceEmbeddingRuntime.modelId,
-        modelSha256: NativeFaceEmbeddingRuntime.modelSha256,
-        preprocessingVersion: NativeFaceEmbeddingRuntime.preprocessingVersion,
-        embeddings: List<Float32List>.unmodifiable(_capturedEmbeddings),
-        qualityScore:
-            _capturedImages
-                .map((image) => image.qualityScore)
-                .reduce((a, b) => a + b) /
-            _capturedImages.length,
-        createdAtMs: now.millisecondsSinceEpoch,
-        expiresAtMs: now.add(const Duration(days: 365)).millisecondsSinceEpoch,
-      );
-      final synced = await _service.applyBackendEnrollment(response);
+      final localEnrollmentId =
+          'local-${DateTime.now().toUtc().millisecondsSinceEpoch}';
+      await _buildAndProtectTemplate(localEnrollmentId);
       if (!mounted) return;
-      await _controller?.dispose();
       setState(() {
-        _snapshot = synced;
-        _controller = null;
         _submitting = false;
         _statusMessage =
-            '${response.message.replaceAll('Backend ', '').replaceAll('backend ', '').replaceAll('locked', 'protected')} '
-            'A ${_portableTemplateJson == null ? 0 : 128}-dimension local identity template is ready.';
+            'Enrollment is protected locally. Test it now with a new live '
+            'camera capture; backend synchronization will follow.';
       });
-      if (synced.isComplete) {
-        widget.onComplete?.call();
-      }
+      await _askToVerifyEnrollment();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -365,6 +370,276 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
             'Face ID could not be saved. Check connection and try again.';
       });
     }
+  }
+
+  Future<void> _buildAndProtectTemplate(String enrollmentId) async {
+    final now = DateTime.now().toUtc();
+    _portableTemplateJson = buildPortableFaceTemplate(
+      studentId: _snapshot.studentId,
+      enrollmentId: enrollmentId,
+      modelId: NativeFaceEmbeddingRuntime.modelId,
+      modelSha256: NativeFaceEmbeddingRuntime.modelSha256,
+      preprocessingVersion: NativeFaceEmbeddingRuntime.preprocessingVersion,
+      embeddings: List<Float32List>.unmodifiable(_capturedEmbeddings),
+      qualityScore:
+          _capturedImages
+              .map((image) => image.qualityScore)
+              .reduce((a, b) => a + b) /
+          _capturedImages.length,
+      createdAtMs: now.millisecondsSinceEpoch,
+      expiresAtMs: now.add(const Duration(days: 365)).millisecondsSinceEpoch,
+    );
+    final protected = await NativeFaceEmbeddingRuntime().storeProtectedTemplate(
+      studentId: _snapshot.studentId,
+      templateJson: _portableTemplateJson!,
+    );
+    if (!protected) {
+      throw StateError(
+        'The identity template could not be protected by Windows DPAPI',
+      );
+    }
+  }
+
+  Future<void> _askToVerifyEnrollment() async {
+    if (!mounted || _portableTemplateJson == null) return;
+    final testNow = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Test your Face ID'),
+        content: const Text(
+          'Enrollment has been stored. We will take one new live image and '
+          'check whether it matches your enrolled identity. A weak or '
+          'mismatched sample simply asks you to try again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Test later'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.verified_user_outlined),
+            label: const Text('Test now'),
+          ),
+        ],
+      ),
+    );
+    if (testNow == true) {
+      await _verifyFreshIdentitySample();
+    } else {
+      await _finishEnrollmentWithoutTest();
+    }
+  }
+
+  Future<void> _verifyFreshIdentitySample() async {
+    if (_verificationRunning || _portableTemplateJson == null) return;
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      setState(() {
+        _statusMessage =
+            'The camera is unavailable. Reopen Face ID to test it.';
+      });
+      return;
+    }
+    setState(() {
+      _verificationRunning = true;
+      _statusMessage =
+          'Look straight at the camera. Capturing a fresh identity sample...';
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    try {
+      final file = await controller.takePicture();
+      final sample = await _embeddingPipeline.processEncodedImage(
+        await File(file.path).readAsBytes(),
+      );
+      if (sample == null || sample.quality < 0.65) {
+        if (!mounted) return;
+        setState(() {
+          _verificationRunning = false;
+          _statusMessage =
+              'The verification image was not reliable. Improve the lighting '
+              'and keep your full face visible.';
+        });
+        await _showVerificationResult(
+          verified: false,
+          title: 'Please try again',
+          message: 'We could not obtain a reliable live face sample.',
+        );
+        return;
+      }
+      final verification = verifyFaceEmbedding1To1(
+        templateJson: _portableTemplateJson!,
+        probeEmbedding: sample.embedding,
+        signalQuality: sample.quality,
+        // Development threshold only. Production uses a threshold calibrated
+        // against the institution's held-out validation population.
+        matchThreshold: 0.363,
+        nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+      );
+      if (!mounted) return;
+      final verified = verification.state == 'identity_verified';
+      setState(() {
+        _verificationRunning = false;
+        _statusMessage = verified
+            ? 'Face ID test passed. Similarity ${(verification.similarity * 100).toStringAsFixed(1)}%.'
+            : 'This sample did not verify. It is not a misconduct decision; try another live sample.';
+      });
+      await _showVerificationResult(
+        verified: verified,
+        title: verified ? 'Identity verified' : 'Identity not confirmed',
+        message: verified
+            ? 'The new live sample matches the stored enrollment.'
+            : 'The sample did not meet the development threshold. Please try again with even lighting and a straight pose.',
+      );
+      if (verified) {
+        await _finishEnrollmentWithoutTest();
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _verificationRunning = false;
+        _statusMessage = 'Face ID test could not run: $error';
+      });
+    }
+  }
+
+  Future<void> _showVerificationResult({
+    required bool verified,
+    required String title,
+    required String message,
+  }) async {
+    if (!mounted) return;
+    final retry = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(
+          verified ? Icons.verified_user : Icons.face_retouching_natural,
+          color: verified ? Colors.green : Colors.orange,
+          size: 42,
+        ),
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          if (!verified)
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Later'),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(!verified),
+            child: Text(verified ? 'Continue' : 'Try again'),
+          ),
+        ],
+      ),
+    );
+    if (!verified && retry == true) {
+      await _verifyFreshIdentitySample();
+    }
+  }
+
+  Future<void> _finishEnrollmentWithoutTest() async {
+    if (_testingExistingTemplate) {
+      await _controller?.dispose();
+      if (!mounted) return;
+      setState(() {
+        _controller = null;
+        _testingExistingTemplate = false;
+        _statusMessage = 'Stored Face ID test completed.';
+      });
+      widget.onComplete?.call();
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _statusMessage = 'Face ID is stored locally. Synchronizing enrollment...';
+    });
+    try {
+      final enrollment = await _identityApi.submit(
+        studentId: _snapshot.studentId,
+        images: List<FaceIdentityEnrollmentImage>.from(_capturedImages),
+      );
+      await _buildAndProtectTemplate(enrollment.enrollmentId);
+      final synced = await _service.applyBackendEnrollment(enrollment);
+      if (!mounted) return;
+      await _controller?.dispose();
+      setState(() {
+        _snapshot = synced;
+        _controller = null;
+        _submitting = false;
+        _statusMessage = 'Face ID enrollment is stored and active.';
+      });
+      if (synced.isComplete) widget.onComplete?.call();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _statusMessage =
+            'Face ID is protected on this device and the test is complete. '
+            'Backend synchronization is pending.';
+      });
+    }
+  }
+
+  Future<void> _testOrEnrollOnThisDevice() async {
+    final protectedTemplate = await NativeFaceEmbeddingRuntime()
+        .loadProtectedTemplate(studentId: _snapshot.studentId);
+    if (protectedTemplate != null && protectedTemplate.isNotEmpty) {
+      final status = validatePortableFaceTemplate(
+        templateJson: protectedTemplate,
+        expectedStudentId: _snapshot.studentId,
+        expectedModelId: NativeFaceEmbeddingRuntime.modelId,
+        expectedModelSha256: NativeFaceEmbeddingRuntime.modelSha256,
+        nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+      );
+      if (status.valid) {
+        setState(() {
+          _portableTemplateJson = protectedTemplate;
+          _testingExistingTemplate = true;
+          _statusMessage = 'Protected Face ID loaded. Opening a live test...';
+        });
+        await _openCamera(forVerification: true);
+        await _askToVerifyEnrollment();
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    final startEnrollment = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Set up Face ID on this device'),
+        content: const Text(
+          'The previous record contains enrollment status but no protected '
+          'embedding template that this device can test. Capture six new '
+          'samples to create and verify one locally. This does not delete the '
+          'institution\'s backend record.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Start capture'),
+          ),
+        ],
+      ),
+    );
+    if (startEnrollment != true) return;
+    final draft = await _service.beginDeviceEnrollment();
+    if (!mounted) return;
+    setState(() {
+      _snapshot = draft;
+      _capturedImages.clear();
+      _capturedEmbeddings.clear();
+      _portableTemplateJson = null;
+      _autoCaptureStarted = false;
+      _autoCaptureRunning = false;
+      _statusMessage = 'Starting secure Face ID capture on this device...';
+    });
+    await _openCamera();
   }
 
   Future<void> _reset() async {
@@ -382,6 +657,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       _capturedImages.clear();
       _capturedEmbeddings.clear();
       _portableTemplateJson = null;
+      _testingExistingTemplate = false;
       _autoCaptureStarted = false;
       _autoCaptureRunning = false;
       _statusMessage = 'Local draft cleared. Automatic capture will restart.';
@@ -395,7 +671,20 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     final compact = MediaQuery.sizeOf(context).width < 640;
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
-      appBar: AppBar(title: const Text('Face ID setup')),
+      appBar: AppBar(
+        title: const Text('Face ID setup'),
+        actions: [
+          if (_snapshot.locked)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: FilledButton.icon(
+                onPressed: _testOrEnrollOnThisDevice,
+                icon: const Icon(Icons.face_retouching_natural),
+                label: const Text('Test Face ID'),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: compact && !_snapshot.locked
           ? _MobileCaptureBar(
               snapshot: _snapshot,
@@ -471,10 +760,22 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                           Navigator.of(context).pop(_snapshot.isComplete),
                     )
                   else
-                    FilledButton.icon(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      icon: const Icon(Icons.verified_user_outlined),
-                      label: const Text('Face ID active - return'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _testOrEnrollOnThisDevice,
+                            icon: const Icon(Icons.face_retouching_natural),
+                            label: const Text('Test Face ID on this device'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          icon: const Icon(Icons.arrow_back),
+                          label: const Text('Return'),
+                        ),
+                      ],
                     ),
                 ],
               ),

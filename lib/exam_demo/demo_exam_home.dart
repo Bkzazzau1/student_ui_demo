@@ -114,7 +114,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
             profile: _studentProfile,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => const StudentInformationView(profile: _studentProfile),
+                builder: (_) =>
+                    const StudentInformationView(profile: _studentProfile),
               ),
             ),
           ),
@@ -123,7 +124,9 @@ class _DemoExamHomeState extends State<DemoExamHome> {
             child: IconButton(
               tooltip: 'Sign out',
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const StudentLogoutView()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const StudentLogoutView(),
+                ),
               ),
               icon: const Icon(Icons.logout_outlined),
             ),
@@ -159,13 +162,19 @@ class _DemoExamHomeState extends State<DemoExamHome> {
                     const SizedBox(height: 16),
                     _QuickActions(
                       onGradeBook: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => const GradeBookView()),
+                        MaterialPageRoute<void>(
+                          builder: (_) => const GradeBookView(),
+                        ),
                       ),
                       onIdentity: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => const DemoFaceIdView()),
+                        MaterialPageRoute<void>(
+                          builder: (_) => const DemoFaceIdView(),
+                        ),
                       ),
                       onSchedule: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => const ExamAttendanceView()),
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ExamAttendanceView(),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -177,7 +186,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
                     else
                       const _EmptyCard(
                         title: 'No assessment scheduled today',
-                        message: 'Your assessments will appear here when available.',
+                        message:
+                            'Your assessments will appear here when available.',
                       ),
                     const SizedBox(height: 18),
                     _DashboardTabs(
@@ -221,7 +231,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
             _AssessmentList(
               title: 'Today\'s activities',
               emptyTitle: 'Nothing scheduled today',
-              emptyMessage: 'No exam, assessment, or practice activity is scheduled for today.',
+              emptyMessage:
+                  'No exam, assessment, or practice activity is scheduled for today.',
               assessments: assessments,
               onOpen: (assessment) => _openSetup(context, assessment),
             ),
@@ -229,8 +240,10 @@ class _DemoExamHomeState extends State<DemoExamHome> {
             _LearningUpdates(
               assignments: assignments,
               feedbackItems: feedbackItems,
-              onOpenAssignment: (assignment) => _openAssignment(context, assignment),
-              onOpenFeedback: (feedbackItem) => _openFeedback(context, feedbackItem),
+              onOpenAssignment: (assignment) =>
+                  _openAssignment(context, assignment),
+              onOpenFeedback: (feedbackItem) =>
+                  _openFeedback(context, feedbackItem),
             ),
           ],
         );
@@ -246,7 +259,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
         return _AssessmentList(
           title: 'Assessments',
           emptyTitle: 'No assessment today',
-          emptyMessage: 'Quizzes, tests, and self-check activities will appear here.',
+          emptyMessage:
+              'Quizzes, tests, and self-check activities will appear here.',
           assessments: assessmentsOnly,
           onOpen: (assessment) => _openSetup(context, assessment),
         );
@@ -254,7 +268,8 @@ class _DemoExamHomeState extends State<DemoExamHome> {
         return _AssessmentList(
           title: 'Practice',
           emptyTitle: 'No practice activity today',
-          emptyMessage: 'Weekly practice questions will appear here when available.',
+          emptyMessage:
+              'Weekly practice questions will appear here when available.',
           assessments: practice,
           onOpen: (assessment) => _openSetup(context, assessment),
         );
@@ -262,8 +277,10 @@ class _DemoExamHomeState extends State<DemoExamHome> {
         return _UpdatesList(
           assignments: assignments,
           feedbackItems: feedbackItems,
-          onOpenAssignment: (assignment) => _openAssignment(context, assignment),
-          onOpenFeedback: (feedbackItem) => _openFeedback(context, feedbackItem),
+          onOpenAssignment: (assignment) =>
+              _openAssignment(context, assignment),
+          onOpenFeedback: (feedbackItem) =>
+              _openFeedback(context, feedbackItem),
         );
     }
   }
@@ -279,7 +296,10 @@ class _DemoExamHomeState extends State<DemoExamHome> {
     return null;
   }
 
-  Future<void> _openSetup(BuildContext context, DemoAssessment assessment) async {
+  Future<void> _openSetup(
+    BuildContext context,
+    DemoAssessment assessment,
+  ) async {
     final result = await Navigator.of(context).push<DemoExamResult>(
       MaterialPageRoute<DemoExamResult>(
         builder: (_) => SecureExamSetupView(assessment: assessment),
@@ -287,11 +307,16 @@ class _DemoExamHomeState extends State<DemoExamHome> {
     );
     if (result == null || !context.mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => DemoExamResultView(result: result)),
+      MaterialPageRoute<void>(
+        builder: (_) => DemoExamResultView(result: result),
+      ),
     );
   }
 
-  Future<void> _openAssignment(BuildContext context, DemoAssignmentItem assignment) async {
+  Future<void> _openAssignment(
+    BuildContext context,
+    DemoAssignmentItem assignment,
+  ) async {
     final result = await Navigator.of(context).push<AssignmentSubmissionResult>(
       MaterialPageRoute<AssignmentSubmissionResult>(
         builder: (_) => AssignmentSubmissionView(assignment: assignment),
@@ -299,7 +324,9 @@ class _DemoExamHomeState extends State<DemoExamHome> {
     );
     if (result == null || !context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${result.assignment.course.code} assignment submitted.')),
+      SnackBar(
+        content: Text('${result.assignment.course.code} assignment submitted.'),
+      ),
     );
   }
 
@@ -328,10 +355,16 @@ class _AppTitle extends StatelessWidget {
             gradient: const LinearGradient(colors: [_brand, Color(0xFF1D4ED8)]),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Text('K', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          child: const Text(
+            'K',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+          ),
         ),
         const SizedBox(width: 10),
-        const Text('K-SLAS Student Portal', style: TextStyle(fontWeight: FontWeight.w900)),
+        const Text(
+          'K-SLAS Student Portal',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ],
     );
   }
@@ -366,10 +399,18 @@ class _StudentPill extends StatelessWidget {
                 const SizedBox(width: 7),
                 Text(
                   profile.studentId,
-                  style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 12),
+                  style: const TextStyle(
+                    color: _brandDark,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(Icons.keyboard_arrow_down_rounded, size: 17, color: _muted),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 17,
+                  color: _muted,
+                ),
               ],
             ),
           ),
@@ -392,7 +433,10 @@ class StudentInformationView extends StatelessWidget {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Student Information', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Student Information',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: _line),
@@ -423,7 +467,13 @@ class StudentInformationView extends StatelessWidget {
                         final details = _StudentDetailsCard(profile: profile);
                         final support = _StudentSupportCard(profile: profile);
                         if (!wide) {
-                          return Column(children: [details, const SizedBox(height: 16), support]);
+                          return Column(
+                            children: [
+                              details,
+                              const SizedBox(height: 16),
+                              support,
+                            ],
+                          );
                         }
                         return Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,9 +506,17 @@ class _StudentProfileHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_brandDark, Color(0xFF113A63), _brand]),
+        gradient: const LinearGradient(
+          colors: [_brandDark, Color(0xFF113A63), _brand],
+        ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: Color(0x1F0F172A), blurRadius: 26, offset: Offset(0, 14))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F0F172A),
+            blurRadius: 26,
+            offset: Offset(0, 14),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -473,7 +531,11 @@ class _StudentProfileHero extends StatelessWidget {
             ),
             child: Text(
               _initials(profile.fullName),
-              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           const SizedBox(width: 18),
@@ -481,16 +543,28 @@ class _StudentProfileHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Student profile', style: TextStyle(color: Color(0xFFDBEAFE), fontWeight: FontWeight.w900)),
+                const Text(
+                  'Student profile',
+                  style: TextStyle(
+                    color: Color(0xFFDBEAFE),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   profile.fullName,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '${profile.studentId} • ${profile.level}',
-                  style: const TextStyle(color: Color(0xFFE2E8F0), fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    color: Color(0xFFE2E8F0),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -504,7 +578,8 @@ class _StudentProfileHero extends StatelessWidget {
     final parts = value.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty) return 'ST';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'.toUpperCase();
+    return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
+        .toUpperCase();
   }
 }
 
@@ -544,7 +619,8 @@ class _StudentSupportCard extends StatelessWidget {
       children: [
         _SupportBox(
           title: 'DLI Support Desk',
-          message: 'Use this link for help with login, assessment access, camera check, and submissions.',
+          message:
+              'Use this link for help with login, assessment access, camera check, and submissions.',
           link: profile.supportLink,
           email: profile.supportEmail,
         ),
@@ -562,7 +638,11 @@ class _StudentSupportCard extends StatelessWidget {
 }
 
 class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({required this.title, required this.icon, required this.children});
+  const _InfoPanel({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
 
   final String title;
   final IconData icon;
@@ -576,24 +656,44 @@ class _InfoPanel extends StatelessWidget {
         color: _surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _line),
-        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(14)),
-            child: Icon(icon, color: _brand),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: _brand),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: _brandDark,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900)),
-          ),
-        ]),
-        const SizedBox(height: 14),
-        ...children,
-      ]),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
     );
   }
 }
@@ -608,16 +708,41 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 11),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 130, child: Text(label, style: const TextStyle(color: _muted, fontWeight: FontWeight.w800))),
-        Expanded(child: Text(value, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800))),
-      ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: _brandDark,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _SupportBox extends StatelessWidget {
-  const _SupportBox({required this.title, required this.message, required this.link, required this.email});
+  const _SupportBox({
+    required this.title,
+    required this.message,
+    required this.link,
+    required this.email,
+  });
 
   final String title;
   final String message;
@@ -633,21 +758,50 @@ class _SupportBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 7),
-        Text(message, style: const TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
-        Text(link, style: const TextStyle(color: _brand, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 4),
-        Text(email, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w700)),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            message,
+            style: const TextStyle(
+              color: _muted,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            link,
+            style: const TextStyle(color: _brand, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            email,
+            style: const TextStyle(
+              color: _brandDark,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _WelcomeHeader extends StatelessWidget {
-  const _WelcomeHeader({required this.today, required this.examCount, required this.activityCount});
+  const _WelcomeHeader({
+    required this.today,
+    required this.examCount,
+    required this.activityCount,
+  });
 
   final DateTime today;
   final int examCount;
@@ -661,44 +815,98 @@ class _WelcomeHeader extends StatelessWidget {
         color: _surface,
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [BoxShadow(color: Color(0x0F0F172A), blurRadius: 22, offset: Offset(0, 12))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F0F172A),
+            blurRadius: 22,
+            offset: Offset(0, 12),
+          ),
+        ],
       ),
-      child: Column(children: [
-        Container(height: 6, decoration: const BoxDecoration(gradient: LinearGradient(colors: [_brand, _success, _warning]))),
-        Padding(
-          padding: const EdgeInsets.all(22),
-          child: Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Welcome back', style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: _brandDark, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 6),
-                Text(_summaryText, style: const TextStyle(color: _muted, fontSize: 16, height: 1.45, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 16),
-                Wrap(spacing: 10, runSpacing: 10, children: [
-                  _MetricPill(value: '$examCount', label: examCount == 1 ? 'exam' : 'exams', color: _brand),
-                  _MetricPill(value: '$activityCount', label: activityCount == 1 ? 'activity' : 'activities', color: _success),
-                ]),
-              ]),
+      child: Column(
+        children: [
+          Container(
+            height: 6,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [_brand, _success, _warning]),
             ),
-            const SizedBox(width: 18),
-            _DateBox(today: today),
-          ]),
-        ),
-      ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(22),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back',
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: _brandDark,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _summaryText,
+                        style: const TextStyle(
+                          color: _muted,
+                          fontSize: 16,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _MetricPill(
+                            value: '$examCount',
+                            label: examCount == 1 ? 'exam' : 'exams',
+                            color: _brand,
+                          ),
+                          _MetricPill(
+                            value: '$activityCount',
+                            label: activityCount == 1
+                                ? 'activity'
+                                : 'activities',
+                            color: _success,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 18),
+                _DateBox(today: today),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   String get _summaryText {
     final examPart = examCount == 1 ? '1 exam' : '$examCount exams';
-    final activityPart = activityCount == 1 ? '1 activity' : '$activityCount activities';
-    if (activityCount == 0) return 'You have no assessment activity scheduled today.';
+    final activityPart = activityCount == 1
+        ? '1 activity'
+        : '$activityCount activities';
+    if (activityCount == 0)
+      return 'You have no assessment activity scheduled today.';
     if (examCount == 0) return 'You have $activityPart today.';
     return 'You have $examPart and $activityPart today.';
   }
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill({required this.value, required this.label, required this.color});
+  const _MetricPill({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
 
   final String value;
   final String label;
@@ -713,11 +921,23 @@ class _MetricPill extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.18)),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w800)),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF334155),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -731,21 +951,39 @@ class _DateBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(color: _surfaceSoft, border: Border.all(color: _line), borderRadius: BorderRadius.circular(16)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        const Text('Today', style: TextStyle(color: _muted, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(
-          '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}',
-          style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 16),
-        ),
-      ]),
+      decoration: BoxDecoration(
+        color: _surfaceSoft,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text(
+            'Today',
+            style: TextStyle(color: _muted, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}',
+            style: const TextStyle(
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.onGradeBook, required this.onIdentity, required this.onSchedule});
+  const _QuickActions({
+    required this.onGradeBook,
+    required this.onIdentity,
+    required this.onSchedule,
+  });
 
   final VoidCallback onGradeBook;
   final VoidCallback onIdentity;
@@ -756,7 +994,9 @@ class _QuickActions extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 720;
-        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
+        final width = compact
+            ? constraints.maxWidth
+            : (constraints.maxWidth - 24) / 3;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -774,8 +1014,8 @@ class _QuickActions extends StatelessWidget {
             SizedBox(
               width: width,
               child: _QuickAction(
-                title: 'Identity setup',
-                subtitle: 'Prepare access',
+                title: 'Face enrollment & test',
+                subtitle: 'Capture and verify identity',
                 icon: Icons.account_circle_outlined,
                 color: _purple,
                 onTap: onIdentity,
@@ -799,7 +1039,13 @@ class _QuickActions extends StatelessWidget {
 }
 
 class _QuickAction extends StatelessWidget {
-  const _QuickAction({required this.title, required this.subtitle, required this.icon, required this.color, required this.onTap});
+  const _QuickAction({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   final String title;
   final String subtitle;
@@ -817,24 +1063,49 @@ class _QuickAction extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(border: Border.all(color: _line), borderRadius: BorderRadius.circular(18)),
-          child: Row(children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(14)),
-              child: Icon(icon, color: color, size: 23),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 2),
-                Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _muted, fontWeight: FontWeight.w600)),
-              ]),
-            ),
-            const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-          ]),
+          decoration: BoxDecoration(
+            border: Border.all(color: _line),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 23),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: _brandDark,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+            ],
+          ),
         ),
       ),
     );
@@ -852,29 +1123,75 @@ class _NextAssessmentCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_brandDark, Color(0xFF113A63), _brand]),
+        gradient: const LinearGradient(
+          colors: [_brandDark, Color(0xFF113A63), _brand],
+        ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: Color(0x260F172A), blurRadius: 28, offset: Offset(0, 16))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x260F172A),
+            blurRadius: 28,
+            offset: Offset(0, 16),
+          ),
+        ],
       ),
-      child: LayoutBuilder(builder: (context, constraints) {
-        final compact = constraints.maxWidth < 700;
-        final details = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _GlassLabel(text: 'Next assessment'),
-          const SizedBox(height: 14),
-          Text(assessment.title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text('${assessment.course.code} • ${assessment.durationMinutes} min • ${assessment.scheduleLabel()}', style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text('Lecturer: ${assessment.course.lecturer}', style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w600)),
-        ]);
-        final action = FilledButton(
-          onPressed: onOpen,
-          style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: _brandDark, minimumSize: const Size(170, 54)),
-          child: Text(_buttonLabelFor(assessment)),
-        );
-        if (compact) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [details, const SizedBox(height: 18), action]);
-        return Row(children: [Expanded(child: details), const SizedBox(width: 20), action]);
-      }),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 700;
+          final details = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _GlassLabel(text: 'Next assessment'),
+              const SizedBox(height: 14),
+              Text(
+                assessment.title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${assessment.course.code} • ${assessment.durationMinutes} min • ${assessment.scheduleLabel()}',
+                style: const TextStyle(
+                  color: Color(0xFFE2E8F0),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Lecturer: ${assessment.course.lecturer}',
+                style: const TextStyle(
+                  color: Color(0xFFCBD5E1),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+          final action = FilledButton(
+            onPressed: onOpen,
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: _brandDark,
+              minimumSize: const Size(170, 54),
+            ),
+            child: Text(_buttonLabelFor(assessment)),
+          );
+          if (compact)
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [details, const SizedBox(height: 18), action],
+            );
+          return Row(
+            children: [
+              Expanded(child: details),
+              const SizedBox(width: 20),
+              action,
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -888,8 +1205,18 @@ class _GlassLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), border: Border.all(color: Colors.white.withValues(alpha: 0.16)), borderRadius: BorderRadius.circular(999)),
-      child: Text(text, style: const TextStyle(color: Color(0xFFDBEAFE), fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFFDBEAFE),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
@@ -904,16 +1231,33 @@ class _DashboardTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(color: _surface, border: Border.all(color: _line), borderRadius: BorderRadius.circular(16)),
-      child: Wrap(spacing: 6, runSpacing: 6, children: [
-        for (final tab in _DashboardTab.values) _TabButton(label: tab.label, selected: selected == tab, onTap: () => onChanged(tab)),
-      ]),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final tab in _DashboardTab.values)
+            _TabButton(
+              label: tab.label,
+              selected: selected == tab,
+              onTap: () => onChanged(tab),
+            ),
+        ],
+      ),
     );
   }
 }
 
 class _TabButton extends StatelessWidget {
-  const _TabButton({required this.label, required this.selected, required this.onTap});
+  const _TabButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
@@ -929,7 +1273,13 @@ class _TabButton extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Text(label, style: TextStyle(color: selected ? Colors.white : const Color(0xFF334155), fontWeight: FontWeight.w900)),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : const Color(0xFF334155),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
       ),
     );
@@ -937,7 +1287,13 @@ class _TabButton extends StatelessWidget {
 }
 
 class _AssessmentList extends StatelessWidget {
-  const _AssessmentList({required this.title, required this.emptyTitle, required this.emptyMessage, required this.assessments, required this.onOpen});
+  const _AssessmentList({
+    required this.title,
+    required this.emptyTitle,
+    required this.emptyMessage,
+    required this.assessments,
+    required this.onOpen,
+  });
 
   final String title;
   final String emptyTitle;
@@ -947,24 +1303,45 @@ class _AssessmentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (assessments.isEmpty) return _EmptyCard(title: emptyTitle, message: emptyMessage);
+    if (assessments.isEmpty)
+      return _EmptyCard(title: emptyTitle, message: emptyMessage);
     return Container(
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(color: _surface, border: Border.all(color: _line), borderRadius: BorderRadius.circular(20)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(height: 4, color: _brand),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
-          child: Row(children: [
-            Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900))),
-            _CountBadge(count: assessments.length),
-          ]),
-        ),
-        for (var index = 0; index < assessments.length; index++) ...[
-          if (index > 0) const Divider(height: 1, color: _line),
-          _AssessmentRow(assessment: assessments[index], onOpen: () => onOpen(assessments[index])),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(height: 4, color: _brand),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: _brandDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                _CountBadge(count: assessments.length),
+              ],
+            ),
+          ),
+          for (var index = 0; index < assessments.length; index++) ...[
+            if (index > 0) const Divider(height: 1, color: _line),
+            _AssessmentRow(
+              assessment: assessments[index],
+              onOpen: () => onOpen(assessments[index]),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
@@ -978,8 +1355,14 @@ class _CountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(999)),
-      child: Text('$count', style: const TextStyle(color: _brand, fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$count',
+        style: const TextStyle(color: _brand, fontWeight: FontWeight.w900),
+      ),
     );
   }
 }
@@ -996,35 +1379,95 @@ class _AssessmentRow extends StatelessWidget {
     return Container(
       color: accent.withValues(alpha: 0.035),
       padding: const EdgeInsets.all(16),
-      child: LayoutBuilder(builder: (context, constraints) {
-        final compact = constraints.maxWidth < 680;
-        final content = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: 4, height: 54, color: accent),
-          const SizedBox(width: 12),
-          Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)), child: Icon(_iconFor(assessment), color: accent)),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(assessment.title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 16)),
-            const SizedBox(height: 4),
-            Text('${assessment.course.code} • ${assessment.course.title}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w700)),
-            const SizedBox(height: 5),
-            Text('${assessment.durationMinutes} min • ${assessment.scheduleLabel()} • ${assessment.course.lecturer}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _muted, fontWeight: FontWeight.w600)),
-          ])),
-        ]);
-        final action = FilledButton(
-          onPressed: onOpen,
-          style: FilledButton.styleFrom(backgroundColor: accent, foregroundColor: Colors.white, minimumSize: const Size(140, 44)),
-          child: Text(_buttonLabelFor(assessment)),
-        );
-        if (compact) return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [content, const SizedBox(height: 14), action]);
-        return Row(children: [Expanded(child: content), const SizedBox(width: 16), action]);
-      }),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 680;
+          final content = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(width: 4, height: 54, color: accent),
+              const SizedBox(width: 12),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(_iconFor(assessment), color: accent),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      assessment.title,
+                      style: const TextStyle(
+                        color: _brandDark,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${assessment.course.code} • ${assessment.course.title}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF334155),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${assessment.durationMinutes} min • ${assessment.scheduleLabel()} • ${assessment.course.lecturer}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+          final action = FilledButton(
+            onPressed: onOpen,
+            style: FilledButton.styleFrom(
+              backgroundColor: accent,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(140, 44),
+            ),
+            child: Text(_buttonLabelFor(assessment)),
+          );
+          if (compact)
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [content, const SizedBox(height: 14), action],
+            );
+          return Row(
+            children: [
+              Expanded(child: content),
+              const SizedBox(width: 16),
+              action,
+            ],
+          );
+        },
+      ),
     );
   }
 }
 
 class _LearningUpdates extends StatelessWidget {
-  const _LearningUpdates({required this.assignments, required this.feedbackItems, required this.onOpenAssignment, required this.onOpenFeedback});
+  const _LearningUpdates({
+    required this.assignments,
+    required this.feedbackItems,
+    required this.onOpenAssignment,
+    required this.onOpenFeedback,
+  });
 
   final List<DemoAssignmentItem> assignments;
   final List<DemoFeedbackItem> feedbackItems;
@@ -1033,25 +1476,57 @@ class _LearningUpdates extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (assignments.isEmpty && feedbackItems.isEmpty) return const SizedBox.shrink();
+    if (assignments.isEmpty && feedbackItems.isEmpty)
+      return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: _surface, border: Border.all(color: _line), borderRadius: BorderRadius.circular(20)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('Learning updates', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 12),
-        if (assignments.isNotEmpty)
-          _UpdateSummaryRow(title: 'Assignments due', subtitle: '${assignments.length} item${assignments.length == 1 ? '' : 's'} available', actionLabel: 'Open', onTap: () => onOpenAssignment(assignments.first)),
-        if (assignments.isNotEmpty && feedbackItems.isNotEmpty) const Divider(height: 18, color: _line),
-        if (feedbackItems.isNotEmpty)
-          _UpdateSummaryRow(title: 'Feedback available', subtitle: '${feedbackItems.length} item${feedbackItems.length == 1 ? '' : 's'} released', actionLabel: 'View', onTap: () => onOpenFeedback(feedbackItems.first)),
-      ]),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Learning updates',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (assignments.isNotEmpty)
+            _UpdateSummaryRow(
+              title: 'Assignments due',
+              subtitle:
+                  '${assignments.length} item${assignments.length == 1 ? '' : 's'} available',
+              actionLabel: 'Open',
+              onTap: () => onOpenAssignment(assignments.first),
+            ),
+          if (assignments.isNotEmpty && feedbackItems.isNotEmpty)
+            const Divider(height: 18, color: _line),
+          if (feedbackItems.isNotEmpty)
+            _UpdateSummaryRow(
+              title: 'Feedback available',
+              subtitle:
+                  '${feedbackItems.length} item${feedbackItems.length == 1 ? '' : 's'} released',
+              actionLabel: 'View',
+              onTap: () => onOpenFeedback(feedbackItems.first),
+            ),
+        ],
+      ),
     );
   }
 }
 
 class _UpdatesList extends StatelessWidget {
-  const _UpdatesList({required this.assignments, required this.feedbackItems, required this.onOpenAssignment, required this.onOpenFeedback});
+  const _UpdatesList({
+    required this.assignments,
+    required this.feedbackItems,
+    required this.onOpenAssignment,
+    required this.onOpenFeedback,
+  });
 
   final List<DemoAssignmentItem> assignments;
   final List<DemoFeedbackItem> feedbackItems;
@@ -1061,27 +1536,62 @@ class _UpdatesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (assignments.isEmpty && feedbackItems.isEmpty) {
-      return const _EmptyCard(title: 'No learning updates', message: 'Assignments and lecturer feedback will appear here.');
+      return const _EmptyCard(
+        title: 'No learning updates',
+        message: 'Assignments and lecturer feedback will appear here.',
+      );
     }
     return Container(
-      decoration: BoxDecoration(color: _surface, border: Border.all(color: _line), borderRadius: BorderRadius.circular(20)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(padding: const EdgeInsets.all(18), child: Text('Updates', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900))),
-        for (final assignment in assignments) ...[
-          const Divider(height: 1, color: _line),
-          _UpdateDetailRow(title: assignment.title, subtitle: '${assignment.course.code} • Due ${assignment.dueLabel}', actionLabel: 'Open', onTap: () => onOpenAssignment(assignment)),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Text(
+              'Updates',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: _brandDark,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          for (final assignment in assignments) ...[
+            const Divider(height: 1, color: _line),
+            _UpdateDetailRow(
+              title: assignment.title,
+              subtitle:
+                  '${assignment.course.code} • Due ${assignment.dueLabel}',
+              actionLabel: 'Open',
+              onTap: () => onOpenAssignment(assignment),
+            ),
+          ],
+          for (final item in feedbackItems) ...[
+            const Divider(height: 1, color: _line),
+            _UpdateDetailRow(
+              title: item.title,
+              subtitle: '${item.course.code} • ${item.scoreLabel}',
+              actionLabel: 'View',
+              onTap: () => onOpenFeedback(item),
+            ),
+          ],
         ],
-        for (final item in feedbackItems) ...[
-          const Divider(height: 1, color: _line),
-          _UpdateDetailRow(title: item.title, subtitle: '${item.course.code} • ${item.scoreLabel}', actionLabel: 'View', onTap: () => onOpenFeedback(item)),
-        ],
-      ]),
+      ),
     );
   }
 }
 
 class _UpdateSummaryRow extends StatelessWidget {
-  const _UpdateSummaryRow({required this.title, required this.subtitle, required this.actionLabel, required this.onTap});
+  const _UpdateSummaryRow({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
 
   final String title;
   final String subtitle;
@@ -1090,19 +1600,43 @@ class _UpdateSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 3),
-        Text(subtitle, style: const TextStyle(color: _muted, fontWeight: FontWeight.w600)),
-      ])),
-      TextButton(onPressed: onTap, child: Text(actionLabel)),
-    ]);
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: _brandDark,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: _muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        TextButton(onPressed: onTap, child: Text(actionLabel)),
+      ],
+    );
   }
 }
 
 class _UpdateDetailRow extends StatelessWidget {
-  const _UpdateDetailRow({required this.title, required this.subtitle, required this.actionLabel, required this.onTap});
+  const _UpdateDetailRow({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
 
   final String title;
   final String subtitle;
@@ -1113,14 +1647,33 @@ class _UpdateDetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: _muted, fontWeight: FontWeight.w600)),
-        ])),
-        OutlinedButton(onPressed: onTap, child: Text(actionLabel)),
-      ]),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: _brandDark,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: _muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          OutlinedButton(onPressed: onTap, child: Text(actionLabel)),
+        ],
+      ),
     );
   }
 }
@@ -1135,12 +1688,28 @@ class _EmptyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: _surface, border: Border.all(color: _line), borderRadius: BorderRadius.circular(18)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: _brandDark, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 6),
-        Text(message, style: const TextStyle(color: _muted, fontWeight: FontWeight.w600)),
-      ]),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: Border.all(color: _line),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            style: const TextStyle(color: _muted, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../face_demo/demo_face_id_service.dart';
 import '../face_demo/demo_face_id_view.dart';
 import '../proctoring_demo/audio_system_review_view.dart';
+import '../proctoring_demo/audio_calibration_profile.dart';
+import '../proctoring_demo/gaze_calibration_view.dart';
 import '../proctoring_demo/proctoring_demo_home.dart';
+import '../rust/api/gaze_calibration.dart';
 import 'demo_exam_attempt_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
@@ -38,6 +41,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   );
 
   final DemoFaceIdService _faceIdService = DemoFaceIdService();
+  final AudioCalibrationProfileStore _audioProfileStore =
+      AudioCalibrationProfileStore();
   late final ExamStartApprovalService _approvalService;
   late DemoFaceIdSnapshot _faceId;
   late String _attemptId;
@@ -53,6 +58,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       : 'Complete the required steps before starting.';
   AudioSystemReviewResult? _audioSystemReview;
   ExamStartApprovalResult? _approvalResult;
+  GazeCalibrationProfileV2? _gazeCalibration;
 
   @override
   void initState() {
@@ -74,11 +80,15 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool get _roomOk => !_needsChecks || (_roomApproved && _manifestPath != null);
   bool get _audioOk => !_needsChecks || _audioApproved;
   bool get _systemOk => !_needsChecks || _systemApproved;
-  bool get _allChecksReady => _faceOk && _roomOk && _audioOk && _systemOk;
+  bool get _calibrationOk => !_needsChecks || _gazeCalibration?.usable == true;
+  bool get _allChecksReady =>
+      _faceOk && _calibrationOk && _roomOk && _audioOk && _systemOk;
   bool get _approvalRequired =>
       widget.assessment.remoteProctored || widget.assessment.graded;
   bool get _approvalOk =>
-      _allowExamOverride || !_approvalRequired || (_startApproved && _startToken != null);
+      _allowExamOverride ||
+      !_approvalRequired ||
+      (_startApproved && _startToken != null);
 
   bool _canStartOnDevice(BuildContext context) {
     final phoneSized = MediaQuery.sizeOf(context).shortestSide < 600;
@@ -86,7 +96,9 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   bool _canRequestApproval(BuildContext context) {
-    return _allChecksReady && _canStartOnDevice(context) && !_requestingApproval;
+    return _allChecksReady &&
+        _canStartOnDevice(context) &&
+        !_requestingApproval;
   }
 
   bool _canStart(BuildContext context) {
@@ -107,10 +119,20 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   @override
   Widget build(BuildContext context) {
     final questions = DemoExamService.questionsFor(widget.assessment);
-    final checksPassed = <bool>[_faceOk, _roomOk, _audioOk, _systemOk]
-        .where((passed) => passed)
-        .length;
-    final requiredChecks = <bool>[_faceOk, _roomOk, _audioOk, _systemOk].length;
+    final checksPassed = <bool>[
+      _faceOk,
+      _calibrationOk,
+      _roomOk,
+      _audioOk,
+      _systemOk,
+    ].where((passed) => passed).length;
+    final requiredChecks = <bool>[
+      _faceOk,
+      _calibrationOk,
+      _roomOk,
+      _audioOk,
+      _systemOk,
+    ].length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -164,11 +186,15 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final wide = constraints.maxWidth >= 940;
-                        final steps = _PreparationSteps(steps: _buildSteps(context));
+                        final steps = _PreparationSteps(
+                          steps: _buildSteps(context),
+                        );
                         final startPanel = _StartPanel(
                           assessment: widget.assessment,
                           ready: _canStart(context),
-                          startLabel: _allowExamOverride ? 'Start now' : _startLabel,
+                          startLabel: _allowExamOverride
+                              ? 'Start now'
+                              : _startLabel,
                           approvalCard: _ReadinessCard(
                             approved: _approvalOk,
                             requesting: _requestingApproval,
@@ -180,7 +206,11 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
 
                         if (!wide) {
                           return Column(
-                            children: [steps, const SizedBox(height: 16), startPanel],
+                            children: [
+                              steps,
+                              const SizedBox(height: 16),
+                              startPanel,
+                            ],
                           );
                         }
                         return Row(
@@ -219,8 +249,21 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       if (_needsChecks)
         _SetupStepData(
           number: 2,
+          title: 'Personal gaze calibration',
+          subtitle:
+              'Follow five screen markers so monitoring can use your normal '
+              'eye and head position instead of generic thresholds.',
+          status: _calibrationOk ? _StepStatus.complete : _StepStatus.pending,
+          icon: Icons.center_focus_strong,
+          actionLabel: _calibrationOk ? 'Calibrate again' : 'Start calibration',
+          onPressed: _openGazeCalibration,
+        ),
+      if (_needsChecks)
+        _SetupStepData(
+          number: 3,
           title: 'Camera and room check',
-          subtitle: 'Show your desk and exam area clearly before the exam begins.',
+          subtitle:
+              'Show your desk and exam area clearly before the exam begins.',
           status: _roomOk ? _StepStatus.complete : _StepStatus.pending,
           icon: Icons.photo_camera_front_outlined,
           actionLabel: _roomOk ? 'Check again' : 'Start check',
@@ -228,17 +271,21 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         ),
       if (_needsChecks)
         _SetupStepData(
-          number: 3,
+          number: 4,
           title: 'Sound and device check',
-          subtitle: 'Confirm your microphone and device are ready for the assessment.',
-          status: _audioOk && _systemOk ? _StepStatus.complete : _StepStatus.pending,
+          subtitle: _calibrationOk
+              ? 'Confirm your microphone and device are ready for the assessment.'
+              : 'Complete personal gaze calibration before microphone observation begins.',
+          status: _audioOk && _systemOk
+              ? _StepStatus.complete
+              : _StepStatus.pending,
           icon: Icons.devices_outlined,
           actionLabel: _audioOk && _systemOk ? 'Check again' : 'Start check',
-          onPressed: _openAudioSystemReview,
+          onPressed: _calibrationOk ? _openAudioSystemReview : null,
         ),
       if (_approvalRequired && !_allowExamOverride)
         _SetupStepData(
-          number: _needsChecks ? 4 : 2,
+          number: _needsChecks ? 5 : 2,
           title: 'Final readiness',
           subtitle: _allChecksReady
               ? 'Confirm that everything is ready before you start.'
@@ -246,14 +293,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           status: _approvalOk
               ? _StepStatus.complete
               : _requestingApproval
-                  ? _StepStatus.running
-                  : _StepStatus.pending,
+              ? _StepStatus.running
+              : _StepStatus.pending,
           icon: Icons.verified_outlined,
           actionLabel: _requestingApproval
               ? 'Checking...'
               : _approvalOk
-                  ? 'Ready'
-                  : 'Confirm readiness',
+              ? 'Ready'
+              : 'Confirm readiness',
           onPressed: _canRequestApproval(context) ? _requestApproval : null,
         ),
     ];
@@ -280,7 +327,9 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         builder: (_) => DemoFaceIdView(
           onComplete: () => setState(() {
             _faceId = _faceIdService.load();
-            _clearApproval('Identity check updated. Please confirm readiness again.');
+            _clearApproval(
+              'Identity check updated. Please confirm readiness again.',
+            );
           }),
         ),
       ),
@@ -288,7 +337,9 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     if (!mounted) return;
     setState(() {
       _faceId = _faceIdService.load();
-      _clearApproval('Identity check completed. Please confirm readiness again.');
+      _clearApproval(
+        'Identity check completed. Please confirm readiness again.',
+      );
     });
   }
 
@@ -296,7 +347,9 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     setState(() {
       _roomApproved = false;
       _manifestPath = null;
-      _clearApproval('Camera and room check changed. Please confirm readiness after all steps are complete.');
+      _clearApproval(
+        'Camera and room check changed. Please confirm readiness after all steps are complete.',
+      );
     });
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -309,14 +362,18 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               setState(() {
                 _roomApproved = false;
                 _manifestPath = null;
-                _clearApproval('Camera and room check was not completed. Please try again.');
+                _clearApproval(
+                  'Camera and room check was not completed. Please try again.',
+                );
               });
               return;
             }
             setState(() {
               _roomApproved = true;
               _manifestPath = manifestPath;
-              _clearApproval('Camera and room check complete. Please confirm readiness after all steps are complete.');
+              _clearApproval(
+                'Camera and room check complete. Please confirm readiness after all steps are complete.',
+              );
             });
             Navigator.of(context).pop();
           },
@@ -325,18 +382,52 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     );
   }
 
+  Future<void> _openGazeCalibration() async {
+    final profile = await Navigator.of(context).push<GazeCalibrationProfileV2>(
+      MaterialPageRoute<GazeCalibrationProfileV2>(
+        builder: (_) => GazeCalibrationView(
+          studentId: _faceId.studentId,
+          examId: widget.assessment.id,
+          attemptId: _attemptId,
+        ),
+      ),
+    );
+    if (!mounted || profile == null) return;
+    setState(() {
+      _gazeCalibration = profile;
+      _clearApproval(
+        'Personal gaze calibration changed. Please confirm readiness again.',
+      );
+    });
+  }
+
   Future<void> _openAudioSystemReview() async {
+    if (!_calibrationOk) {
+      return;
+    }
     final result = await Navigator.of(context).push<AudioSystemReviewResult>(
       MaterialPageRoute<AudioSystemReviewResult>(
         builder: (_) => const AudioSystemReviewView(),
       ),
     );
     if (!mounted || result == null) return;
+    final audioReview = result.audioReview;
+    final audioProfile = result.audioReady && audioReview != null
+        ? await _audioProfileStore.createAndSave(
+            result: audioReview,
+            studentId: _faceId.studentId,
+            examId: widget.assessment.id,
+            attemptId: _attemptId,
+          )
+        : null;
+    if (!mounted) return;
     setState(() {
       _audioSystemReview = result;
-      _audioApproved = result.audioReady;
+      _audioApproved = result.audioReady && audioProfile?.usable == true;
       _systemApproved = result.systemReady;
-      _clearApproval('Sound or device check changed. Please confirm readiness again.');
+      _clearApproval(
+        'Sound or device check changed. Please confirm readiness again.',
+      );
     });
   }
 
@@ -365,15 +456,21 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         roomScanReady: _roomOk,
         audioReady: _audioOk,
         systemReady: _systemOk,
-        audioReview: _audioSystemReview?.audioReview?.toJson() ?? const <String, Object?>{},
-        systemReview: _audioSystemReview?.systemReview?.toJson() ?? const <String, Object?>{},
+        audioReview:
+            _audioSystemReview?.audioReview?.toJson() ??
+            const <String, Object?>{},
+        systemReview:
+            _audioSystemReview?.systemReview?.toJson() ??
+            const <String, Object?>{},
       );
       if (!mounted) return;
       setState(() {
         _requestingApproval = false;
         _approvalResult = result;
         _startApproved = result.approved && result.hasToken;
-        _startToken = result.approved && result.hasToken ? result.examStartToken : null;
+        _startToken = result.approved && result.hasToken
+            ? result.examStartToken
+            : null;
         _approvalMessage = result.approved && result.hasToken
             ? 'Everything is ready. You may now begin.'
             : _friendlyApprovalMessage(result);
@@ -384,7 +481,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         _requestingApproval = false;
         _startApproved = false;
         _startToken = null;
-        _approvalMessage = 'Readiness confirmation could not be completed. Check your connection and try again.';
+        _approvalMessage =
+            'Readiness confirmation could not be completed. Check your connection and try again.';
       });
     }
   }
@@ -403,7 +501,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       await _showPhoneBlockedMessage();
       return;
     }
-    if (!_allowExamOverride && (!_canStart(context) || (_approvalRequired && _startToken == null))) {
+    if (!_allowExamOverride &&
+        (!_canStart(context) || (_approvalRequired && _startToken == null))) {
       await _showBlockedStartMessage();
       return;
     }
@@ -413,14 +512,16 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
           attemptId: _attemptId,
-          examStartToken: _startToken ?? (_allowExamOverride ? 'dev_override_$_attemptId' : ''),
+          examStartToken:
+              _startToken ??
+              (_allowExamOverride ? 'dev_override_$_attemptId' : ''),
           agentDecision: _allowExamOverride
               ? 'testing_override_start'
               : _approvalRequired
-                  ? 'start_approved'
-                  : widget.assessment.attendanceOnly
-                      ? 'attendance_only'
-                      : 'local_setup_ready',
+              ? 'start_approved'
+              : widget.assessment.attendanceOnly
+              ? 'attendance_only'
+              : 'local_setup_ready',
         ),
       ),
     );
@@ -435,7 +536,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         title: const Text('Not ready yet'),
         content: const Text('Complete each required step before starting.'),
         actions: [
-          FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
@@ -451,7 +555,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           'Other assessments may be completed on phone, tablet, desktop, or laptop when allowed by the lecturer.',
         ),
         actions: [
-          FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
@@ -541,7 +648,13 @@ class _PreparationHero extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _HeroTag(assessment.isStrictExam ? 'Supervised exam' : assessment.graded ? 'Graded assessment' : 'Practice'),
+                    _HeroTag(
+                      assessment.isStrictExam
+                          ? 'Supervised exam'
+                          : assessment.graded
+                          ? 'Graded assessment'
+                          : 'Practice',
+                    ),
                     _HeroTag('${assessment.durationMinutes} minutes'),
                     _HeroTag('$questionCount questions'),
                   ],
@@ -665,8 +778,12 @@ class _PreparationStatus extends StatelessWidget {
           Row(
             children: [
               Icon(
-                startReady ? Icons.check_circle : Icons.pending_actions_outlined,
-                color: startReady ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
+                startReady
+                    ? Icons.check_circle
+                    : Icons.pending_actions_outlined,
+                color: startReady
+                    ? const Color(0xFF86EFAC)
+                    : const Color(0xFFBFDBFE),
               ),
               const SizedBox(width: 9),
               Expanded(
@@ -687,7 +804,9 @@ class _PreparationStatus extends StatelessWidget {
               minHeight: 9,
               value: progress.clamp(0.0, 1.0),
               backgroundColor: Colors.white.withValues(alpha: 0.18),
-              color: startReady ? const Color(0xFF22C55E) : const Color(0xFF60A5FA),
+              color: startReady
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFF60A5FA),
             ),
           ),
           const SizedBox(height: 10),
@@ -731,9 +850,9 @@ class _PreparationSteps extends StatelessWidget {
           Text(
             'Preparation steps',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 5),
           const Text(
@@ -763,16 +882,14 @@ class _StepCard extends StatelessWidget {
     final accent = complete
         ? _success
         : running
-            ? _brand
-            : _muted;
+        ? _brand
+        : _muted;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: complete ? const Color(0xFFF0FDF4) : _surfaceSoft,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: complete ? const Color(0xFFBBF7D0) : _line,
-        ),
+        border: Border.all(color: complete ? const Color(0xFFBBF7D0) : _line),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -809,7 +926,10 @@ class _StepCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 step.subtitle,
-                style: const TextStyle(color: _muted, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: _muted,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 10),
               _StepStatusPill(status: step.status),
@@ -821,9 +941,14 @@ class _StepCard extends StatelessWidget {
               backgroundColor: complete ? Colors.white : _brand,
               foregroundColor: complete ? _brand : Colors.white,
               side: complete ? const BorderSide(color: _line) : BorderSide.none,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            icon: Icon(complete ? Icons.refresh_rounded : Icons.arrow_forward_rounded, size: 18),
+            icon: Icon(
+              complete ? Icons.refresh_rounded : Icons.arrow_forward_rounded,
+              size: 18,
+            ),
             label: Text(step.actionLabel),
           );
 
@@ -833,7 +958,11 @@ class _StepCard extends StatelessWidget {
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [leading, const SizedBox(width: 12), Expanded(child: text)],
+                  children: [
+                    leading,
+                    const SizedBox(width: 12),
+                    Expanded(child: text),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 SizedBox(width: double.infinity, child: action),
@@ -875,7 +1004,11 @@ class _StepNumber extends StatelessWidget {
       ),
       child: Text(
         '$number',
-        style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -891,18 +1024,18 @@ class _StepStatusPill extends StatelessWidget {
     final color = status == _StepStatus.complete
         ? _success
         : status == _StepStatus.running
-            ? _brand
-            : _muted;
+        ? _brand
+        : _muted;
     final label = status == _StepStatus.complete
         ? 'Completed'
         : status == _StepStatus.running
-            ? 'Checking now'
-            : 'Waiting';
+        ? 'Checking now'
+        : 'Waiting';
     final icon = status == _StepStatus.complete
         ? Icons.check_circle
         : status == _StepStatus.running
-            ? Icons.sync
-            : Icons.radio_button_unchecked;
+        ? Icons.sync
+        : Icons.radio_button_unchecked;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -917,7 +1050,11 @@ class _StepStatusPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -965,20 +1102,30 @@ class _StartPanel extends StatelessWidget {
               Text(
                 'Start summary',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: _brandDark,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  color: _brandDark,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 12),
-              _SummaryLine(icon: Icons.book_outlined, label: assessment.course.code),
-              _SummaryLine(icon: Icons.schedule_outlined, label: '${assessment.durationMinutes} minutes'),
+              _SummaryLine(
+                icon: Icons.book_outlined,
+                label: assessment.course.code,
+              ),
+              _SummaryLine(
+                icon: Icons.schedule_outlined,
+                label: '${assessment.durationMinutes} minutes',
+              ),
               _SummaryLine(
                 icon: Icons.check_circle_outline,
-                label: assessment.remoteProctored ? 'Preparation required' : 'Standard access',
+                label: assessment.remoteProctored
+                    ? 'Preparation required'
+                    : 'Standard access',
               ),
               _SummaryLine(
                 icon: Icons.rate_review_outlined,
-                label: assessment.graded ? 'Submission will be reviewed' : 'Feedback activity',
+                label: assessment.graded
+                    ? 'Submission will be reviewed'
+                    : 'Feedback activity',
               ),
               const SizedBox(height: 18),
               SizedBox(
@@ -987,12 +1134,20 @@ class _StartPanel extends StatelessWidget {
                   onPressed: onStart,
                   style: FilledButton.styleFrom(
                     backgroundColor: ready ? _brand : const Color(0xFFCBD5E1),
-                    foregroundColor: ready ? Colors.white : const Color(0xFF475569),
+                    foregroundColor: ready
+                        ? Colors.white
+                        : const Color(0xFF475569),
                     minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     textStyle: const TextStyle(fontWeight: FontWeight.w900),
                   ),
-                  icon: Icon(ready ? Icons.play_arrow_rounded : Icons.lock_outline_rounded),
+                  icon: Icon(
+                    ready
+                        ? Icons.play_arrow_rounded
+                        : Icons.lock_outline_rounded,
+                  ),
                   label: Text(startLabel),
                 ),
               ),
@@ -1062,8 +1217,8 @@ class _ReadinessCard extends StatelessWidget {
     final color = requesting
         ? _brand
         : approved
-            ? _success
-            : _warning;
+        ? _success
+        : _warning;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1078,8 +1233,8 @@ class _ReadinessCard extends StatelessWidget {
             requesting
                 ? Icons.sync
                 : approved
-                    ? Icons.verified_outlined
-                    : Icons.info_outline,
+                ? Icons.verified_outlined
+                : Icons.info_outline,
             color: color,
           ),
           const SizedBox(width: 10),
@@ -1090,13 +1245,15 @@ class _ReadinessCard extends StatelessWidget {
                 Text(
                   approved ? 'Ready' : 'Readiness status',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: _brandDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: _brandDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(message, style: const TextStyle(color: Color(0xFF334155))),
-                if (result != null && !approved && result!.issues.isNotEmpty) ...[
+                if (result != null &&
+                    !approved &&
+                    result!.issues.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   ...result!.issues.map((issue) => Text('• $issue')),
                 ],
@@ -1124,7 +1281,11 @@ class _SimpleReminder extends StatelessWidget {
       ),
       child: const Text(
         'Sit in a quiet place, keep your device charged, and stay on the assessment screen until you submit.',
-        style: TextStyle(color: _muted, height: 1.45, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: _muted,
+          height: 1.45,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

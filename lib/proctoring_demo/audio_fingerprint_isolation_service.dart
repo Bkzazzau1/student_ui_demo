@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'native_audio_intelligence_bridge.dart';
+import 'audio_calibration_profile.dart';
 
 class AudioIsolationResult {
   const AudioIsolationResult({
@@ -53,10 +54,12 @@ class AudioFingerprintIsolationService {
     NativeAudioIntelligenceBridge nativeBridge =
         const GeneratedNativeAudioIntelligenceBridge(),
     this.sampleRate = 44100,
+    this.calibration,
   }) : _nativeBridge = nativeBridge;
 
   final NativeAudioIntelligenceBridge _nativeBridge;
   final int sampleRate;
+  final AudioCalibrationProfile? calibration;
 
   final List<double> _recentRms = <double>[];
   final List<double> _recentPeak = <double>[];
@@ -75,7 +78,7 @@ class AudioFingerprintIsolationService {
     );
     if (nativeResult != null && nativeResult.ready) {
       _lastNativeFingerprint = nativeResult.fingerprint;
-      return _fromNative(nativeResult);
+      return _applyCalibration(_fromNative(nativeResult));
     }
 
     final data = ByteData.sublistView(chunk);
@@ -174,19 +177,49 @@ class AudioFingerprintIsolationService {
         ? 'steady_allowed_ambient_noise'
         : 'unclear_environment_sound';
 
+    return _applyCalibration(
+      AudioIsolationResult(
+        rms: rms,
+        peak: peak,
+        zeroCrossingRate: zcr,
+        dynamicVariation: variation,
+        voiceConfidence: voiceConfidence,
+        repeatedFingerprint: repeated,
+        fingerprint: fingerprint,
+        label: label,
+        humanVoiceLikely: humanVoiceLikely,
+        nearVoiceLikely: nearVoiceLikely,
+        possibleFarVoiceLikely: possibleFarVoiceLikely,
+        allowedAmbientLikely: allowedAmbientLikely,
+      ),
+    );
+  }
+
+  AudioIsolationResult _applyCalibration(AudioIsolationResult result) {
+    final profile = calibration;
+    if (profile == null || !profile.usable) return result;
+    final rmsAllowance = math.max(0.004, profile.noiseFloorRms * 2.5);
+    final variationAllowance = math.max(0.006, profile.dynamicVariation * 2.5);
+    final matchesBaseline =
+        (result.rms - profile.averageRms).abs() <= rmsAllowance &&
+        (result.dynamicVariation - profile.dynamicVariation).abs() <=
+            variationAllowance &&
+        !result.nearVoiceLikely &&
+        !result.possibleFarVoiceLikely;
+    if (!matchesBaseline) return result;
     return AudioIsolationResult(
-      rms: rms,
-      peak: peak,
-      zeroCrossingRate: zcr,
-      dynamicVariation: variation,
-      voiceConfidence: voiceConfidence,
-      repeatedFingerprint: repeated,
-      fingerprint: fingerprint,
-      label: label,
-      humanVoiceLikely: humanVoiceLikely,
-      nearVoiceLikely: nearVoiceLikely,
-      possibleFarVoiceLikely: possibleFarVoiceLikely,
-      allowedAmbientLikely: allowedAmbientLikely,
+      rms: result.rms,
+      peak: result.peak,
+      zeroCrossingRate: result.zeroCrossingRate,
+      dynamicVariation: result.dynamicVariation,
+      voiceConfidence: result.voiceConfidence,
+      repeatedFingerprint: result.repeatedFingerprint,
+      fingerprint: result.fingerprint,
+      label: 'calibrated_allowed_ambient_noise',
+      humanVoiceLikely: false,
+      nearVoiceLikely: false,
+      possibleFarVoiceLikely: false,
+      allowedAmbientLikely: true,
     );
   }
 

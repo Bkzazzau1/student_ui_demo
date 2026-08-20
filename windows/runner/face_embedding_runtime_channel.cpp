@@ -10,6 +10,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <windows.h>
+#include <wincrypt.h>
 
 #ifdef KSLAS_ENABLE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
@@ -29,6 +31,55 @@ std::string ReadString(const flutter::EncodableMap* map, const char* key) {
   const auto* value = Find(map, key);
   const auto* text = value ? std::get_if<std::string>(value) : nullptr;
   return text ? *text : std::string();
+}
+
+bool StoreProtectedTemplate(const flutter::EncodableMap* args) {
+  const auto path = ReadString(args, "path");
+  const auto value = ReadString(args, "template_json");
+  const auto entropy_text = ReadString(args, "entropy");
+  if (path.empty() || value.empty() || entropy_text.empty()) return false;
+  DATA_BLOB input{static_cast<DWORD>(value.size()),
+                  reinterpret_cast<BYTE*>(const_cast<char*>(value.data()))};
+  DATA_BLOB entropy{static_cast<DWORD>(entropy_text.size()),
+                    reinterpret_cast<BYTE*>(const_cast<char*>(entropy_text.data()))};
+  DATA_BLOB encrypted{};
+  if (!CryptProtectData(&input, L"K-SLAS face identity template", &entropy,
+                        nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN,
+                        &encrypted)) {
+    return false;
+  }
+  std::ofstream output(path, std::ios::binary | std::ios::trunc);
+  const bool stored = output.good() &&
+      static_cast<bool>(output.write(reinterpret_cast<const char*>(encrypted.pbData),
+                                     encrypted.cbData));
+  output.close();
+  LocalFree(encrypted.pbData);
+  return stored;
+}
+
+flutter::EncodableValue LoadProtectedTemplate(const flutter::EncodableMap* args) {
+  const auto path = ReadString(args, "path");
+  const auto entropy_text = ReadString(args, "entropy");
+  std::ifstream input(path, std::ios::binary | std::ios::ate);
+  if (!input.good() || entropy_text.empty()) return flutter::EncodableValue();
+  const auto length = input.tellg();
+  if (length <= 0 || length > 1024 * 1024) return flutter::EncodableValue();
+  input.seekg(0);
+  std::vector<BYTE> encrypted(static_cast<size_t>(length));
+  if (!input.read(reinterpret_cast<char*>(encrypted.data()), length)) {
+    return flutter::EncodableValue();
+  }
+  DATA_BLOB protected_blob{static_cast<DWORD>(encrypted.size()), encrypted.data()};
+  DATA_BLOB entropy{static_cast<DWORD>(entropy_text.size()),
+                    reinterpret_cast<BYTE*>(const_cast<char*>(entropy_text.data()))};
+  DATA_BLOB clear{};
+  if (!CryptUnprotectData(&protected_blob, nullptr, &entropy, nullptr, nullptr,
+                          CRYPTPROTECT_UI_FORBIDDEN, &clear)) {
+    return flutter::EncodableValue();
+  }
+  std::string value(reinterpret_cast<const char*>(clear.pbData), clear.cbData);
+  LocalFree(clear.pbData);
+  return flutter::EncodableValue(value);
 }
 
 class FaceEmbeddingEngine {
@@ -161,6 +212,10 @@ void RegisterFaceEmbeddingRuntimeChannel(flutter::BinaryMessenger* messenger) {
       result->Success(engine.Health());
     } else if (call.method_name() == "embedAlignedRgb") {
       result->Success(engine.Embed(args));
+    } else if (call.method_name() == "storeProtectedTemplate") {
+      result->Success(StoreProtectedTemplate(args));
+    } else if (call.method_name() == "loadProtectedTemplate") {
+      result->Success(LoadProtectedTemplate(args));
     } else {
       result->NotImplemented();
     }

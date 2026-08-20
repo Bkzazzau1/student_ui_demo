@@ -6,8 +6,58 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `unique_zones`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `mean`, `stddev`, `unique_zones`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+GazeCalibrationProfileV2 buildGazeCalibrationProfileV2({
+  required List<GazeCalibrationSample> samples,
+  required String studentId,
+  required String deviceId,
+  required String examId,
+  required String attemptId,
+  required String cameraId,
+  required int screenWidth,
+  required int screenHeight,
+  required double displayScale,
+  required String modelId,
+  required String modelSha256,
+  required PlatformInt64 createdAtMs,
+  required PlatformInt64 expiresAtMs,
+}) => BrainCoreApi.instance.api
+    .crateApiGazeCalibrationBuildGazeCalibrationProfileV2(
+      samples: samples,
+      studentId: studentId,
+      deviceId: deviceId,
+      examId: examId,
+      attemptId: attemptId,
+      cameraId: cameraId,
+      screenWidth: screenWidth,
+      screenHeight: screenHeight,
+      displayScale: displayScale,
+      modelId: modelId,
+      modelSha256: modelSha256,
+      createdAtMs: createdAtMs,
+      expiresAtMs: expiresAtMs,
+    );
+
+GazeZonePredictionV2 predictCalibratedGazeZoneV2({
+  required GazeCalibrationProfileV2 profile,
+  required double eyeX,
+  required double eyeY,
+  required double headYaw,
+  required double headPitch,
+  required double signalConfidence,
+  required PlatformInt64 nowMs,
+}) => BrainCoreApi.instance.api
+    .crateApiGazeCalibrationPredictCalibratedGazeZoneV2(
+      profile: profile,
+      eyeX: eyeX,
+      eyeY: eyeY,
+      headYaw: headYaw,
+      headPitch: headPitch,
+      signalConfidence: signalConfidence,
+      nowMs: nowMs,
+    );
 
 GazeCalibrationProfile buildGazeCalibrationProfile({
   required List<GazeCalibrationSample> samples,
@@ -82,6 +132,129 @@ class GazeCalibrationProfile {
           reason == other.reason;
 }
 
+class GazeCalibrationProfileV2 {
+  final int profileVersion;
+  final bool usable;
+  final String studentId;
+  final String deviceId;
+  final String examId;
+  final String attemptId;
+  final String cameraId;
+  final int screenWidth;
+  final int screenHeight;
+  final double displayScale;
+  final String modelId;
+  final String modelSha256;
+  final PlatformInt64 createdAtMs;
+  final PlatformInt64 expiresAtMs;
+  final int sampleCount;
+  final double centerEyeX;
+  final double centerEyeY;
+  final double yawBias;
+  final double pitchBias;
+  final double rollBias;
+  final double horizontalStddev;
+  final double verticalStddev;
+  final double yawStddev;
+  final double pitchStddev;
+  final double qualityScore;
+  final List<GazeCalibrationZoneV2> zones;
+  final String reason;
+
+  const GazeCalibrationProfileV2({
+    required this.profileVersion,
+    required this.usable,
+    required this.studentId,
+    required this.deviceId,
+    required this.examId,
+    required this.attemptId,
+    required this.cameraId,
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.displayScale,
+    required this.modelId,
+    required this.modelSha256,
+    required this.createdAtMs,
+    required this.expiresAtMs,
+    required this.sampleCount,
+    required this.centerEyeX,
+    required this.centerEyeY,
+    required this.yawBias,
+    required this.pitchBias,
+    required this.rollBias,
+    required this.horizontalStddev,
+    required this.verticalStddev,
+    required this.yawStddev,
+    required this.pitchStddev,
+    required this.qualityScore,
+    required this.zones,
+    required this.reason,
+  });
+
+  @override
+  int get hashCode =>
+      profileVersion.hashCode ^
+      usable.hashCode ^
+      studentId.hashCode ^
+      deviceId.hashCode ^
+      examId.hashCode ^
+      attemptId.hashCode ^
+      cameraId.hashCode ^
+      screenWidth.hashCode ^
+      screenHeight.hashCode ^
+      displayScale.hashCode ^
+      modelId.hashCode ^
+      modelSha256.hashCode ^
+      createdAtMs.hashCode ^
+      expiresAtMs.hashCode ^
+      sampleCount.hashCode ^
+      centerEyeX.hashCode ^
+      centerEyeY.hashCode ^
+      yawBias.hashCode ^
+      pitchBias.hashCode ^
+      rollBias.hashCode ^
+      horizontalStddev.hashCode ^
+      verticalStddev.hashCode ^
+      yawStddev.hashCode ^
+      pitchStddev.hashCode ^
+      qualityScore.hashCode ^
+      zones.hashCode ^
+      reason.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GazeCalibrationProfileV2 &&
+          runtimeType == other.runtimeType &&
+          profileVersion == other.profileVersion &&
+          usable == other.usable &&
+          studentId == other.studentId &&
+          deviceId == other.deviceId &&
+          examId == other.examId &&
+          attemptId == other.attemptId &&
+          cameraId == other.cameraId &&
+          screenWidth == other.screenWidth &&
+          screenHeight == other.screenHeight &&
+          displayScale == other.displayScale &&
+          modelId == other.modelId &&
+          modelSha256 == other.modelSha256 &&
+          createdAtMs == other.createdAtMs &&
+          expiresAtMs == other.expiresAtMs &&
+          sampleCount == other.sampleCount &&
+          centerEyeX == other.centerEyeX &&
+          centerEyeY == other.centerEyeY &&
+          yawBias == other.yawBias &&
+          pitchBias == other.pitchBias &&
+          rollBias == other.rollBias &&
+          horizontalStddev == other.horizontalStddev &&
+          verticalStddev == other.verticalStddev &&
+          yawStddev == other.yawStddev &&
+          pitchStddev == other.pitchStddev &&
+          qualityScore == other.qualityScore &&
+          zones == other.zones &&
+          reason == other.reason;
+}
+
 class GazeCalibrationSample {
   final String zone;
   final double eyeX;
@@ -129,6 +302,53 @@ class GazeCalibrationSample {
           timestampMs == other.timestampMs;
 }
 
+class GazeCalibrationZoneV2 {
+  final String name;
+  final int sampleCount;
+  final double eyeX;
+  final double eyeY;
+  final double yaw;
+  final double pitch;
+  final double eyeXStddev;
+  final double eyeYStddev;
+
+  const GazeCalibrationZoneV2({
+    required this.name,
+    required this.sampleCount,
+    required this.eyeX,
+    required this.eyeY,
+    required this.yaw,
+    required this.pitch,
+    required this.eyeXStddev,
+    required this.eyeYStddev,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      sampleCount.hashCode ^
+      eyeX.hashCode ^
+      eyeY.hashCode ^
+      yaw.hashCode ^
+      pitch.hashCode ^
+      eyeXStddev.hashCode ^
+      eyeYStddev.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GazeCalibrationZoneV2 &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          sampleCount == other.sampleCount &&
+          eyeX == other.eyeX &&
+          eyeY == other.eyeY &&
+          yaw == other.yaw &&
+          pitch == other.pitch &&
+          eyeXStddev == other.eyeXStddev &&
+          eyeYStddev == other.eyeYStddev;
+}
+
 class GazeZonePrediction {
   final String zone;
   final double confidence;
@@ -160,6 +380,49 @@ class GazeZonePrediction {
           zone == other.zone &&
           confidence == other.confidence &&
           calibrated == other.calibrated &&
+          attentionLevel == other.attentionLevel &&
+          reason == other.reason;
+}
+
+class GazeZonePredictionV2 {
+  final String zone;
+  final double confidence;
+  final bool calibrated;
+  final bool actionable;
+  final double deviationScore;
+  final String attentionLevel;
+  final String reason;
+
+  const GazeZonePredictionV2({
+    required this.zone,
+    required this.confidence,
+    required this.calibrated,
+    required this.actionable,
+    required this.deviationScore,
+    required this.attentionLevel,
+    required this.reason,
+  });
+
+  @override
+  int get hashCode =>
+      zone.hashCode ^
+      confidence.hashCode ^
+      calibrated.hashCode ^
+      actionable.hashCode ^
+      deviationScore.hashCode ^
+      attentionLevel.hashCode ^
+      reason.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GazeZonePredictionV2 &&
+          runtimeType == other.runtimeType &&
+          zone == other.zone &&
+          confidence == other.confidence &&
+          calibrated == other.calibrated &&
+          actionable == other.actionable &&
+          deviationScore == other.deviationScore &&
           attentionLevel == other.attentionLevel &&
           reason == other.reason;
 }

@@ -2,6 +2,7 @@ import 'package:get_storage/get_storage.dart';
 
 import '../rust/api/gaze_calibration.dart';
 import 'gaze_head_pose_estimator.dart';
+import 'gaze_calibration_profile_store.dart';
 
 class CalibratedGazeDecision {
   const CalibratedGazeDecision({
@@ -43,12 +44,24 @@ class CalibratedGazeService {
   final GetStorage _storage;
   final List<GazeCalibrationSample> _samples = <GazeCalibrationSample>[];
   GazeCalibrationProfile? _profile;
+  GazeCalibrationProfileV2? _profileV2;
 
   String get _key => 'gaze_calibration_v1_$attemptId';
-  bool get ready => _profile?.usable == true;
-  int get sampleCount => _profile?.sampleCount ?? _samples.length;
+  bool get ready {
+    final profileV2 = _profileV2;
+    if (profileV2 != null) {
+      return profileV2.usable &&
+          profileV2.expiresAtMs > DateTime.now().toUtc().millisecondsSinceEpoch;
+    }
+    return _profile?.usable == true;
+  }
+
+  int get sampleCount =>
+      _profileV2?.sampleCount ?? _profile?.sampleCount ?? _samples.length;
 
   void load() {
+    _profileV2 = GazeCalibrationProfileStore.profileForAttempt(attemptId);
+    if (_profileV2?.usable == true) return;
     final value = _storage.read<Object?>(_key);
     if (value is! Map) return;
     final json = Map<String, Object?>.from(value);
@@ -101,6 +114,31 @@ class CalibratedGazeService {
         _profile = buildGazeCalibrationProfile(samples: _samples);
         _persist();
       }
+    }
+
+    final profileV2 = _profileV2;
+    if (profileV2 != null && profileV2.usable) {
+      final prediction = predictCalibratedGazeZoneV2(
+        profile: profileV2,
+        eyeX: ((result.gazeX + 1) / 2).clamp(0.0, 1.0),
+        eyeY: ((result.gazeY + 1) / 2).clamp(0.0, 1.0),
+        headYaw: result.yawProxy,
+        headPitch: result.pitchProxy,
+        signalConfidence: result.confidence,
+        nowMs: DateTime.now().millisecondsSinceEpoch,
+      );
+      final deviation =
+          prediction.zone == 'outside_calibrated_screen' ||
+          prediction.deviationScore >= 3.0;
+      return CalibratedGazeDecision(
+        zone: prediction.zone,
+        confidence: prediction.confidence,
+        signalQuality: result.confidence,
+        calibrated: prediction.calibrated,
+        actionable: prediction.actionable,
+        deviating: prediction.actionable && deviation,
+        reason: prediction.reason,
+      );
     }
 
     final profile = _profile;

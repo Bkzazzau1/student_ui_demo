@@ -16,6 +16,7 @@ import 'api/hand_air_board.dart';
 import 'api/hand_gesture.dart';
 import 'api/hand_landmark_runtime.dart';
 import 'api/hand_vision.dart';
+import 'api/liveness_challenge.dart';
 import 'api/lockdown.dart';
 import 'api/native_vision.dart';
 import 'api/proctoring.dart';
@@ -84,6 +85,11 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  GazeCalibrationProfileV2 dco_decode_box_autoadd_gaze_calibration_profile_v_2(
+    dynamic raw,
+  );
+
+  @protected
   GazeHeadPoseDecision dco_decode_box_autoadd_gaze_head_pose_decision(
     dynamic raw,
   );
@@ -143,13 +149,22 @@ abstract class BrainCoreApiApiImplPlatform
   GazeCalibrationProfile dco_decode_gaze_calibration_profile(dynamic raw);
 
   @protected
+  GazeCalibrationProfileV2 dco_decode_gaze_calibration_profile_v_2(dynamic raw);
+
+  @protected
   GazeCalibrationSample dco_decode_gaze_calibration_sample(dynamic raw);
+
+  @protected
+  GazeCalibrationZoneV2 dco_decode_gaze_calibration_zone_v_2(dynamic raw);
 
   @protected
   GazeHeadPoseDecision dco_decode_gaze_head_pose_decision(dynamic raw);
 
   @protected
   GazeZonePrediction dco_decode_gaze_zone_prediction(dynamic raw);
+
+  @protected
+  GazeZonePredictionV2 dco_decode_gaze_zone_prediction_v_2(dynamic raw);
 
   @protected
   HandAirBoardContext dco_decode_hand_air_board_context(dynamic raw);
@@ -207,10 +222,18 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  List<GazeCalibrationZoneV2> dco_decode_list_gaze_calibration_zone_v_2(
+    dynamic raw,
+  );
+
+  @protected
   List<HandLandmarkPoint> dco_decode_list_hand_landmark_point(dynamic raw);
 
   @protected
   List<Float32List> dco_decode_list_list_prim_f_32_strict(dynamic raw);
+
+  @protected
+  List<LivenessObservation> dco_decode_list_liveness_observation(dynamic raw);
 
   @protected
   List<NativeLockdownFinding> dco_decode_list_native_lockdown_finding(
@@ -233,6 +256,12 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  LivenessChallengeResult dco_decode_liveness_challenge_result(dynamic raw);
+
+  @protected
+  LivenessObservation dco_decode_liveness_observation(dynamic raw);
 
   @protected
   MotionAnalysisDecision dco_decode_motion_analysis_decision(dynamic raw);
@@ -371,6 +400,11 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  GazeCalibrationProfileV2 sse_decode_box_autoadd_gaze_calibration_profile_v_2(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   GazeHeadPoseDecision sse_decode_box_autoadd_gaze_head_pose_decision(
     SseDeserializer deserializer,
   );
@@ -452,7 +486,17 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  GazeCalibrationProfileV2 sse_decode_gaze_calibration_profile_v_2(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   GazeCalibrationSample sse_decode_gaze_calibration_sample(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  GazeCalibrationZoneV2 sse_decode_gaze_calibration_zone_v_2(
     SseDeserializer deserializer,
   );
 
@@ -463,6 +507,11 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   GazeZonePrediction sse_decode_gaze_zone_prediction(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  GazeZonePredictionV2 sse_decode_gaze_zone_prediction_v_2(
     SseDeserializer deserializer,
   );
 
@@ -538,12 +587,22 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  List<GazeCalibrationZoneV2> sse_decode_list_gaze_calibration_zone_v_2(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<HandLandmarkPoint> sse_decode_list_hand_landmark_point(
     SseDeserializer deserializer,
   );
 
   @protected
   List<Float32List> sse_decode_list_list_prim_f_32_strict(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<LivenessObservation> sse_decode_list_liveness_observation(
     SseDeserializer deserializer,
   );
 
@@ -568,6 +627,16 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  LivenessChallengeResult sse_decode_liveness_challenge_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  LivenessObservation sse_decode_liveness_observation(
+    SseDeserializer deserializer,
+  );
 
   @protected
   MotionAnalysisDecision sse_decode_motion_analysis_decision(
@@ -740,6 +809,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_box_autoadd_gaze_calibration_profile_v_2(
+    GazeCalibrationProfileV2 self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_gaze_head_pose_decision(
     GazeHeadPoseDecision self,
     SseSerializer serializer,
@@ -839,8 +914,20 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_gaze_calibration_profile_v_2(
+    GazeCalibrationProfileV2 self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_gaze_calibration_sample(
     GazeCalibrationSample self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_gaze_calibration_zone_v_2(
+    GazeCalibrationZoneV2 self,
     SseSerializer serializer,
   );
 
@@ -853,6 +940,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_gaze_zone_prediction(
     GazeZonePrediction self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_gaze_zone_prediction_v_2(
+    GazeZonePredictionV2 self,
     SseSerializer serializer,
   );
 
@@ -950,6 +1043,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_list_gaze_calibration_zone_v_2(
+    List<GazeCalibrationZoneV2> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_hand_landmark_point(
     List<HandLandmarkPoint> self,
     SseSerializer serializer,
@@ -958,6 +1057,12 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_list_list_prim_f_32_strict(
     List<Float32List> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_liveness_observation(
+    List<LivenessObservation> self,
     SseSerializer serializer,
   );
 
@@ -991,6 +1096,18 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_liveness_challenge_result(
+    LivenessChallengeResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_liveness_observation(
+    LivenessObservation self,
     SseSerializer serializer,
   );
 
