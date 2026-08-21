@@ -102,12 +102,19 @@ class FaceIdentityQualityGrader {
         personGate.state != FaceIdentityPersonGateState.noPersonDetected;
     final singlePerson =
         personGate.state != FaceIdentityPersonGateState.multiplePeopleDetected;
-    if (!personPresent) {
-      reasons.add('Only one person should be visible.');
-    }
     if (!singlePerson) {
       reasons.add('Only one person should be visible.');
     }
+    // `personPresent` is intentionally NOT a hard requirement here. The
+    // face landmarker is the authoritative signal for "is a usable face
+    // here" (468-point mesh, eyes/nose/mouth, centering); the general-
+    // purpose YOLO detector is coarser and can miss a close, frame-filling
+    // face during identity capture even when the face is clearly good. YOLO
+    // adding "no person" on top of a landmarker-confirmed face would only
+    // produce false rejections, so it is exposed for telemetry but never
+    // blocks acceptance on its own. Multiple detected people is the one
+    // person-gate signal the landmarker cannot see for itself, so that
+    // stays a hard block above.
 
     final facePresent =
         landmarks.eyesVisible && landmarks.noseVisible && landmarks.mouthVisible;
@@ -157,9 +164,9 @@ class FaceIdentityQualityGrader {
     // Every boolean gate is a hard requirement, not just a scoring input:
     // an image that fails any one of them must retry, never be accepted at
     // a merely lower tier. The score only ranks samples that already
-    // cleared every gate.
-    final hardBlock = !personPresent ||
-        !singlePerson ||
+    // cleared every gate. `personPresent` deliberately does not appear here
+    // — see the comment above where it is computed.
+    final hardBlock = !singlePerson ||
         !facePresent ||
         !landmarks.landmarksComplete ||
         !landmarks.faceCentered ||
@@ -202,7 +209,12 @@ class FaceIdentityQualityGrader {
     required bool poseAcceptable,
     required bool alignmentAcceptable,
   }) {
-    if (personGate.blocking) return 0.0;
+    // Only "multiple people" zeroes the score here, matching hardBlock above
+    // — see the comment in grade() on why a YOLO "no person" reading alone
+    // must not override a landmarker-confirmed face.
+    if (personGate.state == FaceIdentityPersonGateState.multiplePeopleDetected) {
+      return 0.0;
+    }
     if (!landmarks.eyesVisible || !landmarks.noseVisible || !landmarks.mouthVisible) {
       return 0.0;
     }

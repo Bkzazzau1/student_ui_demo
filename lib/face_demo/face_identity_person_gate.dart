@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../proctoring_demo/native_vision_bridge.dart';
@@ -125,16 +126,41 @@ class FaceIdentityPersonGate {
   List<double>? _confidentPersonConfidences(Map<String, Object?> outputs) {
     final rawObjects = outputs['objects'];
     if (rawObjects is Iterable) {
-      final confidences = <double>[];
+      // The native Windows engine decodes its own ONNX output directly and
+      // does NOT run non-max suppression on it: a single real person can
+      // legitimately produce several overlapping raw "person" boxes from
+      // neighboring grid cells/anchors, especially when the face fills most
+      // of the frame during identity capture (as it does for enrollment).
+      // Counting those raw entries directly overcounts people and would
+      // reject a lone, well-framed student as "multiple people". Collapse
+      // duplicates with the same greedy per-class NMS the Rust decoder
+      // uses, kept local and synchronous so this stays a pure function.
+      final boxes = <_DetectionBox>[];
       for (final raw in rawObjects) {
         if (raw is! Map) continue;
         final object = Map<Object?, Object?>.from(raw);
-        final label = _label(object).toLowerCase();
-        if (label != 'person') continue;
-        final confidence = _confidence(object);
-        if (confidence >= minimumConfidence) confidences.add(confidence);
+        final box = object['box'];
+        final boxMap = box is Map ? Map<Object?, Object?>.from(box) : null;
+        boxes.add(
+          _DetectionBox(
+            classId: _int(object['class_id']) ?? -1,
+            label: _label(object),
+            confidence: _confidence(object),
+            x1: _boxValue(boxMap, 'x1'),
+            y1: _boxValue(boxMap, 'y1'),
+            x2: _boxValue(boxMap, 'x2'),
+            y2: _boxValue(boxMap, 'y2'),
+          ),
+        );
       }
-      return confidences;
+      return _nonMaxSuppress(boxes, 0.45)
+          .where(
+            (box) =>
+                box.label.toLowerCase() == 'person' &&
+                box.confidence >= minimumConfidence,
+          )
+          .map((box) => box.confidence)
+          .toList(growable: false);
     }
 
     final tensor = _doubleList(
@@ -240,6 +266,12 @@ class FaceIdentityPersonGate {
     return 1.0;
   }
 
+  double _boxValue(Map<Object?, Object?>? box, String key) {
+    final value = box?[key];
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
   List<double> _doubleList(Object? value) {
     if (value is! Iterable) return const <double>[];
     final output = <double>[];
@@ -272,4 +304,55 @@ class FaceIdentityPersonGate {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '');
   }
+
+  /// Greedy per-class non-max suppression: keeps the highest-confidence box
+  /// for each cluster of overlapping same-class detections, discarding the
+  /// rest. Mirrors the Rust decoder's algorithm exactly so both decode paths
+  /// agree on how many real objects are in a frame.
+  List<_DetectionBox> _nonMaxSuppress(List<_DetectionBox> boxes, double iouThreshold) {
+    final sorted = List<_DetectionBox>.of(boxes)
+      ..sort((a, b) => b.confidence.compareTo(a.confidence));
+    final kept = <_DetectionBox>[];
+    for (final candidate in sorted) {
+      final suppressed = kept.any(
+        (existing) =>
+            existing.classId == candidate.classId &&
+            _iou(candidate, existing) > iouThreshold,
+      );
+      if (!suppressed) kept.add(candidate);
+    }
+    return kept;
+  }
+
+  double _iou(_DetectionBox a, _DetectionBox b) {
+    final left = math.max(a.x1, b.x1);
+    final top = math.max(a.y1, b.y1);
+    final right = math.min(a.x2, b.x2);
+    final bottom = math.min(a.y2, b.y2);
+    if (right <= left || bottom <= top) return 0.0;
+    final intersection = (right - left) * (bottom - top);
+    final areaA = math.max(0.0, a.x2 - a.x1) * math.max(0.0, a.y2 - a.y1);
+    final areaB = math.max(0.0, b.x2 - b.x1) * math.max(0.0, b.y2 - b.y1);
+    return intersection / math.max(0.0001, areaA + areaB - intersection);
+  }
+}
+
+class _DetectionBox {
+  const _DetectionBox({
+    required this.classId,
+    required this.label,
+    required this.confidence,
+    required this.x1,
+    required this.y1,
+    required this.x2,
+    required this.y2,
+  });
+
+  final int classId;
+  final String label;
+  final double confidence;
+  final double x1;
+  final double y1;
+  final double x2;
+  final double y2;
 }

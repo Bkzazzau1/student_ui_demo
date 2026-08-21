@@ -67,6 +67,48 @@ void main() {
     expect(grade.facePresent, isTrue);
   });
 
+  test(
+    'a landmarker-confirmed good face is still accepted even when the '
+    'coarser YOLO detector alone reports no person (regression: this used '
+    'to block capture on a well-framed, close-up enrollment photo)',
+    () {
+      final matrix = FaceLandmarkMatrix.fromPoints(_goodFacePoints(), 400, 400);
+
+      final grade = grader.grade(
+        personGate: const FaceIdentityPersonGateResult(
+          state: FaceIdentityPersonGateState.noPersonDetected,
+          personCount: 0,
+          personConfidence: 0,
+          reason: 'no person',
+        ),
+        faceConfidence: 0.9,
+        landmarks: matrix,
+      );
+
+      expect(grade.personPresent, isFalse);
+      expect(grade.accepted, isTrue);
+      expect(grade.level, isNot(FaceIdentityQualityLevel.retry));
+    },
+  );
+
+  test('multiple detected people still blocks even with a perfect face match', () {
+    final matrix = FaceLandmarkMatrix.fromPoints(_goodFacePoints(), 400, 400);
+
+    final grade = grader.grade(
+      personGate: const FaceIdentityPersonGateResult(
+        state: FaceIdentityPersonGateState.multiplePeopleDetected,
+        personCount: 2,
+        personConfidence: 0.9,
+        reason: 'two people',
+      ),
+      faceConfidence: 0.9,
+      landmarks: matrix,
+    );
+
+    expect(grade.accepted, isFalse);
+    expect(grade.level, FaceIdentityQualityLevel.retry);
+  });
+
   test('a low-confidence face detection is sent to retry, not rejected as a mismatch', () {
     final matrix = FaceLandmarkMatrix.fromPoints(_goodFacePoints(), 400, 400);
 

@@ -412,6 +412,11 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
               ? 'No reliable face was detected. Keep your full face inside the guide.'
               : _embeddingPipeline.lastFailureReason;
         });
+        // Without this, the voice guide speaks each instruction only once
+        // per step (see `_speakGuide`'s dedup guard) and then falls silent
+        // on every subsequent failed attempt, which reads as "the voice
+        // guide stopped working" during a long retry stretch.
+        await _speakGuide(guide, retry: true);
         return;
       }
       if (!_matchesGuide(guide, embeddingResult)) {
