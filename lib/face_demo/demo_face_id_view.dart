@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'demo_face_id_service.dart';
 import 'face_embedding_pipeline.dart';
 import 'face_identity_enrollment_api.dart';
+import 'face_identity_enrollment_gate.dart';
+import 'face_identity_liveness_gate.dart';
+import 'face_identity_verification_service.dart';
 import 'native_face_embedding_runtime.dart';
 import 'windows_speech_prompt_service.dart';
 import '../rust/api/face_verification.dart';
@@ -100,6 +103,11 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   final List<Float32List> _capturedEmbeddings = <Float32List>[];
   final FaceEmbeddingPipeline _embeddingPipeline = FaceEmbeddingPipeline();
   final WindowsSpeechPromptService _speech = WindowsSpeechPromptService();
+  final FaceIdentityEnrollmentGate _enrollmentGate =
+      const FaceIdentityEnrollmentGate();
+  final FaceIdentityVerificationService _verificationService =
+      const FaceIdentityVerificationService();
+  final FaceIdentityLivenessGate _livenessGate = FaceIdentityLivenessGate();
   String? _portableTemplateJson;
 
   late DemoFaceIdSnapshot _snapshot;
@@ -135,9 +143,12 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     final migrated = await _service.migrateUntrustedDraft();
     if (!mounted) return;
     setState(() => _snapshot = migrated);
-    if (!_snapshot.locked && !_snapshot.isComplete) {
-      unawaited(_openCamera());
-    }
+    // `_syncSavedFaceId` is the single authority for deciding whether this
+    // student needs guided enrollment or should confirm an identity that
+    // already exists. It must run before any camera is opened for capture,
+    // otherwise a stale "not yet backend-locked" snapshot can start a new
+    // enrollment even though a valid protected template already exists on
+    // this device.
     await _syncSavedFaceId();
   }
 
@@ -247,6 +258,21 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         await _returnToPreviousPage(approved: true);
         return;
       }
+      if (!_enrollmentGate.requiresEnrollment(
+        snapshot: _snapshot,
+        hasValidLocalTemplate: false,
+      )) {
+        // The snapshot says this identity is locked, but no valid protected
+        // template could be loaded on this device. This needs an explicit
+        // device re-setup, not a silent new auto-capture session.
+        setState(() {
+          _syncing = false;
+          _statusMessage =
+              'Face ID is locked but no protected template was found on this '
+              'device. Use "Test Face ID" to set it up again on this device.';
+        });
+        return;
+      }
       setState(() {
         _syncing = false;
         _statusMessage = latest == null
@@ -258,12 +284,19 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       await _openCamera();
     } catch (_) {
       if (!mounted) return;
+      final canEnroll = _enrollmentGate.requiresEnrollment(
+        snapshot: _snapshot,
+        hasValidLocalTemplate: false,
+      );
       setState(() {
         _syncing = false;
-        _statusMessage =
-            'We could not check your saved Face ID. Capture will continue and save when connection is available.';
+        _statusMessage = canEnroll
+            ? 'We could not check your saved Face ID. Capture will continue '
+                  'and save when connection is available.'
+            : 'Face ID is locked but the saved status could not be checked. '
+                  'Use "Test Face ID" once connectivity is restored.';
       });
-      await _openCamera();
+      if (canEnroll) await _openCamera();
     }
   }
 
@@ -483,12 +516,28 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       final localEnrollmentId =
           'local-${DateTime.now().toUtc().millisecondsSinceEpoch}';
       await _buildAndProtectTemplate(localEnrollmentId);
+      final averageQuality =
+          _capturedImages
+              .map((image) => image.qualityScore)
+              .reduce((a, b) => a + b) /
+          _capturedImages.length;
+      // Development-only: there is no backend to approve this enrollment
+      // yet, so a successfully protected local template is treated as
+      // approved and locked immediately. This is what makes "enroll once,
+      // then always confirm" hold true even fully offline; it is not the
+      // institution's approval policy.
+      final approved = await _service.approveLocalDevelopmentEnrollment(
+        enrollmentId: localEnrollmentId,
+        qualityScore: averageQuality,
+      );
       if (!mounted) return;
       setState(() {
+        _snapshot = approved;
         _submitting = false;
         _statusMessage =
-            'Enrollment is protected locally. Test it now with a new live '
-            'camera capture; backend synchronization will follow.';
+            'Enrollment is protected and locked locally for development '
+            'testing. Test it now with a new live camera capture; backend '
+            'synchronization will follow when available.';
       });
       await _finishEnrollmentWithoutTest();
     } catch (e) {
@@ -546,43 +595,50 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     }
     setState(() {
       _verificationRunning = true;
-      _statusMessage =
-          'Look straight at the camera. Capturing a fresh identity sample...';
+      _statusMessage = 'Confirm liveness: follow the on-screen prompt...';
     });
-    await Future<void>.delayed(const Duration(milliseconds: 900));
     try {
-      final file = await controller.takePicture();
-      final sample = await _embeddingPipeline.processEncodedImage(
-        await File(file.path).readAsBytes(),
+      // 1:1 verification only: YOLO person gate + face landmark matrix +
+      // quality grade run inside the pipeline below; liveness runs a short
+      // randomized-challenge burst before the sample is even considered.
+      final liveness = await _livenessGate.runBurst(controller: controller);
+      if (!mounted) return;
+      final aiAvailable = await _embeddingPipeline.initialize();
+      setState(
+        () => _statusMessage =
+            'Look straight at the camera. Capturing a fresh identity sample...',
       );
-      if (sample == null || sample.quality < 0.65) {
-        if (!mounted) return;
-        setState(() {
-          _verificationRunning = false;
-          _statusMessage =
-              'The verification image was not reliable. Improve the lighting '
-              'and keep your full face visible.';
-        });
-        return;
-      }
-      final verification = verifyFaceEmbedding1To1(
+      final file = await controller.takePicture();
+      final sample = aiAvailable
+          ? await _embeddingPipeline.processEncodedImage(
+              await File(file.path).readAsBytes(),
+            )
+          : null;
+      final outcome = _verificationService.evaluateSample(
+        aiAvailable: aiAvailable,
+        sample: sample,
+        pipelineFailureReason: _embeddingPipeline.lastFailureReason,
         templateJson: _portableTemplateJson!,
-        probeEmbedding: sample.embedding,
-        signalQuality: sample.quality,
-        // Development threshold only. Production uses a threshold calibrated
-        // against the institution's held-out validation population.
-        matchThreshold: 0.363,
-        nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+        liveness: liveness,
       );
       if (!mounted) return;
-      final verified = verification.state == 'identity_verified';
       setState(() {
         _verificationRunning = false;
-        _statusMessage = verified
-            ? 'Face ID test passed. Similarity ${(verification.similarity * 100).toStringAsFixed(1)}%.'
-            : 'This sample did not verify. It is not a misconduct decision; try another live sample.';
+        _statusMessage = switch (outcome.state) {
+          FaceIdentityCheckState.verified =>
+            'Face ID test passed. Similarity ${(outcome.similarity * 100).toStringAsFixed(1)}%.',
+          FaceIdentityCheckState.mismatch =>
+            'This sample did not verify. It is not a misconduct decision; try another live sample.',
+          FaceIdentityCheckState.uncertain =>
+            'The result was uncertain: ${outcome.reason}',
+          FaceIdentityCheckState.aiUnavailable =>
+            'Face identity AI is unavailable on this device. The test cannot run.',
+          FaceIdentityCheckState.qualityRetry => outcome.reason,
+          FaceIdentityCheckState.livenessFailed =>
+            'Liveness could not be confirmed: ${outcome.reason}',
+        };
       });
-      if (verified) {
+      if (outcome.verified) {
         await _finishEnrollmentWithoutTest();
       }
     } catch (error) {
@@ -605,6 +661,10 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       await _returnToPreviousPage(approved: true);
       return;
     }
+    // The local development approval already locked this identity in
+    // `_submitIdentityGallery`. Backend synchronization below is best-effort
+    // metadata enrichment only: its failure or absence must never unlock or
+    // reset the identity that is already active on this device.
     setState(() {
       _submitting = true;
       _statusMessage = 'Face ID is stored locally. Synchronizing enrollment...';
@@ -614,17 +674,25 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         studentId: _snapshot.studentId,
         images: List<FaceIdentityEnrollmentImage>.from(_capturedImages),
       );
-      await _buildAndProtectTemplate(enrollment.enrollmentId);
-      final synced = await _service.applyBackendEnrollment(enrollment);
-      if (!mounted) return;
-      setState(() {
-        _snapshot = synced;
-        _submitting = false;
-        _statusMessage = 'Face ID enrollment is stored and active.';
-      });
-      if (synced.isComplete) {
-        await _returnToPreviousPage(approved: true);
+      if (enrollment.activeLocked) {
+        await _buildAndProtectTemplate(enrollment.enrollmentId);
+        final synced = await _service.applyBackendEnrollment(enrollment);
+        if (!mounted) return;
+        setState(() {
+          _snapshot = synced;
+          _submitting = false;
+          _statusMessage = 'Face ID enrollment is stored and active.';
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _submitting = false;
+          _statusMessage =
+              'Face ID is protected and locked on this device for '
+              'development testing. Backend approval is still pending.';
+        });
       }
+      await _returnToPreviousPage(approved: true);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -633,6 +701,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
             'Face ID is protected on this device and the test is complete. '
             'Backend synchronization is pending.';
       });
+      await _returnToPreviousPage(approved: true);
     }
   }
 
@@ -726,6 +795,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   }
 
   Future<void> _clearEnrollment() async {
+    if (!kDebugMode) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -792,11 +862,15 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         ),
         title: const Text('Face ID setup'),
         actions: [
-          TextButton.icon(
-            onPressed: _submitting || _capturing ? null : _clearEnrollment,
-            icon: const Icon(Icons.restart_alt_rounded),
-            label: const Text('Clear enrollment'),
-          ),
+          // Students must never get a normal "change my identity" control.
+          // This exists only to let developers repeatedly test enrollment
+          // locally, so it is compiled out of release builds entirely.
+          if (kDebugMode)
+            TextButton.icon(
+              onPressed: _submitting || _capturing ? null : _clearEnrollment,
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text('Reset local test identity'),
+            ),
           if (_snapshot.locked)
             Padding(
               padding: const EdgeInsets.only(right: 12),

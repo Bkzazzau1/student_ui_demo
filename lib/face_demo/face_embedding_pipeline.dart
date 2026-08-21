@@ -4,6 +4,9 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 import '../proctoring_demo/native_face_landmarker_runtime.dart';
+import 'face_identity_landmark_matrix.dart';
+import 'face_identity_person_gate.dart';
+import 'face_identity_quality.dart';
 import 'native_face_embedding_runtime.dart';
 
 class FaceEmbeddingPipelineResult {
@@ -17,6 +20,9 @@ class FaceEmbeddingPipelineResult {
     required this.eyeOpenness,
     required this.smileWidth,
     required this.mouthOpenness,
+    required this.landmarks,
+    required this.personGate,
+    required this.qualityGrade,
   });
 
   final List<double> embedding;
@@ -28,17 +34,34 @@ class FaceEmbeddingPipelineResult {
   final double eyeOpenness;
   final double smileWidth;
   final double mouthOpenness;
+
+  /// The full facial landmark matrix behind this sample. Capture validation,
+  /// alignment, pose, and liveness support all read from this; identity
+  /// matching never does.
+  final FaceLandmarkMatrix landmarks;
+
+  /// What the YOLO person gate saw for this frame.
+  final FaceIdentityPersonGateResult personGate;
+
+  /// The structured quality assessment this sample was graded with.
+  final FaceIdentityQualityGrade qualityGrade;
 }
 
 class FaceEmbeddingPipeline {
   FaceEmbeddingPipeline({
     NativeFaceLandmarkerRuntime? landmarker,
     NativeFaceEmbeddingRuntime? embedder,
+    FaceIdentityPersonGate? personGate,
+    FaceIdentityQualityGrader? qualityGrader,
   }) : _landmarker = landmarker ?? NativeFaceLandmarkerRuntime(),
-       _embedder = embedder ?? NativeFaceEmbeddingRuntime();
+       _embedder = embedder ?? NativeFaceEmbeddingRuntime(),
+       _personGate = personGate ?? FaceIdentityPersonGate(),
+       _qualityGrader = qualityGrader ?? const FaceIdentityQualityGrader();
 
   final NativeFaceLandmarkerRuntime _landmarker;
   final NativeFaceEmbeddingRuntime _embedder;
+  final FaceIdentityPersonGate _personGate;
+  final FaceIdentityQualityGrader _qualityGrader;
   bool _ready = false;
   String lastFailureReason = '';
 
@@ -52,6 +75,12 @@ class FaceEmbeddingPipeline {
     return _ready;
   }
 
+  /// CAMERA FRAME -> YOLO person gate -> face landmarker -> facial matrix ->
+  /// quality grade -> alignment -> SFace embedding -> L2-normalized result.
+  ///
+  /// The landmark matrix and quality grade are always produced (even on
+  /// rejection) so callers can show a specific, calm correction message
+  /// instead of a generic failure.
   Future<FaceEmbeddingPipelineResult?> processEncodedImage(
     Uint8List encoded,
   ) async {
@@ -75,114 +104,63 @@ class FaceEmbeddingPipeline {
         rgb[offset++] = pixel.b.toInt();
       }
     }
-    final landmarks = await _landmarker.analyseRgbRaw(
+
+    final personGateResult = await _personGate.analyzeRgb(
       rgbBytes: rgb,
       width: decoded.width,
       height: decoded.height,
     );
-    if (landmarks == null) {
-      lastFailureReason = 'No face was detected.';
-      return null;
-    }
-    final confidence = _number(landmarks['confidence']);
-    if (confidence < 0.72) {
-      lastFailureReason = 'Face confidence is too low.';
-      return null;
-    }
+
+    final landmarksPayload = await _landmarker.analyseRgbRaw(
+      rgbBytes: rgb,
+      width: decoded.width,
+      height: decoded.height,
+    );
+    final confidence = _number(landmarksPayload?['confidence']);
     final points = _points(
-      landmarks['landmarks'],
+      landmarksPayload?['landmarks'],
       decoded.width,
       decoded.height,
     );
-    if (![
-      33,
-      133,
-      362,
-      263,
-      1,
-      61,
-      291,
-      159,
-      145,
-      386,
-      374,
-    ].every(points.containsKey)) {
-      lastFailureReason = 'Eyes, nose, or mouth are not fully visible.';
-      return null;
-    }
-    if (!_hasPlausibleCenteredFace(points, decoded.width, decoded.height)) {
-      lastFailureReason =
-          'Move closer and center your full face inside the green guide.';
-      return null;
-    }
-    final leftEye = _average(points[33]!, points[133]!);
-    final rightEye = _average(points[362]!, points[263]!);
-    final eyeDistance = _distance(leftEye, rightEye);
-    final faceCoverage = (eyeDistance / decoded.width * 4.0).clamp(0.0, 1.0);
-    if (faceCoverage < 0.24) {
-      lastFailureReason = 'Move closer to the camera.';
+    final matrix = landmarksPayload == null
+        ? FaceLandmarkMatrix.empty()
+        : FaceLandmarkMatrix.fromPoints(points, decoded.width, decoded.height);
+
+    final grade = _qualityGrader.grade(
+      personGate: personGateResult,
+      faceConfidence: confidence,
+      landmarks: matrix,
+    );
+
+    if (!grade.accepted) {
+      lastFailureReason = grade.failureReasons.isEmpty
+          ? 'No reliable face was detected.'
+          : grade.failureReasons.first;
       return null;
     }
 
+    final leftEye = matrix.leftEye!;
+    final rightEye = matrix.rightEye!;
     final aligned = _align(decoded, leftEye, rightEye);
     final sample = await _embedder.embedAlignedRgb(aligned);
     if (sample == null || sample.embedding.length != 128) {
       lastFailureReason = 'The face identity sample was not reliable.';
       return null;
     }
-    final quality = (confidence * 0.7 + faceCoverage * 0.3).clamp(0.0, 1.0);
     return FaceEmbeddingPipelineResult(
       embedding: sample.embedding,
-      quality: quality,
+      quality: grade.overallScore,
       faceConfidence: confidence,
       alignedRgb: aligned,
-      yaw: (points[1]!.x - (leftEye.x + rightEye.x) / 2) / eyeDistance,
-      pitch: (points[1]!.y - (leftEye.y + rightEye.y) / 2) / eyeDistance,
-      eyeOpenness:
-          (_distance(points[159]!, points[145]!) +
-              _distance(points[386]!, points[374]!)) /
-          (2 * eyeDistance),
-      smileWidth: _distance(points[61]!, points[291]!) / eyeDistance,
-      mouthOpenness: points.containsKey(13) && points.containsKey(14)
-          ? _distance(points[13]!, points[14]!) / eyeDistance
-          : 0.0,
+      yaw: matrix.yaw,
+      pitch: matrix.pitch,
+      eyeOpenness: matrix.eyeOpenness,
+      smileWidth: matrix.smileWidth,
+      mouthOpenness: matrix.mouthOpenness,
+      landmarks: matrix,
+      personGate: personGateResult,
+      qualityGrade: grade,
     );
-  }
-
-  bool _hasPlausibleCenteredFace(
-    Map<int, math.Point<double>> points,
-    int width,
-    int height,
-  ) {
-    if (points.length < 400) return false;
-    final xs = points.values.map((point) => point.x);
-    final ys = points.values.map((point) => point.y);
-    final minX = xs.reduce(math.min);
-    final maxX = xs.reduce(math.max);
-    final minY = ys.reduce(math.min);
-    final maxY = ys.reduce(math.max);
-    final faceWidth = maxX - minX;
-    final faceHeight = maxY - minY;
-    if (faceWidth / width < 0.22 || faceWidth / width > 0.78) return false;
-    if (faceHeight / height < 0.28 || faceHeight / height > 0.90) return false;
-    final aspect = faceWidth / faceHeight;
-    if (aspect < 0.52 || aspect > 1.15) return false;
-    final centerX = (minX + maxX) / (2 * width);
-    final centerY = (minY + maxY) / (2 * height);
-    if (centerX < 0.27 || centerX > 0.73) return false;
-    if (centerY < 0.24 || centerY > 0.76) return false;
-
-    final leftEye = _average(points[33]!, points[133]!);
-    final rightEye = _average(points[362]!, points[263]!);
-    final eyeDistance = _distance(leftEye, rightEye);
-    final eyeRatio = eyeDistance / faceWidth;
-    if (eyeRatio < 0.24 || eyeRatio > 0.58) return false;
-    if ((leftEye.y - rightEye.y).abs() / eyeDistance > 0.28) return false;
-    final eyeY = (leftEye.y + rightEye.y) / 2;
-    final nose = points[1]!;
-    final mouthY = (points[61]!.y + points[291]!.y) / 2;
-    if (nose.y <= eyeY || mouthY <= nose.y) return false;
-    return nose.x >= minX && nose.x <= maxX;
   }
 
   Map<int, math.Point<double>> _points(Object? raw, int width, int height) {
@@ -237,11 +215,6 @@ class FaceEmbeddingPipeline {
     }
     return output;
   }
-
-  math.Point<double> _average(
-    math.Point<double> first,
-    math.Point<double> second,
-  ) => math.Point<double>((first.x + second.x) / 2, (first.y + second.y) / 2);
 
   double _distance(math.Point<double> a, math.Point<double> b) =>
       math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2));

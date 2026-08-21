@@ -149,6 +149,29 @@ class DemoFaceIdService {
     return load();
   }
 
+  /// Marks a freshly built, protected local template as approved and locked
+  /// for the local development flow, without waiting for a backend review.
+  ///
+  /// This exists ONLY because the local development/test flow does not have
+  /// a backend to approve enrollments. It is not the institution's approval
+  /// policy: a real deployment locks an identity from the backend's
+  /// `applyBackendEnrollment` response, not from this method. Calling this
+  /// is what makes "enroll once, then always confirm" hold true even when
+  /// running fully offline during development.
+  Future<DemoFaceIdSnapshot> approveLocalDevelopmentEnrollment({
+    required String enrollmentId,
+    required double qualityScore,
+  }) async {
+    await _storage.write(_capturedKey, requiredSamples);
+    await _storage.write(_qualityKey, qualityScore.clamp(0.0, 1.0));
+    await _storage.write(_updatedAtKey, DateTime.now().toIso8601String());
+    await _storage.write(_backendSyncedKey, true);
+    await _storage.write(_lockedKey, true);
+    await _storage.write(_enrollmentIdKey, enrollmentId);
+    await _storage.write(_statusKey, 'dev_local_approved');
+    return load();
+  }
+
   /// Starts a new device-local biometric enrollment without deleting or
   /// changing the institution's backend enrollment record.
   Future<DemoFaceIdSnapshot> beginDeviceEnrollment() async {
