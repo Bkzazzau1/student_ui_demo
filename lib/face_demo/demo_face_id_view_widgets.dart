@@ -29,7 +29,11 @@ class _Header extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
+          BoxShadow(
+            color: Color(0x1F0F172A),
+            blurRadius: 24,
+            offset: Offset(0, 14),
+          ),
         ],
       ),
       child: Container(
@@ -53,10 +57,14 @@ class _Header extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.20),
+                    ),
                   ),
                   child: Icon(
-                    snapshot.isComplete ? Icons.verified_user_rounded : Icons.account_circle_outlined,
+                    snapshot.isComplete
+                        ? Icons.verified_user_rounded
+                        : Icons.account_circle_outlined,
                     color: Colors.white,
                     size: compact ? 28 : 36,
                   ),
@@ -70,14 +78,23 @@ class _Header extends StatelessWidget {
                         spacing: 8,
                         runSpacing: 8,
                         children: const [
-                          _HeaderTag(icon: Icons.school_outlined, text: 'K-SLAS'),
-                          _HeaderTag(icon: Icons.verified_outlined, text: 'Identity setup'),
+                          _HeaderTag(
+                            icon: Icons.school_outlined,
+                            text: 'K-SLAS',
+                          ),
+                          _HeaderTag(
+                            icon: Icons.verified_outlined,
+                            text: 'Identity setup',
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        snapshot.isComplete ? 'Identity setup active' : 'Set up your identity',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        snapshot.isComplete
+                            ? 'Identity setup active'
+                            : 'Set up your identity',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.3,
@@ -99,7 +116,10 @@ class _Header extends StatelessWidget {
                 ),
               ],
             );
-            final status = _HeaderProgress(snapshot: snapshot, progress: progress);
+            final status = _HeaderProgress(
+              snapshot: snapshot,
+              progress: progress,
+            );
             if (!wide) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,7 +160,13 @@ class _HeaderTag extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.white, size: 15),
           const SizedBox(width: 7),
-          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
     );
@@ -167,14 +193,24 @@ class _HeaderProgress extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            snapshot.isComplete ? Icons.check_circle_outline : Icons.pending_actions_outlined,
-            color: snapshot.isComplete ? const Color(0xFF86EFAC) : const Color(0xFFBFDBFE),
+            snapshot.isComplete
+                ? Icons.check_circle_outline
+                : Icons.pending_actions_outlined,
+            color: snapshot.isComplete
+                ? const Color(0xFF86EFAC)
+                : const Color(0xFFBFDBFE),
             size: 28,
           ),
           const SizedBox(height: 10),
           Text(
-            snapshot.isComplete ? 'Ready' : '${snapshot.capturedSamples}/${snapshot.requiredSamples} captured',
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+            snapshot.isComplete
+                ? 'Ready'
+                : '${snapshot.capturedSamples}/${snapshot.requiredSamples} captured',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 10),
           ClipRRect(
@@ -184,14 +220,21 @@ class _HeaderProgress extends StatelessWidget {
               value: progress.clamp(0.0, 1.0),
               backgroundColor: Colors.white.withValues(alpha: 0.18),
               valueColor: AlwaysStoppedAnimation<Color>(
-                snapshot.isComplete ? const Color(0xFF22C55E) : const Color(0xFF60A5FA),
+                snapshot.isComplete
+                    ? const Color(0xFF22C55E)
+                    : const Color(0xFF60A5FA),
               ),
             ),
           ),
           const SizedBox(height: 9),
           Text(
-            snapshot.isComplete ? 'Identity confirmed' : 'Follow the guide on screen',
-            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800),
+            snapshot.isComplete
+                ? 'Identity confirmed'
+                : 'Follow the guide on screen',
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -226,7 +269,11 @@ class _CameraPreviewPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _identityLine),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x120F172A), blurRadius: 18, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x120F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: AspectRatio(
@@ -243,7 +290,9 @@ class _CameraPreviewPanel extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        complete ? Icons.verified_user_outlined : Icons.photo_camera_front_outlined,
+                        complete
+                            ? Icons.verified_user_outlined
+                            : Icons.photo_camera_front_outlined,
                         color: Colors.white,
                         size: 34,
                       ),
@@ -252,10 +301,14 @@ class _CameraPreviewPanel extends StatelessWidget {
                         openingCamera
                             ? 'Preparing identity check...'
                             : complete
-                                ? 'Identity setup is active on this device.'
-                                : cameraError ?? 'Camera preview will appear here',
+                            ? 'Identity setup is active on this device.'
+                            : cameraError ?? 'Camera preview will appear here',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, height: 1.35),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          height: 1.35,
+                        ),
                       ),
                     ],
                   ),
@@ -263,32 +316,32 @@ class _CameraPreviewPanel extends StatelessWidget {
               ),
             if (!complete)
               Center(
-                child: Container(
-                  width: compact ? 170 : 220,
-                  height: compact ? 210 : 260,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFF22C55E), width: 3),
-                    borderRadius: BorderRadius.circular(130),
-                    boxShadow: const <BoxShadow>[
-                      BoxShadow(color: Color(0x5522C55E), blurRadius: 18),
-                    ],
-                  ),
-                ),
+                child: _DirectionalFaceGuide(guide: guide, compact: compact),
               ),
             Align(
               alignment: Alignment.topCenter,
               child: Container(
                 margin: const EdgeInsets.all(14),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.70),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.12),
+                  ),
                 ),
                 child: Text(
-                  complete ? 'Identity setup active' : '${guide.title}: ${guide.instruction}',
+                  complete
+                      ? 'Identity setup active'
+                      : '${guide.title}: ${guide.instruction}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
@@ -307,6 +360,100 @@ class _CameraPreviewPanel extends StatelessWidget {
   }
 }
 
+class _DirectionalFaceGuide extends StatefulWidget {
+  const _DirectionalFaceGuide({required this.guide, required this.compact});
+
+  final _IdentityGuide guide;
+  final bool compact;
+
+  @override
+  State<_DirectionalFaceGuide> createState() => _DirectionalFaceGuideState();
+}
+
+class _DirectionalFaceGuideState extends State<_DirectionalFaceGuide>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 850),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _animation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final horizontal = switch (widget.guide.code) {
+      'left_angle' => -1.0,
+      'right_angle' => 1.0,
+      _ => 0.0,
+    };
+    final vertical = switch (widget.guide.code) {
+      'look_up' || 'front_face' => -1.0,
+      'look_down' || 'smile' || 'open_mouth' => 1.0,
+      _ => 0.0,
+    };
+    final icon = switch (widget.guide.code) {
+      'left_angle' => Icons.arrow_back_rounded,
+      'right_angle' => Icons.arrow_forward_rounded,
+      'look_up' => Icons.arrow_upward_rounded,
+      'look_down' => Icons.arrow_downward_rounded,
+      'smile' => Icons.sentiment_very_satisfied_rounded,
+      'open_mouth' => Icons.record_voice_over_rounded,
+      _ => Icons.center_focus_strong_rounded,
+    };
+    final width = widget.compact ? 178.0 : 230.0;
+    final height = widget.compact ? 218.0 : 270.0;
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final travel = 10 * _animation.value;
+        return SizedBox(
+          width: width + 100,
+          height: height + 70,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: width,
+                height: height,
+                decoration: BoxDecoration(
+                  color: const Color(0x1422C55E),
+                  border: Border.all(color: const Color(0xFF22C55E), width: 4),
+                  borderRadius: BorderRadius.circular(150),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x6622C55E), blurRadius: 24),
+                  ],
+                ),
+              ),
+              Transform.translate(
+                offset: Offset(
+                  horizontal * (width / 2 + 34 + travel),
+                  vertical * (height / 2 + 22 + travel),
+                ),
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF22C55E),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Color(0x9922C55E), blurRadius: 18),
+                    ],
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 34),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _CameraHint extends StatelessWidget {
   const _CameraHint();
 
@@ -321,7 +468,11 @@ class _CameraHint extends StatelessWidget {
       child: const Text(
         'Stay still while the app captures automatically',
         textAlign: TextAlign.center,
-        style: TextStyle(color: _identityDark, fontWeight: FontWeight.w900, fontSize: 12),
+        style: TextStyle(
+          color: _identityDark,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -351,7 +502,11 @@ class _StatusPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _identityLine),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -366,16 +521,19 @@ class _StatusPanel extends StatelessWidget {
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.fact_check_outlined, color: _identityBrand),
+                child: const Icon(
+                  Icons.fact_check_outlined,
+                  color: _identityBrand,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Identity setup progress',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: _identityDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: _identityDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],
@@ -385,11 +543,20 @@ class _StatusPanel extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _StatusPill('Images', '${snapshot.capturedSamples}/${snapshot.requiredSamples}'),
+              _StatusPill(
+                'Images',
+                '${snapshot.capturedSamples}/${snapshot.requiredSamples}',
+              ),
               _StatusPill('Protected', snapshot.locked ? 'Yes' : 'Pending'),
-              _StatusPill('Status', snapshot.isComplete ? 'Active' : 'In progress'),
+              _StatusPill(
+                'Status',
+                snapshot.isComplete ? 'Active' : 'In progress',
+              ),
               if (snapshot.lastQualityScore != null)
-                _StatusPill('Quality', '${(snapshot.lastQualityScore! * 100).round()}%'),
+                _StatusPill(
+                  'Quality',
+                  '${(snapshot.lastQualityScore! * 100).round()}%',
+                ),
             ],
           ),
           if (statusMessage != null) ...[
@@ -404,12 +571,20 @@ class _StatusPanel extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 20),
+                  const Icon(
+                    Icons.info_outline,
+                    color: Color(0xFF2563EB),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       statusMessage!,
-                      style: const TextStyle(color: Color(0xFF334155), height: 1.35, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        color: Color(0xFF334155),
+                        height: 1.35,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -419,7 +594,8 @@ class _StatusPanel extends StatelessWidget {
           const SizedBox(height: 16),
           ...guides.asMap().entries.map((entry) {
             final done = entry.key < snapshot.capturedSamples;
-            final active = entry.key == snapshot.capturedSamples && !snapshot.isComplete;
+            final active =
+                entry.key == snapshot.capturedSamples && !snapshot.isComplete;
             return _GuideStep(
               guide: entry.value,
               number: entry.key + 1,
@@ -451,8 +627,8 @@ class _GuideStep extends StatelessWidget {
     final color = done
         ? _identitySuccess
         : active
-            ? _identityBrand
-            : _identityMuted;
+        ? _identityBrand
+        : _identityMuted;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -460,15 +636,15 @@ class _GuideStep extends StatelessWidget {
         color: done
             ? const Color(0xFFF0FDF4)
             : active
-                ? const Color(0xFFEFF6FF)
-                : _identitySoft,
+            ? const Color(0xFFEFF6FF)
+            : _identitySoft,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: done
               ? const Color(0xFFBBF7D0)
               : active
-                  ? const Color(0xFFBFDBFE)
-                  : _identityLine,
+              ? const Color(0xFFBFDBFE)
+              : _identityLine,
         ),
       ),
       child: Row(
@@ -483,7 +659,15 @@ class _GuideStep extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: color.withValues(alpha: 0.22)),
             ),
-            child: Icon(done ? Icons.check_circle : active ? guide.icon : Icons.circle_outlined, color: color, size: 19),
+            child: Icon(
+              done
+                  ? Icons.check_circle
+                  : active
+                  ? guide.icon
+                  : Icons.circle_outlined,
+              color: color,
+              size: 19,
+            ),
           ),
           const SizedBox(width: 11),
           Expanded(
@@ -494,13 +678,20 @@ class _GuideStep extends StatelessWidget {
                   children: [
                     Text(
                       'Step $number',
-                      style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12),
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         guide.title,
-                        style: const TextStyle(color: _identityDark, fontWeight: FontWeight.w900),
+                        style: const TextStyle(
+                          color: _identityDark,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ],
@@ -508,7 +699,11 @@ class _GuideStep extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   guide.instruction,
-                  style: const TextStyle(color: _identityMuted, height: 1.35, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: _identityMuted,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -534,7 +729,14 @@ class _StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: _identityLine),
       ),
-      child: Text('$label: $value', style: const TextStyle(color: _identityDark, fontWeight: FontWeight.w900, fontSize: 12)),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(
+          color: _identityDark,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 }
@@ -567,7 +769,11 @@ class _ActionBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _identityLine),
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x080F172A), blurRadius: 16, offset: Offset(0, 8)),
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: Wrap(
@@ -577,18 +783,26 @@ class _ActionBar extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           FilledButton.icon(
-            onPressed: capturing || submitting || snapshot.locked ? null : onCapture,
-            icon: Icon(submitting ? Icons.cloud_done_outlined : Icons.auto_awesome_motion_outlined),
+            onPressed: capturing || submitting || snapshot.locked
+                ? null
+                : onCapture,
+            icon: Icon(
+              submitting
+                  ? Icons.cloud_done_outlined
+                  : Icons.auto_awesome_motion_outlined,
+            ),
             label: Text(
               submitting
                   ? 'Saving identity...'
                   : capturing
-                      ? 'Automatic capture running...'
-                      : 'Start automatic capture',
+                  ? 'Automatic capture running...'
+                  : 'Start automatic capture',
             ),
           ),
           OutlinedButton.icon(
-            onPressed: capturing || submitting || snapshot.locked ? null : onReset,
+            onPressed: capturing || submitting || snapshot.locked
+                ? null
+                : onReset,
             icon: const Icon(Icons.refresh),
             label: const Text('Restart setup'),
           ),
@@ -633,14 +847,22 @@ class _MobileCaptureBar extends StatelessWidget {
           children: [
             Expanded(
               child: FilledButton.icon(
-                onPressed: capturing || submitting || snapshot.locked ? null : onCapture,
-                icon: Icon(submitting ? Icons.cloud_done_outlined : Icons.auto_awesome_motion_outlined),
+                onPressed: capturing || submitting || snapshot.locked
+                    ? null
+                    : onCapture,
+                icon: Icon(
+                  submitting
+                      ? Icons.cloud_done_outlined
+                      : Icons.auto_awesome_motion_outlined,
+                ),
                 label: Text(submitting ? 'Saving...' : 'Auto capture'),
               ),
             ),
             const SizedBox(width: 8),
             IconButton(
-              onPressed: capturing || submitting || snapshot.locked ? null : onReset,
+              onPressed: capturing || submitting || snapshot.locked
+                  ? null
+                  : onReset,
               icon: const Icon(Icons.refresh),
               tooltip: 'Restart setup',
             ),

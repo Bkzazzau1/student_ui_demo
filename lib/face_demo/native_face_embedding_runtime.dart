@@ -111,4 +111,18 @@ class NativeFaceEmbeddingRuntime {
       },
     );
   }
+
+  Future<bool> clearProtectedTemplate({required String studentId}) async {
+    if (!Platform.isWindows) return false;
+    final root = Platform.environment['LOCALAPPDATA'];
+    if (root == null || root.isEmpty) return false;
+    final identityKey = sha256.convert(studentId.codeUnits).toString();
+    final file = File(
+      '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}'
+      'identity${Platform.pathSeparator}$identityKey.dpapi',
+    );
+    if (!await file.exists()) return true;
+    await file.delete();
+    return !await file.exists();
+  }
 }

@@ -12,12 +12,22 @@ class FaceEmbeddingPipelineResult {
     required this.quality,
     required this.faceConfidence,
     required this.alignedRgb,
+    required this.yaw,
+    required this.pitch,
+    required this.eyeOpenness,
+    required this.smileWidth,
+    required this.mouthOpenness,
   });
 
   final List<double> embedding;
   final double quality;
   final double faceConfidence;
   final Uint8List alignedRgb;
+  final double yaw;
+  final double pitch;
+  final double eyeOpenness;
+  final double smileWidth;
+  final double mouthOpenness;
 }
 
 class FaceEmbeddingPipeline {
@@ -30,6 +40,7 @@ class FaceEmbeddingPipeline {
   final NativeFaceLandmarkerRuntime _landmarker;
   final NativeFaceEmbeddingRuntime _embedder;
   bool _ready = false;
+  String lastFailureReason = '';
 
   Future<bool> initialize() async {
     if (_ready) return true;
@@ -44,9 +55,14 @@ class FaceEmbeddingPipeline {
   Future<FaceEmbeddingPipelineResult?> processEncodedImage(
     Uint8List encoded,
   ) async {
-    if (!_ready && !await initialize()) return null;
+    lastFailureReason = '';
+    if (!_ready && !await initialize()) {
+      lastFailureReason = 'Face AI could not initialize.';
+      return null;
+    }
     final decoded = img.decodeImage(encoded);
     if (decoded == null || decoded.width < 112 || decoded.height < 112) {
+      lastFailureReason = 'The camera image is not usable.';
       return null;
     }
     final rgb = Uint8List(decoded.width * decoded.height * 3);
@@ -64,33 +80,109 @@ class FaceEmbeddingPipeline {
       width: decoded.width,
       height: decoded.height,
     );
-    if (landmarks == null) return null;
+    if (landmarks == null) {
+      lastFailureReason = 'No face was detected.';
+      return null;
+    }
     final confidence = _number(landmarks['confidence']);
-    if (confidence < 0.65) return null;
+    if (confidence < 0.72) {
+      lastFailureReason = 'Face confidence is too low.';
+      return null;
+    }
     final points = _points(
       landmarks['landmarks'],
       decoded.width,
       decoded.height,
     );
-    if (![33, 133, 362, 263, 1, 61, 291].every(points.containsKey)) {
+    if (![
+      33,
+      133,
+      362,
+      263,
+      1,
+      61,
+      291,
+      159,
+      145,
+      386,
+      374,
+    ].every(points.containsKey)) {
+      lastFailureReason = 'Eyes, nose, or mouth are not fully visible.';
+      return null;
+    }
+    if (!_hasPlausibleCenteredFace(points, decoded.width, decoded.height)) {
+      lastFailureReason =
+          'Move closer and center your full face inside the green guide.';
       return null;
     }
     final leftEye = _average(points[33]!, points[133]!);
     final rightEye = _average(points[362]!, points[263]!);
     final eyeDistance = _distance(leftEye, rightEye);
     final faceCoverage = (eyeDistance / decoded.width * 4.0).clamp(0.0, 1.0);
-    if (faceCoverage < 0.28) return null;
+    if (faceCoverage < 0.24) {
+      lastFailureReason = 'Move closer to the camera.';
+      return null;
+    }
 
     final aligned = _align(decoded, leftEye, rightEye);
     final sample = await _embedder.embedAlignedRgb(aligned);
-    if (sample == null || sample.embedding.length != 128) return null;
+    if (sample == null || sample.embedding.length != 128) {
+      lastFailureReason = 'The face identity sample was not reliable.';
+      return null;
+    }
     final quality = (confidence * 0.7 + faceCoverage * 0.3).clamp(0.0, 1.0);
     return FaceEmbeddingPipelineResult(
       embedding: sample.embedding,
       quality: quality,
       faceConfidence: confidence,
       alignedRgb: aligned,
+      yaw: (points[1]!.x - (leftEye.x + rightEye.x) / 2) / eyeDistance,
+      pitch: (points[1]!.y - (leftEye.y + rightEye.y) / 2) / eyeDistance,
+      eyeOpenness:
+          (_distance(points[159]!, points[145]!) +
+              _distance(points[386]!, points[374]!)) /
+          (2 * eyeDistance),
+      smileWidth: _distance(points[61]!, points[291]!) / eyeDistance,
+      mouthOpenness: points.containsKey(13) && points.containsKey(14)
+          ? _distance(points[13]!, points[14]!) / eyeDistance
+          : 0.0,
     );
+  }
+
+  bool _hasPlausibleCenteredFace(
+    Map<int, math.Point<double>> points,
+    int width,
+    int height,
+  ) {
+    if (points.length < 400) return false;
+    final xs = points.values.map((point) => point.x);
+    final ys = points.values.map((point) => point.y);
+    final minX = xs.reduce(math.min);
+    final maxX = xs.reduce(math.max);
+    final minY = ys.reduce(math.min);
+    final maxY = ys.reduce(math.max);
+    final faceWidth = maxX - minX;
+    final faceHeight = maxY - minY;
+    if (faceWidth / width < 0.22 || faceWidth / width > 0.78) return false;
+    if (faceHeight / height < 0.28 || faceHeight / height > 0.90) return false;
+    final aspect = faceWidth / faceHeight;
+    if (aspect < 0.52 || aspect > 1.15) return false;
+    final centerX = (minX + maxX) / (2 * width);
+    final centerY = (minY + maxY) / (2 * height);
+    if (centerX < 0.27 || centerX > 0.73) return false;
+    if (centerY < 0.24 || centerY > 0.76) return false;
+
+    final leftEye = _average(points[33]!, points[133]!);
+    final rightEye = _average(points[362]!, points[263]!);
+    final eyeDistance = _distance(leftEye, rightEye);
+    final eyeRatio = eyeDistance / faceWidth;
+    if (eyeRatio < 0.24 || eyeRatio > 0.58) return false;
+    if ((leftEye.y - rightEye.y).abs() / eyeDistance > 0.28) return false;
+    final eyeY = (leftEye.y + rightEye.y) / 2;
+    final nose = points[1]!;
+    final mouthY = (points[61]!.y + points[291]!.y) / 2;
+    if (nose.y <= eyeY || mouthY <= nose.y) return false;
+    return nose.x >= minX && nose.x <= maxX;
   }
 
   Map<int, math.Point<double>> _points(Object? raw, int width, int height) {

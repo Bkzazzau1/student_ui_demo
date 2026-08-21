@@ -45,7 +45,7 @@ class DemoFaceIdSnapshot {
 class DemoFaceIdService {
   DemoFaceIdService({GetStorage? storage}) : _storage = storage ?? GetStorage();
 
-  static const int requiredSamples = 6;
+  static const int requiredSamples = 7;
   static const String studentId = 'KASU/STU/2026/001';
   static const String _capturedKey = 'demo_face_id_captured_samples';
   static const String _qualityKey = 'demo_face_id_last_quality';
@@ -55,8 +55,20 @@ class DemoFaceIdService {
   static const String _enrollmentIdKey = 'demo_face_id_enrollment_id';
   static const String _statusKey = 'demo_face_id_status';
   static const String _imageUrlsKey = 'demo_face_id_image_urls';
+  static const String _validationVersionKey = 'demo_face_id_validation_version';
+  static const int currentValidationVersion = 3;
 
   final GetStorage _storage;
+
+  Future<DemoFaceIdSnapshot> migrateUntrustedDraft() async {
+    final current = load();
+    final version = _storage.read<int>(_validationVersionKey) ?? 0;
+    if (version != currentValidationVersion && !current.locked) {
+      await resetLocalDraftOnly();
+    }
+    await _storage.write(_validationVersionKey, currentValidationVersion);
+    return load();
+  }
 
   DemoFaceIdSnapshot load() {
     final captured = (_storage.read<int>(_capturedKey) ?? 0).clamp(
