@@ -15,10 +15,58 @@
 
 #ifdef KSLAS_ENABLE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
+#if __has_include(<onnxruntime/core/providers/dml/dml_provider_factory.h>)
+#include <onnxruntime/core/providers/dml/dml_provider_factory.h>
+#define KSLAS_EMBEDDING_HAS_DIRECTML 1
+#elif __has_include(<dml_provider_factory.h>)
+#include <dml_provider_factory.h>
+#define KSLAS_EMBEDDING_HAS_DIRECTML 1
+#else
+#define KSLAS_EMBEDDING_HAS_DIRECTML 0
+#endif
 #endif
 
 namespace {
 flutter::EncodableValue Key(const char* value) { return std::string(value); }
+
+#ifdef KSLAS_ENABLE_ONNXRUNTIME
+// Mirrors the same DirectML opt-in used by the optimized-vision (YOLO)
+// engine and the face landmarker: this session was previously left on the
+// default CPU execution provider. Falls back to CPU silently if DirectML
+// isn't available.
+std::string EmbeddingExecutableDirectory() {
+  std::wstring buffer(MAX_PATH, L'\0');
+  DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+  while (length == buffer.size()) {
+    buffer.resize(buffer.size() * 2);
+    length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+  }
+  if (length == 0) return "";
+  buffer.resize(length);
+  const int utf8_length = WideCharToMultiByte(CP_UTF8, 0, buffer.c_str(), -1, nullptr, 0, nullptr, nullptr);
+  if (utf8_length <= 0) return "";
+  std::string utf8(utf8_length - 1, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, buffer.c_str(), -1, utf8.data(), utf8_length, nullptr, nullptr);
+  const auto index = utf8.find_last_of("\\/");
+  return index == std::string::npos ? "" : utf8.substr(0, index);
+}
+
+void TryEnableEmbeddingDirectMl(Ort::SessionOptions* options) {
+#if KSLAS_EMBEDDING_HAS_DIRECTML
+  const std::string directml_path = EmbeddingExecutableDirectory() + "\\DirectML.dll";
+  if (!std::ifstream(directml_path, std::ios::binary).good()) return;
+  try {
+    options->DisableMemPattern();
+    options->SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
+    Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(*options, 0));
+  } catch (...) {
+    // Leave the session on its default CPU execution provider.
+  }
+#else
+  (void)options;
+#endif
+}
+#endif
 
 const flutter::EncodableValue* Find(const flutter::EncodableMap* map,
                                     const char* key) {
@@ -96,6 +144,7 @@ class FaceEmbeddingEngine {
                                         "kslas-face-embedding");
       options_ = std::make_unique<Ort::SessionOptions>();
       options_->SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+      TryEnableEmbeddingDirectMl(options_.get());
       std::wstring wide(path.begin(), path.end());
       session_ = std::make_unique<Ort::Session>(*env_, wide.c_str(), *options_);
       Ort::AllocatorWithDefaultOptions allocator;

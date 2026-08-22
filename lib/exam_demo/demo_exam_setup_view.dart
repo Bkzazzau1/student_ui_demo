@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../face_demo/demo_face_id_service.dart';
 import '../face_demo/demo_face_id_view.dart';
+import '../face_demo/face_identity_check_view.dart';
 import '../proctoring_demo/proctoring_demo_home.dart';
 import '../proctoring_demo/security_review_service.dart';
 import 'demo_exam_attempt_view.dart';
@@ -20,6 +21,10 @@ class DemoExamSetupView extends StatefulWidget {
 class _DemoExamSetupViewState extends State<DemoExamSetupView> {
   final DemoFaceIdService _faceIdService = DemoFaceIdService();
   late DemoFaceIdSnapshot _faceId;
+  // Reset whenever enrollment changes; proves a fresh live 1:1 comparison
+  // was done for THIS attempt, not merely that enrollment happened at some
+  // point in the past.
+  bool _identityChecked = false;
   bool _proctoringApproved = false;
   String? _manifestPath;
   String? _attemptId;
@@ -49,7 +54,8 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
             const SizedBox(height: 14),
             _ChecklistCard(
               assessment: assessment,
-              faceIdComplete: _faceId.isComplete,
+              enrolled: _faceId.isComplete,
+              identityChecked: _identityChecked,
               proctoringApproved: _proctoringApproved,
               manifestPath: _manifestPath,
             ),
@@ -62,15 +68,21 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
               children: [
                 if (assessment.graded)
                   FilledButton.icon(
-                    onPressed: _openFaceId,
+                    onPressed: _faceId.isComplete
+                        ? _openIdentityCheck
+                        : _openFaceId,
                     icon: const Icon(Icons.face_retouching_natural),
                     label: Text(
-                      _faceId.isComplete ? 'Face ID active' : 'Set up Face ID',
+                      !_faceId.isComplete
+                          ? 'Set up Face ID'
+                          : _identityChecked
+                          ? 'Identity confirmed'
+                          : 'Confirm identity',
                     ),
                   ),
                 if (assessment.remoteProctored)
                   FilledButton.icon(
-                    onPressed: _faceId.isComplete ? _openProctoring : null,
+                    onPressed: _faceOk ? _openProctoring : null,
                     icon: const Icon(Icons.security_outlined),
                     label: Text(
                       _proctoringApproved
@@ -96,24 +108,55 @@ class _DemoExamSetupViewState extends State<DemoExamSetupView> {
     );
   }
 
+  // Enrollment alone (`_faceId.isComplete`) only proves a Face ID was set up
+  // at some point; `_identityChecked` is the fresh, per-attempt 1:1 live
+  // comparison and is what actually gates starting the exam.
+  bool get _faceOk => !widget.assessment.graded || (_faceId.isComplete && _identityChecked);
+
   bool get _canStart =>
-      (!widget.assessment.graded || _faceId.isComplete) &&
+      _faceOk &&
       (!widget.assessment.remoteProctored ||
           (_proctoringApproved &&
               _startApproval?.approvedToStart == true));
 
+  /// Opens enrollment. Only reachable before the student has enrolled;
+  /// afterward the button routes to [_openIdentityCheck] instead, so this
+  /// screen can never be used to replace an already-approved identity.
   Future<void> _openFaceId() async {
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => DemoFaceIdView(
           onComplete: () {
-            setState(() => _faceId = _faceIdService.load());
+            setState(() {
+              _faceId = _faceIdService.load();
+              _identityChecked = false;
+            });
           },
         ),
       ),
     );
     if (!mounted) return;
-    setState(() => _faceId = _faceIdService.load());
+    setState(() {
+      _faceId = _faceIdService.load();
+      _identityChecked = false;
+    });
+  }
+
+  /// Runs the fresh, per-attempt 1:1 identity check against the already
+  /// approved template. Never enrolls, never resets, never searches across
+  /// students.
+  Future<void> _openIdentityCheck() async {
+    final approved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FaceIdentityCheckView(
+          examId: widget.assessment.id,
+          attemptId:
+              _attemptId ?? 'attempt-${DateTime.now().millisecondsSinceEpoch}',
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _identityChecked = approved == true);
   }
 
   Future<void> _openProctoring() async {
@@ -218,13 +261,15 @@ class _SetupHeader extends StatelessWidget {
 class _ChecklistCard extends StatelessWidget {
   const _ChecklistCard({
     required this.assessment,
-    required this.faceIdComplete,
+    required this.enrolled,
+    required this.identityChecked,
     required this.proctoringApproved,
     required this.manifestPath,
   });
 
   final DemoAssessment assessment;
-  final bool faceIdComplete;
+  final bool enrolled;
+  final bool identityChecked;
   final bool proctoringApproved;
   final String? manifestPath;
 
@@ -239,13 +284,15 @@ class _ChecklistCard extends StatelessWidget {
           detail: 'Questions and timing are ready for presentation use.',
         ),
         _CheckRow(
-          passed: !assessment.graded || faceIdComplete,
-          title: 'Face ID setup',
-          detail: assessment.graded
-              ? faceIdComplete
-                    ? 'Face ID is active and attached to this exam attempt.'
-                    : 'Set up Face ID before the security check or exam startup.'
-              : 'Practice assessment can start without Face ID.',
+          passed: !assessment.graded || (enrolled && identityChecked),
+          title: 'Identity check',
+          detail: !assessment.graded
+              ? 'Practice assessment can start without Face ID.'
+              : !enrolled
+              ? 'Set up Face ID before the security check or exam startup.'
+              : identityChecked
+              ? 'A fresh identity check was confirmed for this attempt.'
+              : 'Confirm your identity with a fresh live check before this attempt.',
         ),
         _CheckRow(
           passed: !assessment.remoteProctored || proctoringApproved,

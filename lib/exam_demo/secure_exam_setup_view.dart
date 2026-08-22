@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../face_demo/demo_face_id_service.dart';
 import '../face_demo/demo_face_id_view.dart';
+import '../face_demo/face_identity_check_view.dart';
 import '../proctoring_demo/audio_system_review_view.dart';
 import '../proctoring_demo/audio_calibration_profile.dart';
 import '../proctoring_demo/edge_ai_runtime_preflight_service.dart';
@@ -82,9 +83,18 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     super.dispose();
   }
 
+  // Enrollment (`_faceId.isComplete`) only proves a Face ID was set up at
+  // some point; it is not evidence the person at this device right now is
+  // that student. `_identityChecked` is the fresh, per-attempt 1:1
+  // comparison and is reset whenever enrollment changes underneath it, so
+  // it can never be satisfied by a stale check against a since-replaced
+  // identity.
+  bool _identityChecked = false;
+
   bool get _needsChecks =>
       widget.assessment.isStrictExam && widget.assessment.remoteProctored;
-  bool get _faceOk => !widget.assessment.graded || _faceId.isComplete;
+  bool get _faceOk =>
+      !widget.assessment.graded || (_faceId.isComplete && _identityChecked);
   bool get _runtimeOk => !_needsChecks || _aiRuntimeResult?.ready == true;
   bool get _roomOk => !_needsChecks || (_roomApproved && _manifestPath != null);
   bool get _audioOk => !_needsChecks || _audioApproved;
@@ -277,13 +287,23 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       _SetupStepData(
         number: _needsChecks ? 2 : 1,
         title: 'Identity check',
-        subtitle: widget.assessment.graded
-            ? 'Confirm your student identity before continuing.'
-            : 'Identity setup is available for this activity.',
+        subtitle: !widget.assessment.graded
+            ? 'Identity setup is available for this activity.'
+            : !_faceId.isComplete
+            ? 'Set up your identity before continuing.'
+            : _identityChecked
+            ? 'Your identity was confirmed with a fresh live check for this attempt.'
+            : 'Confirm your identity with a fresh live check before this attempt.',
         status: _faceOk ? _StepStatus.complete : _StepStatus.pending,
         icon: Icons.account_circle_outlined,
-        actionLabel: _faceId.isComplete ? 'Review identity' : 'Set up identity',
-        onPressed: _runtimeOk ? _openFaceId : null,
+        actionLabel: !_faceId.isComplete
+            ? 'Set up identity'
+            : _identityChecked
+            ? 'Check again'
+            : 'Confirm identity',
+        onPressed: _runtimeOk
+            ? (_faceId.isComplete ? _openIdentityCheck : _openFaceId)
+            : null,
       ),
       if (_needsChecks)
         _SetupStepData(
@@ -382,14 +402,20 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     });
   }
 
+  /// Opens enrollment. This is only reachable while the student has no
+  /// completed enrollment yet; once enrolled, the "Identity check" step
+  /// routes to [_openIdentityCheck] instead, never back here, so a student
+  /// cannot re-enroll to replace an approved identity from the exam setup
+  /// screen.
   Future<void> _openFaceId() async {
     await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => DemoFaceIdView(
           onComplete: () => setState(() {
             _faceId = _faceIdService.load();
+            _identityChecked = false;
             _clearApproval(
-              'Identity check updated. Please confirm readiness again.',
+              'Identity setup changed. Please confirm your identity again.',
             );
           }),
         ),
@@ -398,8 +424,32 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     if (!mounted) return;
     setState(() {
       _faceId = _faceIdService.load();
+      _identityChecked = false;
       _clearApproval(
-        'Identity check completed. Please confirm readiness again.',
+        'Identity setup completed. Please confirm your identity before this attempt.',
+      );
+    });
+  }
+
+  /// Runs the fresh, per-attempt 1:1 identity check against the student's
+  /// already-approved template. This never enrolls, never resets, and never
+  /// searches across students — see [FaceIdentityCheckView].
+  Future<void> _openIdentityCheck() async {
+    final approved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FaceIdentityCheckView(
+          examId: widget.assessment.id,
+          attemptId: _attemptId,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      _identityChecked = approved == true;
+      _clearApproval(
+        _identityChecked
+            ? 'Identity confirmed. Please confirm readiness again.'
+            : 'Identity was not confirmed. Please try the identity check again.',
       );
     });
   }

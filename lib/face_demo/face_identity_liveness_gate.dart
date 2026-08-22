@@ -62,17 +62,8 @@ class FaceIdentityLivenessGate {
     return activeSession.evaluate();
   }
 
-  Uint8List _toRgb(img.Image decoded) {
-    final rgb = Uint8List(decoded.width * decoded.height * 3);
-    var offset = 0;
-    for (var y = 0; y < decoded.height; y++) {
-      for (var x = 0; x < decoded.width; x++) {
-        final pixel = decoded.getPixel(x, y);
-        rgb[offset++] = pixel.r.toInt();
-        rgb[offset++] = pixel.g.toInt();
-        rgb[offset++] = pixel.b.toInt();
-      }
-    }
-    return rgb;
-  }
+  // Bulk conversion instead of a per-pixel `getPixel` loop: this runs once
+  // per liveness-burst frame (up to `maxFrames` times per identity check),
+  // so the per-pixel overhead was multiplied across the whole burst.
+  Uint8List _toRgb(img.Image decoded) => decoded.getBytes(order: img.ChannelOrder.rgb);
 }

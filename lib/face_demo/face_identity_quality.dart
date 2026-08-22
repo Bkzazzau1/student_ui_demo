@@ -11,11 +11,22 @@ enum FaceIdentityQualityLevel { excellent, good, acceptable, retry }
 /// value is a constructor parameter rather than a hardcoded literal.
 class FaceIdentityQualityThresholds {
   const FaceIdentityQualityThresholds({
-    this.minFaceConfidence = 0.72,
+    // The face landmarker's own confidence score is the main signal that
+    // degrades in normal indoor/dim lighting (there is no separate
+    // brightness check in this pipeline). 0.72 was tuned for well-lit
+    // studio-style captures and rejected otherwise-usable frames in typical
+    // room lighting; 0.6 still rejects genuinely unusable/no-face frames.
+    this.minFaceConfidence = 0.6,
     this.minFaceCoverage = 0.24,
     this.minPersonConfidence = 0.5,
-    this.maxNeutralYaw = 0.6,
-    this.maxNeutralPitch = 0.6,
+    // Guide poses (left/right/up/down) are intentionally non-neutral, so
+    // this is a broad "not looking almost entirely away" sanity bound, not
+    // a strict front-facing requirement. It used to be 0.6, which was tight
+    // enough that a normal "turn slightly left/right" guide pose could trip
+    // it and hard-block the capture with a generic message instead of ever
+    // reaching the guide-specific pose check.
+    this.maxNeutralYaw = 0.8,
+    this.maxNeutralPitch = 0.8,
     this.minAlignmentQuality = 0.35,
     this.excellentScore = 0.85,
     this.goodScore = 0.70,

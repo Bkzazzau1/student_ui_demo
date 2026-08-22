@@ -37,12 +37,40 @@ class _Target {
 }
 
 class _GazeCalibrationViewState extends State<GazeCalibrationView> {
+  // The signal that actually separates these zones later is head pose
+  // (yaw/pitch from the landmarker), not eye position alone — a face
+  // landmarker's head-pose estimate barely moves if you just shift your
+  // eyes while keeping your head still. Earlier wording ("Look at X") only
+  // asked for eye movement, so several zones ended up with nearly
+  // identical head pose and became hard to tell apart. Asking for a
+  // deliberate head turn toward each target produces a much larger, more
+  // separable signal.
   static const targets = <_Target>[
-    _Target('camera', 'Look at the camera', 0.50, 0.08),
-    _Target('question_area', 'Look at the question area', 0.20, 0.40),
-    _Target('answer_area', 'Look at the answer area', 0.50, 0.68),
-    _Target('air_board', 'Look at the rough-work area', 0.82, 0.60),
-    _Target('top_screen_area', 'Look at the top of the screen', 0.50, 0.22),
+    _Target('camera', 'Turn your head to look at the camera', 0.50, 0.08),
+    _Target(
+      'question_area',
+      'Turn your head toward the question area',
+      0.20,
+      0.40,
+    ),
+    _Target(
+      'answer_area',
+      'Turn your head toward the answer area',
+      0.50,
+      0.68,
+    ),
+    _Target(
+      'air_board',
+      'Turn your head down toward the rough-work area',
+      0.82,
+      0.60,
+    ),
+    _Target(
+      'top_screen_area',
+      'Tilt your head up toward the top of the screen',
+      0.50,
+      0.22,
+    ),
   ];
   static const modelId = 'windows-face-landmarker-478-v1';
   static const modelSha256 =
@@ -87,7 +115,9 @@ class _GazeCalibrationViewState extends State<GazeCalibrationView> {
       setState(() {
         _camera = controller;
         _opening = false;
-        _message = 'Keep your head comfortable and follow each marker.';
+        _message =
+            'If possible, raise the camera closer to eye level. Then turn '
+            'your head (not just your eyes) toward each marker.';
       });
     } catch (error) {
       if (!mounted) return;

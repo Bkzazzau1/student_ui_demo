@@ -94,16 +94,11 @@ class FaceEmbeddingPipeline {
       lastFailureReason = 'The camera image is not usable.';
       return null;
     }
-    final rgb = Uint8List(decoded.width * decoded.height * 3);
-    var offset = 0;
-    for (var y = 0; y < decoded.height; y++) {
-      for (var x = 0; x < decoded.width; x++) {
-        final pixel = decoded.getPixel(x, y);
-        rgb[offset++] = pixel.r.toInt();
-        rgb[offset++] = pixel.g.toInt();
-        rgb[offset++] = pixel.b.toInt();
-      }
-    }
+    // `getBytes` does one bulk conversion instead of allocating a `Pixel`
+    // object per call site via `getPixel`; on a full camera-resolution
+    // frame (hundreds of thousands of pixels, done on every single capture
+    // attempt) that per-pixel overhead was a measurable, needless slowdown.
+    final rgb = decoded.getBytes(order: img.ChannelOrder.rgb);
 
     final personGateResult = await _personGate.analyzeRgb(
       rgbBytes: rgb,

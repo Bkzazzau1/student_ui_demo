@@ -375,7 +375,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         break;
       }
       await _captureSample();
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await Future<void>.delayed(const Duration(milliseconds: 400));
     }
     if (mounted) {
       setState(() => _autoCaptureRunning = false);
@@ -468,24 +468,32 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     }
   }
 
+  // These deltas intentionally accept a natural, moderate pose change
+  // rather than requiring an exaggerated turn: requiring a bigger delta
+  // just means more failed attempts (and a longer wait) before a normal
+  // "turn slightly left/right" pose happens to clear the bar.
   bool _matchesGuide(_IdentityGuide guide, FaceEmbeddingPipelineResult sample) {
     if (guide.code == 'front_face') {
-      return sample.yaw.abs() <= 0.16 && sample.eyeOpenness >= 0.035;
+      return sample.yaw.abs() <= 0.20 && sample.eyeOpenness >= 0.028;
     }
     final baseline = _neutralBaseline;
     if (baseline == null) return false;
-    if (_cosineSimilarity(baseline.embedding, sample.embedding) < 0.36) {
+    // Turning the head away from the frontal baseline naturally lowers
+    // SFace's cosine similarity even for the same person; 0.36 was tuned
+    // for near-frontal pairs and could reject a genuine pose-guide capture
+    // as "different person", forcing repeated retries.
+    if (_cosineSimilarity(baseline.embedding, sample.embedding) < 0.28) {
       return false;
     }
     return switch (guide.code) {
-      'left_angle' => sample.yaw - baseline.yaw >= 0.10,
-      'right_angle' => sample.yaw - baseline.yaw <= -0.10,
-      'look_down' => sample.pitch - baseline.pitch >= 0.055,
-      'look_up' => sample.pitch - baseline.pitch <= -0.055,
-      'smile' => sample.smileWidth - baseline.smileWidth >= 0.055,
+      'left_angle' => sample.yaw - baseline.yaw >= 0.07,
+      'right_angle' => sample.yaw - baseline.yaw <= -0.07,
+      'look_down' => sample.pitch - baseline.pitch >= 0.04,
+      'look_up' => sample.pitch - baseline.pitch <= -0.04,
+      'smile' => sample.smileWidth - baseline.smileWidth >= 0.04,
       'open_mouth' =>
-        sample.mouthOpenness >= 0.055 &&
-            sample.mouthOpenness >= baseline.mouthOpenness * 1.65,
+        sample.mouthOpenness >= 0.04 &&
+            sample.mouthOpenness >= baseline.mouthOpenness * 1.4,
       _ => false,
     };
   }

@@ -12,12 +12,71 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifdef KSLAS_ENABLE_ONNXRUNTIME
 #include <onnxruntime_cxx_api.h>
+#if __has_include(<onnxruntime/core/providers/dml/dml_provider_factory.h>)
+#include <onnxruntime/core/providers/dml/dml_provider_factory.h>
+#define KSLAS_LANDMARKER_HAS_DIRECTML 1
+#elif __has_include(<dml_provider_factory.h>)
+#include <dml_provider_factory.h>
+#define KSLAS_LANDMARKER_HAS_DIRECTML 1
+#else
+#define KSLAS_LANDMARKER_HAS_DIRECTML 0
+#endif
 #endif
 
 namespace {
 flutter::EncodableValue Key(const char* value) { return std::string(value); }
+
+#ifdef KSLAS_ENABLE_ONNXRUNTIME
+// This model runs on every single processed frame (every guided enrollment
+// capture and every liveness-burst frame), so it is the single highest-
+// leverage place to enable GPU acceleration: unlike the optimized-vision
+// (YOLO) engine, this session was left on ONNX Runtime's default CPU
+// execution provider. Falls back to CPU silently if DirectML isn't
+// available on this machine/build, exactly like the YOLO engine does.
+std::string ExecutableDirectory() {
+  std::wstring buffer(MAX_PATH, L'\0');
+  DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+  while (length == buffer.size()) {
+    buffer.resize(buffer.size() * 2);
+    length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+  }
+  if (length == 0) return "";
+  buffer.resize(length);
+  const int utf8_length = WideCharToMultiByte(CP_UTF8, 0, buffer.c_str(), -1, nullptr, 0, nullptr, nullptr);
+  if (utf8_length <= 0) return "";
+  std::string utf8(utf8_length - 1, '\0');
+  WideCharToMultiByte(CP_UTF8, 0, buffer.c_str(), -1, utf8.data(), utf8_length, nullptr, nullptr);
+  const auto index = utf8.find_last_of("\\/");
+  return index == std::string::npos ? "" : utf8.substr(0, index);
+}
+
+bool DirectMlAvailable() {
+  const std::string directml_path = ExecutableDirectory() + "\\DirectML.dll";
+  return std::ifstream(directml_path, std::ios::binary).good();
+}
+
+void TryEnableDirectMl(Ort::SessionOptions* options) {
+#if KSLAS_LANDMARKER_HAS_DIRECTML
+  if (!DirectMlAvailable()) return;
+  try {
+    options->DisableMemPattern();
+    options->SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
+    Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(*options, 0));
+  } catch (...) {
+    // Leave the session on its default CPU execution provider.
+  }
+#else
+  (void)options;
+#endif
+}
+#endif
+
 const flutter::EncodableValue* Find(const flutter::EncodableMap* map, const char* key) {
   if (!map) return nullptr;
   const auto found = map->find(Key(key));
@@ -45,6 +104,7 @@ class FaceLandmarkerEngine {
       env_ = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "kslas-face-landmarks");
       options_ = std::make_unique<Ort::SessionOptions>();
       options_->SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+      TryEnableDirectMl(options_.get());
       std::wstring wide(path.begin(), path.end());
       session_ = std::make_unique<Ort::Session>(*env_, wide.c_str(), *options_);
       Ort::AllocatorWithDefaultOptions allocator;
