@@ -19,11 +19,32 @@ import kotlin.system.measureNanoTime
 class MainActivity : FlutterActivity() {
     private val optimizedVisionEngine = AndroidOptimizedVisionRuntimeEngine()
     private val faceLandmarkerChannel by lazy { AndroidFaceLandmarkerChannel(this) }
+    private val faceEmbeddingChannel = AndroidFaceEmbeddingChannel()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         registerOptimizedVisionRuntime(flutterEngine)
         registerFaceLandmarkerRuntime(flutterEngine)
+        registerFaceEmbeddingRuntime(flutterEngine)
+    }
+
+    private fun registerFaceEmbeddingRuntime(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "kslas.face_embedding",
+        ).setMethodCallHandler { call, result ->
+            val request = call.arguments as? Map<*, *>
+            when (call.method) {
+                "initialize" -> result.success(faceEmbeddingChannel.initialize(request))
+                "health" -> result.success(faceEmbeddingChannel.health())
+                "embedAlignedRgb" -> result.success(faceEmbeddingChannel.embedAlignedRgb(request))
+                "storeProtectedTemplate" ->
+                    result.success(faceEmbeddingChannel.storeProtectedTemplate(request))
+                "loadProtectedTemplate" ->
+                    result.success(faceEmbeddingChannel.loadProtectedTemplate(request))
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun registerOptimizedVisionRuntime(flutterEngine: FlutterEngine) {
@@ -66,6 +87,11 @@ class MainActivity : FlutterActivity() {
                 "analyseFrame" -> {
                     val request = call.arguments as? Map<*, *>
                     result.success(faceLandmarkerChannel.analyseFrame(request))
+                }
+
+                "analyseRgb" -> {
+                    val request = call.arguments as? Map<*, *>
+                    result.success(faceLandmarkerChannel.analyseRgb(request))
                 }
 
                 "status" -> result.success(faceLandmarkerChannel.status())

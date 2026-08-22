@@ -42,10 +42,30 @@ class AndroidFaceLandmarkerChannel(private val context: Context) {
     }
 
     fun analyseFrame(request: Map<*, *>?): Map<String, Any?>? {
-        val runtime = faceLandmarker ?: return null
         if (request == null) return null
+        val bitmap = request.toBitmap() ?: return null
+        return processBitmap(bitmap)
+    }
+
+    /**
+     * Still-photo path used by identity enrollment/verification
+     * (`NativeFaceLandmarkerRuntime.analyseRgbRaw`), as opposed to
+     * [analyseFrame]'s live camera-stream (YUV/BGRA plane) path used by
+     * proctoring. Takes already-decoded, packed RGB bytes directly.
+     */
+    fun analyseRgb(request: Map<*, *>?): Map<String, Any?>? {
+        if (request == null) return null
+        val width = request.intValue("width", 0)
+        val height = request.intValue("height", 0)
+        val bytes = request["rgb_bytes"] as? ByteArray ?: return null
+        if (width <= 0 || height <= 0 || bytes.size < width * height * 3) return null
+        val bitmap = rgbBytesToBitmap(bytes, width, height) ?: return null
+        return processBitmap(bitmap)
+    }
+
+    private fun processBitmap(bitmap: Bitmap): Map<String, Any?>? {
+        val runtime = faceLandmarker ?: return null
         return try {
-            val bitmap = request.toBitmap() ?: return null
             val result = runtime.detect(BitmapImageBuilder(bitmap).build())
             val face = result.faceLandmarks().firstOrNull() ?: return null
             val landmarks = face.mapIndexed { index, landmark ->
@@ -138,6 +158,19 @@ private fun Map<*, *>?.intValue(key: String, fallback: Int): Int {
         is Number -> value.toInt()
         else -> value.toString().toIntOrNull() ?: fallback
     }
+}
+
+private fun rgbBytesToBitmap(bytes: ByteArray, width: Int, height: Int): Bitmap? {
+    val pixels = IntArray(width * height)
+    var offset = 0
+    for (index in pixels.indices) {
+        val r = bytes[offset].toInt() and 0xff
+        val g = bytes[offset + 1].toInt() and 0xff
+        val b = bytes[offset + 2].toInt() and 0xff
+        pixels[index] = (0xff shl 24) or (r shl 16) or (g shl 8) or b
+        offset += 3
+    }
+    return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
 }
 
 private fun Map<*, *>.toBitmap(): Bitmap? {

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(flutter analyze *)",
-      "Bash(cargo test *)"
+      "Bash(cargo test *)",
+      "Bash(xargs -I{} basename {})",
+      "Bash(flutter pub *)"
     ]
   }
 }

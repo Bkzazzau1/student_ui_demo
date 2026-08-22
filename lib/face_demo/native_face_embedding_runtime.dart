@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 class FaceEmbeddingSample {
   const FaceEmbeddingSample({
@@ -25,8 +26,16 @@ class NativeFaceEmbeddingRuntime {
   static const String preprocessingVersion =
       'sface-five-point-similarity-bgr-minus-127.5-div-128-v1';
 
+  /// Platforms with a real native SFace + protected-storage implementation.
+  /// iOS/macOS scaffolding exists in source but is unverified (no Xcode/Mac
+  /// available to build or test it), so it is deliberately not enabled here
+  /// yet: enabling it before it is verified would risk a native channel
+  /// call throwing instead of failing safely, exactly the "AI unavailable"
+  /// path this runtime otherwise handles cleanly.
+  static bool get _supportedPlatform => Platform.isWindows || Platform.isAndroid;
+
   Future<bool> initialize() async {
-    if (!Platform.isWindows) return false;
+    if (!_supportedPlatform) return false;
     final model = await rootBundle.load(modelAssetPath);
     final bytes = model.buffer.asUint8List();
     if (sha256.convert(bytes).toString() != modelSha256) {
@@ -77,12 +86,9 @@ class NativeFaceEmbeddingRuntime {
     required String studentId,
     required String templateJson,
   }) async {
-    if (!Platform.isWindows || templateJson.isEmpty) return false;
-    final root = Platform.environment['LOCALAPPDATA'];
-    if (root == null || root.isEmpty) return false;
-    final directory = Directory(
-      '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}identity',
-    );
+    if (!_supportedPlatform || templateJson.isEmpty) return false;
+    final directory = await _identityDirectory();
+    if (directory == null) return false;
     await directory.create(recursive: true);
     final identityKey = sha256.convert(studentId.codeUnits).toString();
     final path = '${directory.path}${Platform.pathSeparator}$identityKey.dpapi';
@@ -96,13 +102,11 @@ class NativeFaceEmbeddingRuntime {
   }
 
   Future<String?> loadProtectedTemplate({required String studentId}) async {
-    if (!Platform.isWindows) return null;
-    final root = Platform.environment['LOCALAPPDATA'];
-    if (root == null || root.isEmpty) return null;
+    if (!_supportedPlatform) return null;
+    final directory = await _identityDirectory();
+    if (directory == null) return null;
     final identityKey = sha256.convert(studentId.codeUnits).toString();
-    final path =
-        '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}'
-        'identity${Platform.pathSeparator}$identityKey.dpapi';
+    final path = '${directory.path}${Platform.pathSeparator}$identityKey.dpapi';
     return _channel.invokeMethod<String>(
       'loadProtectedTemplate',
       <String, Object?>{
@@ -113,16 +117,36 @@ class NativeFaceEmbeddingRuntime {
   }
 
   Future<bool> clearProtectedTemplate({required String studentId}) async {
-    if (!Platform.isWindows) return false;
-    final root = Platform.environment['LOCALAPPDATA'];
-    if (root == null || root.isEmpty) return false;
+    if (!_supportedPlatform) return false;
+    final directory = await _identityDirectory();
+    if (directory == null) return false;
     final identityKey = sha256.convert(studentId.codeUnits).toString();
     final file = File(
-      '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}'
-      'identity${Platform.pathSeparator}$identityKey.dpapi',
+      '${directory.path}${Platform.pathSeparator}$identityKey.dpapi',
     );
     if (!await file.exists()) return true;
     await file.delete();
     return !await file.exists();
+  }
+
+  /// Resolves the per-platform private directory the protected template
+  /// lives in. Windows keeps its existing `%LOCALAPPDATA%\KSLAS\identity`
+  /// path unchanged; Android uses the app's private, sandboxed support
+  /// directory (nothing else on the device can read this without root).
+  Future<Directory?> _identityDirectory() async {
+    if (Platform.isWindows) {
+      final root = Platform.environment['LOCALAPPDATA'];
+      if (root == null || root.isEmpty) return null;
+      return Directory(
+        '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}identity',
+      );
+    }
+    if (Platform.isAndroid) {
+      final support = await getApplicationSupportDirectory();
+      return Directory(
+        '${support.path}${Platform.pathSeparator}identity',
+      );
+    }
+    return null;
   }
 }
