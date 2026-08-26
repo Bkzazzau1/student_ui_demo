@@ -83,13 +83,50 @@ class FaceIdentityCheckOutcome {
 /// is handed exactly one template and answers "does this live sample match
 /// it", nothing more.
 class FaceIdentityVerificationService {
-  const FaceIdentityVerificationService({this.matchThreshold = 0.363});
+  const FaceIdentityVerificationService({this.matchThreshold = 0.55});
 
-  /// 0.363 is the OpenCV-Zoo published cosine-similarity threshold for the
-  /// `face_recognition_sface_2021dec` checkpoint this app ships. It is
-  /// exposed as a parameter, not a hardcoded final production number,
-  /// because it should be recalibrated once a real held-out dataset exists.
+  /// The public SFace benchmark threshold (0.363) is intentionally not used
+  /// as an exam-security operating point. This higher threshold prioritizes
+  /// rejecting impostors; multi-sample consensus below limits the resulting
+  /// inconvenience to the enrolled student.
   final double matchThreshold;
+
+  FaceIdentityCheckOutcome evaluateConsensus({
+    required List<FaceIdentityCheckOutcome> outcomes,
+    int requiredMatches = 2,
+  }) {
+    final reliable = outcomes.where(
+      (outcome) =>
+          outcome.state == FaceIdentityCheckState.verified ||
+          outcome.state == FaceIdentityCheckState.mismatch,
+    );
+    final matches = reliable.where((outcome) => outcome.verified).toList();
+    if (matches.length >= requiredMatches) {
+      matches.sort((a, b) => a.similarity.compareTo(b.similarity));
+      return FaceIdentityCheckOutcome(
+        state: FaceIdentityCheckState.verified,
+        reason: '$requiredMatches independent live samples matched.',
+        similarity: matches[matches.length ~/ 2].similarity,
+        threshold: matchThreshold,
+      );
+    }
+    if (reliable.length >= requiredMatches) {
+      final best = reliable.fold<FaceIdentityCheckOutcome>(
+        reliable.first,
+        (current, next) =>
+            next.similarity > current.similarity ? next : current,
+      );
+      return FaceIdentityCheckOutcome(
+        state: FaceIdentityCheckState.mismatch,
+        reason: 'Independent live samples did not agree with the template.',
+        similarity: best.similarity,
+        threshold: matchThreshold,
+      );
+    }
+    return FaceIdentityCheckOutcome.qualityRetry(
+      'More high-quality live samples are required.',
+    );
+  }
 
   FaceIdentityCheckOutcome evaluateSample({
     required bool aiAvailable,

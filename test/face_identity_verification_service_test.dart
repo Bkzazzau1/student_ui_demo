@@ -73,7 +73,8 @@ String _template({
     enrollmentId: 'enrollment-1',
     modelId: 'kslas-sface-2021dec-v1',
     modelSha256: 'a' * 64,
-    preprocessingVersion: 'sface-five-point-similarity-bgr-minus-127.5-div-128-v1',
+    preprocessingVersion:
+        'sface-five-point-similarity-bgr-minus-127.5-div-128-v1',
     embeddings: embeddings
         .map((e) => Float32List.fromList(e))
         .toList(growable: false),
@@ -90,60 +91,94 @@ void main() {
 
   const service = FaceIdentityVerificationService();
 
-  test('a matching live embedding is verified against the student\'s own template', () {
-    final template = _template(
-      studentId: 'student-1',
-      embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
+  test(
+    'a matching live embedding is verified against the student\'s own template',
+    () {
+      final template = _template(
+        studentId: 'student-1',
+        embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
+      );
+
+      final outcome = service.evaluateSample(
+        aiAvailable: true,
+        sample: _sample(_vector(128, 0)),
+        pipelineFailureReason: '',
+        templateJson: template,
+        nowMs: 1000,
+      );
+
+      expect(outcome.state, FaceIdentityCheckState.verified);
+      expect(outcome.verified, isTrue);
+      expect(outcome.similarity, closeTo(1.0, 1e-6));
+    },
+  );
+
+  test(
+    'a reliable non-matching sample is a mismatch, not an accusation label',
+    () {
+      final template = _template(
+        studentId: 'student-1',
+        embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
+      );
+
+      final outcome = service.evaluateSample(
+        aiAvailable: true,
+        sample: _sample(_vector(128, 1)),
+        pipelineFailureReason: '',
+        templateJson: template,
+        nowMs: 1000,
+      );
+
+      expect(outcome.state, FaceIdentityCheckState.mismatch);
+      expect(outcome.verified, isFalse);
+    },
+  );
+
+  test('consensus requires two independent matching live samples', () {
+    const strict = FaceIdentityVerificationService();
+    const match = FaceIdentityCheckOutcome(
+      state: FaceIdentityCheckState.verified,
+      reason: 'match',
+      similarity: 0.72,
+      threshold: 0.55,
+    );
+    const mismatch = FaceIdentityCheckOutcome(
+      state: FaceIdentityCheckState.mismatch,
+      reason: 'mismatch',
+      similarity: 0.31,
+      threshold: 0.55,
     );
 
-    final outcome = service.evaluateSample(
-      aiAvailable: true,
-      sample: _sample(_vector(128, 0)),
-      pipelineFailureReason: '',
-      templateJson: template,
-      nowMs: 1000,
+    expect(
+      strict.evaluateConsensus(outcomes: [match, mismatch, mismatch]).state,
+      FaceIdentityCheckState.mismatch,
     );
-
-    expect(outcome.state, FaceIdentityCheckState.verified);
-    expect(outcome.verified, isTrue);
-    expect(outcome.similarity, closeTo(1.0, 1e-6));
+    expect(
+      strict.evaluateConsensus(outcomes: [match, mismatch, match]).state,
+      FaceIdentityCheckState.verified,
+    );
   });
 
-  test('a reliable non-matching sample is a mismatch, not an accusation label', () {
-    final template = _template(
-      studentId: 'student-1',
-      embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
-    );
+  test(
+    'a low-quality/failed capture retries instead of becoming a mismatch',
+    () {
+      final template = _template(
+        studentId: 'student-1',
+        embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
+      );
 
-    final outcome = service.evaluateSample(
-      aiAvailable: true,
-      sample: _sample(_vector(128, 1)),
-      pipelineFailureReason: '',
-      templateJson: template,
-      nowMs: 1000,
-    );
+      final outcome = service.evaluateSample(
+        aiAvailable: true,
+        sample: null,
+        pipelineFailureReason: 'Move closer to the camera.',
+        templateJson: template,
+        nowMs: 1000,
+      );
 
-    expect(outcome.state, FaceIdentityCheckState.mismatch);
-    expect(outcome.verified, isFalse);
-  });
-
-  test('a low-quality/failed capture retries instead of becoming a mismatch', () {
-    final template = _template(
-      studentId: 'student-1',
-      embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
-    );
-
-    final outcome = service.evaluateSample(
-      aiAvailable: true,
-      sample: null,
-      pipelineFailureReason: 'Move closer to the camera.',
-      templateJson: template,
-      nowMs: 1000,
-    );
-
-    expect(outcome.state, FaceIdentityCheckState.qualityRetry);
-    expect(outcome.reason, 'Move closer to the camera.');
-  });
+      expect(outcome.state, FaceIdentityCheckState.qualityRetry);
+      expect(outcome.reason, 'Move closer to the camera.');
+    },
+  );
 
   test('an unavailable SFace runtime reports AI-unavailable, never a pass', () {
     final template = _template(
@@ -163,33 +198,36 @@ void main() {
     expect(outcome.verified, isFalse);
   });
 
-  test('a failed liveness challenge blocks verification even with a matching embedding', () {
-    final template = _template(
-      studentId: 'student-1',
-      embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
-    );
+  test(
+    'a failed liveness challenge blocks verification even with a matching embedding',
+    () {
+      final template = _template(
+        studentId: 'student-1',
+        embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
+      );
 
-    final outcome = service.evaluateSample(
-      aiAvailable: true,
-      sample: _sample(_vector(128, 0)),
-      pipelineFailureReason: '',
-      templateJson: template,
-      liveness: const LivenessChallengeResult(
-        state: 'possible_presentation_attack',
-        challenge: 'blink',
-        completed: false,
-        reliable: false,
-        progress: 0,
-        spoofRiskScore: 0.9,
-        usableObservations: 8,
-        reason: 'repeated flat frames need human review',
-      ),
-      nowMs: 1000,
-    );
+      final outcome = service.evaluateSample(
+        aiAvailable: true,
+        sample: _sample(_vector(128, 0)),
+        pipelineFailureReason: '',
+        templateJson: template,
+        liveness: const LivenessChallengeResult(
+          state: 'possible_presentation_attack',
+          challenge: 'blink',
+          completed: false,
+          reliable: false,
+          progress: 0,
+          spoofRiskScore: 0.9,
+          usableObservations: 8,
+          reason: 'repeated flat frames need human review',
+        ),
+        nowMs: 1000,
+      );
 
-    expect(outcome.state, FaceIdentityCheckState.livenessFailed);
-    expect(outcome.verified, isFalse);
-  });
+      expect(outcome.state, FaceIdentityCheckState.livenessFailed);
+      expect(outcome.verified, isFalse);
+    },
+  );
 
   test('an invalid probe embedding dimension is uncertain, not a mismatch', () {
     final template = _template(
@@ -221,23 +259,26 @@ void main() {
     expect(outcome.verified, isFalse);
   });
 
-  test('this is strictly 1:1: a template built for another student never matches', () {
-    final template = _template(
-      studentId: 'student-2',
-      embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
-    );
+  test(
+    'this is strictly 1:1: a template built for another student never matches',
+    () {
+      final template = _template(
+        studentId: 'student-2',
+        embeddings: [_vector(128, 0), _vector(128, 0), _vector(128, 0)],
+      );
 
-    // validate_portable_face_template is what the app calls before ever
-    // trusting a loaded template for "this" logged-in student.
-    final status = validatePortableFaceTemplate(
-      templateJson: template,
-      expectedStudentId: 'student-1',
-      expectedModelId: 'kslas-sface-2021dec-v1',
-      expectedModelSha256: 'a' * 64,
-      nowMs: 1000,
-    );
+      // validate_portable_face_template is what the app calls before ever
+      // trusting a loaded template for "this" logged-in student.
+      final status = validatePortableFaceTemplate(
+        templateJson: template,
+        expectedStudentId: 'student-1',
+        expectedModelId: 'kslas-sface-2021dec-v1',
+        expectedModelSha256: 'a' * 64,
+        nowMs: 1000,
+      );
 
-    expect(status.valid, isFalse);
-    expect(status.reason, contains('different student'));
-  });
+      expect(status.valid, isFalse);
+      expect(status.reason, contains('different student'));
+    },
+  );
 }

@@ -179,20 +179,33 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
       final aiAvailable = await _pipeline.initialize();
       setState(
         () => _message =
-            'Look straight at the camera. Capturing your identity check...',
+            'Look straight at the camera. Capturing secure identity samples...',
       );
-      final file = await controller.takePicture();
-      final sample = aiAvailable
-          ? await _pipeline.processEncodedImage(
-              await File(file.path).readAsBytes(),
-            )
-          : null;
-      final outcome = _verificationService.evaluateSample(
-        aiAvailable: aiAvailable,
-        sample: sample,
-        pipelineFailureReason: _pipeline.lastFailureReason,
-        templateJson: templateJson,
-        liveness: liveness,
+      final independentOutcomes = <FaceIdentityCheckOutcome>[];
+      for (var index = 0; index < 3; index++) {
+        if (!mounted) return;
+        setState(() => _message = 'Hold still • sample ${index + 1} of 3');
+        final file = await controller.takePicture();
+        final sample = aiAvailable
+            ? await _pipeline.processEncodedImage(
+                await File(file.path).readAsBytes(),
+              )
+            : null;
+        independentOutcomes.add(
+          _verificationService.evaluateSample(
+            aiAvailable: aiAvailable,
+            sample: sample,
+            pipelineFailureReason: _pipeline.lastFailureReason,
+            templateJson: templateJson,
+            liveness: liveness,
+          ),
+        );
+        if (index < 2) {
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+      }
+      final outcome = _verificationService.evaluateConsensus(
+        outcomes: independentOutcomes,
       );
       if (!mounted) return;
       setState(() {

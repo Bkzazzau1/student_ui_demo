@@ -667,11 +667,10 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     }
     final baseline = _neutralBaseline;
     if (baseline == null) return false;
-    // Turning the head away from the frontal baseline naturally lowers
-    // SFace's cosine similarity even for the same person; 0.36 was tuned
-    // for near-frontal pairs and could reject a genuine pose-guide capture
-    // as "different person", forcing repeated retries.
-    if (_cosineSimilarity(baseline.embedding, sample.embedding) < 0.28) {
+    // Every enrollment pose must remain strongly tied to the first frontal
+    // face. This prevents another person from replacing the enrollee midway
+    // through the seven-step capture.
+    if (_cosineSimilarity(baseline.embedding, sample.embedding) < 0.50) {
       return false;
     }
     return switch (guide.code) {
