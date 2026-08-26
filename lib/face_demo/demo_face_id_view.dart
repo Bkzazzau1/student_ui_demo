@@ -10,8 +10,11 @@ import 'demo_face_id_service.dart';
 import 'face_embedding_pipeline.dart';
 import 'face_identity_enrollment_api.dart';
 import 'face_identity_enrollment_gate.dart';
+import 'face_identity_landmark_matrix.dart';
 import 'face_identity_liveness_gate.dart';
+import 'face_identity_quality.dart';
 import 'face_identity_verification_service.dart';
+import 'face_live_capture_engine.dart';
 import 'native_face_embedding_runtime.dart';
 import 'windows_speech_prompt_service.dart';
 import '../rust/api/face_verification.dart';
@@ -40,6 +43,12 @@ class _IdentityGuide {
   final String instruction;
   final IconData icon;
 }
+
+/// What the live capture engine currently sees, surfaced to the guide-oval
+/// UI so it reacts to the camera stream in real time (idle=no face found,
+/// adjusting=face found but not matching the requested pose/quality yet,
+/// ready=about to auto-capture) instead of sitting static the whole time.
+enum _LiveGuideState { idle, adjusting, ready }
 
 class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   static const List<_IdentityGuide> _guides = <_IdentityGuide>[
@@ -108,6 +117,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   final FaceIdentityVerificationService _verificationService =
       const FaceIdentityVerificationService();
   final FaceIdentityLivenessGate _livenessGate = FaceIdentityLivenessGate();
+  final FaceLiveCaptureEngine _liveCaptureEngine = FaceLiveCaptureEngine();
   String? _portableTemplateJson;
 
   late DemoFaceIdSnapshot _snapshot;
@@ -154,6 +164,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
 
   @override
   void dispose() {
+    unawaited(_liveCaptureEngine.stop());
     _controller?.dispose();
     _speech.dispose();
     _identityApi.dispose();
@@ -161,6 +172,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   }
 
   Future<void> _releaseCameraAndSpeech() async {
+    await _liveCaptureEngine.stop();
     final controller = _controller;
     if (mounted && controller != null) {
       setState(() => _controller = null);
@@ -325,6 +337,12 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         selected,
         ResolutionPreset.medium,
         enableAudio: false,
+        // Apply the limit inside CameraX so Android never allocates and sends
+        // thirty YUV frames per second just for Dart to discard most of them.
+        // Five analyzed frames per second remains responsive for enrollment
+        // and matches FaceLiveCaptureEngine's 200 ms sampling interval.
+        fps: Platform.isWindows ? null : 5,
+        imageFormatGroup: Platform.isWindows ? null : ImageFormatGroup.yuv420,
       );
       await _controller?.dispose();
       await controller.initialize();
@@ -345,6 +363,17 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     }
   }
 
+  // Consecutive live-stream frames that must all pass the quality/pose check
+  // before the engine actually takes a photo. At the fast lane's effective
+  // rate this is on the order of a couple hundred milliseconds, and it
+  // exists purely to avoid triggering on one lucky frame mid-motion.
+  static const int _liveCaptureStabilityFrames = 3;
+
+  int _liveConsecutiveGoodFrames = 0;
+  bool _liveCaptureTriggered = false;
+  _LiveGuideState _liveGuideState = _LiveGuideState.idle;
+  DateTime? _lastLiveGuidanceAt;
+
   Future<void> _startAutomaticCapture() async {
     if (_autoCaptureRunning ||
         _autoCaptureStarted ||
@@ -357,6 +386,140 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     _autoCaptureStarted = true;
     _autoCaptureRunning = true;
     final generation = _enrollmentGeneration;
+
+    final guide = _currentGuide;
+    setState(() {
+      _statusMessage = '${guide.title}: ${guide.instruction} Hold steady...';
+    });
+    final liveStarted = await _startLiveCapture(generation);
+    if (liveStarted) {
+      await _speakGuide(guide);
+      return;
+    }
+    await _runPolledAutomaticCapture(generation);
+  }
+
+  /// Live-stream capture path: analyzes the camera preview continuously and
+  /// only takes an actual photo once several consecutive frames already
+  /// look right, instead of blindly capturing on a fixed timer and checking
+  /// quality afterward. Returns false when streaming isn't supported here
+  /// (e.g. `camera_windows`), so the caller can fall back to polling.
+  Future<bool> _startLiveCapture(int generation) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return false;
+    _liveConsecutiveGoodFrames = 0;
+    _liveCaptureTriggered = false;
+    if (_liveGuideState != _LiveGuideState.idle) {
+      setState(() => _liveGuideState = _LiveGuideState.idle);
+    }
+    return _liveCaptureEngine.start(
+      controller: controller,
+      onFrame: (landmarks, grade) => _onLiveFrame(
+        generation: generation,
+        landmarks: landmarks,
+        grade: grade,
+      ),
+    );
+  }
+
+  void _onLiveFrame({
+    required int generation,
+    required FaceLandmarkMatrix landmarks,
+    required FaceIdentityQualityGrade grade,
+  }) {
+    if (!mounted ||
+        generation != _enrollmentGeneration ||
+        _snapshot.locked ||
+        _submitting ||
+        _capturing ||
+        _liveCaptureTriggered) {
+      return;
+    }
+    final matches =
+        grade.accepted && _matchesGuideLive(_currentGuide, landmarks);
+    final hasFace =
+        landmarks.eyesVisible &&
+        landmarks.noseVisible &&
+        landmarks.mouthVisible;
+    final nextState = matches
+        ? _LiveGuideState.ready
+        : hasFace
+        ? _LiveGuideState.adjusting
+        : _LiveGuideState.idle;
+    if (!matches) {
+      _liveConsecutiveGoodFrames = 0;
+      final now = DateTime.now();
+      final stateChanged = nextState != _liveGuideState;
+      if (stateChanged ||
+          _lastLiveGuidanceAt == null ||
+          now.difference(_lastLiveGuidanceAt!) >=
+              const Duration(milliseconds: 800)) {
+        _lastLiveGuidanceAt = now;
+        final message = grade.failureReasons.isNotEmpty
+            ? grade.failureReasons.first
+            : '${_currentGuide.title}: follow the direction and hold still.';
+        setState(() {
+          _statusMessage = message;
+          _liveGuideState = nextState;
+        });
+      }
+      return;
+    }
+    if (nextState != _liveGuideState) {
+      setState(() => _liveGuideState = nextState);
+    }
+    _liveConsecutiveGoodFrames++;
+    if (_liveConsecutiveGoodFrames < _liveCaptureStabilityFrames) return;
+    _liveConsecutiveGoodFrames = 0;
+    _liveCaptureTriggered = true;
+    unawaited(_captureFromLiveStream(generation));
+  }
+
+  Future<void> _captureFromLiveStream(int generation) async {
+    await _liveCaptureEngine.stop();
+    try {
+      if (!mounted ||
+          generation != _enrollmentGeneration ||
+          _snapshot.locked ||
+          _submitting) {
+        return;
+      }
+      await _captureSample();
+      if (!mounted ||
+          generation != _enrollmentGeneration ||
+          _snapshot.locked ||
+          _snapshot.isComplete ||
+          _submitting) {
+        return;
+      }
+      final guide = _currentGuide;
+      setState(() {
+        _statusMessage = '${guide.title}: ${guide.instruction} Hold steady...';
+      });
+      await _speakGuide(guide);
+      final resumed = await _startLiveCapture(generation);
+      if (!resumed) {
+        await _runPolledAutomaticCapture(generation);
+        return;
+      }
+    } finally {
+      _liveCaptureTriggered = false;
+      if (mounted &&
+          (generation != _enrollmentGeneration ||
+              _snapshot.locked ||
+              _snapshot.isComplete)) {
+        setState(() => _autoCaptureRunning = false);
+      }
+    }
+  }
+
+  /// Fallback capture loop for platforms the live stream doesn't support
+  /// (Windows today, via `camera_windows`, which doesn't implement
+  /// `startImageStream`). Unchanged from the original polling behavior.
+  Future<void> _runPolledAutomaticCapture(int generation) async {
+    if (_liveGuideState != _LiveGuideState.idle) {
+      setState(() => _liveGuideState = _LiveGuideState.idle);
+    }
     while (mounted &&
         generation == _enrollmentGeneration &&
         !_snapshot.locked &&
@@ -380,6 +543,32 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     if (mounted) {
       setState(() => _autoCaptureRunning = false);
     }
+  }
+
+  // Landmark-only pose/expression pre-check used by the live capture engine
+  // to decide which frames are worth turning into an actual capture
+  // attempt. This intentionally omits `_matchesGuide`'s SFace cosine-
+  // similarity anti-swap check (computing an embedding on every live frame
+  // would defeat the point of a fast lane): that check still runs, exactly
+  // as before, on the captured photo inside `_captureSample`.
+  bool _matchesGuideLive(_IdentityGuide guide, FaceLandmarkMatrix landmarks) {
+    if (!landmarks.isGeometryUsable) return false;
+    if (guide.code == 'front_face') {
+      return landmarks.yaw.abs() <= 0.20 && landmarks.eyeOpenness >= 0.028;
+    }
+    final baseline = _neutralBaseline;
+    if (baseline == null) return false;
+    return switch (guide.code) {
+      'left_angle' => landmarks.yaw - baseline.yaw >= 0.07,
+      'right_angle' => landmarks.yaw - baseline.yaw <= -0.07,
+      'look_down' => landmarks.pitch - baseline.pitch >= 0.04,
+      'look_up' => landmarks.pitch - baseline.pitch <= -0.04,
+      'smile' => landmarks.smileWidth - baseline.smileWidth >= 0.04,
+      'open_mouth' =>
+        landmarks.mouthOpenness >= 0.04 &&
+            landmarks.mouthOpenness >= baseline.mouthOpenness * 1.4,
+      _ => false,
+    };
   }
 
   Future<void> _captureSample() async {
@@ -608,14 +797,29 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     }
     setState(() {
       _verificationRunning = true;
-      _statusMessage = 'Confirm liveness: follow the on-screen prompt...';
+      _statusMessage = 'Get ready to confirm liveness...';
     });
     try {
       // 1:1 verification only: YOLO person gate + face landmark matrix +
       // quality grade run inside the pipeline below; liveness runs a short
       // randomized-challenge burst before the sample is even considered.
-      final liveness = await _livenessGate.runBurst(controller: controller);
+      final liveness = await _livenessGate.runBurst(
+        controller: controller,
+        onChallengeStarted: (session) {
+          if (!mounted) return;
+          setState(() => _statusMessage = session.instruction);
+          unawaited(_speech.speak(session.instruction));
+        },
+      );
       if (!mounted) return;
+      if (liveness.state != 'live_challenge_passed') {
+        setState(() {
+          _verificationRunning = false;
+          _statusMessage =
+              'Liveness could not be confirmed: ${liveness.reason}';
+        });
+        return;
+      }
       final aiAvailable = await _embeddingPipeline.initialize();
       setState(
         () => _statusMessage =
@@ -668,9 +872,12 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (mounted) {
         setState(() {
           _testingExistingTemplate = false;
-          _statusMessage = 'Stored Face ID test completed.';
+          _statusMessage = 'Face ID verified successfully.';
         });
+        await _speech.speak('Face ID verified successfully.');
+        await Future<void>.delayed(const Duration(seconds: 2));
       }
+      if (!mounted) return;
       await _returnToPreviousPage(approved: true);
       return;
     }
@@ -705,6 +912,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
               'development testing. Backend approval is still pending.';
         });
       }
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
       await _returnToPreviousPage(approved: true);
     } catch (_) {
       if (!mounted) return;
@@ -714,6 +923,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
             'Face ID is protected on this device and the test is complete. '
             'Backend synchronization is pending.';
       });
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
       await _returnToPreviousPage(approved: true);
     }
   }
@@ -937,6 +1148,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                           guide: _currentGuide,
                           complete: _snapshot.isComplete,
                           compact: !wide,
+                          statusMessage: _statusMessage,
+                          liveGuideState: _liveGuideState,
                         );
                         final status = _StatusPanel(
                           snapshot: _snapshot,

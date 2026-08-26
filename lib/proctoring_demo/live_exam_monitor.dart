@@ -7,6 +7,11 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 
+import '../exam_demo/continuous_identity_policy.dart';
+import '../face_demo/demo_face_id_service.dart';
+import '../face_demo/face_embedding_pipeline.dart';
+import '../face_demo/face_identity_verification_service.dart';
+import '../face_demo/native_face_embedding_runtime.dart';
 import 'audio_evidence_capture_service.dart';
 import 'audio_event_evidence_policy.dart';
 import 'audio_calibration_profile.dart';
@@ -44,6 +49,7 @@ class LiveExamMonitor extends StatefulWidget {
     required this.examId,
     required this.attemptId,
     required this.onCriticalEvent,
+    this.onIdentityEscalation,
     this.assessmentType = 'exam',
     this.reviewAudience = 'invigilator',
   });
@@ -52,6 +58,7 @@ class LiveExamMonitor extends StatefulWidget {
   final String examId;
   final String attemptId;
   final ValueChanged<String> onCriticalEvent;
+  final VoidCallback? onIdentityEscalation;
   final String assessmentType;
   final String reviewAudience;
 
@@ -110,6 +117,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       const CameraEventEvidencePolicy();
   final ContinuousBiometricLivenessService _continuousLiveness =
       ContinuousBiometricLivenessService();
+  final ContinuousIdentityPolicy _identityPolicy = ContinuousIdentityPolicy();
+  final FaceEmbeddingPipeline _identityPipeline = FaceEmbeddingPipeline();
+  final FaceIdentityVerificationService _identityVerification =
+      const FaceIdentityVerificationService();
+  final math.Random _identityRandom = math.Random.secure();
   final VisualReflectionShadowService _visualIntegrity =
       VisualReflectionShadowService();
   final OptimizedVisionRuntimeBridge _optimizedVision =
@@ -174,6 +186,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _snapshotYoloFramesProcessed = 0;
   int _objectFramesReady = 0;
   bool _yoloRuntimeReady = false;
+  String? _identityTemplateJson;
+  DateTime? _nextIdentityCheckAt;
+  bool _identityCheckBusy = false;
+  bool _identityEscalated = false;
   String _yoloRuntimeStatus = 'Object review starting';
   String _yoloModelPath = '';
 
@@ -684,9 +700,127 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     );
     _framesPublished = frame.sequence;
 
+    if (_identityCheckDue && !_identityCheckBusy && !_identityEscalated) {
+      _identityCheckBusy = true;
+      unawaited(_runPassiveIdentityOccasion(image));
+    }
+
     final started = DateTime.now();
     _analysingFrame = true;
     unawaited(_analyseCameraImage(image, started));
+  }
+
+  bool get _identityCheckDue {
+    final due = _nextIdentityCheckAt;
+    if (due == null) {
+      _scheduleNextIdentityCheck(initial: true);
+      return false;
+    }
+    return !DateTime.now().isBefore(due);
+  }
+
+  void _scheduleNextIdentityCheck({bool initial = false}) {
+    final seconds = initial
+        ? 35 + _identityRandom.nextInt(31)
+        : 120 + _identityRandom.nextInt(181);
+    _nextIdentityCheckAt = DateTime.now().add(Duration(seconds: seconds));
+  }
+
+  Future<void> _runPassiveIdentityOccasion(CameraImage cameraImage) async {
+    try {
+      _identityTemplateJson ??= await NativeFaceEmbeddingRuntime()
+          .loadProtectedTemplate(studentId: DemoFaceIdService.studentId);
+      final template = _identityTemplateJson;
+      if (template == null || template.isEmpty) return;
+
+      final encoded = _cameraImageToJpeg(cameraImage);
+      if (encoded == null) return;
+      final available = await _identityPipeline.initialize();
+      final sample = available
+          ? await _identityPipeline.processEncodedImage(encoded)
+          : null;
+      final outcome = _identityVerification.evaluateSample(
+        aiAvailable: available,
+        sample: sample,
+        pipelineFailureReason: _identityPipeline.lastFailureReason,
+        templateJson: template,
+      );
+      final decision = switch (outcome.state) {
+        FaceIdentityCheckState.verified => PassiveIdentityDecision.verified,
+        FaceIdentityCheckState.mismatch => PassiveIdentityDecision.mismatch,
+        _ => PassiveIdentityDecision.inconclusive,
+      };
+      final snapshot = _identityPolicy.record(decision);
+      if (snapshot.requiresExplicitCheck && !_identityEscalated) {
+        _identityEscalated = true;
+        widget.onIdentityEscalation?.call();
+      }
+    } catch (_) {
+      // Runtime, lighting, and conversion failures are inconclusive.
+    } finally {
+      _scheduleNextIdentityCheck();
+      _identityCheckBusy = false;
+    }
+  }
+
+  Uint8List? _cameraImageToJpeg(CameraImage image) {
+    if (image.width <= 0 || image.height <= 0 || image.planes.isEmpty) {
+      return null;
+    }
+    final output = img.Image(width: image.width, height: image.height);
+    if (image.format.group == ImageFormatGroup.yuv420 &&
+        image.planes.length >= 3) {
+      final yPlane = image.planes[0];
+      final uPlane = image.planes[1];
+      final vPlane = image.planes[2];
+      final uvPixelStride = uPlane.bytesPerPixel ?? 1;
+      for (var y = 0; y < image.height; y++) {
+        for (var x = 0; x < image.width; x++) {
+          final yi = y * yPlane.bytesPerRow + x;
+          final ui = (y ~/ 2) * uPlane.bytesPerRow + (x ~/ 2) * uvPixelStride;
+          final vi =
+              (y ~/ 2) * vPlane.bytesPerRow +
+              (x ~/ 2) * (vPlane.bytesPerPixel ?? uvPixelStride);
+          if (yi >= yPlane.bytes.length ||
+              ui >= uPlane.bytes.length ||
+              vi >= vPlane.bytes.length) {
+            continue;
+          }
+          final yy = yPlane.bytes[yi].toDouble();
+          final uu = uPlane.bytes[ui] - 128.0;
+          final vv = vPlane.bytes[vi] - 128.0;
+          output.setPixelRgb(
+            x,
+            y,
+            (yy + 1.402 * vv).round().clamp(0, 255),
+            (yy - 0.344136 * uu - 0.714136 * vv).round().clamp(0, 255),
+            (yy + 1.772 * uu).round().clamp(0, 255),
+          );
+        }
+      }
+    } else if (image.format.group == ImageFormatGroup.bgra8888) {
+      final plane = image.planes.first;
+      for (var y = 0; y < image.height; y++) {
+        for (var x = 0; x < image.width; x++) {
+          final i = y * plane.bytesPerRow + x * 4;
+          if (i + 2 >= plane.bytes.length) continue;
+          output.setPixelRgb(
+            x,
+            y,
+            plane.bytes[i + 2],
+            plane.bytes[i + 1],
+            plane.bytes[i],
+          );
+        }
+      }
+    } else {
+      return null;
+    }
+    final orientation = _camera?.description.sensorOrientation ?? 0;
+    final upright = orientation == 0
+        ? output
+        : img.copyRotate(output, angle: orientation);
+    return Uint8List.fromList(img.encodeJpg(upright, quality: 82));
   }
 
   Future<void> _startObjectModelGate() async {

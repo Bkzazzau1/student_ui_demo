@@ -91,10 +91,17 @@ pub fn analyze_liveness_challenge(
         };
     }
 
+    // Sign convention cross-checked against `FaceLandmarkMatrix.yaw` (the
+    // same `(nose.x - eyeCenter.x) / eyeSpan` formula used by enrollment's
+    // pose guides): enrollment's "turn left" guide requires yaw to increase
+    // (`sample.yaw - baseline.yaw >= 0.07`), so a real "turn left" motion
+    // produces positive yaw here, not negative. These two arms were
+    // previously swapped, which meant complying with the "turn left"
+    // instruction only ever satisfied the "turn_right" condition.
     let completed = match challenge.as_str() {
         "blink" => completed_blink(&usable),
-        "turn_left" => usable.iter().any(|sample| sample.head_yaw <= -0.22),
-        "turn_right" => usable.iter().any(|sample| sample.head_yaw >= 0.22),
+        "turn_left" => usable.iter().any(|sample| sample.head_yaw >= 0.22),
+        "turn_right" => usable.iter().any(|sample| sample.head_yaw <= -0.22),
         "look_up" => usable.iter().any(|sample| sample.head_pitch <= -0.18),
         _ => false,
     };
@@ -154,14 +161,14 @@ fn movement_progress(challenge: &str, samples: &[&LivenessObservation]) -> f32 {
         "turn_left" => {
             samples
                 .iter()
-                .map(|sample| -sample.head_yaw)
+                .map(|sample| sample.head_yaw)
                 .fold(0.0, f32::max)
                 / 0.22
         }
         "turn_right" => {
             samples
                 .iter()
-                .map(|sample| sample.head_yaw)
+                .map(|sample| -sample.head_yaw)
                 .fold(0.0, f32::max)
                 / 0.22
         }

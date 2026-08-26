@@ -90,6 +90,7 @@ class _DemoExamHomeState extends State<DemoExamHome> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 640;
     final today = DateTime.now();
     final assessments = DemoExamService.assessmentsForDate(today);
     final assignments = DemoStudentHubExtras.assignmentsForDate(today);
@@ -107,20 +108,33 @@ class _DemoExamHomeState extends State<DemoExamHome> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        titleSpacing: 20,
-        title: const _AppTitle(),
+        toolbarHeight: compact ? 64 : kToolbarHeight,
+        titleSpacing: compact ? 16 : 20,
+        title: _AppTitle(compact: compact),
         actions: [
-          _StudentPill(
-            profile: _studentProfile,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) =>
-                    const StudentInformationView(profile: _studentProfile),
+          if (compact)
+            IconButton(
+              tooltip: 'Student profile',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const StudentInformationView(profile: _studentProfile),
+                ),
+              ),
+              icon: const Icon(Icons.account_circle_outlined),
+            )
+          else
+            _StudentPill(
+              profile: _studentProfile,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const StudentInformationView(profile: _studentProfile),
+                ),
               ),
             ),
-          ),
           Padding(
-            padding: const EdgeInsets.only(right: 12, left: 8),
+            padding: EdgeInsets.only(right: compact ? 8 : 12, left: 2),
             child: IconButton(
               tooltip: 'Sign out',
               onPressed: () => Navigator.of(context).push(
@@ -146,7 +160,12 @@ class _DemoExamHomeState extends State<DemoExamHome> {
           ),
         ),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+          padding: EdgeInsets.fromLTRB(
+            compact ? 16 : 20,
+            compact ? 16 : 20,
+            compact ? 16 : 20,
+            96,
+          ),
           children: [
             Center(
               child: ConstrainedBox(
@@ -159,25 +178,7 @@ class _DemoExamHomeState extends State<DemoExamHome> {
                       examCount: exams.length,
                       activityCount: assessments.length + assignments.length,
                     ),
-                    const SizedBox(height: 16),
-                    _QuickActions(
-                      onGradeBook: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const GradeBookView(),
-                        ),
-                      ),
-                      onIdentity: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const DemoFaceIdView(),
-                        ),
-                      ),
-                      onSchedule: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const ExamAttendanceView(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
+                    SizedBox(height: compact ? 14 : 18),
                     if (nextAssessment != null)
                       _NextAssessmentCard(
                         assessment: nextAssessment,
@@ -189,7 +190,25 @@ class _DemoExamHomeState extends State<DemoExamHome> {
                         message:
                             'Your assessments will appear here when available.',
                       ),
-                    const SizedBox(height: 18),
+                    SizedBox(height: compact ? 20 : 18),
+                    if (compact) ...[
+                      const _SectionEyebrow('Student tools'),
+                      const SizedBox(height: 10),
+                    ],
+                    _QuickActions(
+                      onGradeBook: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const GradeBookView(),
+                        ),
+                      ),
+                      onIdentity: () => _openIdentity(context),
+                      onSchedule: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ExamAttendanceView(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: compact ? 22 : 18),
                     _DashboardTabs(
                       selected: _selectedTab,
                       onChanged: (tab) => setState(() => _selectedTab = tab),
@@ -212,6 +231,28 @@ class _DemoExamHomeState extends State<DemoExamHome> {
         ),
       ),
     );
+  }
+
+  Future<void> _openIdentity(BuildContext context) async {
+    final approved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const DemoFaceIdView()),
+    );
+    if (approved != true || !context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.verified_rounded, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(child: Text('Face ID verified successfully.')),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Color(0xFF166534),
+        ),
+      );
   }
 
   Widget _buildSelectedContent({
@@ -340,12 +381,13 @@ class _DemoExamHomeState extends State<DemoExamHome> {
 }
 
 class _AppTitle extends StatelessWidget {
-  const _AppTitle();
+  const _AppTitle({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 36,
@@ -361,9 +403,13 @@ class _AppTitle extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        const Text(
-          'K-SLAS Student Portal',
-          style: TextStyle(fontWeight: FontWeight.w900),
+        Flexible(
+          child: Text(
+            compact ? 'Exam Portal' : 'K-SLAS Student Portal',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
         ),
       ],
     );
@@ -809,83 +855,101 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: _surface,
-        border: Border.all(color: _line),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F0F172A),
-            blurRadius: 22,
-            offset: Offset(0, 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 600;
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: _surface,
+            border: Border.all(color: _line),
+            borderRadius: BorderRadius.circular(compact ? 18 : 22),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A0F172A),
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            height: 6,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [_brand, _success, _warning]),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(22),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              color: _brandDark,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _summaryText,
-                        style: const TextStyle(
-                          color: _muted,
-                          fontSize: 16,
-                          height: 1.45,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
+          child: Column(
+            children: [
+              Container(
+                height: 5,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_brand, _success, _warning],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(compact ? 16 : 22),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _MetricPill(
-                            value: '$examCount',
-                            label: examCount == 1 ? 'exam' : 'exams',
-                            color: _brand,
+                          Text(
+                            'Welcome back',
+                            maxLines: 1,
+                            style:
+                                (compact
+                                        ? Theme.of(context).textTheme.titleLarge
+                                        : Theme.of(
+                                            context,
+                                          ).textTheme.headlineMedium)
+                                    ?.copyWith(
+                                      color: _brandDark,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                           ),
-                          _MetricPill(
-                            value: '$activityCount',
-                            label: activityCount == 1
-                                ? 'activity'
-                                : 'activities',
-                            color: _success,
+                          SizedBox(height: compact ? 3 : 6),
+                          Text(
+                            _summaryText,
+                            maxLines: compact ? 2 : null,
+                            overflow: compact ? TextOverflow.ellipsis : null,
+                            style: TextStyle(
+                              color: _muted,
+                              fontSize: compact ? 13 : 16,
+                              height: 1.35,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: compact ? 10 : 16),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _MetricPill(
+                                value: '$examCount',
+                                label: examCount == 1 ? 'exam' : 'exams',
+                                color: _brand,
+                                compact: compact,
+                              ),
+                              _MetricPill(
+                                value: '$activityCount',
+                                label: activityCount == 1
+                                    ? 'activity'
+                                    : 'activities',
+                                color: _success,
+                                compact: compact,
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(width: compact ? 10 : 18),
+                    _DateBox(today: today, compact: compact),
+                  ],
                 ),
-                const SizedBox(width: 18),
-                _DateBox(today: today),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -907,16 +971,21 @@ class _MetricPill extends StatelessWidget {
     required this.value,
     required this.label,
     required this.color,
+    this.compact = false,
   });
 
   final String value;
   final String label;
   final Color color;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 9 : 12,
+        vertical: compact ? 6 : 8,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         border: Border.all(color: color.withValues(alpha: 0.18)),
@@ -944,14 +1013,18 @@ class _MetricPill extends StatelessWidget {
 }
 
 class _DateBox extends StatelessWidget {
-  const _DateBox({required this.today});
+  const _DateBox({required this.today, this.compact = false});
 
   final DateTime today;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 18,
+        vertical: compact ? 10 : 14,
+      ),
       decoration: BoxDecoration(
         color: _surfaceSoft,
         border: Border.all(color: _line),
@@ -966,17 +1039,34 @@ class _DateBox extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}',
-            style: const TextStyle(
+            compact
+                ? '${today.day.toString().padLeft(2, '0')} ${_shortMonth(today.month)}'
+                : '${today.day.toString().padLeft(2, '0')}/${today.month.toString().padLeft(2, '0')}/${today.year}',
+            style: TextStyle(
               color: _brandDark,
               fontWeight: FontWeight.w900,
-              fontSize: 16,
+              fontSize: compact ? 14 : 16,
             ),
           ),
         ],
       ),
     );
   }
+
+  String _shortMonth(int month) => const <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][month - 1];
 }
 
 class _QuickActions extends StatelessWidget {
@@ -995,6 +1085,39 @@ class _QuickActions extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 720;
+        if (compact) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _CompactQuickAction(
+                  title: 'Grades',
+                  icon: Icons.workspace_premium_outlined,
+                  color: _warning,
+                  onTap: onGradeBook,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _CompactQuickAction(
+                  title: 'Face ID',
+                  icon: Icons.verified_user_outlined,
+                  color: _purple,
+                  onTap: onIdentity,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _CompactQuickAction(
+                  title: 'Schedule',
+                  icon: Icons.calendar_month_outlined,
+                  color: _success,
+                  onTap: onSchedule,
+                ),
+              ),
+            ],
+          );
+        }
         final width = compact
             ? constraints.maxWidth
             : (constraints.maxWidth - 24) / 3;
@@ -1035,6 +1158,83 @@ class _QuickActions extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _CompactQuickAction extends StatelessWidget {
+  const _CompactQuickAction({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: _surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 13),
+          decoration: BoxDecoration(
+            border: Border.all(color: _line),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 21),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _brandDark,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionEyebrow extends StatelessWidget {
+  const _SectionEyebrow(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        color: _muted,
+        fontSize: 11,
+        letterSpacing: 1.1,
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 }
@@ -1121,13 +1321,14 @@ class _NextAssessmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 640;
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: EdgeInsets.all(mobile ? 18 : 22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [_brandDark, Color(0xFF113A63), _brand],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(mobile ? 20 : 24),
         boxShadow: const [
           BoxShadow(
             color: Color(0x260F172A),
@@ -1146,17 +1347,21 @@ class _NextAssessmentCard extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 assessment.title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
+                style:
+                    (mobile
+                            ? Theme.of(context).textTheme.titleLarge
+                            : Theme.of(context).textTheme.headlineSmall)
+                        ?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
               ),
               const SizedBox(height: 8),
               Text(
                 '${assessment.course.code} • ${assessment.durationMinutes} min • ${assessment.scheduleLabel()}',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFFE2E8F0),
-                  fontSize: 16,
+                  fontSize: mobile ? 14 : 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -1182,7 +1387,7 @@ class _NextAssessmentCard extends StatelessWidget {
           if (compact) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [details, const SizedBox(height: 18), action],
+              children: [details, const SizedBox(height: 14), action],
             );
           }
           return Row(

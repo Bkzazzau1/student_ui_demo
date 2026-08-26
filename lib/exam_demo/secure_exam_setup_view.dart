@@ -15,6 +15,7 @@ import 'demo_exam_attempt_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 import 'exam_start_approval_service.dart';
+import 'exam_lockdown_service.dart';
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
@@ -49,6 +50,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       AudioCalibrationProfileStore();
   final EdgeAiRuntimePreflightService _aiPreflight =
       EdgeAiRuntimePreflightService();
+  final ExamLockdownService _lockdown = const ExamLockdownService();
   late final ExamStartApprovalService _approvalService;
   late DemoFaceIdSnapshot _faceId;
   late String _attemptId;
@@ -67,6 +69,11 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   GazeCalibrationProfileV2? _gazeCalibration;
   EdgeAiRuntimePreflightResult? _aiRuntimeResult;
   bool _aiRuntimeChecking = false;
+  bool _secureDeviceChecking = false;
+  bool _secureDeviceReady = false;
+  bool _readinessConfirmed = false;
+  String _secureDeviceMessage =
+      'Sound and secure-screen controls have not been checked.';
 
   @override
   void initState() {
@@ -75,6 +82,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     _attemptId = 'attempt-${DateTime.now().millisecondsSinceEpoch}';
     _approvalService = ExamStartApprovalService(baseUrl: _baseUrl);
     if (_needsChecks) unawaited(_runAiPreflight());
+    if (widget.assessment.graded) unawaited(_runSecureDeviceReadiness());
   }
 
   @override
@@ -100,15 +108,17 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   bool get _audioOk => !_needsChecks || _audioApproved;
   bool get _systemOk => !_needsChecks || _systemApproved;
   bool get _calibrationOk => !_needsChecks || _gazeCalibration?.usable == true;
-  bool get _allChecksReady =>
+  bool get _secureDeviceOk => !widget.assessment.graded || _secureDeviceReady;
+  bool get _readinessChecksReady =>
       _runtimeOk &&
-      _faceOk &&
       _calibrationOk &&
       _roomOk &&
       _audioOk &&
-      _systemOk;
-  bool get _approvalRequired =>
-      widget.assessment.remoteProctored || widget.assessment.graded;
+      _systemOk &&
+      _secureDeviceOk;
+  bool get _allChecksReady =>
+      _readinessChecksReady && _readinessConfirmed && _faceOk;
+  bool get _approvalRequired => widget.assessment.remoteProctored;
   bool get _approvalOk =>
       _allowExamOverride ||
       !_approvalRequired ||
@@ -119,12 +129,6 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     return !phoneSized || !widget.assessment.isStrictExam;
   }
 
-  bool _canRequestApproval(BuildContext context) {
-    return _allChecksReady &&
-        _canStartOnDevice(context) &&
-        !_requestingApproval;
-  }
-
   bool _canStart(BuildContext context) {
     if (!_canStartOnDevice(context)) return false;
     if (_allowExamOverride) return true;
@@ -132,6 +136,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   void _clearApproval([String? message]) {
+    _readinessConfirmed = false;
     _startApproved = false;
     _startToken = null;
     _approvalResult = null;
@@ -150,6 +155,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       _roomOk,
       _audioOk,
       _systemOk,
+      _secureDeviceOk,
+      _readinessConfirmed,
     ].where((passed) => passed).length;
     final requiredChecks = <bool>[
       _runtimeOk,
@@ -158,6 +165,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       _roomOk,
       _audioOk,
       _systemOk,
+      _secureDeviceOk,
+      _readinessConfirmed,
     ].length;
 
     return Scaffold(
@@ -166,20 +175,13 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        titleSpacing: 0,
         title: Text(
           _setupTitle,
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: TextButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back_rounded, size: 18),
-              label: const Text('Back'),
-            ),
-          ),
-        ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1, color: _line),
@@ -194,7 +196,12 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           ),
         ),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+          padding: EdgeInsets.fromLTRB(
+            MediaQuery.sizeOf(context).width < 600 ? 14 : 20,
+            MediaQuery.sizeOf(context).width < 600 ? 14 : 20,
+            MediaQuery.sizeOf(context).width < 600 ? 14 : 20,
+            120,
+          ),
           children: [
             Center(
               child: ConstrainedBox(
@@ -217,8 +224,11 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                         );
                         final startPanel = _StartPanel(
                           assessment: widget.assessment,
-                          ready: _canStart(context),
-                          startLabel: _allowExamOverride
+                          ready:
+                              !widget.assessment.graded && _canStart(context),
+                          startLabel: widget.assessment.graded
+                              ? 'Opens after identity confirmation'
+                              : _allowExamOverride
                               ? 'Start now'
                               : _startLabel,
                           approvalCard: _ReadinessCard(
@@ -227,7 +237,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
                             message: _approvalMessage,
                             result: _approvalResult,
                           ),
-                          onStart: _canStart(context) ? _startExam : null,
+                          onStart:
+                              !widget.assessment.graded && _canStart(context)
+                              ? _startExam
+                              : null,
                         );
 
                         if (!wide) {
@@ -260,10 +273,12 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   }
 
   List<_SetupStepData> _buildSteps(BuildContext context) {
-    final steps = <_SetupStepData>[
-      if (_needsChecks)
+    final steps = <_SetupStepData>[];
+    var number = 0;
+    if (_needsChecks) {
+      steps.add(
         _SetupStepData(
-          number: 1,
+          number: ++number,
           title: 'Edge AI runtime',
           subtitle: _aiRuntimeChecking
               ? 'Checking native models, secure Rust services, and the local Python intelligence runtime.'
@@ -284,30 +299,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               : 'Run check',
           onPressed: _aiRuntimeChecking ? null : _runAiPreflight,
         ),
-      _SetupStepData(
-        number: _needsChecks ? 2 : 1,
-        title: 'Identity check',
-        subtitle: !widget.assessment.graded
-            ? 'Identity setup is available for this activity.'
-            : !_faceId.isComplete
-            ? 'Set up your identity before continuing.'
-            : _identityChecked
-            ? 'Your identity was confirmed with a fresh live check for this attempt.'
-            : 'Confirm your identity with a fresh live check before this attempt.',
-        status: _faceOk ? _StepStatus.complete : _StepStatus.pending,
-        icon: Icons.account_circle_outlined,
-        actionLabel: !_faceId.isComplete
-            ? 'Set up identity'
-            : _identityChecked
-            ? 'Check again'
-            : 'Confirm identity',
-        onPressed: _runtimeOk
-            ? (_faceId.isComplete ? _openIdentityCheck : _openFaceId)
-            : null,
-      ),
-      if (_needsChecks)
+      );
+      steps.add(
         _SetupStepData(
-          number: 3,
+          number: ++number,
           title: 'Personal gaze calibration',
           subtitle:
               'Follow five screen markers so monitoring can use your normal '
@@ -317,9 +312,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           actionLabel: _calibrationOk ? 'Calibrate again' : 'Start calibration',
           onPressed: _runtimeOk ? _openGazeCalibration : null,
         ),
-      if (_needsChecks)
+      );
+      steps.add(
         _SetupStepData(
-          number: 4,
+          number: ++number,
           title: 'Camera and room check',
           subtitle:
               'Show your desk and exam area clearly before the exam begins.',
@@ -328,9 +324,10 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
           actionLabel: _roomOk ? 'Check again' : 'Start check',
           onPressed: _runtimeOk ? _openRoomScan : null,
         ),
-      if (_needsChecks)
+      );
+      steps.add(
         _SetupStepData(
-          number: 5,
+          number: ++number,
           title: 'Sound and device check',
           subtitle: _calibrationOk
               ? 'Confirm your microphone and device are ready for the assessment.'
@@ -344,42 +341,113 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               ? _openAudioSystemReview
               : null,
         ),
-      if (_approvalRequired && !_allowExamOverride)
-        _SetupStepData(
-          number: _needsChecks ? 6 : 2,
-          title: 'Final readiness',
-          subtitle: _allChecksReady
-              ? 'Confirm that everything is ready before you start.'
-              : 'Complete the required steps first.',
-          status: _approvalOk
-              ? _StepStatus.complete
-              : _requestingApproval
-              ? _StepStatus.running
-              : _StepStatus.pending,
-          icon: Icons.verified_outlined,
-          actionLabel: _requestingApproval
-              ? 'Checking...'
-              : _approvalOk
-              ? 'Ready'
-              : 'Confirm readiness',
-          onPressed: _canRequestApproval(context) ? _requestApproval : null,
-        ),
-    ];
-
-    if (steps.isEmpty) {
-      return <_SetupStepData>[
-        _SetupStepData(
-          number: 1,
-          title: 'Ready to start',
-          subtitle: 'You may begin when ready.',
-          status: _StepStatus.complete,
-          icon: Icons.check_circle_outline,
-          actionLabel: 'Ready',
-          onPressed: null,
-        ),
-      ];
+      );
     }
+
+    if (widget.assessment.graded) {
+      steps.add(
+        _SetupStepData(
+          number: ++number,
+          title: 'Phone security and sound',
+          subtitle: _secureDeviceMessage,
+          status: _secureDeviceChecking
+              ? _StepStatus.running
+              : _secureDeviceOk
+              ? _StepStatus.complete
+              : _StepStatus.pending,
+          icon: Icons.phonelink_lock_outlined,
+          actionLabel: _secureDeviceChecking
+              ? 'Checking...'
+              : _secureDeviceOk
+              ? 'Check again'
+              : 'Run secure check',
+          onPressed: _secureDeviceChecking ? null : _runSecureDeviceReadiness,
+        ),
+      );
+    }
+
+    steps.add(
+      _SetupStepData(
+        number: ++number,
+        title: 'Final readiness',
+        subtitle: _readinessChecksReady
+            ? 'Confirm you are ready. Identity verification comes next and the assessment opens immediately after it passes.'
+            : 'Complete every device and environment check first.',
+        status: _readinessConfirmed
+            ? _StepStatus.complete
+            : _StepStatus.pending,
+        icon: Icons.fact_check_outlined,
+        actionLabel: _readinessConfirmed ? 'Ready' : 'Confirm readiness',
+        onPressed: _readinessChecksReady && !_readinessConfirmed
+            ? _confirmReadiness
+            : null,
+      ),
+    );
+
+    if (widget.assessment.graded) {
+      steps.add(
+        _SetupStepData(
+          number: ++number,
+          title: 'Identity check — final step',
+          subtitle: !_faceId.isComplete
+              ? 'Set up Face ID before the assessment can begin.'
+              : _identityChecked
+              ? 'Identity confirmed. Opening the assessment securely...'
+              : 'After confirmation, the assessment opens immediately and cannot be left before submission.',
+          status: _faceOk ? _StepStatus.complete : _StepStatus.pending,
+          icon: Icons.verified_user_outlined,
+          actionLabel: !_faceId.isComplete
+              ? 'Set up identity'
+              : _identityChecked
+              ? 'Opening...'
+              : 'Confirm identity and start',
+          onPressed: _readinessConfirmed
+              ? (_faceId.isComplete ? _openIdentityCheck : _openFaceId)
+              : null,
+        ),
+      );
+    }
+
     return steps;
+  }
+
+  void _confirmReadiness() {
+    if (!_readinessChecksReady) return;
+    setState(() {
+      _readinessConfirmed = true;
+      _approvalMessage = widget.assessment.graded
+          ? 'Readiness confirmed. Complete the final identity check to start.'
+          : 'Everything is ready. You may begin.';
+    });
+    if (!widget.assessment.graded) unawaited(_startExam());
+  }
+
+  Future<void> _runSecureDeviceReadiness() async {
+    if (_secureDeviceChecking) return;
+    setState(() {
+      _secureDeviceChecking = true;
+      _secureDeviceReady = false;
+      _readinessConfirmed = false;
+      _secureDeviceMessage =
+          'Checking sound, clipboard, and screen-capture protection...';
+    });
+    try {
+      final result = await _lockdown.prepare();
+      if (!mounted) return;
+      setState(() {
+        _secureDeviceChecking = false;
+        _secureDeviceReady = result.ready;
+        _secureDeviceMessage = result.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _secureDeviceChecking = false;
+        _secureDeviceReady = false;
+        _secureDeviceMessage =
+            'Secure device readiness could not be completed. Try again.';
+      });
+    }
   }
 
   Future<void> _runAiPreflight() async {
@@ -444,14 +512,22 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       ),
     );
     if (!mounted) return;
+    final confirmed = approved == true;
     setState(() {
-      _identityChecked = approved == true;
-      _clearApproval(
-        _identityChecked
-            ? 'Identity confirmed. Please confirm readiness again.'
-            : 'Identity was not confirmed. Please try the identity check again.',
-      );
+      _identityChecked = confirmed;
+      _approvalMessage = confirmed
+          ? 'Identity confirmed. Opening the assessment securely...'
+          : 'Identity was not confirmed. Please try again.';
     });
+    if (confirmed) await _finalizeIdentityAndStart();
+  }
+
+  Future<void> _finalizeIdentityAndStart() async {
+    if (_approvalRequired && !_allowExamOverride) {
+      await _requestApproval();
+      if (!mounted || !_approvalOk) return;
+    }
+    await _startExam();
   }
 
   Future<void> _openRoomScan() async {
@@ -617,7 +693,58 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       await _showBlockedStartMessage();
       return;
     }
-    final result = await Navigator.of(context).push<DemoExamResult>(
+    if (widget.assessment.graded) {
+      try {
+        var secure = await _lockdown.enter();
+        if (_lockdown.isAndroid && !secure.lockTaskActive) {
+          for (var retry = 0; retry < 3 && !secure.lockTaskActive; retry++) {
+            await Future<void>.delayed(const Duration(seconds: 1));
+            secure = await _lockdown.prepare();
+          }
+        }
+        if (!secure.ready || (_lockdown.isAndroid && !secure.lockTaskActive)) {
+          if (!mounted) return;
+          await showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Secure mode is not ready'),
+              content: Text(
+                !secure.ready
+                    ? secure.message
+                    : 'Allow Android screen pinning to prevent leaving the assessment before submission.',
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      } catch (_) {
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Could not enter secure mode'),
+            content: const Text(
+              'Secure exam controls could not be enabled. Run the phone security check again.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement<DemoExamResult, DemoExamResult>(
       MaterialPageRoute<DemoExamResult>(
         builder: (_) => DemoExamAttemptView(
           assessment: widget.assessment,
@@ -636,8 +763,6 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         ),
       ),
     );
-    if (!mounted || result == null) return;
-    Navigator.of(context).pop(result);
   }
 
   Future<void> _showBlockedStartMessage() {
@@ -727,11 +852,12 @@ class _PreparationHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     final progress = requiredChecks == 0 ? 1.0 : checksPassed / requiredChecks;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(compact ? 20 : 24),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1F0F172A),
@@ -741,7 +867,7 @@ class _PreparationHero extends StatelessWidget {
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(compact ? 18 : 24),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -781,9 +907,9 @@ class _PreparationHero extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   assessment.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 30,
+                    fontSize: compact ? 24 : 30,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
                   ),
@@ -941,8 +1067,9 @@ class _PreparationSteps extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
         color: _surface,
         borderRadius: BorderRadius.circular(22),
@@ -967,7 +1094,7 @@ class _PreparationSteps extends StatelessWidget {
           ),
           const SizedBox(height: 5),
           const Text(
-            'Complete each step in order. The start button opens when everything is ready.',
+            'Complete readiness first. Identity is the final step and starts the assessment immediately.',
             style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
@@ -988,6 +1115,7 @@ class _StepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final phone = MediaQuery.sizeOf(context).width < 600;
     final complete = step.status == _StepStatus.complete;
     final running = step.status == _StepStatus.running;
     final accent = complete
@@ -996,7 +1124,7 @@ class _StepCard extends StatelessWidget {
         ? _brand
         : _muted;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(phone ? 13 : 16),
       decoration: BoxDecoration(
         color: complete ? const Color(0xFFF0FDF4) : _surfaceSoft,
         borderRadius: BorderRadius.circular(18),
@@ -1006,8 +1134,8 @@ class _StepCard extends StatelessWidget {
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 560;
           final leading = Container(
-            width: 50,
-            height: 50,
+            width: phone ? 44 : 50,
+            height: phone ? 44 : 50,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -1025,9 +1153,9 @@ class _StepCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       step.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: _brandDark,
-                        fontSize: 18,
+                        fontSize: phone ? 16 : 18,
                         fontWeight: FontWeight.w900,
                       ),
                     ),

@@ -32,6 +32,9 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/.codex_video_frames/
+/android/build/
+/build_acl_backup/
 
 # Symbolication related
 app.*.symbols

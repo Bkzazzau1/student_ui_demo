@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:camera/camera.dart';
+
 import '../proctoring_demo/native_vision_bridge.dart';
 import '../proctoring_demo/optimized_vision_runtime_bridge.dart';
 
@@ -68,6 +70,20 @@ class FaceIdentityPersonGate {
       rgbBytes: rgbBytes,
       width: width,
       height: height,
+      tasks: const <String>['yolo_exam_review', 'object_review'],
+    );
+    return evaluate(result);
+  }
+
+  /// Same check as [analyzeRgb], but for a live camera-stream frame (raw
+  /// YUV/BGRA planes) instead of an already-decoded still photo. Used by the
+  /// live capture engine's periodic "multiple people" sweep, so it doesn't
+  /// need a JPEG round-trip either.
+  Future<FaceIdentityPersonGateResult> analyzeCameraImage(
+    CameraImage image,
+  ) async {
+    final result = await _bridge.runFrame(
+      image: image,
       tasks: const <String>['yolo_exam_review', 'object_review'],
     );
     return evaluate(result);

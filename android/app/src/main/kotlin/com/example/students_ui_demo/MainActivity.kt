@@ -6,6 +6,13 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import ai.onnxruntime.TensorInfo
 import android.content.res.AssetManager
+import android.app.ActivityManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.media.AudioManager
+import android.view.View
+import android.view.WindowManager
 import io.flutter.FlutterInjector
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -26,6 +33,66 @@ class MainActivity : FlutterActivity() {
         registerOptimizedVisionRuntime(flutterEngine)
         registerFaceLandmarkerRuntime(flutterEngine)
         registerFaceEmbeddingRuntime(flutterEngine)
+        registerExamLockdown(flutterEngine)
+    }
+
+    private fun registerExamLockdown(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "kslas.exam_lockdown",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "prepare" -> result.success(prepareExamDevice(startPinned = false))
+                "enter" -> result.success(prepareExamDevice(startPinned = true))
+                "exit" -> {
+                    exitExamDeviceMode()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun prepareExamDevice(startPinned: Boolean): Map<String, Any> {
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
+        if (startPinned) {
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            try {
+                startLockTask()
+            } catch (_: Throwable) {
+                // The returned state remains false when Android/device policy
+                // does not permit pinning or the user declines confirmation.
+            }
+        }
+        val audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val activity = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val lockActive = activity.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
+        return mapOf(
+            "supported" to true,
+            "screen_capture_blocked" to true,
+            "clipboard_cleared" to (
+                !clipboard.hasPrimaryClip() ||
+                    clipboard.primaryClip?.getItemAt(0)?.text.isNullOrEmpty()
+                ),
+            "output_muted" to (audio.getStreamVolume(AudioManager.STREAM_MUSIC) <= 0),
+            "microphone_muted" to audio.isMicrophoneMute,
+            "lock_task_active" to lockActive,
+        )
+    }
+
+    private fun exitExamDeviceMode() {
+        try {
+            val activity = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            if (activity.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE) stopLockTask()
+        } catch (_: Throwable) {
+        }
+        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
     }
 
     private fun registerFaceEmbeddingRuntime(flutterEngine: FlutterEngine) {

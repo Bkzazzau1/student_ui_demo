@@ -21,7 +21,9 @@ class StudentLoginView extends StatefulWidget {
 
 class _StudentLoginViewState extends State<StudentLoginView> {
   static const String demoStudentId = 'KSLAS/STD/2026/001';
-  static const String demoPassword = 'demo' '123';
+  static const String demoPassword =
+      'demo'
+      '123';
 
   final _formKey = GlobalKey<FormState>();
   final _studentIdController = TextEditingController(text: demoStudentId);
@@ -63,10 +65,20 @@ class _StudentLoginViewState extends State<StudentLoginView> {
         child: SafeArea(
           child: Stack(
             children: [
-              const Positioned(top: 0, left: 0, right: 0, child: _TopColorBand()),
+              const Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _TopColorBand(),
+              ),
               Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.sizeOf(context).width < 600
+                        ? 14
+                        : 18,
+                    vertical: MediaQuery.sizeOf(context).width < 600 ? 12 : 18,
+                  ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1040),
                     child: LayoutBuilder(
@@ -79,9 +91,13 @@ class _StudentLoginViewState extends State<StudentLoginView> {
                           rememberMe: _rememberMe,
                           obscurePassword: _obscurePassword,
                           signingIn: _signingIn,
-                          onRememberChanged: (value) => setState(() => _rememberMe = value),
-                          onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
+                          onRememberChanged: (value) =>
+                              setState(() => _rememberMe = value),
+                          onTogglePassword: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                           onSignIn: _signIn,
+                          compact: !wide,
                         );
 
                         if (!wide) {
@@ -147,6 +163,31 @@ class _TopColorBand extends StatelessWidget {
   }
 }
 
+class _CompactInstitutionMark extends StatelessWidget {
+  const _CompactInstitutionMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: const Text(
+        'K',
+        style: TextStyle(
+          color: _brand,
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
 class _BrandPanel extends StatelessWidget {
   const _BrandPanel({this.compact = false});
 
@@ -154,6 +195,64 @@ class _BrandPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF082F49), _brand, Color(0xFF14532D)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1F0F172A),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: const Row(
+          children: [
+            _CompactInstitutionMark(),
+            SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'K-SLAS Exam Portal',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Secure student assessment access',
+                    style: TextStyle(
+                      color: Color(0xFFD8E3F0),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8),
+            Icon(
+              Icons.lock_outline_rounded,
+              color: Color(0xFFBBF7D0),
+              size: 21,
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -172,7 +271,9 @@ class _BrandPanel extends StatelessWidget {
               width: compact ? 64 : 90,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.06),
-                border: Border(left: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+                border: Border(
+                  left: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                ),
               ),
             ),
           ),
@@ -189,11 +290,11 @@ class _BrandPanel extends StatelessWidget {
                 Text(
                   'K-SLAS Student Portal',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        height: 1.05,
-                        letterSpacing: -0.5,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    height: 1.05,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -239,7 +340,11 @@ class _OfficialAccessTag extends StatelessWidget {
           SizedBox(width: 7),
           Text(
             'AI-Powered Exam Platform',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12.5),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 12.5,
+            ),
           ),
         ],
       ),
@@ -262,7 +367,10 @@ class _InstitutionMark extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.2),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.55),
+              width: 1.2,
+            ),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x1A000000),
@@ -329,13 +437,15 @@ class _AccessSummary extends StatelessWidget {
         children: [
           _SummaryRow(
             title: 'AI-powered assessments',
-            subtitle: 'Access exams, quizzes, and practice activities in one secure platform.',
+            subtitle:
+                'Access exams, quizzes, and practice activities in one secure platform.',
             color: _amber,
           ),
           SizedBox(height: 10),
           _SummaryRow(
             title: 'Guided exam readiness',
-            subtitle: 'AI-supported checks help confirm identity, room, camera, sound, and device readiness.',
+            subtitle:
+                'AI-supported checks help confirm identity, room, camera, sound, and device readiness.',
             color: _green,
           ),
           SizedBox(height: 10),
@@ -369,7 +479,10 @@ class _SummaryRow extends StatelessWidget {
         Container(
           width: 4,
           height: 36,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(999),
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -413,6 +526,7 @@ class _LoginPanel extends StatelessWidget {
     required this.onRememberChanged,
     required this.onTogglePassword,
     required this.onSignIn,
+    this.compact = false,
   });
 
   final GlobalKey<FormState> formKey;
@@ -424,12 +538,29 @@ class _LoginPanel extends StatelessWidget {
   final ValueChanged<bool> onRememberChanged;
   final VoidCallback onTogglePassword;
   final VoidCallback onSignIn;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _surface,
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
+      decoration: BoxDecoration(
+        color: _surface,
+        border: compact ? Border.all(color: const Color(0xFFD6DFEA)) : null,
+        borderRadius: compact ? BorderRadius.circular(20) : null,
+        boxShadow: compact
+            ? const [
+                BoxShadow(
+                  color: Color(0x120F172A),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ]
+            : null,
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 18 : 28,
+        vertical: compact ? 20 : 30,
+      ),
       child: Form(
         key: formKey,
         child: Column(
@@ -439,8 +570,8 @@ class _LoginPanel extends StatelessWidget {
           children: [
             const _LoginHeading(),
             const SizedBox(height: 14),
-            const _DemoCredentialsCard(),
-            const SizedBox(height: 18),
+            _DemoCredentialsCard(compact: compact),
+            SizedBox(height: compact ? 16 : 18),
             TextFormField(
               controller: studentIdController,
               textInputAction: TextInputAction.next,
@@ -451,7 +582,9 @@ class _LoginPanel extends StatelessWidget {
                 icon: Icons.badge_outlined,
               ),
               validator: (value) {
-                if (value == null || value.trim().isEmpty) return 'Enter your student ID';
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter your student ID';
+                }
                 return null;
               },
             ),
@@ -469,12 +602,16 @@ class _LoginPanel extends StatelessWidget {
                   tooltip: obscurePassword ? 'Show password' : 'Hide password',
                   onPressed: onTogglePassword,
                   icon: Icon(
-                    obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                   ),
                 ),
               ),
               validator: (value) {
-                if (value == null || value.isEmpty) return 'Enter your password';
+                if (value == null || value.isEmpty) {
+                  return 'Enter your password';
+                }
                 return null;
               },
             ),
@@ -504,7 +641,11 @@ class _LoginPanel extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please contact the institute support desk.')),
+                      const SnackBar(
+                        content: Text(
+                          'Please contact the institute support desk.',
+                        ),
+                      ),
                     );
                   },
                   child: const Text('Need help?'),
@@ -570,9 +711,9 @@ class _LoginHeading extends StatelessWidget {
         Text(
           'Student Login',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: _brandDark,
-              ),
+            fontWeight: FontWeight.w900,
+            color: _brandDark,
+          ),
         ),
         const SizedBox(height: 5),
         const Text(
@@ -590,7 +731,10 @@ class _LoginHeading extends StatelessWidget {
 }
 
 class _PrimarySignInButton extends StatelessWidget {
-  const _PrimarySignInButton({required this.signingIn, required this.onPressed});
+  const _PrimarySignInButton({
+    required this.signingIn,
+    required this.onPressed,
+  });
 
   final bool signingIn;
   final VoidCallback onPressed;
@@ -600,7 +744,9 @@ class _PrimarySignInButton extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: signingIn
-            ? const LinearGradient(colors: [Color(0xFF94A3B8), Color(0xFF64748B)])
+            ? const LinearGradient(
+                colors: [Color(0xFF94A3B8), Color(0xFF64748B)],
+              )
             : const LinearGradient(colors: [_brand, Color(0xFF1D4ED8), _green]),
         borderRadius: BorderRadius.circular(14),
         boxShadow: const [
@@ -623,12 +769,19 @@ class _PrimarySignInButton extends StatelessWidget {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.login_rounded, color: Colors.white, size: 18),
+                        Icon(
+                          Icons.login_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'Sign In',
@@ -649,10 +802,40 @@ class _PrimarySignInButton extends StatelessWidget {
 }
 
 class _DemoCredentialsCard extends StatelessWidget {
-  const _DemoCredentialsCard();
+  const _DemoCredentialsCard({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFBBF7D0)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: _green, size: 18),
+            SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                'Demo account details are prefilled',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Color(0xFF166534),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -689,9 +872,15 @@ class _DemoCredentialsCard extends StatelessWidget {
                   ],
                 ),
                 SizedBox(height: 10),
-                _DemoLoginLine(label: 'Student ID', value: _StudentLoginViewState.demoStudentId),
+                _DemoLoginLine(
+                  label: 'Student ID',
+                  value: _StudentLoginViewState.demoStudentId,
+                ),
                 SizedBox(height: 5),
-                _DemoLoginLine(label: 'Password', value: _StudentLoginViewState.demoPassword),
+                _DemoLoginLine(
+                  label: 'Password',
+                  value: _StudentLoginViewState.demoPassword,
+                ),
               ],
             ),
           ),

@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../face_demo/face_identity_check_view.dart';
 import '../proctoring_demo/companion_cam_panel.dart';
 import '../proctoring_demo/live_exam_monitor.dart';
 import '../proctoring_demo/live_proctoring_event_service.dart';
@@ -17,6 +18,7 @@ import 'assessment_monitoring_profile.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_result_view.dart';
 import 'demo_exam_service.dart';
+import 'exam_lockdown_service.dart';
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
@@ -76,6 +78,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   );
   final Map<String, DateTime> _lastAttemptEventAt = <String, DateTime>{};
   final Map<String, String> _answers = <String, String>{};
+  final ExamLockdownService _lockdown = const ExamLockdownService();
 
   late final DateTime _startedAt;
   late final List<DemoQuestion> _questions;
@@ -87,6 +90,8 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   bool _exitWarningShowing = false;
   bool _submitting = false;
   bool _airBoardOpen = false;
+  bool _identityRecheckActive = false;
+  int _monitorEpoch = 0;
   String _pauseMessage = '';
 
   @override
@@ -138,7 +143,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
-      final autoSubmit = _monitoringProfile.autoSubmitWhenBackgrounded;
+      final autoSubmit =
+          widget.assessment.graded ||
+          _monitoringProfile.autoSubmitWhenBackgrounded;
       unawaited(
         _sendRuntimeSessionEvent(
           eventType: 'exam_screen_backgrounded',
@@ -389,14 +396,16 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       ),
     ];
 
-    if (!_airBoardOpen) {
+    if (!_airBoardOpen && !_identityRecheckActive) {
       panels.addAll([
         const SizedBox(height: 12),
         LiveExamMonitor(
+          key: ValueKey<String>('identity-monitor-$_monitorEpoch'),
           studentId: widget.studentId,
           examId: widget.assessment.id,
           attemptId: widget.attemptId,
           onCriticalEvent: _handleCriticalMonitoringEvent,
+          onIdentityEscalation: _beginExplicitIdentityRecheck,
           assessmentType: widget.assessment.assessmentType,
           reviewAudience: _monitoringProfile.reviewAudience,
         ),
@@ -590,6 +599,43 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     });
   }
 
+  Future<void> _beginExplicitIdentityRecheck() async {
+    if (!mounted || _identityRecheckActive || _submitting) return;
+    setState(() {
+      _paused = true;
+      _identityRecheckActive = true;
+      _pauseMessage =
+          'We need to confirm your identity. Your answers are saved and your timer is paused.';
+    });
+
+    // Removing the silent monitor releases its exclusive camera lease before
+    // the visible liveness challenge opens.
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    final approved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => FaceIdentityCheckView(
+          examId: widget.assessment.id,
+          attemptId: widget.attemptId,
+          allowCancel: false,
+          maxFailedAttempts: 2,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (approved == true) {
+      setState(() {
+        _paused = false;
+        _identityRecheckActive = false;
+        _pauseMessage = '';
+        _monitorEpoch++;
+      });
+      _startTimer();
+      return;
+    }
+    await _submit(autoSubmitted: true, force: true);
+  }
+
   Future<void> _submit({
     required bool autoSubmitted,
     bool force = false,
@@ -641,6 +687,14 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     unawaited(
       _sendSubmissionEventBestEffort(result, autoSubmitted: autoSubmitted),
     );
+    if (widget.assessment.graded) {
+      try {
+        await _lockdown.exit();
+      } catch (_) {
+        // Submission and the local result must still complete if Android has
+        // already released screen pinning during lifecycle teardown.
+      }
+    }
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
@@ -1314,6 +1368,11 @@ class _QuestionCardState extends State<_QuestionCard> {
             TextField(
               controller: _controller,
               enabled: widget.enabled,
+              enableInteractiveSelection: false,
+              enableSuggestions: false,
+              autocorrect: false,
+              contextMenuBuilder: (context, editableTextState) =>
+                  const SizedBox.shrink(),
               minLines: question.section == DemoExamSection.theory ? 8 : 2,
               maxLines: question.section == DemoExamSection.theory ? 14 : 4,
               onChanged: widget.onChanged,

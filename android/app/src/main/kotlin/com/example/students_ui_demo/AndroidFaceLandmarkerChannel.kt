@@ -2,6 +2,7 @@ package com.example.students_ui_demo
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -43,8 +44,15 @@ class AndroidFaceLandmarkerChannel(private val context: Context) {
 
     fun analyseFrame(request: Map<*, *>?): Map<String, Any?>? {
         if (request == null) return null
-        val bitmap = request.toBitmap() ?: return null
-        return processBitmap(bitmap)
+        val source = request.toBitmap() ?: return null
+        val rotation = request.intValue("rotation_degrees", 0)
+        val bitmap = source.rotated(rotation)
+        return try {
+            processBitmap(bitmap)
+        } finally {
+            if (bitmap !== source) bitmap.recycle()
+            source.recycle()
+        }
     }
 
     /**
@@ -171,6 +179,18 @@ private fun rgbBytesToBitmap(bytes: ByteArray, width: Int, height: Int): Bitmap?
         offset += 3
     }
     return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+}
+
+private fun Bitmap.rotated(degrees: Int): Bitmap {
+    val normalized = ((degrees % 360) + 360) % 360
+    if (normalized == 0) return this
+    val matrix = Matrix().apply { postRotate(normalized.toFloat()) }
+    // `filter = false`: this is a disposable analysis-only bitmap (never the
+    // captured enrollment photo, which goes through the separate takePicture()
+    // + analyseRgb path unaffected by this), so bilinear filtering only adds
+    // CPU/memory-bandwidth cost per live frame without helping landmark
+    // detection.
+    return Bitmap.createBitmap(this, 0, 0, width, height, matrix, false)
 }
 
 private fun Map<*, *>.toBitmap(): Bitmap? {

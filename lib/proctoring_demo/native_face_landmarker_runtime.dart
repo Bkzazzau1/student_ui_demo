@@ -100,6 +100,46 @@ class NativeFaceLandmarkerRuntime {
     }
   }
 
+  /// Same live-camera-frame path as [analyse] (raw YUV/BGRA planes, no JPEG
+  /// round-trip), but returns the native landmark payload as-is instead of
+  /// parsing it into a [GazeHeadPoseResult] — the shape identity-capture
+  /// callers need to build a `FaceLandmarkMatrix`, matching what
+  /// [analyseRgbRaw] returns for the still-photo path.
+  Future<Map<String, Object?>?> analyseCameraImageRaw(
+    CameraImage image, {
+    int rotationDegrees = 0,
+  }) async {
+    if (!_ready && !await initialize()) return null;
+    try {
+      final planes = image.planes
+          .map(
+            (plane) => <String, Object?>{
+              'bytes': Uint8List.fromList(plane.bytes),
+              'bytes_per_row': plane.bytesPerRow,
+              'bytes_per_pixel': plane.bytesPerPixel ?? 1,
+              'height': plane.height,
+              'width': plane.width,
+            },
+          )
+          .toList();
+      return await _channel
+          .invokeMapMethod<String, Object?>('analyseFrame', <String, Object?>{
+            'width': image.width,
+            'height': image.height,
+            'format': image.format.group.name,
+            'rotation_degrees': rotationDegrees,
+            'planes': planes,
+            'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
+          });
+    } on MissingPluginException {
+      _failed = true;
+      _ready = false;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<GazeHeadPoseResult?> analyseRgb({
     required Uint8List rgbBytes,
     required int width,

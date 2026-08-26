@@ -24,6 +24,58 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_identityDark, _identityBrand],
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.face_retouching_natural, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    snapshot.isComplete ? 'Identity ready' : 'Face enrollment',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    snapshot.isComplete
+                        ? 'Protected on this device'
+                        : '${snapshot.capturedSamples}/${snapshot.requiredSamples} captured · Follow the camera guide',
+                    style: const TextStyle(
+                      color: Color(0xFFE2E8F0),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 6,
+                      value: progress.clamp(0.0, 1.0),
+                      backgroundColor: Colors.white24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -250,6 +302,8 @@ class _CameraPreviewPanel extends StatelessWidget {
     required this.guide,
     required this.complete,
     required this.compact,
+    required this.statusMessage,
+    required this.liveGuideState,
   });
 
   final CameraController? controller;
@@ -258,6 +312,8 @@ class _CameraPreviewPanel extends StatelessWidget {
   final _IdentityGuide guide;
   final bool complete;
   final bool compact;
+  final String? statusMessage;
+  final _LiveGuideState liveGuideState;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +372,11 @@ class _CameraPreviewPanel extends StatelessWidget {
               ),
             if (!complete)
               Center(
-                child: _DirectionalFaceGuide(guide: guide, compact: compact),
+                child: _DirectionalFaceGuide(
+                  guide: guide,
+                  compact: compact,
+                  state: liveGuideState,
+                ),
               ),
             Align(
               alignment: Alignment.topCenter,
@@ -333,24 +393,36 @@ class _CameraPreviewPanel extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.12),
                   ),
                 ),
-                child: Text(
-                  complete
-                      ? 'Identity setup active'
-                      : '${guide.title}: ${guide.instruction}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!complete) _LiveStateDot(state: liveGuideState),
+                    if (!complete) const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        complete
+                            ? 'Identity setup active'
+                            : '${guide.title}: ${guide.instruction}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
             if (!complete)
-              const Align(
+              Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: EdgeInsets.all(14),
-                  child: _CameraHint(),
+                  padding: const EdgeInsets.all(14),
+                  child: _CameraHint(
+                    message: statusMessage,
+                    state: liveGuideState,
+                  ),
                 ),
               ),
           ],
@@ -361,10 +433,15 @@ class _CameraPreviewPanel extends StatelessWidget {
 }
 
 class _DirectionalFaceGuide extends StatefulWidget {
-  const _DirectionalFaceGuide({required this.guide, required this.compact});
+  const _DirectionalFaceGuide({
+    required this.guide,
+    required this.compact,
+    required this.state,
+  });
 
   final _IdentityGuide guide;
   final bool compact;
+  final _LiveGuideState state;
 
   @override
   State<_DirectionalFaceGuide> createState() => _DirectionalFaceGuideState();
@@ -406,25 +483,42 @@ class _DirectionalFaceGuideState extends State<_DirectionalFaceGuide>
     };
     final width = widget.compact ? 178.0 : 230.0;
     final height = widget.compact ? 218.0 : 270.0;
+    // Reacts to what the live capture engine currently sees, the way a real
+    // KYC scan UI does: gray while no face is found, amber while a face is
+    // present but not yet matching the requested pose, green with a check
+    // once it's about to auto-capture.
+    final ringColor = switch (widget.state) {
+      _LiveGuideState.ready => const Color(0xFF22C55E),
+      _LiveGuideState.adjusting => const Color(0xFFF59E0B),
+      _LiveGuideState.idle => const Color(0xFF94A3B8),
+    };
+    final ready = widget.state == _LiveGuideState.ready;
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        final travel = 10 * _animation.value;
+        final travel = ready ? 0.0 : 10 * _animation.value;
         return SizedBox(
           width: width + 100,
           height: height + 70,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 280),
                 width: width,
                 height: height,
                 decoration: BoxDecoration(
-                  color: const Color(0x1422C55E),
-                  border: Border.all(color: const Color(0xFF22C55E), width: 4),
+                  color: ringColor.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: ringColor,
+                    width: ready ? 5 : 4,
+                  ),
                   borderRadius: BorderRadius.circular(150),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x6622C55E), blurRadius: 24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ringColor.withValues(alpha: 0.40),
+                      blurRadius: ready ? 34 : 24,
+                    ),
                   ],
                 ),
               ),
@@ -433,17 +527,29 @@ class _DirectionalFaceGuideState extends State<_DirectionalFaceGuide>
                   horizontal * (width / 2 + 34 + travel),
                   vertical * (height / 2 + 22 + travel),
                 ),
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
                   width: 58,
                   height: 58,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF22C55E),
+                  decoration: BoxDecoration(
+                    color: ringColor,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: Color(0x9922C55E), blurRadius: 18),
+                      BoxShadow(
+                        color: ringColor.withValues(alpha: 0.60),
+                        blurRadius: 18,
+                      ),
                     ],
                   ),
-                  child: Icon(icon, color: Colors.white, size: 34),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      ready ? Icons.check_rounded : icon,
+                      key: ValueKey<bool>(ready),
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -454,25 +560,81 @@ class _DirectionalFaceGuideState extends State<_DirectionalFaceGuide>
   }
 }
 
-class _CameraHint extends StatelessWidget {
-  const _CameraHint();
+class _LiveStateDot extends StatelessWidget {
+  const _LiveStateDot({required this.state});
+
+  final _LiveGuideState state;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final color = switch (state) {
+      _LiveGuideState.ready => _identitySuccess,
+      _LiveGuideState.adjusting => _identityWarning,
+      _LiveGuideState.idle => const Color(0xFF94A3B8),
+    };
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      width: 9,
+      height: 9,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: color.withValues(alpha: 0.7), blurRadius: 6),
+        ],
+      ),
+    );
+  }
+}
+
+class _CameraHint extends StatelessWidget {
+  const _CameraHint({this.message, this.state = _LiveGuideState.idle});
+
+  final String? message;
+  final _LiveGuideState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = switch (state) {
+      _LiveGuideState.ready => _identitySuccess,
+      _LiveGuideState.adjusting => _identityWarning,
+      _LiveGuideState.idle => _identityDark,
+    };
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.90),
+        color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: accent.withValues(alpha: 0.35), width: 1.5),
       ),
-      child: const Text(
-        'Stay still while the app captures automatically',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: _identityDark,
-          fontWeight: FontWeight.w900,
-          fontSize: 12,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            switch (state) {
+              _LiveGuideState.ready => Icons.check_circle_rounded,
+              _LiveGuideState.adjusting => Icons.autorenew_rounded,
+              _LiveGuideState.idle => Icons.face_retouching_natural_rounded,
+            },
+            color: accent,
+            size: 15,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              message?.trim().isNotEmpty == true
+                  ? message!
+                  : 'Stay still while the app captures automatically',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _identityDark,
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

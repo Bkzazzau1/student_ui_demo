@@ -9,6 +9,7 @@ import 'face_embedding_pipeline.dart';
 import 'face_identity_liveness_gate.dart';
 import 'face_identity_verification_service.dart';
 import 'native_face_embedding_runtime.dart';
+import 'windows_speech_prompt_service.dart';
 import '../rust/api/face_verification.dart';
 
 /// The 1:1 identity check a student must pass immediately before writing an
@@ -26,10 +27,14 @@ class FaceIdentityCheckView extends StatefulWidget {
     super.key,
     required this.examId,
     required this.attemptId,
+    this.allowCancel = true,
+    this.maxFailedAttempts,
   });
 
   final String examId;
   final String attemptId;
+  final bool allowCancel;
+  final int? maxFailedAttempts;
 
   @override
   State<FaceIdentityCheckView> createState() => _FaceIdentityCheckViewState();
@@ -42,6 +47,7 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
   final FaceIdentityLivenessGate _livenessGate = FaceIdentityLivenessGate();
   final FaceIdentityVerificationService _verificationService =
       const FaceIdentityVerificationService();
+  final WindowsSpeechPromptService _speech = WindowsSpeechPromptService();
   final String _studentId = DemoFaceIdService.studentId;
 
   CameraController? _controller;
@@ -50,6 +56,7 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
   String _message = 'Loading your approved identity...';
   FaceIdentityCheckOutcome? _lastOutcome;
   bool _leaving = false;
+  int _failedAttempts = 0;
 
   @override
   void initState() {
@@ -60,6 +67,7 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
   @override
   void dispose() {
     _controller?.dispose();
+    unawaited(_speech.dispose());
     super.dispose();
   }
 
@@ -108,7 +116,8 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
       if (cameras.isEmpty) {
         if (!mounted) return;
         setState(
-          () => _message = 'No camera was found. Identity check requires a camera.',
+          () => _message =
+              'No camera was found. Identity check requires a camera.',
         );
         return;
       }
@@ -141,12 +150,32 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
     }
     setState(() {
       _stage = _CheckStage.running;
-      _message = 'Confirm liveness: follow the on-screen prompt...';
+      _message = 'Get ready to confirm liveness...';
       _lastOutcome = null;
     });
     try {
-      final liveness = await _livenessGate.runBurst(controller: controller);
+      final liveness = await _livenessGate.runBurst(
+        controller: controller,
+        onChallengeStarted: (session) {
+          if (!mounted) return;
+          setState(() => _message = session.instruction);
+          unawaited(_speech.speak(session.instruction));
+        },
+      );
       if (!mounted) return;
+      if (liveness.state != 'live_challenge_passed') {
+        setState(() {
+          _stage = _CheckStage.ready;
+          _message = 'Liveness could not be confirmed: ${liveness.reason}';
+        });
+        _failedAttempts++;
+        final limit = widget.maxFailedAttempts;
+        if (limit != null && _failedAttempts >= limit) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+          await _finish(approved: false);
+        }
+        return;
+      }
       final aiAvailable = await _pipeline.initialize();
       setState(
         () => _message =
@@ -154,7 +183,9 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
       );
       final file = await controller.takePicture();
       final sample = aiAvailable
-          ? await _pipeline.processEncodedImage(await File(file.path).readAsBytes())
+          ? await _pipeline.processEncodedImage(
+              await File(file.path).readAsBytes(),
+            )
           : null;
       final outcome = _verificationService.evaluateSample(
         aiAvailable: aiAvailable,
@@ -172,7 +203,8 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
           FaceIdentityCheckState.mismatch =>
             'This sample did not match the approved identity. It is not a '
                 'misconduct decision; try again with better framing.',
-          FaceIdentityCheckState.uncertain => 'The result was uncertain: ${outcome.reason}',
+          FaceIdentityCheckState.uncertain =>
+            'The result was uncertain: ${outcome.reason}',
           FaceIdentityCheckState.aiUnavailable =>
             'Face identity AI is unavailable on this device. The check cannot run.',
           FaceIdentityCheckState.qualityRetry => outcome.reason,
@@ -182,8 +214,17 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
         _stage = outcome.verified ? _CheckStage.passed : _CheckStage.ready;
       });
       if (outcome.verified) {
-        await Future<void>.delayed(const Duration(milliseconds: 700));
+        await _speech.speak('Identity confirmed successfully.');
+        await Future<void>.delayed(const Duration(seconds: 2));
         await _finish(approved: true);
+      } else if (outcome.state == FaceIdentityCheckState.mismatch ||
+          outcome.state == FaceIdentityCheckState.livenessFailed) {
+        _failedAttempts++;
+        final limit = widget.maxFailedAttempts;
+        if (limit != null && _failedAttempts >= limit) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+          await _finish(approved: false);
+        }
       }
     } catch (error) {
       if (!mounted) return;
@@ -206,94 +247,99 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
   @override
   Widget build(BuildContext context) {
     final ready = _controller?.value.isInitialized ?? false;
-    return Scaffold(
-      backgroundColor: const Color(0xFF07111F),
-      appBar: AppBar(
-        title: const Text('Confirm your identity'),
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => _finish(approved: false),
+    return PopScope(
+      canPop: widget.allowCancel,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF07111F),
+        appBar: AppBar(
+          title: const Text('Confirm your identity'),
+          backgroundColor: Colors.white,
+          automaticallyImplyLeading: false,
+          leading: widget.allowCancel
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => _finish(approved: false),
+                )
+              : null,
         ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AspectRatio(
-                    aspectRatio: 4 / 3,
-                    child: Container(
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0B1220),
-                        borderRadius: BorderRadius.circular(20),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 4 / 3,
+                      child: Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0B1220),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: ready
+                            ? CameraPreview(_controller!)
+                            : Center(
+                                child: Icon(
+                                  _stage == _CheckStage.noApprovedIdentity
+                                      ? Icons.person_off_outlined
+                                      : Icons.face_retouching_natural,
+                                  color: Colors.white54,
+                                  size: 48,
+                                ),
+                              ),
                       ),
-                      child: ready
-                          ? CameraPreview(_controller!)
-                          : Center(
-                              child: Icon(
-                                _stage == _CheckStage.noApprovedIdentity
-                                    ? Icons.person_off_outlined
-                                    : Icons.face_retouching_natural,
-                                color: Colors.white54,
-                                size: 48,
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _message,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (_stage == _CheckStage.noApprovedIdentity)
+                            FilledButton.icon(
+                              onPressed: () => _finish(approved: false),
+                              icon: const Icon(Icons.arrow_back),
+                              label: const Text('Go back and set up identity'),
+                            )
+                          else
+                            FilledButton.icon(
+                              onPressed: ready && _stage != _CheckStage.running
+                                  ? _runCheck
+                                  : null,
+                              icon: Icon(
+                                _stage == _CheckStage.running
+                                    ? Icons.hourglass_top
+                                    : Icons.verified_user_outlined,
+                              ),
+                              label: Text(
+                                _stage == _CheckStage.running
+                                    ? 'Checking...'
+                                    : _lastOutcome == null
+                                    ? 'Start identity check'
+                                    : 'Try again',
                               ),
                             ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _message,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (_stage == _CheckStage.noApprovedIdentity)
-                          FilledButton.icon(
-                            onPressed: () => _finish(approved: false),
-                            icon: const Icon(Icons.arrow_back),
-                            label: const Text('Go back and set up identity'),
-                          )
-                        else
-                          FilledButton.icon(
-                            onPressed:
-                                ready && _stage != _CheckStage.running
-                                ? _runCheck
-                                : null,
-                            icon: Icon(
-                              _stage == _CheckStage.running
-                                  ? Icons.hourglass_top
-                                  : Icons.verified_user_outlined,
-                            ),
-                            label: Text(
-                              _stage == _CheckStage.running
-                                  ? 'Checking...'
-                                  : _lastOutcome == null
-                                  ? 'Start identity check'
-                                  : 'Try again',
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
