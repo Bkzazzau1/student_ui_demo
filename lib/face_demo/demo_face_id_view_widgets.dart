@@ -509,10 +509,7 @@ class _DirectionalFaceGuideState extends State<_DirectionalFaceGuide>
                 height: height,
                 decoration: BoxDecoration(
                   color: ringColor.withValues(alpha: 0.08),
-                  border: Border.all(
-                    color: ringColor,
-                    width: ready ? 5 : 4,
-                  ),
+                  border: Border.all(color: ringColor, width: ready ? 5 : 4),
                   borderRadius: BorderRadius.circular(150),
                   boxShadow: [
                     BoxShadow(
@@ -647,6 +644,7 @@ class _StatusPanel extends StatelessWidget {
     required this.guides,
     required this.statusMessage,
     required this.compact,
+    this.onRetryVerification,
   });
 
   final DemoFaceIdSnapshot snapshot;
@@ -654,6 +652,13 @@ class _StatusPanel extends StatelessWidget {
   final List<_IdentityGuide> guides;
   final String? statusMessage;
   final bool compact;
+
+  /// Non-null only right after a failed or expired live test attempt
+  /// (liveness timeout, mismatch, quality retry, etc.), so the student can
+  /// try again immediately from right where the failure message is shown,
+  /// instead of having to find the "Test Face ID" button elsewhere on the
+  /// page.
+  final VoidCallback? onRetryVerification;
 
   @override
   Widget build(BuildContext context) {
@@ -752,6 +757,14 @@ class _StatusPanel extends StatelessWidget {
                 ],
               ),
             ),
+            if (onRetryVerification != null) ...[
+              const SizedBox(height: 10),
+              FilledButton.icon(
+                onPressed: onRetryVerification,
+                icon: const Icon(Icons.replay_rounded),
+                label: const Text('Retry identity check'),
+              ),
+            ],
           ],
           const SizedBox(height: 16),
           ...guides.asMap().entries.map((entry) {

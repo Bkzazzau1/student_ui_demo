@@ -129,7 +129,16 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
   bool _autoCaptureRunning = false;
   bool _autoCaptureStarted = false;
   bool _verificationRunning = false;
+  bool _verificationFailed = false;
   bool _testingExistingTemplate = false;
+  // Consecutive live-stream frames that must all pass the quality gate
+  // before a "Test Face ID" verification sample is actually captured. Uses
+  // the same `_liveCaptureEngine` cycle guided enrollment capture relies on
+  // (they never run concurrently), instead of blindly snapping a single
+  // still photo the moment liveness passes.
+  static const int _verificationStabilityFrames = 3;
+  static const int _verificationCaptureRetries = 8;
+  int _verificationConsecutiveGoodFrames = 0;
   bool _leavingPage = false;
   int _enrollmentGeneration = 0;
   String? _cameraError;
@@ -784,6 +793,82 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     await _verifyFreshIdentitySample();
   }
 
+  /// Waits for the live camera stream to settle on several consecutive
+  /// good-quality frames before returning, the same cycle
+  /// [_startLiveCapture] drives during guided enrollment — just without a
+  /// specific guide pose requirement, since verification only needs any
+  /// clear, well-aligned frontal frame. No-ops quickly on platforms/builds
+  /// without streaming support (e.g. `camera_windows`), where the retry
+  /// loop in [_captureVerificationSample] is the fallback quality gate.
+  Future<void> _waitForLiveVerificationFrame(
+    CameraController controller,
+  ) async {
+    _verificationConsecutiveGoodFrames = 0;
+    final completer = Completer<bool>();
+    final started = await _liveCaptureEngine.start(
+      controller: controller,
+      onFrame: (landmarks, grade) {
+        if (completer.isCompleted) return;
+        if (!grade.accepted) {
+          _verificationConsecutiveGoodFrames = 0;
+          if (mounted) {
+            setState(() {
+              _statusMessage = grade.failureReasons.isNotEmpty
+                  ? grade.failureReasons.first
+                  : 'Center your face in the frame and hold still.';
+            });
+          }
+          return;
+        }
+        _verificationConsecutiveGoodFrames++;
+        if (_verificationConsecutiveGoodFrames >=
+            _verificationStabilityFrames) {
+          completer.complete(true);
+        }
+      },
+    );
+    if (!started) return;
+    await completer.future.timeout(
+      const Duration(seconds: 6),
+      onTimeout: () => false,
+    );
+    await _liveCaptureEngine.stop();
+  }
+
+  /// Captures one "Test Face ID" verification sample using the same
+  /// live-frame cycle guided enrollment relies on, instead of blindly
+  /// snapping a single still the moment liveness passes: wait for a settled
+  /// good-quality frame, then take the photo, retrying (without spending
+  /// the single verification attempt on a bad frame) if the pipeline
+  /// rejects it as low quality.
+  Future<FaceEmbeddingPipelineResult?> _captureVerificationSample(
+    CameraController controller,
+  ) async {
+    await _waitForLiveVerificationFrame(controller);
+    for (var attempt = 0; attempt < _verificationCaptureRetries; attempt++) {
+      if (!mounted || !controller.value.isInitialized) return null;
+      final XFile file;
+      try {
+        file = await controller.takePicture();
+      } catch (_) {
+        return null;
+      }
+      final sample = await _embeddingPipeline.processEncodedImage(
+        await File(file.path).readAsBytes(),
+      );
+      if (sample != null) return sample;
+      if (attempt == _verificationCaptureRetries - 1) return null;
+      if (!mounted) return null;
+      setState(() {
+        _statusMessage = _embeddingPipeline.lastFailureReason.isEmpty
+            ? 'Hold still and look directly at the camera.'
+            : _embeddingPipeline.lastFailureReason;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+    return null;
+  }
+
   Future<void> _verifyFreshIdentitySample() async {
     if (_verificationRunning || _portableTemplateJson == null) return;
     final controller = _controller;
@@ -796,6 +881,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
     }
     setState(() {
       _verificationRunning = true;
+      _verificationFailed = false;
       _statusMessage = 'Get ready to confirm liveness...';
     });
     try {
@@ -814,6 +900,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (liveness.state != 'live_challenge_passed') {
         setState(() {
           _verificationRunning = false;
+          _verificationFailed = true;
           _statusMessage =
               'Liveness could not be confirmed: ${liveness.reason}';
         });
@@ -824,11 +911,8 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
         () => _statusMessage =
             'Look straight at the camera. Capturing a fresh identity sample...',
       );
-      final file = await controller.takePicture();
       final sample = aiAvailable
-          ? await _embeddingPipeline.processEncodedImage(
-              await File(file.path).readAsBytes(),
-            )
+          ? await _captureVerificationSample(controller)
           : null;
       final outcome = _verificationService.evaluateSample(
         aiAvailable: aiAvailable,
@@ -840,6 +924,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (!mounted) return;
       setState(() {
         _verificationRunning = false;
+        _verificationFailed = !outcome.verified;
         _statusMessage = switch (outcome.state) {
           FaceIdentityCheckState.verified =>
             'Face ID test passed. Similarity ${(outcome.similarity * 100).toStringAsFixed(1)}%.',
@@ -861,6 +946,7 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
       if (!mounted) return;
       setState(() {
         _verificationRunning = false;
+        _verificationFailed = true;
         _statusMessage = 'Face ID test could not run: $error';
       });
     }
@@ -1156,6 +1242,12 @@ class _DemoFaceIdViewState extends State<DemoFaceIdView> {
                           guides: _guides,
                           statusMessage: _statusMessage,
                           compact: !wide,
+                          onRetryVerification:
+                              _testingExistingTemplate &&
+                                  _verificationFailed &&
+                                  !_verificationRunning
+                              ? _verifyFreshIdentitySample
+                              : null,
                         );
                         if (!wide) {
                           return Column(

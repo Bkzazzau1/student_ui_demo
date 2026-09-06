@@ -8,6 +8,7 @@ import 'demo_face_id_service.dart';
 import 'face_embedding_pipeline.dart';
 import 'face_identity_liveness_gate.dart';
 import 'face_identity_verification_service.dart';
+import 'face_live_capture_engine.dart';
 import 'native_face_embedding_runtime.dart';
 import 'windows_speech_prompt_service.dart';
 import '../rust/api/face_verification.dart';
@@ -47,8 +48,20 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
   final FaceIdentityLivenessGate _livenessGate = FaceIdentityLivenessGate();
   final FaceIdentityVerificationService _verificationService =
       const FaceIdentityVerificationService();
+  final FaceLiveCaptureEngine _liveCaptureEngine = FaceLiveCaptureEngine();
   final WindowsSpeechPromptService _speech = WindowsSpeechPromptService();
   final String _studentId = DemoFaceIdService.studentId;
+
+  // Consecutive live-stream frames that must all pass the quality gate
+  // before a verification sample is actually captured. Mirrors the same
+  // cycle enrollment's `FaceLiveCaptureEngine` uses: a photo is only taken
+  // once the camera has settled on a genuinely good frame, instead of
+  // snapping on a fixed timer and hoping the frame was usable. Feeding the
+  // matcher steadier, better-aligned samples narrows the embedding noise
+  // that a marginal capture could otherwise let a false match slip through.
+  static const int _liveCaptureStabilityFrames = 3;
+  static const int _maxCaptureRetries = 8;
+  int _liveConsecutiveGoodFrames = 0;
 
   CameraController? _controller;
   String? _templateJson;
@@ -66,6 +79,7 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
 
   @override
   void dispose() {
+    unawaited(_liveCaptureEngine.stop());
     _controller?.dispose();
     unawaited(_speech.dispose());
     super.dispose();
@@ -185,11 +199,8 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
       for (var index = 0; index < 3; index++) {
         if (!mounted) return;
         setState(() => _message = 'Hold still • sample ${index + 1} of 3');
-        final file = await controller.takePicture();
         final sample = aiAvailable
-            ? await _pipeline.processEncodedImage(
-                await File(file.path).readAsBytes(),
-              )
+            ? await _captureQualitySample(controller)
             : null;
         independentOutcomes.add(
           _verificationService.evaluateSample(
@@ -200,9 +211,6 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
             liveness: liveness,
           ),
         );
-        if (index < 2) {
-          await Future<void>.delayed(const Duration(milliseconds: 250));
-        }
       }
       final outcome = _verificationService.evaluateConsensus(
         outcomes: independentOutcomes,
@@ -246,6 +254,78 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
         _message = 'Identity check could not run: $error';
       });
     }
+  }
+
+  /// Captures one verification sample using the same live-frame cycle
+  /// enrollment relies on: wait for the camera stream to settle on several
+  /// consecutive good-quality frames, then take the photo. Falls back to a
+  /// short retry loop (discarding rejected captures instead of spending one
+  /// of the three independent samples on them) on platforms where live
+  /// streaming isn't supported, e.g. `camera_windows`.
+  Future<FaceEmbeddingPipelineResult?> _captureQualitySample(
+    CameraController controller,
+  ) async {
+    await _waitForLiveQualityFrame(controller);
+    for (var attempt = 0; attempt < _maxCaptureRetries; attempt++) {
+      if (!mounted || !controller.value.isInitialized) return null;
+      final XFile file;
+      try {
+        file = await controller.takePicture();
+      } catch (_) {
+        return null;
+      }
+      final sample = await _pipeline.processEncodedImage(
+        await File(file.path).readAsBytes(),
+      );
+      if (sample != null) return sample;
+      if (attempt == _maxCaptureRetries - 1) return null;
+      if (!mounted) return null;
+      setState(() {
+        _message = _pipeline.lastFailureReason.isEmpty
+            ? 'Hold still and look directly at the camera.'
+            : _pipeline.lastFailureReason;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+    return null;
+  }
+
+  /// Streams the live camera preview and waits until several consecutive
+  /// frames pass the same quality gate enrollment uses, before returning so
+  /// the caller can take the still photo. Returns without waiting long on
+  /// platforms/builds where streaming isn't available (the still-capture
+  /// retry loop in [_captureQualitySample] is the fallback quality gate
+  /// there).
+  Future<void> _waitForLiveQualityFrame(CameraController controller) async {
+    _liveConsecutiveGoodFrames = 0;
+    final completer = Completer<bool>();
+    final started = await _liveCaptureEngine.start(
+      controller: controller,
+      onFrame: (landmarks, grade) {
+        if (completer.isCompleted) return;
+        if (!grade.accepted) {
+          _liveConsecutiveGoodFrames = 0;
+          if (mounted) {
+            setState(() {
+              _message = grade.failureReasons.isNotEmpty
+                  ? grade.failureReasons.first
+                  : 'Center your face in the frame and hold still.';
+            });
+          }
+          return;
+        }
+        _liveConsecutiveGoodFrames++;
+        if (_liveConsecutiveGoodFrames >= _liveCaptureStabilityFrames) {
+          completer.complete(true);
+        }
+      },
+    );
+    if (!started) return;
+    await completer.future.timeout(
+      const Duration(seconds: 6),
+      onTimeout: () => false,
+    );
+    await _liveCaptureEngine.stop();
   }
 
   Future<void> _finish({required bool approved}) async {
