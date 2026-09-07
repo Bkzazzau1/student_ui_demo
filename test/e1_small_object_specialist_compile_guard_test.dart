@@ -23,7 +23,16 @@ void main() {
       imageHeight: 480,
       targets: <E1SmallObjectTarget>{E1SmallObjectTarget.smartwatch},
       reason: 'compile_guard',
-      roiHint: E1SpecialistRoiHint(strategy: 'full_frame_periodic'),
+      roiHint: E1SpecialistRoiHint(
+        strategy: 'person_arm_watch',
+        anchorCanonicalObjectId: 'person',
+        boundingBox: <String, double>{
+          'x': 0.2,
+          'y': 0.3,
+          'width': 0.5,
+          'height': 0.6,
+        },
+      ),
     );
 
     expect(request.isValid, isTrue);
