@@ -17,30 +17,30 @@ pub struct BoundingBoxV1 {
 pub struct KeypointV1 {
     pub x: f32,
     pub y: f32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub confidence: Option<f32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ModelGeometryV1 {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub coordinate_space: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub bounding_box: Option<BoundingBoxV1>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub keypoints: Vec<KeypointV1>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub vector: Option<Vec<f32>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub region_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ValidityIntervalV1 {
     pub start_timestamp_ns: u64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub end_timestamp_ns: Option<u64>,
 }
 
@@ -49,20 +49,20 @@ pub struct ModelEventV1 {
     pub schema_version: String,
     pub session_id: String,
     pub event_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub source_frame_id: Option<u64>,
     pub capture_timestamp_ns: u64,
     pub inference_timestamp_ns: u64,
     pub model_id: String,
     pub model_version: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub track_id: Option<String>,
     pub class_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub confidence: Option<f32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub quality: Option<f32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub geometry: Option<ModelGeometryV1>,
     pub validity_interval: ValidityIntervalV1,
     #[serde(default)]
