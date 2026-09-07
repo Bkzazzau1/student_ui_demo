@@ -155,6 +155,33 @@ This export step prepares data; it does not select model architecture,
 hyperparameters, scientific acceptance thresholds, or calibration values. See
 `docs/edge_ai/e1_training_export.md`.
 
+## E1 training experiment lock
+
+`e1_training_experiment.py` binds an explicit experiment specification to one
+verified E1 training export before a training run is allowed to become part of
+the scientific record.
+
+```powershell
+python -m ai_runtime.e1_training_experiment --pretty --export work/e1/base-yolo --output experiments/e1/base-exp-001.lock.json experiments/e1/base-exp-001.json
+```
+
+The specification must explicitly record the framework/version, architecture,
+initialization, checkpoint provenance when pretrained, random seed, image size,
+epochs, batch size, optimizer, learning rate, weight decay, workers, precision,
+deterministic choice, augmentation policy and execution device. The lock tool
+supplies no core training defaults.
+
+Before writing the lock it verifies the export role/class order, checks every
+copied image against its recorded SHA-256, confirms every image/label artifact
+exists, and fingerprints the complete package. A pretrained checkpoint must
+also exist and match its declared SHA-256. Existing lock files are never
+overwritten.
+
+The tool still does **not** run training or choose good hyperparameters; it makes
+a future experiment reproducible. See `docs/edge_ai/e1_training_experiment.md`.
+The JSON under `docs/edge_ai/examples/e1_training_experiment.example.json` is
+`example_only`; none of its values is a selected E1 setting or recommendation.
+
 ## Tests
 
 Run all Python runtime and training-readiness contract tests with:
