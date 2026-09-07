@@ -4,6 +4,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub const MODEL_EVENT_SCHEMA_VERSION: &str = "1.0";
+pub const MODEL_EVENT_CORE_FIELDS: [&str; 15] = [
+    "schema_version",
+    "session_id",
+    "event_id",
+    "source_frame_id",
+    "capture_timestamp_ns",
+    "inference_timestamp_ns",
+    "model_id",
+    "model_version",
+    "track_id",
+    "class_id",
+    "confidence",
+    "quality",
+    "geometry",
+    "validity_interval",
+    "metadata",
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BoundingBoxV1 {
@@ -105,7 +122,22 @@ impl ModelEventV1 {
     }
 
     pub fn from_json(value: &str) -> Result<Self, String> {
-        let event: Self = serde_json::from_str(value).map_err(|error| error.to_string())?;
+        let raw: Value = serde_json::from_str(value).map_err(|error| error.to_string())?;
+        let object = raw
+            .as_object()
+            .ok_or_else(|| "ModelEventV1 must be a JSON object".to_string())?;
+        let missing: Vec<&str> = MODEL_EVENT_CORE_FIELDS
+            .iter()
+            .copied()
+            .filter(|field| !object.contains_key(*field))
+            .collect();
+        if !missing.is_empty() {
+            return Err(format!(
+                "missing ModelEventV1 core fields: {}",
+                missing.join(", ")
+            ));
+        }
+        let event: Self = serde_json::from_value(raw).map_err(|error| error.to_string())?;
         event.validate()?;
         Ok(event)
     }
