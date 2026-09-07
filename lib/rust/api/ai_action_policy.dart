@@ -13,7 +13,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 AiActionAuthorization authorizeAiAction({
   required String action,
   required bool examActive,
-}) => RustLib.instance.api.crateApiAiActionPolicyAuthorizeAiAction(
+}) => BrainCoreApi.instance.api.crateApiAiActionPolicyAuthorizeAiAction(
   action: action,
   examActive: examActive,
 );

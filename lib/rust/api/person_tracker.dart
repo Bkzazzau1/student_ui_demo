@@ -74,7 +74,7 @@ class PersonTrackerV1 {
   });
 
   static Future<PersonTrackerV1> default_() =>
-      RustLib.instance.api.crateApiPersonTrackerPersonTrackerV1Default();
+      BrainCoreApi.instance.api.crateApiPersonTrackerPersonTrackerV1Default();
 
   @override
   int get hashCode =>

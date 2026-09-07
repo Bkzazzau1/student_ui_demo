@@ -9,14 +9,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These functions are ignored because they are not marked as `pub`: `constant_time_eq`, `sha256_hex`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
-String attemptChecksum({required String payloadJson}) => RustLib.instance.api
+String attemptChecksum({required String payloadJson}) => BrainCoreApi
+    .instance
+    .api
     .crateApiAttemptRecoveryAttemptChecksum(payloadJson: payloadJson);
 
 NativeAttemptRecoveryCheck verifyAttemptSnapshot({
   required String payloadJson,
   required String checksum,
   required String recoveredFrom,
-}) => RustLib.instance.api.crateApiAttemptRecoveryVerifyAttemptSnapshot(
+}) => BrainCoreApi.instance.api.crateApiAttemptRecoveryVerifyAttemptSnapshot(
   payloadJson: payloadJson,
   checksum: checksum,
   recoveredFrom: recoveredFrom,

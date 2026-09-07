@@ -34,15 +34,17 @@ import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// Main entrypoint of the Rust API
-class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
+class BrainCoreApi
+    extends
+        BaseEntrypoint<BrainCoreApiApi, BrainCoreApiApiImpl, BrainCoreApiWire> {
   @internal
-  static final instance = RustLib._();
+  static final instance = BrainCoreApi._();
 
-  RustLib._();
+  BrainCoreApi._();
 
   /// Initialize flutter_rust_bridge
   static Future<void> init({
-    RustLibApi? api,
+    BrainCoreApiApi? api,
     BaseHandler? handler,
     ExternalLibrary? externalLibrary,
     bool forceSameCodegenVersion = true,
@@ -57,7 +59,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
   /// Initialize flutter_rust_bridge in mock mode.
   /// No libraries for FFI are loaded.
-  static void initMock({required RustLibApi api}) {
+  static void initMock({required BrainCoreApiApi api}) {
     instance.initMockImpl(api: api);
   }
 
@@ -68,12 +70,12 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   static void dispose() => instance.disposeImpl();
 
   @override
-  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor =>
-      RustLibApiImpl.new;
+  ApiImplConstructor<BrainCoreApiApiImpl, BrainCoreApiWire>
+  get apiImplConstructor => BrainCoreApiApiImpl.new;
 
   @override
-  WireConstructor<RustLibWire> get wireConstructor =>
-      RustLibWire.fromExternalLibrary;
+  WireConstructor<BrainCoreApiWire> get wireConstructor =>
+      BrainCoreApiWire.fromExternalLibrary;
 
   @override
   Future<void> executeRustInitializers() async {}
@@ -96,7 +98,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
       );
 }
 
-abstract class RustLibApi extends BaseApi {
+abstract class BrainCoreApiApi extends BaseApi {
   BigInt crateApiModelEventModelEventV1AutoAccessorGetCaptureTimestampNs({
     required ModelEventV1 that,
   });
@@ -764,8 +766,9 @@ abstract class RustLibApi extends BaseApi {
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_StrPtr;
 }
 
-class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
-  RustLibApiImpl({
+class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
+    implements BrainCoreApiApi {
+  BrainCoreApiApiImpl({
     required super.handler,
     required super.wire,
     required super.generalizedFrbRustBinding,
@@ -10300,15 +10303,15 @@ class BTreeMapStringValueImpl extends RustOpaque
   ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
 
   static final _kStaticData = RustArcStaticData(
-    rustArcIncrementStrongCount: RustLib
+    rustArcIncrementStrongCount: BrainCoreApi
         .instance
         .api
         .rust_arc_increment_strong_count_BTreeMapStringValue,
-    rustArcDecrementStrongCount: RustLib
+    rustArcDecrementStrongCount: BrainCoreApi
         .instance
         .api
         .rust_arc_decrement_strong_count_BTreeMapStringValue,
-    rustArcDecrementStrongCountPtr: RustLib
+    rustArcDecrementStrongCountPtr: BrainCoreApi
         .instance
         .api
         .rust_arc_decrement_strong_count_BTreeMapStringValuePtr,
@@ -10327,149 +10330,153 @@ class ModelEventV1Impl extends RustOpaque implements ModelEventV1 {
 
   static final _kStaticData = RustArcStaticData(
     rustArcIncrementStrongCount:
-        RustLib.instance.api.rust_arc_increment_strong_count_ModelEventV1,
+        BrainCoreApi.instance.api.rust_arc_increment_strong_count_ModelEventV1,
     rustArcDecrementStrongCount:
-        RustLib.instance.api.rust_arc_decrement_strong_count_ModelEventV1,
-    rustArcDecrementStrongCountPtr:
-        RustLib.instance.api.rust_arc_decrement_strong_count_ModelEventV1Ptr,
+        BrainCoreApi.instance.api.rust_arc_decrement_strong_count_ModelEventV1,
+    rustArcDecrementStrongCountPtr: BrainCoreApi
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_ModelEventV1Ptr,
   );
 
-  BigInt get captureTimestampNs => RustLib.instance.api
+  BigInt get captureTimestampNs => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetCaptureTimestampNs(
         that: this,
       );
 
-  String get classId => RustLib.instance.api
+  String get classId => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetClassId(that: this);
 
-  double? get confidence => RustLib.instance.api
+  double? get confidence => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetConfidence(that: this);
 
-  String get eventId => RustLib.instance.api
+  String get eventId => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetEventId(that: this);
 
-  ModelGeometryV1? get geometry => RustLib.instance.api
+  ModelGeometryV1? get geometry => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetGeometry(that: this);
 
-  BigInt get inferenceTimestampNs => RustLib.instance.api
+  BigInt get inferenceTimestampNs => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetInferenceTimestampNs(
         that: this,
       );
 
-  BTreeMapStringValue get metadata => RustLib.instance.api
+  BTreeMapStringValue get metadata => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetMetadata(that: this);
 
-  String get modelId => RustLib.instance.api
+  String get modelId => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetModelId(that: this);
 
-  String get modelVersion => RustLib.instance.api
+  String get modelVersion => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetModelVersion(that: this);
 
-  double? get quality => RustLib.instance.api
+  double? get quality => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetQuality(that: this);
 
-  String get schemaVersion => RustLib.instance.api
+  String get schemaVersion => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetSchemaVersion(that: this);
 
-  String get sessionId => RustLib.instance.api
+  String get sessionId => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetSessionId(that: this);
 
-  BigInt? get sourceFrameId => RustLib.instance.api
+  BigInt? get sourceFrameId => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetSourceFrameId(that: this);
 
-  String? get trackId => RustLib.instance.api
+  String? get trackId => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetTrackId(that: this);
 
-  ValidityIntervalV1 get validityInterval => RustLib.instance.api
+  ValidityIntervalV1 get validityInterval => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorGetValidityInterval(
         that: this,
       );
 
-  set captureTimestampNs(BigInt captureTimestampNs) => RustLib.instance.api
+  set captureTimestampNs(BigInt captureTimestampNs) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetCaptureTimestampNs(
         that: this,
         captureTimestampNs: captureTimestampNs,
       );
 
-  set classId(String classId) =>
-      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetClassId(
+  set classId(String classId) => BrainCoreApi.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetClassId(
         that: this,
         classId: classId,
       );
 
-  set confidence(double? confidence) => RustLib.instance.api
+  set confidence(double? confidence) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetConfidence(
         that: this,
         confidence: confidence,
       );
 
-  set eventId(String eventId) =>
-      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetEventId(
+  set eventId(String eventId) => BrainCoreApi.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetEventId(
         that: this,
         eventId: eventId,
       );
 
-  set geometry(ModelGeometryV1? geometry) => RustLib.instance.api
+  set geometry(ModelGeometryV1? geometry) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetGeometry(
         that: this,
         geometry: geometry,
       );
 
-  set inferenceTimestampNs(BigInt inferenceTimestampNs) => RustLib.instance.api
+  set inferenceTimestampNs(BigInt inferenceTimestampNs) => BrainCoreApi
+      .instance
+      .api
       .crateApiModelEventModelEventV1AutoAccessorSetInferenceTimestampNs(
         that: this,
         inferenceTimestampNs: inferenceTimestampNs,
       );
 
-  set metadata(BTreeMapStringValue metadata) => RustLib.instance.api
+  set metadata(BTreeMapStringValue metadata) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetMetadata(
         that: this,
         metadata: metadata,
       );
 
-  set modelId(String modelId) =>
-      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetModelId(
+  set modelId(String modelId) => BrainCoreApi.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetModelId(
         that: this,
         modelId: modelId,
       );
 
-  set modelVersion(String modelVersion) => RustLib.instance.api
+  set modelVersion(String modelVersion) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetModelVersion(
         that: this,
         modelVersion: modelVersion,
       );
 
-  set quality(double? quality) =>
-      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetQuality(
+  set quality(double? quality) => BrainCoreApi.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetQuality(
         that: this,
         quality: quality,
       );
 
-  set schemaVersion(String schemaVersion) => RustLib.instance.api
+  set schemaVersion(String schemaVersion) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetSchemaVersion(
         that: this,
         schemaVersion: schemaVersion,
       );
 
-  set sessionId(String sessionId) => RustLib.instance.api
+  set sessionId(String sessionId) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetSessionId(
         that: this,
         sessionId: sessionId,
       );
 
-  set sourceFrameId(BigInt? sourceFrameId) => RustLib.instance.api
+  set sourceFrameId(BigInt? sourceFrameId) => BrainCoreApi.instance.api
       .crateApiModelEventModelEventV1AutoAccessorSetSourceFrameId(
         that: this,
         sourceFrameId: sourceFrameId,
       );
 
-  set trackId(String? trackId) =>
-      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetTrackId(
+  set trackId(String? trackId) => BrainCoreApi.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetTrackId(
         that: this,
         trackId: trackId,
       );
 
-  set validityInterval(ValidityIntervalV1 validityInterval) => RustLib
+  set validityInterval(ValidityIntervalV1 validityInterval) => BrainCoreApi
       .instance
       .api
       .crateApiModelEventModelEventV1AutoAccessorSetValidityInterval(
@@ -10477,11 +10484,11 @@ class ModelEventV1Impl extends RustOpaque implements ModelEventV1 {
         validityInterval: validityInterval,
       );
 
-  Future<String> toJson() =>
-      RustLib.instance.api.crateApiModelEventModelEventV1ToJson(that: this);
+  Future<String> toJson() => BrainCoreApi.instance.api
+      .crateApiModelEventModelEventV1ToJson(that: this);
 
-  Future<void> validate() =>
-      RustLib.instance.api.crateApiModelEventModelEventV1Validate(that: this);
+  Future<void> validate() => BrainCoreApi.instance.api
+      .crateApiModelEventModelEventV1Validate(that: this);
 }
 
 @sealed
@@ -10498,29 +10505,29 @@ class SpatiotemporalRingBufferV1Impl extends RustOpaque
   ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
 
   static final _kStaticData = RustArcStaticData(
-    rustArcIncrementStrongCount: RustLib
+    rustArcIncrementStrongCount: BrainCoreApi
         .instance
         .api
         .rust_arc_increment_strong_count_SpatiotemporalRingBufferV1,
-    rustArcDecrementStrongCount: RustLib
+    rustArcDecrementStrongCount: BrainCoreApi
         .instance
         .api
         .rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1,
-    rustArcDecrementStrongCountPtr: RustLib
+    rustArcDecrementStrongCountPtr: BrainCoreApi
         .instance
         .api
         .rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1Ptr,
   );
 
-  Future<BigInt> capacity() => RustLib.instance.api
+  Future<BigInt> capacity() => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Capacity(
         that: this,
       );
 
-  Future<void> clear() => RustLib.instance.api
+  Future<void> clear() => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Clear(that: this);
 
-  Future<bool> containsEventId({required String eventId}) => RustLib
+  Future<bool> containsEventId({required String eventId}) => BrainCoreApi
       .instance
       .api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ContainsEventId(
@@ -10529,7 +10536,7 @@ class SpatiotemporalRingBufferV1Impl extends RustOpaque
       );
 
   Future<List<ModelEventV1>> eventsActiveAt({required BigInt timestampNs}) =>
-      RustLib.instance.api
+      BrainCoreApi.instance.api
           .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsActiveAt(
             that: this,
             timestampNs: timestampNs,
@@ -10538,14 +10545,14 @@ class SpatiotemporalRingBufferV1Impl extends RustOpaque
   Future<List<ModelEventV1>> eventsBetween({
     required BigInt startCaptureTimestampNs,
     required BigInt endCaptureTimestampNs,
-  }) => RustLib.instance.api
+  }) => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsBetween(
         that: this,
         startCaptureTimestampNs: startCaptureTimestampNs,
         endCaptureTimestampNs: endCaptureTimestampNs,
       );
 
-  Future<bool> isEmpty() => RustLib.instance.api
+  Future<bool> isEmpty() => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1IsEmpty(
         that: this,
       );
@@ -10554,7 +10561,7 @@ class SpatiotemporalRingBufferV1Impl extends RustOpaque
     required String classId,
     Str? trackId,
     required BigInt atOrBeforeCaptureTimestampNs,
-  }) => RustLib.instance.api
+  }) => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LatestForClass(
         that: this,
         classId: classId,
@@ -10562,22 +10569,22 @@ class SpatiotemporalRingBufferV1Impl extends RustOpaque
         atOrBeforeCaptureTimestampNs: atOrBeforeCaptureTimestampNs,
       );
 
-  Future<BigInt> len() => RustLib.instance.api
+  Future<BigInt> len() => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Len(that: this);
 
   Future<RingBufferInsertResultV1> push({required ModelEventV1 event}) =>
-      RustLib.instance.api
+      BrainCoreApi.instance.api
           .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Push(
             that: this,
             event: event,
           );
 
-  Future<void> sessionId() => RustLib.instance.api
+  Future<void> sessionId() => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SessionId(
         that: this,
       );
 
-  Future<List<ModelEventV1>> snapshot() => RustLib.instance.api
+  Future<List<ModelEventV1>> snapshot() => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Snapshot(
         that: this,
       );
@@ -10595,10 +10602,10 @@ class StrImpl extends RustOpaque implements Str {
 
   static final _kStaticData = RustArcStaticData(
     rustArcIncrementStrongCount:
-        RustLib.instance.api.rust_arc_increment_strong_count_Str,
+        BrainCoreApi.instance.api.rust_arc_increment_strong_count_Str,
     rustArcDecrementStrongCount:
-        RustLib.instance.api.rust_arc_decrement_strong_count_Str,
+        BrainCoreApi.instance.api.rust_arc_decrement_strong_count_Str,
     rustArcDecrementStrongCountPtr:
-        RustLib.instance.api.rust_arc_decrement_strong_count_StrPtr,
+        BrainCoreApi.instance.api.rust_arc_decrement_strong_count_StrPtr,
   );
 }

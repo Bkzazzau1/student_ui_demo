@@ -18,37 +18,37 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 ModelEventIngestResultV1 ingestModelEventV1Json({
   required String eventJson,
   BigInt? requestedCapacity,
-}) => RustLib.instance.api.crateApiModelEventMemoryIngestModelEventV1Json(
+}) => BrainCoreApi.instance.api.crateApiModelEventMemoryIngestModelEventV1Json(
   eventJson: eventJson,
   requestedCapacity: requestedCapacity,
 );
 
 ModelEventMemoryStatusV1 modelEventMemoryStatusV1({
   required String sessionId,
-}) => RustLib.instance.api.crateApiModelEventMemoryModelEventMemoryStatusV1(
-  sessionId: sessionId,
-);
+}) => BrainCoreApi.instance.api
+    .crateApiModelEventMemoryModelEventMemoryStatusV1(sessionId: sessionId);
 
 String readModelEventsBetweenV1Json({
   required String sessionId,
   required BigInt startCaptureTimestampNs,
   required BigInt endCaptureTimestampNs,
-}) => RustLib.instance.api.crateApiModelEventMemoryReadModelEventsBetweenV1Json(
-  sessionId: sessionId,
-  startCaptureTimestampNs: startCaptureTimestampNs,
-  endCaptureTimestampNs: endCaptureTimestampNs,
-);
+}) => BrainCoreApi.instance.api
+    .crateApiModelEventMemoryReadModelEventsBetweenV1Json(
+      sessionId: sessionId,
+      startCaptureTimestampNs: startCaptureTimestampNs,
+      endCaptureTimestampNs: endCaptureTimestampNs,
+    );
 
 String readModelEventsActiveAtV1Json({
   required String sessionId,
   required BigInt timestampNs,
-}) =>
-    RustLib.instance.api.crateApiModelEventMemoryReadModelEventsActiveAtV1Json(
+}) => BrainCoreApi.instance.api
+    .crateApiModelEventMemoryReadModelEventsActiveAtV1Json(
       sessionId: sessionId,
       timestampNs: timestampNs,
     );
 
-bool clearModelEventMemoryV1({required String sessionId}) => RustLib
+bool clearModelEventMemoryV1({required String sessionId}) => BrainCoreApi
     .instance
     .api
     .crateApiModelEventMemoryClearModelEventMemoryV1(sessionId: sessionId);

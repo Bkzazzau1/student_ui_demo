@@ -72,8 +72,10 @@ abstract class ModelEventV1 implements RustOpaqueInterface {
 
   set validityInterval(ValidityIntervalV1 validityInterval);
 
-  static Future<ModelEventV1> fromJson({required String value}) =>
-      RustLib.instance.api.crateApiModelEventModelEventV1FromJson(value: value);
+  static Future<ModelEventV1> fromJson({required String value}) => BrainCoreApi
+      .instance
+      .api
+      .crateApiModelEventModelEventV1FromJson(value: value);
 
   Future<String> toJson();
 
@@ -152,9 +154,9 @@ class ModelGeometryV1 {
   });
 
   static Future<ModelGeometryV1> default_() =>
-      RustLib.instance.api.crateApiModelEventModelGeometryV1Default();
+      BrainCoreApi.instance.api.crateApiModelEventModelGeometryV1Default();
 
-  Future<void> validate() => RustLib.instance.api
+  Future<void> validate() => BrainCoreApi.instance.api
       .crateApiModelEventModelGeometryV1Validate(that: this);
 
   @override
@@ -186,7 +188,7 @@ class ValidityIntervalV1 {
     this.endTimestampNs,
   });
 
-  Future<void> validate() => RustLib.instance.api
+  Future<void> validate() => BrainCoreApi.instance.api
       .crateApiModelEventValidityIntervalV1Validate(that: this);
 
   @override

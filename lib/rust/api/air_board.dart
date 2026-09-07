@@ -10,7 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 AirBoardActivitySummary analyzeAirBoardContext({
   required AirBoardContext context,
-}) => RustLib.instance.api.crateApiAirBoardAnalyzeAirBoardContext(
+}) => BrainCoreApi.instance.api.crateApiAirBoardAnalyzeAirBoardContext(
   context: context,
 );
 
@@ -18,7 +18,7 @@ String buildAirBoardEvidenceManifest({
   required String sessionId,
   required String attemptId,
   required AirBoardActivitySummary summary,
-}) => RustLib.instance.api.crateApiAirBoardBuildAirBoardEvidenceManifest(
+}) => BrainCoreApi.instance.api.crateApiAirBoardBuildAirBoardEvidenceManifest(
   sessionId: sessionId,
   attemptId: attemptId,
   summary: summary,

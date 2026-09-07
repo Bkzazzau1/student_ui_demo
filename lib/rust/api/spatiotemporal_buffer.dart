@@ -40,7 +40,7 @@ abstract class SpatiotemporalRingBufferV1 implements RustOpaqueInterface {
   static Future<SpatiotemporalRingBufferV1> newInstance({
     required String sessionId,
     required BigInt capacity,
-  }) => RustLib.instance.api
+  }) => BrainCoreApi.instance.api
       .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1New(
         sessionId: sessionId,
         capacity: capacity,

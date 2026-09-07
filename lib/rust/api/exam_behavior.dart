@@ -13,7 +13,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 ExamBehaviourDecision analyzeExamBehaviourContext({
   required ExamBehaviourContext context,
-}) => RustLib.instance.api.crateApiExamBehaviorAnalyzeExamBehaviourContext(
+}) => BrainCoreApi.instance.api.crateApiExamBehaviorAnalyzeExamBehaviourContext(
   context: context,
 );
 

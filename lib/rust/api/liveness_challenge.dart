@@ -16,13 +16,14 @@ LivenessChallengeResult analyzeLivenessChallenge({
   required PlatformInt64 startedAtMs,
   required PlatformInt64 deadlineMs,
   required PlatformInt64 nowMs,
-}) => RustLib.instance.api.crateApiLivenessChallengeAnalyzeLivenessChallenge(
-  challenge: challenge,
-  observations: observations,
-  startedAtMs: startedAtMs,
-  deadlineMs: deadlineMs,
-  nowMs: nowMs,
-);
+}) =>
+    BrainCoreApi.instance.api.crateApiLivenessChallengeAnalyzeLivenessChallenge(
+      challenge: challenge,
+      observations: observations,
+      startedAtMs: startedAtMs,
+      deadlineMs: deadlineMs,
+      nowMs: nowMs,
+    );
 
 class LivenessChallengeResult {
   final String state;

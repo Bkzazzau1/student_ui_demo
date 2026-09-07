@@ -20,17 +20,18 @@ String buildPortableFaceTemplate({
   required double qualityScore,
   required PlatformInt64 createdAtMs,
   required PlatformInt64 expiresAtMs,
-}) => RustLib.instance.api.crateApiFaceVerificationBuildPortableFaceTemplate(
-  studentId: studentId,
-  enrollmentId: enrollmentId,
-  modelId: modelId,
-  modelSha256: modelSha256,
-  preprocessingVersion: preprocessingVersion,
-  embeddings: embeddings,
-  qualityScore: qualityScore,
-  createdAtMs: createdAtMs,
-  expiresAtMs: expiresAtMs,
-);
+}) =>
+    BrainCoreApi.instance.api.crateApiFaceVerificationBuildPortableFaceTemplate(
+      studentId: studentId,
+      enrollmentId: enrollmentId,
+      modelId: modelId,
+      modelSha256: modelSha256,
+      preprocessingVersion: preprocessingVersion,
+      embeddings: embeddings,
+      qualityScore: qualityScore,
+      createdAtMs: createdAtMs,
+      expiresAtMs: expiresAtMs,
+    );
 
 FaceTemplateStatus validatePortableFaceTemplate({
   required String templateJson,
@@ -38,13 +39,14 @@ FaceTemplateStatus validatePortableFaceTemplate({
   required String expectedModelId,
   required String expectedModelSha256,
   required PlatformInt64 nowMs,
-}) => RustLib.instance.api.crateApiFaceVerificationValidatePortableFaceTemplate(
-  templateJson: templateJson,
-  expectedStudentId: expectedStudentId,
-  expectedModelId: expectedModelId,
-  expectedModelSha256: expectedModelSha256,
-  nowMs: nowMs,
-);
+}) => BrainCoreApi.instance.api
+    .crateApiFaceVerificationValidatePortableFaceTemplate(
+      templateJson: templateJson,
+      expectedStudentId: expectedStudentId,
+      expectedModelId: expectedModelId,
+      expectedModelSha256: expectedModelSha256,
+      nowMs: nowMs,
+    );
 
 FaceVerificationResult verifyFaceEmbedding1To1({
   required String templateJson,
@@ -52,7 +54,7 @@ FaceVerificationResult verifyFaceEmbedding1To1({
   required double signalQuality,
   required double matchThreshold,
   required PlatformInt64 nowMs,
-}) => RustLib.instance.api.crateApiFaceVerificationVerifyFaceEmbedding1To1(
+}) => BrainCoreApi.instance.api.crateApiFaceVerificationVerifyFaceEmbedding1To1(
   templateJson: templateJson,
   probeEmbedding: probeEmbedding,
   signalQuality: signalQuality,

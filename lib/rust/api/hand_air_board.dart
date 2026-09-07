@@ -11,7 +11,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 HandAirBoardDecision analyzeHandAirBoardContext({
   required HandAirBoardContext context,
-}) => RustLib.instance.api.crateApiHandAirBoardAnalyzeHandAirBoardContext(
+}) => BrainCoreApi.instance.api.crateApiHandAirBoardAnalyzeHandAirBoardContext(
   context: context,
 );
 

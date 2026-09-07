@@ -13,7 +13,7 @@ NativeVisionFrameQuality analyzeRgbFrameQuality({
   required int width,
   required int height,
   required List<int> rgbBytes,
-}) => RustLib.instance.api.crateApiNativeVisionAnalyzeRgbFrameQuality(
+}) => BrainCoreApi.instance.api.crateApiNativeVisionAnalyzeRgbFrameQuality(
   width: width,
   height: height,
   rgbBytes: rgbBytes,
@@ -29,7 +29,7 @@ NativeObjectReviewResult decodeYoloOutput({
   required double iouThreshold,
   required String layout,
   required List<String> classNames,
-}) => RustLib.instance.api.crateApiNativeVisionDecodeYoloOutput(
+}) => BrainCoreApi.instance.api.crateApiNativeVisionDecodeYoloOutput(
   output: output,
   numPredictions: numPredictions,
   numClasses: numClasses,
@@ -44,7 +44,7 @@ NativeObjectReviewResult decodeYoloOutput({
 NativeObjectReviewResult reviewObjectDetections({
   required List<NativeVisionDetection> detections,
   required double iouThreshold,
-}) => RustLib.instance.api.crateApiNativeVisionReviewObjectDetections(
+}) => BrainCoreApi.instance.api.crateApiNativeVisionReviewObjectDetections(
   detections: detections,
   iouThreshold: iouThreshold,
 );
@@ -60,7 +60,7 @@ NativeHeadPoseReviewResult analyzeHeadPoseGeometry({
   required double mouthY,
   required double faceWidth,
   required double faceHeight,
-}) => RustLib.instance.api.crateApiNativeVisionAnalyzeHeadPoseGeometry(
+}) => BrainCoreApi.instance.api.crateApiNativeVisionAnalyzeHeadPoseGeometry(
   leftEyeX: leftEyeX,
   leftEyeY: leftEyeY,
   rightEyeX: rightEyeX,

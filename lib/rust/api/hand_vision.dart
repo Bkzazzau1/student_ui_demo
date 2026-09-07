@@ -15,16 +15,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 HandVisionModelStatus loadHandVisionModel({
   required String manifestJson,
   required List<int> modelBytes,
-}) => RustLib.instance.api.crateApiHandVisionLoadHandVisionModel(
+}) => BrainCoreApi.instance.api.crateApiHandVisionLoadHandVisionModel(
   manifestJson: manifestJson,
   modelBytes: modelBytes,
 );
 
 void clearHandVisionModel() =>
-    RustLib.instance.api.crateApiHandVisionClearHandVisionModel();
+    BrainCoreApi.instance.api.crateApiHandVisionClearHandVisionModel();
 
 HandVisionModelStatus currentHandVisionModelStatus() =>
-    RustLib.instance.api.crateApiHandVisionCurrentHandVisionModelStatus();
+    BrainCoreApi.instance.api.crateApiHandVisionCurrentHandVisionModelStatus();
 
 HandVisionResult analyzeHandRgbFrame({
   required List<int> rgbBytes,
@@ -32,7 +32,7 @@ HandVisionResult analyzeHandRgbFrame({
   required int imageHeight,
   required HandVisionZones zones,
   required PlatformInt64 timestampMs,
-}) => RustLib.instance.api.crateApiHandVisionAnalyzeHandRgbFrame(
+}) => BrainCoreApi.instance.api.crateApiHandVisionAnalyzeHandRgbFrame(
   rgbBytes: rgbBytes,
   imageWidth: imageWidth,
   imageHeight: imageHeight,
@@ -52,7 +52,7 @@ HandVisionResult reviewHandModelOutput({
   required List<String> classNames,
   required HandVisionZones zones,
   required PlatformInt64 timestampMs,
-}) => RustLib.instance.api.crateApiHandVisionReviewHandModelOutput(
+}) => BrainCoreApi.instance.api.crateApiHandVisionReviewHandModelOutput(
   output: output,
   numPredictions: numPredictions,
   numClasses: numClasses,
@@ -72,7 +72,7 @@ HandVisionResult reviewHandDetections({
   required int imageHeight,
   required HandVisionZones zones,
   required PlatformInt64 timestampMs,
-}) => RustLib.instance.api.crateApiHandVisionReviewHandDetections(
+}) => BrainCoreApi.instance.api.crateApiHandVisionReviewHandDetections(
   detections: detections,
   imageWidth: imageWidth,
   imageHeight: imageHeight,
