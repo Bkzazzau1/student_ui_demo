@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:students_ui_demo/proctoring_demo/e1_small_object_cascade_coordinator.dart';
 import 'package:students_ui_demo/proctoring_demo/e1_small_object_specialist.dart';
 import 'package:students_ui_demo/proctoring_demo/e1_small_object_specialist_runtime.dart';
+import 'package:students_ui_demo/proctoring_demo/e1_specialist_execution_budget.dart';
 import 'package:students_ui_demo/proctoring_demo/e1_specialist_frame.dart';
 import 'package:students_ui_demo/proctoring_demo/model_event_v1.dart';
 import 'package:students_ui_demo/proctoring_demo/optimized_vision_runtime_bridge.dart';
@@ -75,6 +76,9 @@ class _FakeSpecialistRuntime implements E1SmallObjectSpecialistRuntime {
     return const <E1SmallObjectSpecialistObservation>[];
   }
 }
+
+E1SpecialistExecutionBudget _unthrottledBudget() =>
+    E1SpecialistExecutionBudget(minCaptureIntervalNs: 0, maxRequestsPerFrame: 3);
 
 E1SpecialistFrameInput _frame({
   int sourceFrameId = 7,
@@ -182,6 +186,7 @@ void main() {
       final ingested = <E1SmallObjectSpecialistObservation>[];
       final cascade = E1SmallObjectCascadeCoordinator(
         runtime: runtime,
+        executionBudget: _unthrottledBudget(),
         ingestObservations: (observations) async {
           final accepted = observations.toList(growable: false);
           ingested.addAll(accepted);
@@ -197,6 +202,8 @@ void main() {
       );
 
       expect(summary.requestsPlanned, 3);
+      expect(summary.requestsScheduled, 3);
+      expect(summary.requestsBudgetSkipped, 0);
       expect(summary.requestsExecuted, 3);
       expect(runtime.calls, 3);
       expect(summary.observationsAccepted, 2);
@@ -217,6 +224,7 @@ void main() {
       var ingestorCalls = 0;
       final cascade = E1SmallObjectCascadeCoordinator(
         runtime: runtime,
+        executionBudget: _unthrottledBudget(),
         ingestObservations: (observations) async {
           ingestorCalls++;
           return (ingested: observations.length, failed: 0);
@@ -231,8 +239,9 @@ void main() {
       );
 
       expect(summary.requestsPlanned, 0);
+      expect(summary.requestsScheduled, 0);
+      expect(summary.requestsBudgetSkipped, 0);
       expect(summary.requestsExecuted, 0);
-      expect(summary.observationsAccepted, 0);
       expect(runtime.calls, 0);
       expect(ingestorCalls, 0);
     },
@@ -243,6 +252,7 @@ void main() {
     var ingestorCalls = 0;
     final cascade = E1SmallObjectCascadeCoordinator(
       runtime: runtime,
+      executionBudget: _unthrottledBudget(),
       ingestObservations: (observations) async {
         ingestorCalls++;
         return (ingested: observations.length, failed: 0);
@@ -257,6 +267,7 @@ void main() {
     );
 
     expect(summary.requestsPlanned, 0);
+    expect(summary.requestsScheduled, 0);
     expect(summary.requestsExecuted, 0);
     expect(runtime.calls, 0);
     expect(ingestorCalls, 0);
@@ -267,6 +278,7 @@ void main() {
     var ingestorCalls = 0;
     final cascade = E1SmallObjectCascadeCoordinator(
       runtime: runtime,
+      executionBudget: _unthrottledBudget(),
       ingestObservations: (observations) async {
         ingestorCalls++;
         return (ingested: observations.length, failed: 0);
@@ -281,9 +293,43 @@ void main() {
     );
 
     expect(summary.requestsPlanned, 3);
+    expect(summary.requestsScheduled, 3);
+    expect(summary.requestsBudgetSkipped, 0);
     expect(summary.requestsExecuted, 3);
     expect(summary.observationsAccepted, 0);
     expect(summary.eventsIngested, 0);
+    expect(ingestorCalls, 0);
+  });
+
+  test('budget-skipped requests remain unobserved and create no evidence', () async {
+    final runtime = _FakeSpecialistRuntime();
+    var ingestorCalls = 0;
+    final cascade = E1SmallObjectCascadeCoordinator(
+      runtime: runtime,
+      executionBudget: E1SpecialistExecutionBudget(
+        minCaptureIntervalNs: 0,
+        maxRequestsPerFrame: 1,
+      ),
+      ingestObservations: (observations) async {
+        ingestorCalls++;
+        return (ingested: observations.length, failed: 0);
+      },
+    );
+
+    final summary = await cascade.run(
+      sessionId: 'attempt-1',
+      baseResult: _baseResult(),
+      baseEvents: _baseEvents(),
+      frame: _frame(),
+    );
+
+    expect(summary.requestsPlanned, 3);
+    expect(summary.requestsScheduled, 1);
+    expect(summary.requestsBudgetSkipped, 2);
+    expect(summary.requestsExecuted, 1);
+    expect(summary.observationsAccepted, 0);
+    expect(summary.eventsIngested, 0);
+    expect(runtime.calls, 1);
     expect(ingestorCalls, 0);
   });
 }
