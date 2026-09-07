@@ -51,12 +51,14 @@ class LiveCameraFrameBus {
   LiveCameraFrameBus._();
 
   static final LiveCameraFrameBus instance = LiveCameraFrameBus._();
+  static const int _recentFrameCapacity = 4;
 
   final StreamController<LiveCameraFrame> _controller =
       StreamController<LiveCameraFrame>.broadcast(sync: true);
 
   int _sequence = 0;
   LiveCameraFrame? _latestFrame;
+  final List<LiveCameraFrame> _recentFrames = <LiveCameraFrame>[];
 
   Stream<LiveCameraFrame> get frames => _controller.stream;
   LiveCameraFrame? get latestFrame => _latestFrame;
@@ -78,16 +80,40 @@ class LiveCameraFrameBus {
       captureTimestampNs: captureTimestampNs,
     );
     _latestFrame = frame;
+    _recentFrames.add(frame);
+    if (_recentFrames.length > _recentFrameCapacity) {
+      _recentFrames.removeAt(0);
+    }
     if (!_controller.isClosed) {
       _controller.add(frame);
     }
     return frame;
   }
 
+  /// Resolves provenance only when the exact CameraImage instance was published
+  /// by this bus. It never substitutes the latest frame for a different image.
+  LiveCameraFrame? frameForImage(CameraImage image) {
+    for (var index = _recentFrames.length - 1; index >= 0; index--) {
+      final frame = _recentFrames[index];
+      if (identical(frame.image, image)) return frame;
+    }
+    return null;
+  }
+
+  LiveCameraFrame? frameForSequence(int? sequence) {
+    if (sequence == null) return null;
+    for (var index = _recentFrames.length - 1; index >= 0; index--) {
+      final frame = _recentFrames[index];
+      if (frame.sequence == sequence) return frame;
+    }
+    return null;
+  }
+
   Map<String, Object?> currentState() => <String, Object?>{
     'latest_frame_sequence': _latestFrame?.sequence,
     'latest_frame_at': _latestFrame?.capturedAt.toUtc().toIso8601String(),
     'latest_capture_timestamp_ns': _latestFrame?.captureTimestampNs,
+    'recent_frame_count': _recentFrames.length,
     'has_listeners': hasListeners,
   };
 }
