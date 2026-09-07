@@ -127,8 +127,7 @@ class OptimizedVisionRuntimeBridge {
   }) async {
     if (!await initialize()) return null;
     try {
-      final publishedFrame =
-          sourceFrameId == null || captureTimestampNs == null
+      final publishedFrame = sourceFrameId == null || captureTimestampNs == null
           ? LiveCameraFrameBus.instance.frameForImage(image)
           : null;
       final resolvedSourceFrameId = sourceFrameId ?? publishedFrame?.sequence;
