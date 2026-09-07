@@ -120,6 +120,8 @@ jobs:
         run: flutter pub get
 
       - name: Check E1 Dart formatting
+        id: dartfmt
+        continue-on-error: true
         run: >-
           dart format --output=none --set-exit-if-changed
           lib/proctoring_demo/e1_model_event_memory_coordinator.dart
@@ -131,6 +133,39 @@ jobs:
           test/e1_small_object_cascade_coordinator_test.dart
           test/e1_small_object_specialist_manifest_test.dart
           test/e1_small_object_specialist_runtime_bridge_test.dart
+
+      - name: Produce exact dartfmt patch
+        if: steps.dartfmt.outcome == 'failure'
+        shell: bash
+        run: |
+          dart format \
+            lib/proctoring_demo/e1_model_event_memory_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_cascade_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_specialist_manifest.dart \
+            lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart \
+            lib/proctoring_demo/live_camera_frame_bus.dart \
+            lib/proctoring_demo/optimized_vision_runtime_bridge.dart \
+            test/e1_small_object_cascade_coordinator_test.dart \
+            test/e1_small_object_specialist_manifest_test.dart \
+            test/e1_small_object_specialist_runtime_bridge_test.dart
+          git diff -- \
+            lib/proctoring_demo/e1_model_event_memory_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_cascade_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_specialist_manifest.dart \
+            lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart \
+            lib/proctoring_demo/live_camera_frame_bus.dart \
+            lib/proctoring_demo/optimized_vision_runtime_bridge.dart \
+            test/e1_small_object_cascade_coordinator_test.dart \
+            test/e1_small_object_specialist_manifest_test.dart \
+            test/e1_small_object_specialist_runtime_bridge_test.dart \
+            > dartfmt.patch
+
+      - name: Upload dartfmt patch
+        if: steps.dartfmt.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e1-dartfmt-patch
+          path: dartfmt.patch
 
       - name: Analyze E1 live cascade slice
         run: >-
@@ -164,6 +199,11 @@ jobs:
           test/e1_specialist_memory_ingress_test.dart
           test/object_review_event_mapper_test.dart
           test/optimized_vision_object_event_adapter_test.dart
+
+      - name: Fail when Dart formatting differs
+        if: steps.dartfmt.outcome == 'failure'
+        shell: bash
+        run: exit 1
 
   windows-e1-native:
     name: Windows E1 native build
