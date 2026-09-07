@@ -47,6 +47,36 @@ the candidate device.
 The frozen runtime/training boundary is documented in
 `docs/edge_ai/e1_runtime_training_readiness.md`.
 
+## E1 annotation ingest
+
+`e1_annotation_ingest.py` converts staged annotation records into the frozen E1
+dataset manifest. The collection workflow must supply `source_group_id` and a
+canonical E1 class for every annotation; ingest does not guess semantic aliases
+or invent leakage boundaries.
+
+Staging annotations may provide exactly one of:
+
+- `bbox_xyxy_pixels`;
+- `bbox_xywh_pixels`;
+- `bbox_xywh_normalized`.
+
+Pixel geometry is converted into full-source-image normalized geometry. The
+canonical output always uses the frozen object shape
+`{"x": ..., "y": ..., "width": ..., "height": ...}` and deterministic sample
+and annotation IDs. Related frames from one recording/session should share the
+same `source_group_id` even when they later become separate image samples.
+
+Convert one staged split:
+
+```powershell
+python -m ai_runtime.e1_annotation_ingest --pretty data/staging/e1_base_train.json data/e1/base/train.json
+```
+
+The tool refuses to overwrite an existing output unless `--force` is supplied,
+and it never writes a canonical manifest when staging validation fails. A
+synthetic staging example is available at
+`docs/edge_ai/examples/e1_annotation_staging.example.json`.
+
 ## E1 dataset readiness CLI
 
 `e1_dataset_tool.py` turns the readiness contracts into a command-line gate for
