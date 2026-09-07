@@ -16,6 +16,7 @@ pub mod lockdown;
 pub mod model_event;
 pub mod native_vision;
 pub mod proctoring;
+pub mod spatiotemporal_buffer;
 pub mod system_security;
 
 pub use ai_action_policy::*;
@@ -36,4 +37,5 @@ pub use lockdown::*;
 pub use model_event::*;
 pub use native_vision::*;
 pub use proctoring::*;
+pub use spatiotemporal_buffer::*;
 pub use system_security::*;
