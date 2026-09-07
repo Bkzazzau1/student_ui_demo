@@ -86,9 +86,7 @@ class E1SmallObjectSpecialistManifest {
     };
   }
 
-  factory E1SmallObjectSpecialistManifest.fromJson(
-    Map<String, Object?> json,
-  ) {
+  factory E1SmallObjectSpecialistManifest.fromJson(Map<String, Object?> json) {
     final required = _readStrings(json['required_canonical_classes']).toSet();
     final classes = _readStrings(json['class_names']);
     return E1SmallObjectSpecialistManifest(
