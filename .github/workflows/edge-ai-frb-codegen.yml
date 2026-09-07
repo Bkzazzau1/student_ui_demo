@@ -11,7 +11,7 @@ on:
       - '.github/workflows/edge-ai-frb-codegen.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   frb-codegen:
@@ -58,3 +58,16 @@ jobs:
             frb-codegen-status.txt
           if-no-files-found: error
           retention-days: 3
+
+      - name: Commit exact generated bindings
+        shell: bash
+        run: |
+          git add lib/rust native/brain_core/src/frb_generated.rs
+          if git diff --cached --quiet; then
+            echo 'FRB bindings are already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(rust): regenerate FRB bindings for model event memory'
+          git push origin HEAD:edge-ai/e1-person-tracking
