@@ -80,6 +80,10 @@ class E1SmallObjectSpecialistRuntimeBridge
     if (manifest == null || !manifest.runtimeAvailable) {
       return const <E1SmallObjectSpecialistObservation>[];
     }
+    final roi = request.roiHint.roi;
+    if (roi == null) {
+      return const <E1SmallObjectSpecialistObservation>[];
+    }
 
     try {
       final response = await _channel.invokeMapMethod<String, Object?>(
@@ -94,7 +98,7 @@ class E1SmallObjectSpecialistRuntimeBridge
             'strategy': request.roiHint.strategy,
             'anchor_canonical_object_id':
                 request.roiHint.anchorCanonicalObjectId,
-            'bounding_box': request.roiHint.boundingBox,
+            'bounding_box': roi.toBoundingBox(),
           },
         },
       );
@@ -130,7 +134,9 @@ class E1SmallObjectSpecialistRuntimeBridge
               confidence > 1.0) {
             continue;
           }
-          final boundingBox = _normalizedBoundingBox(object['box']);
+          final cropBox = _normalizedBoundingBox(object['box']);
+          if (cropBox == null) continue;
+          final boundingBox = _remapCropBoxToFrame(cropBox, roi);
           if (boundingBox == null) continue;
 
           final observation = E1SmallObjectSpecialistObservation(
@@ -177,7 +183,8 @@ class E1SmallObjectSpecialistRuntimeBridge
     final width = _readDouble(box['width']);
     final height = _readDouble(box['height']);
     if (x != null && y != null && width != null && height != null) {
-      return <String, double>{'x': x, 'y': y, 'width': width, 'height': height};
+      final roi = E1NormalizedRoi(x: x, y: y, width: width, height: height);
+      return roi.isValid ? roi.toBoundingBox() : null;
     }
 
     final x1 = _readDouble(box['x1']);
@@ -185,12 +192,28 @@ class E1SmallObjectSpecialistRuntimeBridge
     final x2 = _readDouble(box['x2']);
     final y2 = _readDouble(box['y2']);
     if (x1 == null || y1 == null || x2 == null || y2 == null) return null;
-    return <String, double>{
-      'x': x1,
-      'y': y1,
-      'width': x2 - x1,
-      'height': y2 - y1,
-    };
+    final roi = E1NormalizedRoi(
+      x: x1,
+      y: y1,
+      width: x2 - x1,
+      height: y2 - y1,
+    );
+    return roi.isValid ? roi.toBoundingBox() : null;
+  }
+
+  Map<String, double>? _remapCropBoxToFrame(
+    Map<String, double> cropBox,
+    E1NormalizedRoi crop,
+  ) {
+    final local = E1NormalizedRoi.tryFrom(cropBox);
+    if (local == null) return null;
+    final full = E1NormalizedRoi(
+      x: crop.x + local.x * crop.width,
+      y: crop.y + local.y * crop.height,
+      width: local.width * crop.width,
+      height: local.height * crop.height,
+    );
+    return full.isValid ? full.toBoundingBox() : null;
   }
 
   int? _readInt(Object? value) {
