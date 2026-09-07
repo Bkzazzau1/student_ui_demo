@@ -12,7 +12,7 @@ const MAX_CENTER_DISTANCE: f32 = 0.20;
 const MIN_ASSOCIATION_SCORE: f32 = 0.18;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct PersonTrackEnrichmentV1 {
+pub(crate) struct PersonTrackEnrichmentV1 {
     pub track_id: String,
     pub is_new_track: bool,
     pub track_state: String,
@@ -38,14 +38,14 @@ struct PersonTrackStateV1 {
 }
 
 #[derive(Debug, Default)]
-pub struct PersonTrackerV1 {
+pub(crate) struct PersonTrackerV1 {
     next_track_number: u64,
     latest_capture_timestamp_ns: Option<u64>,
     tracks: HashMap<String, PersonTrackStateV1>,
 }
 
 impl PersonTrackerV1 {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             next_track_number: 1,
             latest_capture_timestamp_ns: None,
@@ -60,7 +60,10 @@ impl PersonTrackerV1 {
     /// geometry/motion association only; it does not claim long-gap biometric
     /// re-identification. Late out-of-order frames remain untracked rather than
     /// being force-associated with newer state.
-    pub fn enrich_event(&mut self, event: &mut ModelEventV1) -> Option<PersonTrackEnrichmentV1> {
+    pub(crate) fn enrich_event(
+        &mut self,
+        event: &mut ModelEventV1,
+    ) -> Option<PersonTrackEnrichmentV1> {
         if !is_person_class(&event.class_id) || event.track_id.is_some() {
             return None;
         }
