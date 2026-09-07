@@ -80,8 +80,8 @@ class E1SmallObjectSpecialistRuntimeBridge
     if (manifest == null || !manifest.runtimeAvailable) {
       return const <E1SmallObjectSpecialistObservation>[];
     }
-    final roi = request.roiHint.roi;
-    if (roi == null) {
+    final requestedRoi = request.roiHint.roi;
+    if (requestedRoi == null) {
       return const <E1SmallObjectSpecialistObservation>[];
     }
 
@@ -98,7 +98,7 @@ class E1SmallObjectSpecialistRuntimeBridge
             'strategy': request.roiHint.strategy,
             'anchor_canonical_object_id':
                 request.roiHint.anchorCanonicalObjectId,
-            'bounding_box': roi.toBoundingBox(),
+            'bounding_box': requestedRoi.toBoundingBox(),
           },
         },
       );
@@ -109,6 +109,18 @@ class E1SmallObjectSpecialistRuntimeBridge
       final outputs = Map<String, Object?>.from(
         response['outputs'] as Map? ?? const <String, Object?>{},
       );
+      final appliedRoi = E1NormalizedRoi.tryFrom(outputs['source_roi']);
+      if (outputs['output_coordinate_space'] != 'normalized_roi' ||
+          appliedRoi == null ||
+          !_appliedRoiMatchesRequest(
+            applied: appliedRoi,
+            requested: requestedRoi,
+            imageWidth: request.imageWidth,
+            imageHeight: request.imageHeight,
+          )) {
+        return const <E1SmallObjectSpecialistObservation>[];
+      }
+
       final inferenceTimestampNs = MonotonicTimebase.instance.nowNs;
       final requestedIds = request.targets
           .map((target) => target.canonicalObjectId)
@@ -136,7 +148,7 @@ class E1SmallObjectSpecialistRuntimeBridge
           }
           final cropBox = _normalizedBoundingBox(object['box']);
           if (cropBox == null) continue;
-          final boundingBox = _remapCropBoxToFrame(cropBox, roi);
+          final boundingBox = _remapCropBoxToFrame(cropBox, appliedRoi);
           if (boundingBox == null) continue;
 
           final observation = E1SmallObjectSpecialistObservation(
@@ -172,6 +184,21 @@ class E1SmallObjectSpecialistRuntimeBridge
         request.targets.any(
           (target) => target.canonicalObjectId == observation.canonicalObjectId,
         );
+  }
+
+  bool _appliedRoiMatchesRequest({
+    required E1NormalizedRoi applied,
+    required E1NormalizedRoi requested,
+    required int imageWidth,
+    required int imageHeight,
+  }) {
+    if (imageWidth <= 0 || imageHeight <= 0) return false;
+    final xTolerance = 1.0 / imageWidth + 1e-6;
+    final yTolerance = 1.0 / imageHeight + 1e-6;
+    return (applied.x - requested.x).abs() <= xTolerance &&
+        (applied.right - requested.right).abs() <= xTolerance &&
+        (applied.y - requested.y).abs() <= yTolerance &&
+        (applied.bottom - requested.bottom).abs() <= yTolerance;
   }
 
   Map<String, double>? _normalizedBoundingBox(Object? value) {
