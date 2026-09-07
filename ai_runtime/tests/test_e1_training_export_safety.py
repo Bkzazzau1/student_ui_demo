@@ -103,6 +103,35 @@ class E1TrainingExportSafetyTests(unittest.TestCase):
             yaml_text = (output / "dataset.yaml").read_text(encoding="utf-8")
             self.assertIn("test: images/test", yaml_text)
 
+    def test_path_like_sample_id_is_rejected_before_materialization(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifests = self._write_inputs(root)
+            train = json.loads(manifests[0].read_text(encoding="utf-8"))
+            train["samples"][0]["sample_id"] = "../escape"
+            manifests[0].write_text(json.dumps(train), encoding="utf-8")
+            output = root / "export"
+
+            with self.assertRaises(E1TrainingExportInputError) as raised:
+                export_training_package(manifests, output)
+
+            self.assertEqual(raised.exception.code, "unsafe_sample_id")
+            self.assertFalse(output.exists())
+            self.assertFalse((root.parent / "escape.jpg").exists())
+
+    def test_windows_reserved_sample_id_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifests = self._write_inputs(root)
+            train = json.loads(manifests[0].read_text(encoding="utf-8"))
+            train["samples"][0]["sample_id"] = "CON"
+            manifests[0].write_text(json.dumps(train), encoding="utf-8")
+
+            with self.assertRaises(E1TrainingExportInputError) as raised:
+                export_training_package(manifests, root / "export")
+
+            self.assertEqual(raised.exception.code, "unsafe_sample_id")
+
 
 if __name__ == "__main__":
     unittest.main()
