@@ -35,6 +35,12 @@ E1SmallObjectSpecialistRequest _request({
   Set<E1SmallObjectTarget> targets = const <E1SmallObjectTarget>{
     E1SmallObjectTarget.smartwatch,
   },
+  Map<String, double>? roi = const <String, double>{
+    'x': 0.25,
+    'y': 0.25,
+    'width': 0.5,
+    'height': 0.5,
+  },
 }) {
   return E1SmallObjectSpecialistRequest(
     sessionId: 'attempt-1',
@@ -44,9 +50,10 @@ E1SmallObjectSpecialistRequest _request({
     imageHeight: 2,
     targets: targets,
     reason: 'test_specialist_request',
-    roiHint: const E1SpecialistRoiHint(
-      strategy: 'person_relative_wearable',
+    roiHint: E1SpecialistRoiHint(
+      strategy: 'person_arm_watch',
       anchorCanonicalObjectId: 'person',
+      boundingBox: roi,
     ),
   );
 }
@@ -114,14 +121,16 @@ void main() {
   );
 
   test(
-    'native class id maps through specialist manifest, not native label',
+    'native crop-space box remaps to full-frame coordinates',
     () async {
       final methods = <String>[];
+      Map<Object?, Object?>? runFrameArguments;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_channel, (call) async {
             methods.add(call.method);
             if (call.method == 'initialize') return true;
             if (call.method == 'runFrame') {
+              runFrameArguments = Map<Object?, Object?>.from(call.arguments as Map);
               return <String, Object?>{
                 'available': true,
                 'outputs': <String, Object?>{
@@ -163,8 +172,27 @@ void main() {
       expect(observation.sourceFrameId, 42);
       expect(observation.captureTimestampNs, 1000);
       expect(observation.inferenceTimestampNs, greaterThanOrEqualTo(1000));
-      expect(observation.boundingBox['x'], closeTo(0.1, 0.0001));
-      expect(observation.boundingBox['width'], closeTo(0.2, 0.0001));
+
+      // Crop is [0.25, 0.25, 0.5, 0.5]. Local box
+      // [0.1, 0.2, 0.2, 0.2] therefore maps back to
+      // [0.30, 0.35, 0.10, 0.10] in the original frame.
+      expect(observation.boundingBox['x'], closeTo(0.30, 0.0001));
+      expect(observation.boundingBox['y'], closeTo(0.35, 0.0001));
+      expect(observation.boundingBox['width'], closeTo(0.10, 0.0001));
+      expect(observation.boundingBox['height'], closeTo(0.10, 0.0001));
+
+      final roiHint = Map<Object?, Object?>.from(
+        runFrameArguments!['roi_hint'] as Map,
+      );
+      expect(
+        Map<Object?, Object?>.from(roiHint['bounding_box'] as Map),
+        equals(<Object?, Object?>{
+          'x': 0.25,
+          'y': 0.25,
+          'width': 0.5,
+          'height': 0.5,
+        }),
+      );
     },
   );
 
@@ -221,6 +249,26 @@ void main() {
     final observations = await runtime.infer(
       request: _request(),
       frame: _frame(sourceFrameId: 99),
+    );
+
+    expect(observations, isEmpty);
+    expect(nativeCalls, 0);
+  });
+
+  test('missing ROI blocks native calls rather than falling back to full frame', () async {
+    var nativeCalls = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          nativeCalls++;
+          return true;
+        });
+
+    final runtime = E1SmallObjectSpecialistRuntimeBridge(
+      manifestLoader: () async => _installedManifest(),
+    );
+    final observations = await runtime.infer(
+      request: _request(roi: null),
+      frame: _frame(),
     );
 
     expect(observations, isEmpty);
