@@ -4,7 +4,7 @@ import 'package:students_ui_demo/proctoring_demo/native_vision_bridge.dart';
 
 void main() {
   group('E1ModelEventAdapter', () {
-    test('preserves frame timing and emits normalized detection geometry', () {
+    test('preserves timing and emits canonical normalized detection geometry', () {
       const review = NativeObjectReviewSnapshot(
         detections: <NativeVisionDetectionSnapshot>[
           NativeVisionDetectionSnapshot(
@@ -53,7 +53,7 @@ void main() {
       expect(event.sourceFrameId, 42);
       expect(event.captureTimestampNs, 1_000_000);
       expect(event.inferenceTimestampNs, 1_120_000);
-      expect(event.classId, 'cell_phone');
+      expect(event.classId, 'phone');
       expect(event.trackId, isNull);
       expect(event.modelId, 'e1-yolo-exam-review');
       expect(event.modelVersion, 'development-baseline-1');
@@ -62,10 +62,15 @@ void main() {
       expect(box['y'], closeTo(0.4, 0.0001));
       expect(box['width'], closeTo(0.2, 0.0001));
       expect(box['height'], closeTo(0.2, 0.0001));
-      expect(event.metadata['persistent_tracking_available'], isFalse);
+      expect(event.metadata['raw_label'], 'cell phone');
+      expect(event.metadata['canonical_taxonomy_id'], 'e1-exam-object-taxonomy');
+      expect(event.metadata['canonical_taxonomy_version'], '1.0.0');
+      expect(event.metadata['taxonomy_known_class'], isTrue);
+      expect(event.metadata['required_detector_class'], isTrue);
+      expect(event.metadata['tracking_assignment_stage'], 'not_applicable');
     });
 
-    test('does not invent persistent track IDs', () {
+    test('does not invent persistent track IDs before Rust ingress', () {
       const review = NativeObjectReviewSnapshot(
         detections: <NativeVisionDetectionSnapshot>[
           NativeVisionDetectionSnapshot(
@@ -106,6 +111,51 @@ void main() {
           .single;
       expect(event.classId, 'person');
       expect(event.trackId, isNull);
+      expect(event.metadata['tracking_assignment_stage'], 'rust_memory_ingress');
+    });
+
+    test('does not accept detector context wording as derived policy state', () {
+      const review = NativeObjectReviewSnapshot(
+        detections: <NativeVisionDetectionSnapshot>[
+          NativeVisionDetectionSnapshot(
+            classId: 0,
+            label: 'additional person',
+            confidence: 0.8,
+            xCenter: 100,
+            yCenter: 100,
+            width: 50,
+            height: 100,
+            xMin: 75,
+            yMin: 50,
+            xMax: 125,
+            yMax: 150,
+          ),
+        ],
+        peopleCount: 1,
+        phoneCount: 0,
+        bookCount: 0,
+        paperCount: 0,
+        needsReview: false,
+        attentionLevel: 'normal',
+        reason: 'object review complete',
+      );
+      const context = E1FrameInferenceContext(
+        sessionId: 'attempt-002',
+        sourceFrameId: 2,
+        captureTimestampNs: 20,
+        inferenceTimestampNs: 21,
+        modelId: 'test-detector',
+        modelVersion: '1.0.0',
+        imageWidth: 200,
+        imageHeight: 200,
+      );
+
+      final event = const E1ModelEventAdapter()
+          .fromNativeReview(review: review, context: context)
+          .single;
+      expect(event.classId, 'person');
+      expect(event.metadata['raw_label'], 'additional person');
+      expect(event.metadata['tracking_assignment_stage'], 'rust_memory_ingress');
     });
   });
 }
