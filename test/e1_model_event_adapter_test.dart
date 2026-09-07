@@ -48,12 +48,11 @@ void main() {
         context: context,
       );
 
-      expect(events, hasLength(1));
-      final event = events.single;
+      expect(events, hasLength(2));
+      final event = events.firstWhere((item) => item.classId == 'cell_phone');
       expect(event.sourceFrameId, 42);
       expect(event.captureTimestampNs, 1_000_000);
       expect(event.inferenceTimestampNs, 1_120_000);
-      expect(event.classId, 'cell_phone');
       expect(event.trackId, isNull);
       expect(event.modelId, 'e1-yolo-exam-review');
       expect(event.modelVersion, 'development-baseline-1');
@@ -63,9 +62,16 @@ void main() {
       expect(box['width'], closeTo(0.2, 0.0001));
       expect(box['height'], closeTo(0.2, 0.0001));
       expect(event.metadata['persistent_tracking_available'], isFalse);
+
+      final count = events.firstWhere((item) => item.classId == 'person_count');
+      expect(count.sourceFrameId, 42);
+      expect(count.captureTimestampNs, 1_000_000);
+      expect(count.metadata['count'], 0);
+      expect(count.geometry, isNull);
+      expect(count.trackId, isNull);
     });
 
-    test('does not invent persistent track IDs', () {
+    test('does not invent persistent track IDs before Rust memory ingress', () {
       const review = NativeObjectReviewSnapshot(
         detections: <NativeVisionDetectionSnapshot>[
           NativeVisionDetectionSnapshot(
@@ -101,11 +107,45 @@ void main() {
         imageHeight: 200,
       );
 
-      final event = const E1ModelEventAdapter()
-          .fromNativeReview(review: review, context: context)
-          .single;
-      expect(event.classId, 'person');
-      expect(event.trackId, isNull);
+      final events = const E1ModelEventAdapter().fromNativeReview(
+        review: review,
+        context: context,
+      );
+      final person = events.firstWhere((item) => item.classId == 'person');
+      final count = events.firstWhere((item) => item.classId == 'person_count');
+      expect(person.trackId, isNull);
+      expect(count.metadata['count'], 1);
+    });
+
+    test('emits explicit zero-person observation when no detections exist', () {
+      const review = NativeObjectReviewSnapshot(
+        detections: <NativeVisionDetectionSnapshot>[],
+        peopleCount: 0,
+        phoneCount: 0,
+        bookCount: 0,
+        paperCount: 0,
+        needsReview: false,
+        attentionLevel: 'normal',
+        reason: 'object review complete',
+      );
+      const context = E1FrameInferenceContext(
+        sessionId: 'attempt-001',
+        sourceFrameId: 9,
+        captureTimestampNs: 900,
+        inferenceTimestampNs: 950,
+        modelId: 'e1-yolo-exam-review',
+        modelVersion: 'development-baseline-1',
+        imageWidth: 640,
+        imageHeight: 480,
+      );
+
+      final events = const E1ModelEventAdapter().fromNativeReview(
+        review: review,
+        context: context,
+      );
+      expect(events, hasLength(1));
+      expect(events.single.classId, 'person_count');
+      expect(events.single.metadata['count'], 0);
     });
   });
 }
