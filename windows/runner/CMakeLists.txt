@@ -7,6 +7,7 @@ project(runner LANGUAGES CXX)
 #
 # Any new source files that you add to the application should be added here.
 add_executable(${BINARY_NAME} WIN32
+  "e1_small_object_specialist_runtime_channel.cpp"
   "exam_window_channel.cpp"
   "face_landmarker_runtime_channel.cpp"
   "face_embedding_runtime_channel.cpp"
