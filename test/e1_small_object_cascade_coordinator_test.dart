@@ -123,60 +123,66 @@ OptimizedVisionRuntimeResult _baseResult({
 }
 
 void main() {
-  test('planner requests are not evidence; only matching observations ingest', () async {
-    final runtime = _FakeSpecialistRuntime();
-    final ingested = <E1SmallObjectSpecialistObservation>[];
-    final cascade = E1SmallObjectCascadeCoordinator(
-      runtime: runtime,
-      ingestObservations: (observations) async {
-        final accepted = observations.toList(growable: false);
-        ingested.addAll(accepted);
-        return (ingested: accepted.length, failed: 0);
-      },
-    );
+  test(
+    'planner requests are not evidence; only matching observations ingest',
+    () async {
+      final runtime = _FakeSpecialistRuntime();
+      final ingested = <E1SmallObjectSpecialistObservation>[];
+      final cascade = E1SmallObjectCascadeCoordinator(
+        runtime: runtime,
+        ingestObservations: (observations) async {
+          final accepted = observations.toList(growable: false);
+          ingested.addAll(accepted);
+          return (ingested: accepted.length, failed: 0);
+        },
+      );
 
-    final summary = await cascade.run(
-      sessionId: 'attempt-1',
-      baseResult: _baseResult(),
-      frame: _frame(),
-    );
+      final summary = await cascade.run(
+        sessionId: 'attempt-1',
+        baseResult: _baseResult(),
+        frame: _frame(),
+      );
 
-    expect(summary.requestsPlanned, 2);
-    expect(summary.requestsExecuted, 2);
-    expect(runtime.calls, 2);
-    expect(summary.observationsAccepted, 2);
-    expect(summary.eventsIngested, 2);
-    expect(summary.ingestFailures, 0);
-    expect(
-      ingested.map((item) => item.canonicalObjectId).toSet(),
-      equals(<String>{'smartwatch', 'calculator'}),
-    );
-    expect(ingested.every((item) => item.sourceFrameId == 7), isTrue);
-  });
+      expect(summary.requestsPlanned, 2);
+      expect(summary.requestsExecuted, 2);
+      expect(runtime.calls, 2);
+      expect(summary.observationsAccepted, 2);
+      expect(summary.eventsIngested, 2);
+      expect(summary.ingestFailures, 0);
+      expect(
+        ingested.map((item) => item.canonicalObjectId).toSet(),
+        equals(<String>{'smartwatch', 'calculator'}),
+      );
+      expect(ingested.every((item) => item.sourceFrameId == 7), isTrue);
+    },
+  );
 
-  test('base/frame provenance mismatch prevents specialist execution', () async {
-    final runtime = _FakeSpecialistRuntime();
-    var ingestorCalls = 0;
-    final cascade = E1SmallObjectCascadeCoordinator(
-      runtime: runtime,
-      ingestObservations: (observations) async {
-        ingestorCalls++;
-        return (ingested: observations.length, failed: 0);
-      },
-    );
+  test(
+    'base/frame provenance mismatch prevents specialist execution',
+    () async {
+      final runtime = _FakeSpecialistRuntime();
+      var ingestorCalls = 0;
+      final cascade = E1SmallObjectCascadeCoordinator(
+        runtime: runtime,
+        ingestObservations: (observations) async {
+          ingestorCalls++;
+          return (ingested: observations.length, failed: 0);
+        },
+      );
 
-    final summary = await cascade.run(
-      sessionId: 'attempt-1',
-      baseResult: _baseResult(),
-      frame: _frame(sourceFrameId: 8),
-    );
+      final summary = await cascade.run(
+        sessionId: 'attempt-1',
+        baseResult: _baseResult(),
+        frame: _frame(sourceFrameId: 8),
+      );
 
-    expect(summary.requestsPlanned, 0);
-    expect(summary.requestsExecuted, 0);
-    expect(summary.observationsAccepted, 0);
-    expect(runtime.calls, 0);
-    expect(ingestorCalls, 0);
-  });
+      expect(summary.requestsPlanned, 0);
+      expect(summary.requestsExecuted, 0);
+      expect(summary.observationsAccepted, 0);
+      expect(runtime.calls, 0);
+      expect(ingestorCalls, 0);
+    },
+  );
 
   test('empty specialist output cannot become evidence', () async {
     final runtime = const UnavailableE1SmallObjectSpecialistRuntime();
