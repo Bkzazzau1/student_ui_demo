@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use brain_core::api::model_event::{ModelEventV1, ValidityIntervalV1, MODEL_EVENT_SCHEMA_VERSION};
+use brain_core::api::model_event::{MODEL_EVENT_SCHEMA_VERSION, ModelEventV1, ValidityIntervalV1};
 use brain_core::api::spatiotemporal_buffer::SpatiotemporalRingBufferV1;
 
 fn event(
@@ -35,8 +35,12 @@ fn event(
 fn aligns_asynchronous_results_by_capture_time_not_completion_time() {
     let mut buffer = SpatiotemporalRingBufferV1::new("session-001".into(), 8).unwrap();
 
-    buffer.push(event("late-capture", "phone_visible", 20, 50)).unwrap();
-    buffer.push(event("early-capture", "hand_reach", 10, 60)).unwrap();
+    buffer
+        .push(event("late-capture", "phone_visible", 20, 50))
+        .unwrap();
+    buffer
+        .push(event("early-capture", "hand_reach", 10, 60))
+        .unwrap();
 
     let captures: Vec<u64> = buffer
         .snapshot()
@@ -96,7 +100,9 @@ fn queries_validity_and_latest_track_evidence_without_interpolation() {
         .unwrap();
     assert_eq!(latest.event_id, "e1");
 
-    assert!(buffer
-        .latest_for_class("eyes_left", Some("PERSON_TRACK_001"), 250)
-        .is_none());
+    assert!(
+        buffer
+            .latest_for_class("eyes_left", Some("PERSON_TRACK_001"), 250)
+            .is_none()
+    );
 }
