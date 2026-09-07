@@ -7,6 +7,13 @@ import 'package:students_ui_demo/proctoring_demo/e1_specialist_frame.dart';
 
 const _channel = MethodChannel('kslas.e1_small_object_specialist_runtime');
 
+const _roi = <String, double>{
+  'x': 0.25,
+  'y': 0.25,
+  'width': 0.5,
+  'height': 0.5,
+};
+
 E1SmallObjectSpecialistManifest _installedManifest() {
   return const E1SmallObjectSpecialistManifest(
     schemaVersion: '1.0',
@@ -35,19 +42,14 @@ E1SmallObjectSpecialistRequest _request({
   Set<E1SmallObjectTarget> targets = const <E1SmallObjectTarget>{
     E1SmallObjectTarget.smartwatch,
   },
-  Map<String, double>? roi = const <String, double>{
-    'x': 0.25,
-    'y': 0.25,
-    'width': 0.5,
-    'height': 0.5,
-  },
+  Map<String, double>? roi = _roi,
 }) {
   return E1SmallObjectSpecialistRequest(
     sessionId: 'attempt-1',
     sourceFrameId: 42,
     captureTimestampNs: 1000,
-    imageWidth: 2,
-    imageHeight: 2,
+    imageWidth: 100,
+    imageHeight: 100,
     targets: targets,
     reason: 'test_specialist_request',
     roiHint: E1SpecialistRoiHint(
@@ -61,20 +63,31 @@ E1SmallObjectSpecialistRequest _request({
 E1SpecialistFrameInput _frame({int sourceFrameId = 42}) {
   return E1SpecialistFrameInput(
     format: 'rgb888',
-    width: 2,
-    height: 2,
+    width: 100,
+    height: 100,
     sourceFrameId: sourceFrameId,
     captureTimestampNs: 1000,
     planes: <E1SpecialistFramePlane>[
       E1SpecialistFramePlane(
-        bytes: Uint8List.fromList(<int>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        bytesPerRow: 6,
+        bytes: Uint8List(100 * 100 * 3),
+        bytesPerRow: 300,
         bytesPerPixel: 3,
-        width: 2,
-        height: 2,
+        width: 100,
+        height: 100,
       ),
     ],
   );
+}
+
+Map<String, Object?> _nativeOutputs({
+  Map<String, double> sourceRoi = _roi,
+  List<Map<String, Object?>> objects = const <Map<String, Object?>>[],
+}) {
+  return <String, Object?>{
+    'output_coordinate_space': 'normalized_roi',
+    'source_roi': sourceRoi,
+    'objects': objects,
+  };
 }
 
 void main() {
@@ -121,7 +134,7 @@ void main() {
   );
 
   test(
-    'native crop-space box remaps to full-frame coordinates',
+    'native crop-space box remaps from applied ROI to full-frame coordinates',
     () async {
       final methods = <String>[];
       Map<Object?, Object?>? runFrameArguments;
@@ -133,8 +146,8 @@ void main() {
               runFrameArguments = Map<Object?, Object?>.from(call.arguments as Map);
               return <String, Object?>{
                 'available': true,
-                'outputs': <String, Object?>{
-                  'objects': <Map<String, Object?>>[
+                'outputs': _nativeOutputs(
+                  objects: <Map<String, Object?>>[
                     <String, Object?>{
                       // Deliberately wrong/base-model label. The specialist bridge
                       // must use class_id + manifest class_names instead.
@@ -149,7 +162,7 @@ void main() {
                       },
                     },
                   ],
-                },
+                ),
               };
             }
             return null;
@@ -173,7 +186,7 @@ void main() {
       expect(observation.captureTimestampNs, 1000);
       expect(observation.inferenceTimestampNs, greaterThanOrEqualTo(1000));
 
-      // Crop is [0.25, 0.25, 0.5, 0.5]. Local box
+      // Applied crop is [0.25, 0.25, 0.5, 0.5]. Local box
       // [0.1, 0.2, 0.2, 0.2] therefore maps back to
       // [0.30, 0.35, 0.10, 0.10] in the original frame.
       expect(observation.boundingBox['x'], closeTo(0.30, 0.0001));
@@ -196,7 +209,50 @@ void main() {
     },
   );
 
-  test('unrequested specialist class is dropped', () async {
+  test('native ROI outside one-pixel tolerance is rejected', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          if (call.method == 'initialize') return true;
+          if (call.method == 'runFrame') {
+            return <String, Object?>{
+              'available': true,
+              'outputs': _nativeOutputs(
+                sourceRoi: const <String, double>{
+                  'x': 0.10,
+                  'y': 0.25,
+                  'width': 0.5,
+                  'height': 0.5,
+                },
+                objects: <Map<String, Object?>>[
+                  <String, Object?>{
+                    'class_id': 0,
+                    'confidence': 0.95,
+                    'box': <String, Object?>{
+                      'x': 0.1,
+                      'y': 0.1,
+                      'width': 0.2,
+                      'height': 0.2,
+                    },
+                  },
+                ],
+              ),
+            };
+          }
+          return null;
+        });
+
+    final runtime = E1SmallObjectSpecialistRuntimeBridge(
+      manifestLoader: () async => _installedManifest(),
+    );
+    final observations = await runtime.infer(
+      request: _request(),
+      frame: _frame(),
+    );
+
+    expect(observations, isEmpty);
+  });
+
+  test('missing native ROI coordinate metadata is rejected', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, (call) async {
           if (call.method == 'initialize') return true;
@@ -217,6 +273,43 @@ void main() {
                   },
                 ],
               },
+            };
+          }
+          return null;
+        });
+
+    final runtime = E1SmallObjectSpecialistRuntimeBridge(
+      manifestLoader: () async => _installedManifest(),
+    );
+    final observations = await runtime.infer(
+      request: _request(),
+      frame: _frame(),
+    );
+
+    expect(observations, isEmpty);
+  });
+
+  test('unrequested specialist class is dropped', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          if (call.method == 'initialize') return true;
+          if (call.method == 'runFrame') {
+            return <String, Object?>{
+              'available': true,
+              'outputs': _nativeOutputs(
+                objects: <Map<String, Object?>>[
+                  <String, Object?>{
+                    'class_id': 0,
+                    'confidence': 0.95,
+                    'box': <String, Object?>{
+                      'x': 0.1,
+                      'y': 0.1,
+                      'width': 0.2,
+                      'height': 0.2,
+                    },
+                  },
+                ],
+              ),
             };
           }
           return null;
