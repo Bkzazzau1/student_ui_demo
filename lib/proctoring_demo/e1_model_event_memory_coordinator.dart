@@ -105,8 +105,12 @@ class E1ModelEventMemoryCoordinator {
               bytes: plane.bytes,
               bytesPerRow: plane.bytesPerRow,
               bytesPerPixel: plane.bytesPerPixel ?? 1,
-              width: plane.width,
-              height: plane.height,
+              // Camera backends may omit per-plane dimensions. Keep that
+              // evidence UNKNOWN by using the invalid sentinel 0; the frame
+              // contract will then skip specialist inference rather than
+              // substituting full-frame dimensions.
+              width: plane.width ?? 0,
+              height: plane.height ?? 0,
             ),
           )
           .toList(growable: false),
