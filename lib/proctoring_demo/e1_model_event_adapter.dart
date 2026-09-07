@@ -1,3 +1,4 @@
+import 'e1_object_taxonomy.dart';
 import 'model_event_v1.dart';
 import 'native_vision_bridge.dart';
 
@@ -51,6 +52,7 @@ class E1ModelEventAdapter {
       final classId = _normalizeClassId(detection.label);
       if (classId.isEmpty) continue;
 
+      final taxonomy = E1ObjectTaxonomyV1.resolve(detection.label);
       final boundingBox = _normalizedBoundingBox(detection, context);
       final eventId = _detectionEventId(
         context: context,
@@ -85,6 +87,7 @@ class E1ModelEventAdapter {
             'producer': 'e1_person_object_ai',
             'raw_class_id': detection.classId,
             'raw_label': detection.label,
+            ...taxonomy.toMetadata(),
             'backend': context.backend,
             'precision': context.precision,
             'persistent_tracking_available': false,

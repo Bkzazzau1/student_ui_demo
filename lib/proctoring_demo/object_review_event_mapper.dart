@@ -1,3 +1,5 @@
+import 'e1_object_taxonomy.dart';
+
 class ObjectReviewEventDecision {
   const ObjectReviewEventDecision({
     required this.eventType,
@@ -30,82 +32,113 @@ class ObjectReviewEventMapper {
     String source = 'native_scan_frame_review',
     String? target,
   }) {
-    final normalized = _normalizeLabels(labels);
-    if (normalized.isEmpty) return const <ObjectReviewEventDecision>[];
+    final resolutions = _resolveLabels(labels);
+    if (resolutions.isEmpty) return const <ObjectReviewEventDecision>[];
 
     final decisions = <ObjectReviewEventDecision>[];
 
-    final phoneLabels = _matching(normalized, const <String>[
-      'phone',
-      'cell phone',
-      'mobile',
-      'smartphone',
-      'remote',
-    ]);
-    if (phoneLabels.isNotEmpty) {
+    final phoneLike = _matchingCanonical(
+      resolutions,
+      const <String>{'phone'},
+    );
+    if (phoneLike.isNotEmpty) {
       decisions.add(
         _decision(
           eventType: 'yolo_phone_detected',
           severity: 'warning',
           message: 'Phone-like object noticed in camera view.',
-          labels: phoneLabels,
+          matches: phoneLike,
           source: source,
           target: target,
         ),
       );
     }
 
-    final screenLabels = _matching(normalized, const <String>[
-      'laptop',
-      'monitor',
-      'tv',
-      'tv monitor',
-      'screen',
-      'tablet',
-    ]);
-    if (screenLabels.isNotEmpty) {
+    final screens = _matchingCanonical(
+      resolutions,
+      const <String>{
+        'laptop',
+        'television',
+        'monitor',
+        'tablet',
+        'screen_signal',
+      },
+    );
+    if (screens.isNotEmpty) {
       decisions.add(
         _decision(
           eventType: 'yolo_extra_screen_detected',
           severity: 'warning',
           message: 'Extra screen-like object noticed in camera view.',
-          labels: screenLabels,
+          matches: screens,
           source: source,
           target: target,
         ),
       );
     }
 
-    final paperLabels = _matching(normalized, const <String>[
-      'book',
-      'paper',
-      'notebook',
-      'notes',
-      'sheet',
-    ]);
-    if (paperLabels.isNotEmpty) {
+    final referenceMaterial = _matchingCanonical(
+      resolutions,
+      const <String>{'book', 'paper_note'},
+    );
+    if (referenceMaterial.isNotEmpty) {
       decisions.add(
         _decision(
           eventType: 'yolo_book_or_paper_detected',
           severity: 'warning',
           message: 'Book or paper-like object noticed in camera view.',
-          labels: paperLabels,
+          matches: referenceMaterial,
           source: source,
           target: target,
         ),
       );
     }
 
-    final calculatorLabels = _matching(normalized, const <String>[
-      'calculator',
-    ]);
-    if (calculatorLabels.isNotEmpty) {
+    final calculator = _matchingCanonical(
+      resolutions,
+      const <String>{'calculator'},
+    );
+    if (calculator.isNotEmpty) {
       decisions.add(
         _decision(
           eventType: 'yolo_calculator_detected',
           severity: 'warning',
           message: 'Calculator-like object noticed in camera view.',
-          labels: calculatorLabels,
+          matches: calculator,
+          source: source,
+          target: target,
+        ),
+      );
+    }
+
+    final smartwatch = _matchingCanonical(
+      resolutions,
+      const <String>{'smartwatch'},
+    );
+    if (smartwatch.isNotEmpty) {
+      decisions.add(
+        _decision(
+          eventType: 'e1_smartwatch_detected',
+          severity: 'warning',
+          message: 'Smartwatch-like object noticed in camera view.',
+          matches: smartwatch,
+          source: source,
+          target: target,
+        ),
+      );
+    }
+
+    final earbud = _matchingCanonical(
+      resolutions,
+      const <String>{'earbud'},
+    );
+    if (earbud.isNotEmpty) {
+      decisions.add(
+        _decision(
+          eventType: 'e1_earbud_detected',
+          severity: 'warning',
+          message: 'Earbud-like object noticed in camera view.',
+          matches: earbud,
           source: source,
           target: target,
         ),
@@ -119,10 +152,21 @@ class ObjectReviewEventMapper {
     required String eventType,
     required String severity,
     required String message,
-    required List<String> labels,
+    required List<E1ObjectTaxonomyResolution> matches,
     required String source,
     required String? target,
   }) {
+    final normalizedLabels = matches.map((item) => item.normalizedLabel).toSet()
+      ..removeWhere((item) => item.isEmpty);
+    final canonicalIds = matches.map((item) => item.canonicalObjectId).toSet();
+    final coverage = matches.map((item) => item.coverage.wireValue).toSet();
+    final groups = matches.map((item) => item.group).toSet();
+
+    final labels = normalizedLabels.toList()..sort();
+    final canonical = canonicalIds.toList()..sort();
+    final coverageValues = coverage.toList()..sort();
+    final groupValues = groups.toList()..sort();
+
     return ObjectReviewEventDecision(
       eventType: eventType,
       severity: severity,
@@ -132,31 +176,37 @@ class ObjectReviewEventMapper {
         'source_component': source,
         if (target != null) 'scan_target': target,
         'matched_labels': labels,
+        'taxonomy_version': E1ObjectTaxonomyV1.version,
+        'canonical_object_ids': canonical,
+        'object_groups': groupValues,
+        'object_coverage': coverageValues,
+        'specialist_required': matches.any(
+          (item) => item.coverage == E1ObjectCoverage.specialistRequired,
+        ),
       },
     );
   }
 
-  List<String> _normalizeLabels(List<String> labels) {
-    final normalized = <String>{};
-    for (final label in labels) {
-      final value = label
-          .trim()
-          .toLowerCase()
-          .replaceAll(RegExp(r'[_\-]+'), ' ')
-          .replaceAll(RegExp(r'\s+'), ' ');
-      if (value.isEmpty || value == 'background' || value == 'none') continue;
-      normalized.add(value);
+  List<E1ObjectTaxonomyResolution> _resolveLabels(List<String> labels) {
+    final byKey = <String, E1ObjectTaxonomyResolution>{};
+    for (final raw in labels) {
+      final resolution = E1ObjectTaxonomyV1.resolve(raw);
+      if (!resolution.isKnown) continue;
+      final key =
+          '${resolution.normalizedLabel}:${resolution.canonicalObjectId}:${resolution.coverage.wireValue}';
+      byKey[key] = resolution;
     }
-    return normalized.toList()..sort();
+    final output = byKey.values.toList()
+      ..sort((a, b) => a.normalizedLabel.compareTo(b.normalizedLabel));
+    return output;
   }
 
-  List<String> _matching(List<String> labels, List<String> keywords) {
-    return labels
-        .where(
-          (label) => keywords.any(
-            (keyword) => label == keyword || label.contains(keyword),
-          ),
-        )
-        .toList();
+  List<E1ObjectTaxonomyResolution> _matchingCanonical(
+    List<E1ObjectTaxonomyResolution> resolutions,
+    Set<String> canonicalIds,
+  ) {
+    return resolutions
+        .where((item) => canonicalIds.contains(item.canonicalObjectId))
+        .toList(growable: false);
   }
 }
