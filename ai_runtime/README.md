@@ -47,6 +47,34 @@ the candidate device.
 The frozen runtime/training boundary is documented in
 `docs/edge_ai/e1_runtime_training_readiness.md`.
 
+## E1 dataset readiness CLI
+
+`e1_dataset_tool.py` turns the readiness contracts into a command-line gate for
+real dataset files. It emits deterministic JSON and returns a non-zero exit code
+when the supplied data is invalid or leaks related capture groups across splits.
+
+Validate one or more dataset manifests together so train/validation/test leakage
+can be detected:
+
+```powershell
+python -m ai_runtime.e1_dataset_tool --pretty dataset data/e1/base/train.json data/e1/base/validation.json data/e1/base/test.json
+```
+
+Validate a held-out evaluation/calibration report:
+
+```powershell
+python -m ai_runtime.e1_dataset_tool --pretty evaluation reports/e1/base_validation.json
+```
+
+A valid evaluation report may still return `"calibration_complete": false`.
+That means the report contract is sound but per-class thresholds have not yet
+been selected from held-out calibration evidence. The CLI also refuses to treat
+`support: 0` as real held-out class evidence.
+
+Synthetic examples live under `docs/edge_ai/examples/`. They are marked
+`example_only` and are format illustrations only; their sample IDs, metric
+values, and paths are not training data, model results, or acceptance targets.
+
 ## Tests
 
 Run all Python runtime and training-readiness contract tests with:

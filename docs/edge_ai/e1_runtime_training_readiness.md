@@ -89,6 +89,26 @@ Each split manifest must preserve:
 
 `source_group_id` is a leakage boundary. Closely related captures from the same recording/burst/session must not be divided across train, validation and test splits.
 
+### Executable dataset gate
+
+Use `ai_runtime/e1_dataset_tool.py` to apply the contracts to real JSON files before training or evaluation.
+
+Validate dataset splits together:
+
+```powershell
+python -m ai_runtime.e1_dataset_tool --pretty dataset data/e1/base/train.json data/e1/base/validation.json data/e1/base/test.json
+```
+
+Validate a held-out evaluation/calibration report:
+
+```powershell
+python -m ai_runtime.e1_dataset_tool --pretty evaluation reports/e1/base_validation.json
+```
+
+The tool emits machine-readable JSON and exits non-zero for invalid data, malformed JSON, unsafe class/geometry contracts, or source-group leakage. It also reports dataset sample/annotation/class/hard-negative counts. Held-out class metrics with zero support are not treated as real evaluation evidence.
+
+Files under `docs/edge_ai/examples/` are synthetic format examples only. Their paths, IDs, metrics and values are not model results, training data, or scientific acceptance targets.
+
 ## Hard negatives
 
 Hard-negative collection is required for realistic exam deployment. Initial categories include:

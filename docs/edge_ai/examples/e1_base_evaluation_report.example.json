@@ -1,0 +1,36 @@
+{
+  "example_only": true,
+  "schema_version": "1.0",
+  "taxonomy_version": "1.0",
+  "model_id": "EXAMPLE-e1-base-candidate",
+  "model_version": "example-candidate-1",
+  "evaluation_dataset_id": "EXAMPLE-e1-base-validation",
+  "model_role": "base",
+  "evaluation_split": "validation",
+  "class_metrics": {
+    "book": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7},
+    "keyboard": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7},
+    "laptop": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7},
+    "mouse": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7},
+    "person": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7},
+    "phone": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7},
+    "remote": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7},
+    "television": {"support": 10, "precision": 0.8, "recall": 0.8, "f1": 0.8, "ap50": 0.8, "ap50_95": 0.7}
+  },
+  "hard_negative_metrics": {
+    "hand_without_phone": {
+      "sample_count": 10,
+      "false_positive_rate": 0.1
+    }
+  },
+  "calibration": {
+    "book": {"selected_confidence_threshold": null},
+    "keyboard": {"selected_confidence_threshold": null},
+    "laptop": {"selected_confidence_threshold": null},
+    "mouse": {"selected_confidence_threshold": null},
+    "person": {"selected_confidence_threshold": null},
+    "phone": {"selected_confidence_threshold": null},
+    "remote": {"selected_confidence_threshold": null},
+    "television": {"selected_confidence_threshold": null}
+  }
+}
