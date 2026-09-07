@@ -51,44 +51,47 @@ List<E1SmallObjectSpecialistRequest> _threeRoutes(int captureTimestampNs) {
 }
 
 void main() {
-  test('uses monotonic capture time for cooldown and rejects stale captures', () {
-    final budget = E1SpecialistExecutionBudget(
-      minCaptureIntervalNs: 900,
-      maxRequestsPerFrame: 2,
-    );
+  test(
+    'uses monotonic capture time for cooldown and rejects stale captures',
+    () {
+      final budget = E1SpecialistExecutionBudget(
+        minCaptureIntervalNs: 900,
+        maxRequestsPerFrame: 2,
+      );
 
-    final first = budget.reserve(
-      sessionId: 'attempt-1',
-      captureTimestampNs: 1000,
-      requests: _threeRoutes(1000),
-    );
-    expect(first, hasLength(2));
-    budget.complete(sessionId: 'attempt-1', captureTimestampNs: 1000);
-
-    expect(
-      budget.reserve(
+      final first = budget.reserve(
         sessionId: 'attempt-1',
-        captureTimestampNs: 1500,
-        requests: _threeRoutes(1500),
-      ),
-      isEmpty,
-    );
-    expect(
-      budget.reserve(
-        sessionId: 'attempt-1',
-        captureTimestampNs: 900,
-        requests: _threeRoutes(900),
-      ),
-      isEmpty,
-    );
+        captureTimestampNs: 1000,
+        requests: _threeRoutes(1000),
+      );
+      expect(first, hasLength(2));
+      budget.complete(sessionId: 'attempt-1', captureTimestampNs: 1000);
 
-    final next = budget.reserve(
-      sessionId: 'attempt-1',
-      captureTimestampNs: 1900,
-      requests: _threeRoutes(1900),
-    );
-    expect(next, hasLength(2));
-  });
+      expect(
+        budget.reserve(
+          sessionId: 'attempt-1',
+          captureTimestampNs: 1500,
+          requests: _threeRoutes(1500),
+        ),
+        isEmpty,
+      );
+      expect(
+        budget.reserve(
+          sessionId: 'attempt-1',
+          captureTimestampNs: 900,
+          requests: _threeRoutes(900),
+        ),
+        isEmpty,
+      );
+
+      final next = budget.reserve(
+        sessionId: 'attempt-1',
+        captureTimestampNs: 1900,
+        requests: _threeRoutes(1900),
+      );
+      expect(next, hasLength(2));
+    },
+  );
 
   test('rotates fairly across earbud, watch, and desk routes', () {
     final budget = E1SpecialistExecutionBudget(
