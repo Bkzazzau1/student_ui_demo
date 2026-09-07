@@ -104,10 +104,9 @@ pub fn read_model_events_between_v1_json(
         .lock()
         .map_err(|_| "model event memory lock is poisoned".to_string())?;
     let events = match memory.get(&session_id) {
-        Some(buffer) => buffer.events_between(
-            start_capture_timestamp_ns,
-            end_capture_timestamp_ns,
-        )?,
+        Some(buffer) => {
+            buffer.events_between(start_capture_timestamp_ns, end_capture_timestamp_ns)?
+        }
         None => Vec::new(),
     };
     serde_json::to_string(&events).map_err(|error| error.to_string())
@@ -181,7 +180,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
-    use crate::api::model_event::{ValidityIntervalV1, MODEL_EVENT_SCHEMA_VERSION};
+    use crate::api::model_event::{MODEL_EVENT_SCHEMA_VERSION, ValidityIntervalV1};
 
     fn event_json(session: &str, event_id: &str, capture: u64, inference: u64) -> String {
         ModelEventV1 {
