@@ -8,6 +8,8 @@ void main() {
       final laptop = E1ObjectTaxonomyV1.resolve('Laptop');
       final book = E1ObjectTaxonomyV1.resolve('book');
       final remote = E1ObjectTaxonomyV1.resolve('remote');
+      final monitor = E1ObjectTaxonomyV1.resolve('monitor');
+      final tvMonitor = E1ObjectTaxonomyV1.resolve('tv_monitor');
 
       expect(phone.canonicalObjectId, 'phone');
       expect(phone.coverage, E1ObjectCoverage.baseDetector);
@@ -16,6 +18,10 @@ void main() {
       expect(book.coverage, E1ObjectCoverage.baseDetector);
       expect(remote.canonicalObjectId, 'remote');
       expect(remote.coverage, E1ObjectCoverage.baseDetector);
+      expect(monitor.canonicalObjectId, 'television');
+      expect(monitor.coverage, E1ObjectCoverage.baseDetector);
+      expect(tvMonitor.canonicalObjectId, 'television');
+      expect(tvMonitor.coverage, E1ObjectCoverage.baseDetector);
     });
 
     test('marks exam-specific small objects as specialist-required', () {

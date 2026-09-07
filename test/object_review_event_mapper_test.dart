@@ -19,15 +19,18 @@ void main() {
     expect(decisions.single.metadata['specialist_required'], isFalse);
   });
 
-  test('maps laptop and monitor labels to extra screen event with mixed coverage', () {
+  test('maps laptop and monitor alias to base extra-screen coverage', () {
     final decisions = mapper.mapLabels(const <String>['Laptop', 'tv_monitor']);
     final screen = decisions.firstWhere(
       (decision) => decision.eventType == 'yolo_extra_screen_detected',
     );
 
-    expect(screen.metadata['canonical_object_ids'], containsAll(<String>['laptop', 'monitor']));
-    expect(screen.metadata['object_coverage'], containsAll(<String>['base_detector', 'specialist_required']));
-    expect(screen.metadata['specialist_required'], isTrue);
+    expect(
+      screen.metadata['canonical_object_ids'],
+      containsAll(<String>['laptop', 'television']),
+    );
+    expect(screen.metadata['object_coverage'], <String>['base_detector']);
+    expect(screen.metadata['specialist_required'], isFalse);
   });
 
   test('maps paper and calculator labels to separate specialist-required events', () {

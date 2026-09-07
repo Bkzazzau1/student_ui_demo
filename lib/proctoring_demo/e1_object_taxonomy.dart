@@ -147,7 +147,10 @@ abstract final class E1ObjectTaxonomyV1 {
           E1ObjectCoverage.baseDetector,
         ),
 
-        // Base-detector screen/peripheral classes.
+        // Base-detector screen/peripheral classes. The COCO baseline exposes
+        // the large-screen class as `tv`; generic monitor wording resolves to
+        // the same canonical television category rather than inventing a
+        // separate specialist class.
         'laptop': _E1TaxonomyEntry(
           'laptop',
           'extra_screen',
@@ -164,14 +167,14 @@ abstract final class E1ObjectTaxonomyV1 {
           E1ObjectCoverage.baseDetector,
         ),
         'monitor': _E1TaxonomyEntry(
-          'monitor',
+          'television',
           'extra_screen',
-          E1ObjectCoverage.specialistRequired,
+          E1ObjectCoverage.baseDetector,
         ),
         'tv monitor': _E1TaxonomyEntry(
-          'monitor',
+          'television',
           'extra_screen',
-          E1ObjectCoverage.specialistRequired,
+          E1ObjectCoverage.baseDetector,
         ),
         'keyboard': _E1TaxonomyEntry(
           'keyboard',
