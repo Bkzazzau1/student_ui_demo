@@ -78,6 +78,24 @@ class E1ExamObjectTaxonomy {
     return aliases[normalized] ?? _fallbackClassId(normalized);
   }
 
+  /// Canonicalizes a class emitted by a detector without allowing that detector
+  /// to assert contextual relationships. `additional_*` and `partial_person`
+  /// are states derived later from tracking, geometry and exam context.
+  static String canonicalizeDetectorLabel(String rawLabel) {
+    final normalized = normalizeRawLabel(rawLabel);
+    if (normalized.isEmpty) return '';
+    switch (normalized) {
+      case 'partial person':
+      case 'additional person':
+        return 'person';
+      case 'additional laptop':
+        return 'laptop';
+      case 'additional display':
+        return 'display';
+    }
+    return aliases[normalized] ?? _fallbackClassId(normalized);
+  }
+
   static bool isKnownCanonicalClass(String classId) {
     return requiredDetectorClasses.contains(classId) ||
         contextualObservationClasses.contains(classId) ||
