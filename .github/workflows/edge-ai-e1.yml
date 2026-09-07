@@ -13,6 +13,7 @@ on:
       - 'lib/proctoring_demo/e1_small_object_specialist_manifest.dart'
       - 'lib/proctoring_demo/e1_small_object_specialist_runtime.dart'
       - 'lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart'
+      - 'lib/proctoring_demo/e1_specialist_execution_budget.dart'
       - 'lib/proctoring_demo/e1_specialist_frame.dart'
       - 'lib/proctoring_demo/e1_specialist_model_event_adapter.dart'
       - 'lib/proctoring_demo/live_camera_frame_bus.dart'
@@ -39,6 +40,7 @@ on:
       - 'test/e1_small_object_specialist_compile_guard_test.dart'
       - 'test/e1_small_object_specialist_manifest_test.dart'
       - 'test/e1_small_object_specialist_runtime_bridge_test.dart'
+      - 'test/e1_specialist_execution_budget_test.dart'
       - 'test/e1_specialist_frame_contract_test.dart'
       - 'test/e1_specialist_model_event_adapter_test.dart'
       - 'test/e1_specialist_memory_ingress_test.dart'
@@ -55,6 +57,7 @@ on:
       - 'edge-ai/e1-specialist-frame-contract'
       - 'edge-ai/e1-live-specialist-cascade'
       - 'edge-ai/e1-roi-specialist-cascade'
+      - 'edge-ai/e1-specialist-scheduling'
     paths:
       - 'assets/models/yolo_exam_review/**'
       - 'assets/models/e1_small_object_specialist/**'
@@ -66,6 +69,7 @@ on:
       - 'lib/proctoring_demo/e1_small_object_specialist_manifest.dart'
       - 'lib/proctoring_demo/e1_small_object_specialist_runtime.dart'
       - 'lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart'
+      - 'lib/proctoring_demo/e1_specialist_execution_budget.dart'
       - 'lib/proctoring_demo/e1_specialist_frame.dart'
       - 'lib/proctoring_demo/e1_specialist_model_event_adapter.dart'
       - 'lib/proctoring_demo/live_camera_frame_bus.dart'
@@ -92,6 +96,7 @@ on:
       - 'test/e1_small_object_specialist_compile_guard_test.dart'
       - 'test/e1_small_object_specialist_manifest_test.dart'
       - 'test/e1_small_object_specialist_runtime_bridge_test.dart'
+      - 'test/e1_specialist_execution_budget_test.dart'
       - 'test/e1_specialist_frame_contract_test.dart'
       - 'test/e1_specialist_model_event_adapter_test.dart'
       - 'test/e1_specialist_memory_ingress_test.dart'
@@ -130,12 +135,14 @@ jobs:
           lib/proctoring_demo/e1_small_object_specialist.dart
           lib/proctoring_demo/e1_small_object_specialist_manifest.dart
           lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart
+          lib/proctoring_demo/e1_specialist_execution_budget.dart
           lib/proctoring_demo/live_camera_frame_bus.dart
           lib/proctoring_demo/optimized_vision_runtime_bridge.dart
           test/e1_small_object_cascade_coordinator_test.dart
           test/e1_small_object_specialist_test.dart
           test/e1_small_object_specialist_manifest_test.dart
           test/e1_small_object_specialist_runtime_bridge_test.dart
+          test/e1_specialist_execution_budget_test.dart
 
       - name: Produce exact dartfmt patch
         if: steps.dartfmt.outcome == 'failure'
@@ -147,24 +154,28 @@ jobs:
             lib/proctoring_demo/e1_small_object_specialist.dart \
             lib/proctoring_demo/e1_small_object_specialist_manifest.dart \
             lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart \
-            lib/proctoring_demo/live_camera_frame_bus.dart \
-            lib/proctoring_demo/optimized_vision_runtime_bridge.dart \
-            test/e1_small_object_cascade_coordinator_test.dart \
-            test/e1_small_object_specialist_test.dart \
-            test/e1_small_object_specialist_manifest_test.dart \
-            test/e1_small_object_specialist_runtime_bridge_test.dart
-          git diff -- \
-            lib/proctoring_demo/e1_model_event_memory_coordinator.dart \
-            lib/proctoring_demo/e1_small_object_cascade_coordinator.dart \
-            lib/proctoring_demo/e1_small_object_specialist.dart \
-            lib/proctoring_demo/e1_small_object_specialist_manifest.dart \
-            lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart \
+            lib/proctoring_demo/e1_specialist_execution_budget.dart \
             lib/proctoring_demo/live_camera_frame_bus.dart \
             lib/proctoring_demo/optimized_vision_runtime_bridge.dart \
             test/e1_small_object_cascade_coordinator_test.dart \
             test/e1_small_object_specialist_test.dart \
             test/e1_small_object_specialist_manifest_test.dart \
             test/e1_small_object_specialist_runtime_bridge_test.dart \
+            test/e1_specialist_execution_budget_test.dart
+          git diff -- \
+            lib/proctoring_demo/e1_model_event_memory_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_cascade_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_specialist.dart \
+            lib/proctoring_demo/e1_small_object_specialist_manifest.dart \
+            lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart \
+            lib/proctoring_demo/e1_specialist_execution_budget.dart \
+            lib/proctoring_demo/live_camera_frame_bus.dart \
+            lib/proctoring_demo/optimized_vision_runtime_bridge.dart \
+            test/e1_small_object_cascade_coordinator_test.dart \
+            test/e1_small_object_specialist_test.dart \
+            test/e1_small_object_specialist_manifest_test.dart \
+            test/e1_small_object_specialist_runtime_bridge_test.dart \
+            test/e1_specialist_execution_budget_test.dart \
             > dartfmt.patch
 
       - name: Upload dartfmt patch
@@ -182,12 +193,14 @@ jobs:
           lib/proctoring_demo/e1_small_object_specialist.dart
           lib/proctoring_demo/e1_small_object_specialist_manifest.dart
           lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart
+          lib/proctoring_demo/e1_specialist_execution_budget.dart
           lib/proctoring_demo/live_camera_frame_bus.dart
           lib/proctoring_demo/optimized_vision_runtime_bridge.dart
           test/e1_small_object_cascade_coordinator_test.dart
           test/e1_small_object_specialist_test.dart
           test/e1_small_object_specialist_manifest_test.dart
           test/e1_small_object_specialist_runtime_bridge_test.dart
+          test/e1_specialist_execution_budget_test.dart
 
       - name: Run E1 contract and adapter tests
         run: >-
@@ -203,6 +216,7 @@ jobs:
           test/e1_small_object_specialist_compile_guard_test.dart
           test/e1_small_object_specialist_manifest_test.dart
           test/e1_small_object_specialist_runtime_bridge_test.dart
+          test/e1_specialist_execution_budget_test.dart
           test/e1_specialist_frame_contract_test.dart
           test/e1_specialist_model_event_adapter_test.dart
           test/e1_specialist_memory_ingress_test.dart
