@@ -95,6 +95,8 @@ jobs:
         id: generated_diff
         shell: bash
         run: |
+          # Intent-to-add makes newly generated API files visible to git diff.
+          git add -N lib/rust native/brain_core/src/frb_generated.rs
           git diff -- lib/rust native/brain_core/src/frb_generated.rs > frb-codegen.patch
           if [ -s frb-codegen.patch ]; then
             echo 'changed=true' >> "$GITHUB_OUTPUT"
