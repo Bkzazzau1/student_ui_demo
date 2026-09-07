@@ -22,6 +22,16 @@ class YoloExamReviewManifest {
     required this.iouThreshold,
     required this.targetFps,
     required this.classNames,
+    this.taxonomyId = '',
+    this.taxonomyVersion = '',
+    this.coverageStatus = 'unknown',
+    this.finalExamSpecificModel = false,
+    this.calibrationStatus = 'unknown',
+    this.requiredCanonicalClasses = const <String>[],
+    this.supportedCanonicalClasses = const <String>[],
+    this.missingRequiredCanonicalClasses = const <String>[],
+    this.derivedContextStatesNotDetectorClasses = const <String>[],
+    this.canonicalClassAliases = const <String, String>{},
   });
 
   static const String defaultAssetPath =
@@ -43,6 +53,16 @@ class YoloExamReviewManifest {
   final double iouThreshold;
   final int targetFps;
   final List<String> classNames;
+  final String taxonomyId;
+  final String taxonomyVersion;
+  final String coverageStatus;
+  final bool finalExamSpecificModel;
+  final String calibrationStatus;
+  final List<String> requiredCanonicalClasses;
+  final List<String> supportedCanonicalClasses;
+  final List<String> missingRequiredCanonicalClasses;
+  final List<String> derivedContextStatesNotDetectorClasses;
+  final Map<String, String> canonicalClassAliases;
 
   factory YoloExamReviewManifest.fromJson(Map<String, Object?> json) {
     return YoloExamReviewManifest(
@@ -64,6 +84,24 @@ class YoloExamReviewManifest {
       iouThreshold: _double(json['iou_threshold'], 0.45),
       targetFps: _int(json['target_fps'], 1),
       classNames: _stringList(json['class_names']),
+      taxonomyId: json['taxonomy_id']?.toString() ?? '',
+      taxonomyVersion: json['taxonomy_version']?.toString() ?? '',
+      coverageStatus: json['coverage_status']?.toString() ?? 'unknown',
+      finalExamSpecificModel: _bool(json['final_exam_specific_model']),
+      calibrationStatus: json['calibration_status']?.toString() ?? 'unknown',
+      requiredCanonicalClasses: _stringList(
+        json['required_canonical_classes'],
+      ),
+      supportedCanonicalClasses: _stringList(
+        json['supported_canonical_classes'],
+      ),
+      missingRequiredCanonicalClasses: _stringList(
+        json['missing_required_canonical_classes'],
+      ),
+      derivedContextStatesNotDetectorClasses: _stringList(
+        json['derived_context_states_not_detector_classes'],
+      ),
+      canonicalClassAliases: _stringMap(json['canonical_class_aliases']),
     );
   }
 
@@ -104,6 +142,16 @@ class YoloExamReviewManifest {
       inputChannels > 0 &&
       classNames.isNotEmpty;
 
+  bool get hasCompleteRequiredClassCoverage {
+    if (requiredCanonicalClasses.isEmpty) return false;
+    final supported = supportedCanonicalClasses.toSet();
+    return missingRequiredCanonicalClasses.isEmpty &&
+        requiredCanonicalClasses.every(supported.contains);
+  }
+
+  bool get isFinalExamSpecificCoverageCandidate =>
+      finalExamSpecificModel && hasCompleteRequiredClassCoverage;
+
   String selectedModelPath(OptimizedVisionRuntimePolicy policy) {
     switch (policy.precision) {
       case VisionModelPrecision.int8:
@@ -135,6 +183,18 @@ class YoloExamReviewManifest {
       'target_fps': targetFps,
       'num_classes': classNames.length,
       'class_names': classNames,
+      'taxonomy_id': taxonomyId,
+      'taxonomy_version': taxonomyVersion,
+      'coverage_status': coverageStatus,
+      'final_exam_specific_model': finalExamSpecificModel,
+      'calibration_status': calibrationStatus,
+      'required_canonical_classes': requiredCanonicalClasses,
+      'supported_canonical_classes': supportedCanonicalClasses,
+      'missing_required_canonical_classes': missingRequiredCanonicalClasses,
+      'derived_context_states_not_detector_classes':
+          derivedContextStatesNotDetectorClasses,
+      'canonical_class_aliases': canonicalClassAliases,
+      'has_complete_required_class_coverage': hasCompleteRequiredClassCoverage,
       'requires_real_model': true,
     };
   }
@@ -151,10 +211,31 @@ double _double(Object? value, double fallback) {
   return double.tryParse(value?.toString() ?? '') ?? fallback;
 }
 
+bool _bool(Object? value, [bool fallback = false]) {
+  if (value is bool) return value;
+  final normalized = value?.toString().trim().toLowerCase();
+  if (normalized == 'true') return true;
+  if (normalized == 'false') return false;
+  return fallback;
+}
+
 List<String> _stringList(Object? value) {
   if (value is! Iterable) return const <String>[];
   return value
       .map((item) => item?.toString().trim() ?? '')
       .where((item) => item.isNotEmpty)
       .toList(growable: false);
+}
+
+Map<String, String> _stringMap(Object? value) {
+  if (value is! Map) return const <String, String>{};
+  final output = <String, String>{};
+  for (final entry in value.entries) {
+    final key = entry.key?.toString().trim() ?? '';
+    final mapped = entry.value?.toString().trim() ?? '';
+    if (key.isNotEmpty && mapped.isNotEmpty) {
+      output[key] = mapped;
+    }
+  }
+  return Map<String, String>.unmodifiable(output);
 }
