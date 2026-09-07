@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
 use brain_core::api::model_event::{
-    BoundingBoxV1, KeypointV1, ModelEventV1, ModelGeometryV1, ValidityIntervalV1,
-    MODEL_EVENT_CORE_FIELDS, MODEL_EVENT_SCHEMA_VERSION,
+    BoundingBoxV1, KeypointV1, MODEL_EVENT_CORE_FIELDS, MODEL_EVENT_SCHEMA_VERSION, ModelEventV1,
+    ModelGeometryV1, ValidityIntervalV1,
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 fn sample_event() -> ModelEventV1 {
     let mut metadata = BTreeMap::new();
@@ -57,7 +57,10 @@ fn serializes_every_frozen_core_field_and_roundtrips() {
     let object = value.as_object().unwrap();
 
     for field in MODEL_EVENT_CORE_FIELDS {
-        assert!(object.contains_key(field), "missing serialized field {field}");
+        assert!(
+            object.contains_key(field),
+            "missing serialized field {field}"
+        );
     }
     assert_eq!(value["capture_timestamp_ns"], json!(10_200_000_000_u64));
     assert_eq!(value["inference_timestamp_ns"], json!(10_451_000_000_u64));
@@ -96,9 +99,7 @@ fn rejects_temporal_misalignment_and_invalid_ranges() {
     assert!(event.validate().is_err());
 
     let mut event = sample_event();
-    event.validity_interval.end_timestamp_ns = Some(
-        event.validity_interval.start_timestamp_ns - 1,
-    );
+    event.validity_interval.end_timestamp_ns = Some(event.validity_interval.start_timestamp_ns - 1);
     assert!(event.validate().is_err());
 }
 
