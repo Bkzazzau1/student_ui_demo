@@ -67,14 +67,12 @@ impl PersonTrackerV1 {
 
         if let Some(latest) = self.latest_capture_timestamp_ns {
             if event.capture_timestamp_ns < latest {
-                event.metadata.insert(
-                    "tracking_status".into(),
-                    json!("late_frame_unresolved"),
-                );
-                event.metadata.insert(
-                    "persistent_tracking_available".into(),
-                    json!(true),
-                );
+                event
+                    .metadata
+                    .insert("tracking_status".into(), json!("late_frame_unresolved"));
+                event
+                    .metadata
+                    .insert("persistent_tracking_available".into(), json!(true));
                 return None;
             }
         }
@@ -86,14 +84,12 @@ impl PersonTrackerV1 {
             .filter(|bbox| valid_normalized_box(bbox))
             .cloned()
         else {
-            event.metadata.insert(
-                "tracking_status".into(),
-                json!("geometry_unavailable"),
-            );
-            event.metadata.insert(
-                "persistent_tracking_available".into(),
-                json!(true),
-            );
+            event
+                .metadata
+                .insert("tracking_status".into(), json!("geometry_unavailable"));
+            event
+                .metadata
+                .insert("persistent_tracking_available".into(), json!(true));
             return None;
         };
 
@@ -107,15 +103,13 @@ impl PersonTrackerV1 {
 
         let best_match = self.best_match(event, &current_box);
         let enrichment = match best_match {
-            Some((track_id, association_score)) => {
-                self.update_track(
-                    &track_id,
-                    event.source_frame_id,
-                    event.capture_timestamp_ns,
-                    current_box,
-                    association_score,
-                )
-            }
+            Some((track_id, association_score)) => self.update_track(
+                &track_id,
+                event.source_frame_id,
+                event.capture_timestamp_ns,
+                current_box,
+                association_score,
+            ),
             None => self.create_track(
                 event.source_frame_id,
                 event.capture_timestamp_ns,
@@ -236,10 +230,8 @@ impl PersonTrackerV1 {
             let (new_x, new_y) = center(&current_box);
             let observed_vx = ((new_x - old_x) / seconds).clamp(-1.0, 1.0);
             let observed_vy = ((new_y - old_y) / seconds).clamp(-1.0, 1.0);
-            track.velocity_x_per_second =
-                track.velocity_x_per_second * 0.60 + observed_vx * 0.40;
-            track.velocity_y_per_second =
-                track.velocity_y_per_second * 0.60 + observed_vy * 0.40;
+            track.velocity_x_per_second = track.velocity_x_per_second * 0.60 + observed_vx * 0.40;
+            track.velocity_y_per_second = track.velocity_y_per_second * 0.60 + observed_vy * 0.40;
         }
 
         track.last_seen_ns = capture_timestamp_ns;
@@ -302,10 +294,8 @@ fn track_seen_in_same_frame(track: &PersonTrackStateV1, event: &ModelEventV1) ->
 
 fn predicted_box(track: &PersonTrackStateV1, gap_ns: u64) -> BoundingBoxV1 {
     let seconds = (gap_ns as f32 / 1_000_000_000.0).clamp(0.0, 1.0);
-    let predicted_x =
-        (track.last_box.x + track.velocity_x_per_second * seconds).clamp(0.0, 1.0);
-    let predicted_y =
-        (track.last_box.y + track.velocity_y_per_second * seconds).clamp(0.0, 1.0);
+    let predicted_x = (track.last_box.x + track.velocity_x_per_second * seconds).clamp(0.0, 1.0);
+    let predicted_y = (track.last_box.y + track.velocity_y_per_second * seconds).clamp(0.0, 1.0);
     BoundingBoxV1 {
         x: predicted_x.min((1.0 - track.last_box.width).max(0.0)),
         y: predicted_y.min((1.0 - track.last_box.height).max(0.0)),
@@ -360,26 +350,21 @@ fn motion_state(previous: &BoundingBoxV1, current: &BoundingBoxV1) -> String {
 }
 
 fn attach_tracking_metadata(event: &mut ModelEventV1, enrichment: &PersonTrackEnrichmentV1) {
-    event.metadata.insert(
-        "persistent_tracking_available".into(),
-        json!(true),
-    );
-    event.metadata.insert(
-        "tracking_source".into(),
-        json!("rust_iou_motion_v1"),
-    );
-    event.metadata.insert(
-        "tracking_status".into(),
-        json!(enrichment.track_state),
-    );
-    event.metadata.insert(
-        "track_duration_ns".into(),
-        json!(enrichment.duration_ns),
-    );
-    event.metadata.insert(
-        "track_hits".into(),
-        json!(enrichment.hit_count),
-    );
+    event
+        .metadata
+        .insert("persistent_tracking_available".into(), json!(true));
+    event
+        .metadata
+        .insert("tracking_source".into(), json!("rust_iou_motion_v1"));
+    event
+        .metadata
+        .insert("tracking_status".into(), json!(enrichment.track_state));
+    event
+        .metadata
+        .insert("track_duration_ns".into(), json!(enrichment.duration_ns));
+    event
+        .metadata
+        .insert("track_hits".into(), json!(enrichment.hit_count));
     event.metadata.insert(
         "short_gap_recovered".into(),
         json!(enrichment.gap_recovered),
@@ -394,14 +379,12 @@ fn attach_tracking_metadata(event: &mut ModelEventV1, enrichment: &PersonTrackEn
             .association_score
             .map_or(serde_json::Value::Null, |score| json!(score)),
     );
-    event.metadata.insert(
-        "motion_state".into(),
-        json!(enrichment.motion_state),
-    );
-    event.metadata.insert(
-        "new_track".into(),
-        json!(enrichment.is_new_track),
-    );
+    event
+        .metadata
+        .insert("motion_state".into(), json!(enrichment.motion_state));
+    event
+        .metadata
+        .insert("new_track".into(), json!(enrichment.is_new_track));
 }
 
 #[cfg(test)]
@@ -409,7 +392,9 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
-    use crate::api::model_event::{ModelGeometryV1, ValidityIntervalV1, MODEL_EVENT_SCHEMA_VERSION};
+    use crate::api::model_event::{
+        MODEL_EVENT_SCHEMA_VERSION, ModelGeometryV1, ValidityIntervalV1,
+    };
 
     fn person_event(frame_id: u64, capture: u64, x: f32, width: f32) -> ModelEventV1 {
         ModelEventV1 {
