@@ -155,6 +155,24 @@ This export step prepares data; it does not select model architecture,
 hyperparameters, scientific acceptance thresholds, or calibration values. See
 `docs/edge_ai/e1_training_export.md`.
 
+## E1 training experiment planning
+
+`e1_training_experiment.py` validates an explicit experiment specification
+against a previously exported YOLO package and writes a deterministic training
+plan. The planning step does **not** execute training.
+
+```powershell
+python -m ai_runtime.e1_training_experiment --pretty --spec experiments/e1/base_exp_001.json --export work/e1/base-yolo --output-plan work/e1/plans/base_exp_001.plan.json
+```
+
+The experiment specification must explicitly pin the Ultralytics version,
+checkpoint path, random seed, trainer arguments and augmentation policy. The
+planner records checkpoint/export SHA-256 provenance and emits the future YOLO
+invocation as a `command_argv` list rather than a shell command string. It never
+downloads a checkpoint, runs a subprocess, or invents hyperparameter values.
+
+See `docs/edge_ai/e1_training_experiment.md` for the complete contract.
+
 ## Tests
 
 Run all Python runtime and training-readiness contract tests with:
