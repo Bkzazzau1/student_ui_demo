@@ -9,7 +9,7 @@ void main() {
     // Compile-time guard: these references must resolve without initializing
     // camera or the native library in the Flutter test process.
     expect(BrainCoreRuntime.ensureInitialized, isA<Function>());
-    expect(RustLib.init, isA<Function>());
+    expect(BrainCoreApi.init, isA<Function>());
     expect(const NativeModelEventMemorySink(), isNotNull);
     expect(LiveExamMonitor.new, isA<Function>());
   });
