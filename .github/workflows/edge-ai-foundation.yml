@@ -1,0 +1,107 @@
+name: Edge AI Foundation
+
+on:
+  pull_request:
+    paths:
+      - 'ai_runtime/**'
+      - 'native/brain_core/**'
+      - 'lib/proctoring_demo/live_camera_frame_bus.dart'
+      - 'lib/proctoring_demo/monotonic_timebase.dart'
+      - 'docs/edge_ai/**'
+      - '.github/workflows/edge-ai-foundation.yml'
+  push:
+    branches:
+      - 'edge-ai/**'
+    paths:
+      - 'ai_runtime/**'
+      - 'native/brain_core/**'
+      - 'lib/proctoring_demo/live_camera_frame_bus.dart'
+      - 'lib/proctoring_demo/monotonic_timebase.dart'
+      - 'docs/edge_ai/**'
+      - '.github/workflows/edge-ai-foundation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  python-contract:
+    name: Python Edge AI contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run AI runtime tests
+        run: python -m unittest discover -s ai_runtime/tests -v
+
+  rust-format:
+    name: Rust formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check Rust formatting
+        id: rustfmt_check
+        continue-on-error: true
+        run: cargo fmt --manifest-path native/brain_core/Cargo.toml -- --check
+
+      - name: Produce exact rustfmt patch
+        if: steps.rustfmt_check.outcome == 'failure'
+        run: |
+          cargo fmt --manifest-path native/brain_core/Cargo.toml
+          git diff -- native/brain_core > rustfmt.patch
+
+      - name: Upload rustfmt patch
+        if: steps.rustfmt_check.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustfmt-patch
+          path: rustfmt.patch
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Fail when formatting differs
+        if: steps.rustfmt_check.outcome == 'failure'
+        run: exit 1
+
+  rust-tests:
+    name: Rust brain_core tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run brain_core tests and capture output
+        id: rust_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --manifest-path native/brain_core/Cargo.toml 2>&1 | tee rust-tests.log
+
+      - name: Upload Rust test log
+        if: steps.rust_tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-tests-log
+          path: rust-tests.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Fail when Rust tests fail
+        if: steps.rust_tests.outcome == 'failure'
+        run: exit 1
