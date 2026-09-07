@@ -125,6 +125,36 @@ Synthetic examples live under `docs/edge_ai/examples/`. They are marked
 `example_only` and are format illustrations only; their sample IDs, metric
 values, and paths are not training data, model results, or acceptance targets.
 
+## E1 YOLO training export
+
+`e1_training_export.py` converts validated canonical manifests into a
+self-contained YOLO package for development-time model training. It revalidates
+the manifests and source-group split boundary before copying any data.
+
+Base example:
+
+```powershell
+python -m ai_runtime.e1_training_export --pretty --output work/e1/base-yolo data/e1/base/train.json data/e1/base/validation.json data/e1/base/test.json
+```
+
+The export contains:
+
+- `images/<split>/` copied source images;
+- `labels/<split>/` YOLO center-format label files;
+- `dataset.yaml` with the frozen canonical class order;
+- `export_manifest.json` with dataset identity, class mapping, source-group
+  provenance, source image SHA-256 hashes and exported paths.
+
+Base and specialist manifests must be exported separately. Train and validation
+splits are required; test is optional. The output directory must not already
+exist, so the exporter never silently replaces an earlier training package.
+Canonical top-left `x/y/width/height` boxes are converted to YOLO
+`class cx cy width height` only after the frozen manifest validators pass.
+
+This export step prepares data; it does not select model architecture,
+hyperparameters, scientific acceptance thresholds, or calibration values. See
+`docs/edge_ai/e1_training_export.md`.
+
 ## Tests
 
 Run all Python runtime and training-readiness contract tests with:
