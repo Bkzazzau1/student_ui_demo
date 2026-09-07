@@ -263,32 +263,39 @@ bool BuildCroppedRgbRequest(const flutter::EncodableMap* request,
   const int source_width = ReadInt(request, "width", 0);
   const int source_height = ReadInt(request, "height", 0);
   if (source_width <= 0 || source_height <= 0) return false;
-  if (!ReadNormalizedRoi(request, applied_roi)) return false;
+
+  NormalizedRoi requested_roi;
+  if (!ReadNormalizedRoi(request, &requested_roi)) return false;
 
   std::vector<ImagePlane> image_planes;
   if (!ReadImagePlanes(request, source_width, &image_planes)) return false;
 
   const int left = std::clamp(
-      static_cast<int>(std::floor(applied_roi->x * source_width)),
+      static_cast<int>(std::floor(requested_roi.x * source_width)),
       0,
       source_width - 1);
   const int top = std::clamp(
-      static_cast<int>(std::floor(applied_roi->y * source_height)),
+      static_cast<int>(std::floor(requested_roi.y * source_height)),
       0,
       source_height - 1);
   const int right = std::clamp(
       static_cast<int>(std::ceil(
-          (applied_roi->x + applied_roi->width) * source_width)),
+          (requested_roi.x + requested_roi.width) * source_width)),
       left + 1,
       source_width);
   const int bottom = std::clamp(
       static_cast<int>(std::ceil(
-          (applied_roi->y + applied_roi->height) * source_height)),
+          (requested_roi.y + requested_roi.height) * source_height)),
       top + 1,
       source_height);
   const int crop_width = right - left;
   const int crop_height = bottom - top;
   if (crop_width <= 0 || crop_height <= 0) return false;
+
+  applied_roi->x = static_cast<double>(left) / source_width;
+  applied_roi->y = static_cast<double>(top) / source_height;
+  applied_roi->width = static_cast<double>(crop_width) / source_width;
+  applied_roi->height = static_cast<double>(crop_height) / source_height;
 
   const std::string format = ReadString(request, "format");
   std::vector<uint8_t> rgb(
