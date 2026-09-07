@@ -9,6 +9,6 @@ abstract final class BrainCoreRuntime {
   static Future<void>? _initialization;
 
   static Future<void> ensureInitialized() {
-    return _initialization ??= BrainCoreApi.init();
+    return _initialization ??= RustLib.init();
   }
 }
