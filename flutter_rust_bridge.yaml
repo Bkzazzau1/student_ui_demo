@@ -1,0 +1,5 @@
+rust_input: crate::api
+rust_root: native/brain_core
+dart_output: lib/rust
+rust_output: native/brain_core/src/frb_generated.rs
+dart_entrypoint_class_name: BrainCoreApi
