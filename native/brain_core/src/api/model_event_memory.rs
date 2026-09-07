@@ -6,12 +6,15 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use super::model_event::ModelEventV1;
+use super::person_tracker::PersonTrackerV1;
 use super::spatiotemporal_buffer::{RingBufferInsertResultV1, SpatiotemporalRingBufferV1};
 
 const DEFAULT_MODEL_EVENT_CAPACITY: usize = 4096;
 const MAX_MODEL_EVENT_CAPACITY: usize = 100_000;
 
 static MODEL_EVENT_MEMORY: Lazy<Mutex<HashMap<String, SpatiotemporalRingBufferV1>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+static PERSON_TRACKER_MEMORY: Lazy<Mutex<HashMap<String, PersonTrackerV1>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 #[frb]
@@ -37,15 +40,15 @@ pub struct ModelEventMemoryStatusV1 {
 /// Transitional JSON ingress for the frozen ModelEventV1 contract.
 ///
 /// JSON is intentionally used at the integration boundary while the event bus
-/// is being migrated. The internal memory is Rust-owned and typed. A compact
-/// binary transport can replace this ingress later without changing the event
-/// semantics.
+/// is being migrated. The internal memory is Rust-owned and typed. E1 person
+/// observations are enriched with conservative short-term persistent track IDs
+/// here before storage, keeping stateful tracking out of Flutter.
 #[frb(sync)]
 pub fn ingest_model_event_v1_json(
     event_json: String,
     requested_capacity: Option<u64>,
 ) -> Result<ModelEventIngestResultV1, String> {
-    let event = ModelEventV1::from_json(&event_json)?;
+    let mut event = ModelEventV1::from_json(&event_json)?;
     let session_id = event.session_id.clone();
     let event_id = event.event_id.clone();
     let capacity = normalize_capacity(requested_capacity)?;
@@ -64,6 +67,23 @@ pub fn ingest_model_event_v1_json(
             .get_mut(&session_id)
             .ok_or_else(|| "failed to initialize model event memory".to_string())?
     };
+
+    // Reject replay before mutating tracker state. Otherwise a duplicate event
+    // could incorrectly increment hit counts even though the ring buffer would
+    // later refuse to store it.
+    if buffer.contains_event_id(&event_id) {
+        return Err(format!("duplicate event_id {event_id}"));
+    }
+
+    {
+        let mut trackers = PERSON_TRACKER_MEMORY
+            .lock()
+            .map_err(|_| "person tracker memory lock is poisoned".to_string())?;
+        let tracker = trackers
+            .entry(session_id.clone())
+            .or_insert_with(PersonTrackerV1::new);
+        tracker.enrich_event(&mut event);
+    }
 
     let result = buffer.push(event)?;
     Ok(to_ingest_result(session_id, event_id, result))
@@ -134,7 +154,12 @@ pub fn clear_model_event_memory_v1(session_id: String) -> Result<bool, String> {
     let mut memory = MODEL_EVENT_MEMORY
         .lock()
         .map_err(|_| "model event memory lock is poisoned".to_string())?;
-    Ok(memory.remove(&session_id).is_some())
+    let removed = memory.remove(&session_id).is_some();
+    let mut trackers = PERSON_TRACKER_MEMORY
+        .lock()
+        .map_err(|_| "person tracker memory lock is poisoned".to_string())?;
+    trackers.remove(&session_id);
+    Ok(removed)
 }
 
 fn normalize_capacity(requested_capacity: Option<u64>) -> Result<usize, String> {
@@ -180,7 +205,9 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
-    use crate::api::model_event::{MODEL_EVENT_SCHEMA_VERSION, ValidityIntervalV1};
+    use crate::api::model_event::{
+        BoundingBoxV1, MODEL_EVENT_SCHEMA_VERSION, ModelGeometryV1, ValidityIntervalV1,
+    };
 
     fn event_json(session: &str, event_id: &str, capture: u64, inference: u64) -> String {
         ModelEventV1 {
@@ -207,6 +234,48 @@ mod tests {
         .unwrap()
     }
 
+    fn tracked_event_json(
+        session: &str,
+        event_id: &str,
+        frame_id: u64,
+        capture: u64,
+        x: f32,
+    ) -> String {
+        ModelEventV1 {
+            schema_version: MODEL_EVENT_SCHEMA_VERSION.into(),
+            session_id: session.into(),
+            event_id: event_id.into(),
+            source_frame_id: Some(frame_id),
+            capture_timestamp_ns: capture,
+            inference_timestamp_ns: capture + 10,
+            model_id: "e1-yolo-exam-review".into(),
+            model_version: "development-baseline-1".into(),
+            track_id: None,
+            class_id: "person".into(),
+            confidence: Some(0.9),
+            quality: Some(0.8),
+            geometry: Some(ModelGeometryV1 {
+                coordinate_space: Some("normalized_frame".into()),
+                bounding_box: Some(BoundingBoxV1 {
+                    x,
+                    y: 0.2,
+                    width: 0.3,
+                    height: 0.6,
+                }),
+                keypoints: Vec::new(),
+                vector: None,
+                region_id: Some("middle_center".into()),
+            }),
+            validity_interval: ValidityIntervalV1 {
+                start_timestamp_ns: capture,
+                end_timestamp_ns: Some(capture),
+            },
+            metadata: BTreeMap::new(),
+        }
+        .to_json()
+        .unwrap()
+    }
+
     #[test]
     fn ingest_is_session_scoped_and_capture_time_ordered() {
         let session = "model-memory-test-order";
@@ -223,6 +292,51 @@ mod tests {
     }
 
     #[test]
+    fn ingress_assigns_stable_person_track_ids_before_storage() {
+        let session = "model-memory-test-tracking";
+        clear_model_event_memory_v1(session.into()).unwrap();
+        ingest_model_event_v1_json(
+            tracked_event_json(session, "p1", 1, 1_000_000_000, 0.30),
+            Some(8),
+        )
+        .unwrap();
+        ingest_model_event_v1_json(
+            tracked_event_json(session, "p2", 2, 1_100_000_000, 0.31),
+            Some(8),
+        )
+        .unwrap();
+
+        let raw = read_model_events_between_v1_json(session.into(), 0, u64::MAX).unwrap();
+        let events: Vec<ModelEventV1> = serde_json::from_str(&raw).unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0].track_id, events[1].track_id);
+        assert!(events[0].track_id.is_some());
+        assert_eq!(events[0].metadata["tracking_status"], "tentative");
+        assert_eq!(events[1].metadata["tracking_status"], "confirmed");
+        assert_eq!(events[1].metadata["track_hits"], 2);
+        clear_model_event_memory_v1(session.into()).unwrap();
+    }
+
+    #[test]
+    fn duplicate_ingress_does_not_mutate_person_track_state() {
+        let session = "model-memory-test-tracking-duplicate";
+        clear_model_event_memory_v1(session.into()).unwrap();
+        let first = tracked_event_json(session, "p1", 1, 1_000_000_000, 0.30);
+        ingest_model_event_v1_json(first.clone(), Some(8)).unwrap();
+        assert!(ingest_model_event_v1_json(first, Some(8)).is_err());
+        ingest_model_event_v1_json(
+            tracked_event_json(session, "p2", 2, 1_100_000_000, 0.31),
+            Some(8),
+        )
+        .unwrap();
+
+        let raw = read_model_events_between_v1_json(session.into(), 0, u64::MAX).unwrap();
+        let events: Vec<ModelEventV1> = serde_json::from_str(&raw).unwrap();
+        assert_eq!(events[1].metadata["track_hits"], 2);
+        clear_model_event_memory_v1(session.into()).unwrap();
+    }
+
+    #[test]
     fn ingest_rejects_duplicate_event_ids() {
         let session = "model-memory-test-duplicate";
         clear_model_event_memory_v1(session.into()).unwrap();
@@ -233,7 +347,7 @@ mod tests {
     }
 
     #[test]
-    fn clear_removes_only_requested_session() {
+    fn clear_removes_only_requested_session_and_resets_tracker() {
         let first = "model-memory-test-clear-a";
         let second = "model-memory-test-clear-b";
         clear_model_event_memory_v1(first.into()).unwrap();
@@ -245,5 +359,15 @@ mod tests {
         assert!(!model_event_memory_status_v1(first.into()).unwrap().exists);
         assert!(model_event_memory_status_v1(second.into()).unwrap().exists);
         clear_model_event_memory_v1(second.into()).unwrap();
+
+        ingest_model_event_v1_json(
+            tracked_event_json(first, "fresh", 1, 1_000_000_000, 0.30),
+            Some(4),
+        )
+        .unwrap();
+        let raw = read_model_events_between_v1_json(first.into(), 0, u64::MAX).unwrap();
+        let events: Vec<ModelEventV1> = serde_json::from_str(&raw).unwrap();
+        assert_eq!(events[0].track_id.as_deref(), Some("PERSON_TRACK_000001"));
+        clear_model_event_memory_v1(first.into()).unwrap();
     }
 }
