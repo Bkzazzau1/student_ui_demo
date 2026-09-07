@@ -35,8 +35,6 @@ class _FakeSpecialistRuntime implements E1SmallObjectSpecialistRuntime {
           captureTimestampNs: request.captureTimestampNs,
           inferenceTimestampNs: request.captureTimestampNs + 10,
         ),
-        // Valid on its own, but intentionally detached from this request. The
-        // cascade must drop it before evidence ingestion.
         E1SmallObjectSpecialistObservation(
           canonicalObjectId: 'earbud',
           confidence: 0.9,
@@ -77,8 +75,10 @@ class _FakeSpecialistRuntime implements E1SmallObjectSpecialistRuntime {
   }
 }
 
-E1SpecialistExecutionBudget _unthrottledBudget() =>
-    E1SpecialistExecutionBudget(minCaptureIntervalNs: 0, maxRequestsPerFrame: 3);
+E1SpecialistExecutionBudget _unthrottledBudget() => E1SpecialistExecutionBudget(
+  minCaptureIntervalNs: 0,
+  maxRequestsPerFrame: 3,
+);
 
 E1SpecialistFrameInput _frame({
   int sourceFrameId = 7,
@@ -301,35 +301,38 @@ void main() {
     expect(ingestorCalls, 0);
   });
 
-  test('budget-skipped requests remain unobserved and create no evidence', () async {
-    final runtime = _FakeSpecialistRuntime();
-    var ingestorCalls = 0;
-    final cascade = E1SmallObjectCascadeCoordinator(
-      runtime: runtime,
-      executionBudget: E1SpecialistExecutionBudget(
-        minCaptureIntervalNs: 0,
-        maxRequestsPerFrame: 1,
-      ),
-      ingestObservations: (observations) async {
-        ingestorCalls++;
-        return (ingested: observations.length, failed: 0);
-      },
-    );
+  test(
+    'budget-skipped requests remain unobserved and create no evidence',
+    () async {
+      final runtime = _FakeSpecialistRuntime();
+      var ingestorCalls = 0;
+      final cascade = E1SmallObjectCascadeCoordinator(
+        runtime: runtime,
+        executionBudget: E1SpecialistExecutionBudget(
+          minCaptureIntervalNs: 0,
+          maxRequestsPerFrame: 1,
+        ),
+        ingestObservations: (observations) async {
+          ingestorCalls++;
+          return (ingested: observations.length, failed: 0);
+        },
+      );
 
-    final summary = await cascade.run(
-      sessionId: 'attempt-1',
-      baseResult: _baseResult(),
-      baseEvents: _baseEvents(),
-      frame: _frame(),
-    );
+      final summary = await cascade.run(
+        sessionId: 'attempt-1',
+        baseResult: _baseResult(),
+        baseEvents: _baseEvents(),
+        frame: _frame(),
+      );
 
-    expect(summary.requestsPlanned, 3);
-    expect(summary.requestsScheduled, 1);
-    expect(summary.requestsBudgetSkipped, 2);
-    expect(summary.requestsExecuted, 1);
-    expect(summary.observationsAccepted, 0);
-    expect(summary.eventsIngested, 0);
-    expect(runtime.calls, 1);
-    expect(ingestorCalls, 0);
-  });
+      expect(summary.requestsPlanned, 3);
+      expect(summary.requestsScheduled, 1);
+      expect(summary.requestsBudgetSkipped, 2);
+      expect(summary.requestsExecuted, 1);
+      expect(summary.observationsAccepted, 0);
+      expect(summary.eventsIngested, 0);
+      expect(runtime.calls, 1);
+      expect(ingestorCalls, 0);
+    },
+  );
 }
