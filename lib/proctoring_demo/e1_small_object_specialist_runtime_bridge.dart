@@ -177,12 +177,7 @@ class E1SmallObjectSpecialistRuntimeBridge
     final width = _readDouble(box['width']);
     final height = _readDouble(box['height']);
     if (x != null && y != null && width != null && height != null) {
-      return <String, double>{
-        'x': x,
-        'y': y,
-        'width': width,
-        'height': height,
-      };
+      return <String, double>{'x': x, 'y': y, 'width': width, 'height': height};
     }
 
     final x1 = _readDouble(box['x1']);
