@@ -1,5 +1,9 @@
+import 'e1_small_object_cascade_coordinator.dart';
 import 'e1_small_object_specialist.dart';
+import 'e1_small_object_specialist_runtime_bridge.dart';
+import 'e1_specialist_frame.dart';
 import 'e1_specialist_model_event_adapter.dart';
+import 'live_camera_frame_bus.dart';
 import 'model_event_v1.dart';
 import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
@@ -37,6 +41,9 @@ class E1ModelEventMemoryCoordinator {
     this.specialistAdapter = const E1SpecialistModelEventAdapter(),
   });
 
+  static final E1SmallObjectSpecialistRuntimeBridge _liveSpecialistRuntime =
+      E1SmallObjectSpecialistRuntimeBridge();
+
   final ModelEventMemorySink sink;
   final OptimizedVisionObjectEventAdapter adapter;
   final E1SpecialistModelEventAdapter specialistAdapter;
@@ -51,7 +58,78 @@ class E1ModelEventMemoryCoordinator {
       sessionId: sessionId,
       quality: quality,
     );
-    return _ingestEvents(events);
+    final baseSummary = await _ingestEvents(events);
+
+    // The live specialist path is deliberately evidence-neutral when no
+    // validated specialist model is installed. It may only inspect the exact
+    // camera frame that produced this base result; missing provenance remains
+    // UNKNOWN and skips specialist inference rather than reconstructing it.
+    await _runLiveSpecialistCascade(result: result, sessionId: sessionId);
+
+    return baseSummary;
+  }
+
+  Future<void> _runLiveSpecialistCascade({
+    required OptimizedVisionRuntimeResult result,
+    required String sessionId,
+  }) async {
+    if (sessionId.trim().isEmpty ||
+        !result.available ||
+        !result.hasModelEventProvenance) {
+      return;
+    }
+
+    final liveFrame = LiveCameraFrameBus.instance.frameForSequence(
+      result.sourceFrameId,
+    );
+    if (liveFrame == null ||
+        liveFrame.captureTimestampNs != result.captureTimestampNs ||
+        liveFrame.width != result.imageWidth ||
+        liveFrame.height != result.imageHeight) {
+      return;
+    }
+
+    final image = liveFrame.image;
+    final frame = E1SpecialistFrameInput(
+      format: liveFrame.formatGroup,
+      width: liveFrame.width,
+      height: liveFrame.height,
+      sourceFrameId: liveFrame.sequence,
+      captureTimestampNs: liveFrame.captureTimestampNs,
+      planes: image.planes
+          .map(
+            (plane) => E1SpecialistFramePlane(
+              bytes: plane.bytes,
+              bytesPerRow: plane.bytesPerRow,
+              bytesPerPixel: plane.bytesPerPixel ?? 1,
+              // Camera backends may omit per-plane dimensions. Keep that
+              // evidence UNKNOWN by using the invalid sentinel 0; the frame
+              // contract will then skip specialist inference rather than
+              // substituting full-frame dimensions.
+              width: plane.width ?? 0,
+              height: plane.height ?? 0,
+            ),
+          )
+          .toList(growable: false),
+    );
+    if (!frame.isValid) return;
+
+    final cascade = E1SmallObjectCascadeCoordinator(
+      runtime: _liveSpecialistRuntime,
+      ingestObservations: (observations) async {
+        final summary = await ingestSpecialistObservations(
+          sessionId: sessionId,
+          observations: observations,
+        );
+        return (ingested: summary.ingested, failed: summary.failed);
+      },
+    );
+
+    try {
+      await cascade.run(sessionId: sessionId, baseResult: result, frame: frame);
+    } catch (_) {
+      // Specialist observability must never crash or block base E1 evidence.
+    }
   }
 
   Future<E1ModelEventMemoryIngestSummary> ingestSpecialistObservations({

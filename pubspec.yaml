@@ -36,5 +36,6 @@ flutter:
     - assets/models/face_embedding_sface/
     - assets/models/optimized_vision_runtime/
     - assets/models/yolo_exam_review/
+    - assets/models/e1_small_object_specialist/
     - assets/models/hand_vision/
     - assets/models/hand_landmark/
