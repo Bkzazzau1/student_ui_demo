@@ -85,5 +85,23 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Run brain_core tests
-        run: cargo test --manifest-path native/brain_core/Cargo.toml
+      - name: Run brain_core tests and capture output
+        id: rust_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --manifest-path native/brain_core/Cargo.toml 2>&1 | tee rust-tests.log
+
+      - name: Upload Rust test log
+        if: steps.rust_tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-tests-log
+          path: rust-tests.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Fail when Rust tests fail
+        if: steps.rust_tests.outcome == 'failure'
+        run: exit 1
