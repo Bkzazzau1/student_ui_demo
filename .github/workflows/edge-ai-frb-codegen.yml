@@ -3,6 +3,7 @@ name: Edge AI FRB Codegen
 on:
   push:
     branches:
+      - 'edge-ai/e1-event-wiring-clean'
       - 'edge-ai/e1-person-tracking'
     paths:
       - 'native/brain_core/src/api/**'
@@ -70,4 +71,4 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'chore(rust): regenerate FRB bindings for model event memory'
-          git push origin HEAD:edge-ai/e1-person-tracking
+          git push origin HEAD:${GITHUB_REF_NAME}
