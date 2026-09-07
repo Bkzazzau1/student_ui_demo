@@ -15,6 +15,57 @@
   "confidence_threshold": 0.45,
   "iou_threshold": 0.45,
   "target_fps": 1,
+  "taxonomy_id": "e1-exam-object-taxonomy",
+  "taxonomy_version": "1.0.0",
+  "coverage_status": "partial_development_baseline",
+  "final_exam_specific_model": false,
+  "calibration_status": "uncalibrated",
+  "required_canonical_classes": [
+    "person",
+    "phone",
+    "tablet",
+    "smartwatch",
+    "earbud",
+    "headphone",
+    "paper",
+    "book",
+    "note",
+    "calculator",
+    "laptop",
+    "display"
+  ],
+  "supported_canonical_classes": [
+    "person",
+    "phone",
+    "book",
+    "laptop",
+    "display"
+  ],
+  "missing_required_canonical_classes": [
+    "tablet",
+    "smartwatch",
+    "earbud",
+    "headphone",
+    "paper",
+    "note",
+    "calculator"
+  ],
+  "derived_context_states_not_detector_classes": [
+    "partial_person",
+    "additional_person",
+    "additional_laptop",
+    "additional_display"
+  ],
+  "canonical_class_aliases": {
+    "person": "person",
+    "cell phone": "phone",
+    "book": "book",
+    "laptop": "laptop",
+    "tv": "display",
+    "keyboard": "keyboard",
+    "mouse": "mouse",
+    "remote": "remote"
+  },
   "class_names": [
     "person",
     "bicycle",
