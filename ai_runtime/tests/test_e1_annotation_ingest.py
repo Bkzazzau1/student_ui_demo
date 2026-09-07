@@ -54,7 +54,10 @@ class BuildDatasetManifestTests(unittest.TestCase):
         )
         annotation = sample["annotations"][0]
         self.assertEqual(annotation["canonical_object_id"], "phone")
-        self.assertEqual(annotation["bbox_xywh_normalized"], [0.1, 0.1, 0.2, 0.4])
+        self.assertEqual(
+            annotation["bbox_xywh_normalized"],
+            {"x": 0.1, "y": 0.1, "width": 0.2, "height": 0.4},
+        )
         self.assertTrue(sample["sample_id"].startswith("e1s_"))
         self.assertTrue(annotation["annotation_id"].startswith("e1a_"))
 
@@ -79,8 +82,14 @@ class BuildDatasetManifestTests(unittest.TestCase):
             item["canonical_object_id"]: item["bbox_xywh_normalized"]
             for item in manifest["samples"][0]["annotations"]
         }
-        self.assertEqual(boxes["laptop"], [0.25, 0.2, 0.5, 0.5])
-        self.assertEqual(boxes["book"], [0.2, 0.3, 0.1, 0.2])
+        self.assertEqual(
+            boxes["laptop"],
+            {"x": 0.25, "y": 0.2, "width": 0.5, "height": 0.5},
+        )
+        self.assertEqual(
+            boxes["book"],
+            {"x": 0.2, "y": 0.3, "width": 0.1, "height": 0.2},
+        )
 
     def test_ids_are_deterministic_and_annotation_order_independent(self) -> None:
         staging = _base_staging()
