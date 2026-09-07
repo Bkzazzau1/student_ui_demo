@@ -32,6 +32,7 @@ import 'live_monitoring_profile.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'native_edge_ai_action_authorizer.dart';
+import 'native_model_event_memory_bridge.dart';
 import 'object_review_event_mapper.dart';
 import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
@@ -128,6 +129,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       OptimizedVisionRuntimeBridge();
   final OptimizedVisionObjectEventAdapter _objectEventAdapter =
       const OptimizedVisionObjectEventAdapter();
+  final NativeModelEventMemoryBridge _modelEventMemory =
+      NativeModelEventMemoryBridge();
   final SnapshotGazeFallbackService _snapshotGazeFallback =
       SnapshotGazeFallbackService();
   final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
@@ -247,6 +250,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _camera = null;
     unawaited(_disposeCameraAndReleaseLease(camera));
     unawaited(_objectFrameGate.stop());
+    unawaited(_modelEventMemory.clear(widget.attemptId));
     _microphone.dispose();
     _events.dispose();
     unawaited(_disposeEdgeAi());
@@ -707,7 +711,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
     final started = DateTime.now();
     _analysingFrame = true;
-    unawaited(_analyseCameraImage(image, started));
+    unawaited(_analyseCameraImage(frame, started));
   }
 
   bool get _identityCheckDue {
@@ -937,7 +941,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     }
   }
 
-  Future<void> _analyseCameraImage(CameraImage image, DateTime started) async {
+  Future<void> _analyseCameraImage(
+    LiveCameraFrame frame,
+    DateTime started,
+  ) async {
+    final image = frame.image;
     try {
       _handleFrameQuality(image);
 
@@ -950,6 +958,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           'person_detector',
           'object_reflection_shadow_detector',
         ],
+        sourceFrameId: frame.sequence,
+        captureTimestampNs: frame.captureTimestampNs,
       );
       if (optimized != null && optimized.available) {
         _handleOptimizedVisionResult(optimized);
@@ -1107,6 +1117,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleOptimizedVisionResult(OptimizedVisionRuntimeResult result) {
+    final modelEvents = _objectEventAdapter.mapModelEvents(
+      result,
+      sessionId: widget.attemptId,
+    );
+    for (final modelEvent in modelEvents) {
+      unawaited(_modelEventMemory.ingest(modelEvent));
+    }
+
     final objects = (result.outputs['objects'] as List? ?? const <Object?>[])
         .whereType<Map>()
         .map((item) => Map<String, Object?>.from(item))
