@@ -31,8 +31,9 @@ class E1FrameInferenceContext {
 
 /// Converts E1 detector outputs into the frozen Stage 3 observation envelope.
 ///
-/// Persistent tracking is deliberately not invented here. Until E1 tracking is
-/// implemented, `track_id` remains null even for person detections.
+/// Persistent person IDs are assigned later by the Rust-owned tracking/memory
+/// runtime. Dart intentionally emits raw frame observations and never invents a
+/// `track_id`.
 class E1ModelEventAdapter {
   const E1ModelEventAdapter();
 
@@ -51,7 +52,7 @@ class E1ModelEventAdapter {
       if (classId.isEmpty) continue;
 
       final boundingBox = _normalizedBoundingBox(detection, context);
-      final eventId = _eventId(
+      final eventId = _detectionEventId(
         context: context,
         classId: classId,
         detectionIndex: index,
@@ -92,6 +93,39 @@ class E1ModelEventAdapter {
         ),
       );
     }
+
+    // A zero-person frame is meaningful evidence. Emit one bounded frame-level
+    // observation every time E1 inference completes so downstream temporal
+    // logic can distinguish "no person detected" from "no inference result".
+    output.add(
+      ModelEventV1Payload(
+        sessionId: context.sessionId,
+        eventId: _frameEventId(context: context, classId: 'person_count'),
+        sourceFrameId: context.sourceFrameId,
+        captureTimestampNs: context.captureTimestampNs,
+        inferenceTimestampNs: context.inferenceTimestampNs,
+        modelId: context.modelId,
+        modelVersion: context.modelVersion,
+        trackId: null,
+        classId: 'person_count',
+        confidence: null,
+        quality: context.quality,
+        geometry: null,
+        validityInterval: ModelEventValidityIntervalV1(
+          startTimestampNs: context.captureTimestampNs,
+          endTimestampNs: context.captureTimestampNs,
+        ),
+        metadata: <String, Object?>{
+          'modality': 'vision',
+          'producer': 'e1_person_object_ai',
+          'count': review.peopleCount,
+          'backend': context.backend,
+          'precision': context.precision,
+          'observable_behaviour_only': true,
+        },
+      ),
+    );
+
     return List<ModelEventV1Payload>.unmodifiable(output);
   }
 
@@ -142,13 +176,21 @@ class E1ModelEventAdapter {
     return '${vertical}_$horizontal';
   }
 
-  String _eventId({
+  String _detectionEventId({
     required E1FrameInferenceContext context,
     required String classId,
     required int detectionIndex,
   }) {
     final source = context.sourceFrameId?.toString() ?? 'no-frame';
     return '${context.sessionId}:e1:$source:${context.captureTimestampNs}:$classId:$detectionIndex';
+  }
+
+  String _frameEventId({
+    required E1FrameInferenceContext context,
+    required String classId,
+  }) {
+    final source = context.sourceFrameId?.toString() ?? 'no-frame';
+    return '${context.sessionId}:e1:$source:${context.captureTimestampNs}:$classId:frame';
   }
 
   String _normalizeClassId(String label) {
