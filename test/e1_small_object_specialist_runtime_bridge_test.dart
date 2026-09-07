@@ -38,6 +38,16 @@ E1SmallObjectSpecialistManifest _installedManifest() {
   );
 }
 
+E1SmallObjectSpecialistRuntimeBridge _runtime({
+  E1SpecialistManifestLoader? manifestLoader,
+  E1SpecialistModelAssetChecker? modelAssetChecker,
+}) {
+  return E1SmallObjectSpecialistRuntimeBridge(
+    manifestLoader: manifestLoader ?? () async => _installedManifest(),
+    modelAssetChecker: modelAssetChecker ?? (_) async => true,
+  );
+}
+
 E1SmallObjectSpecialistRequest _request({
   Set<E1SmallObjectTarget> targets = const <E1SmallObjectTarget>{
     E1SmallObjectTarget.smartwatch,
@@ -99,16 +109,17 @@ void main() {
   });
 
   test(
-    'uninstalled manifest never calls native inference and emits nothing',
+    'uninstalled manifest never checks model asset or calls native inference',
     () async {
       var nativeCalls = 0;
+      var assetChecks = 0;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_channel, (call) async {
             nativeCalls++;
             return true;
           });
 
-      final runtime = E1SmallObjectSpecialistRuntimeBridge(
+      final runtime = _runtime(
         manifestLoader: () async => const E1SmallObjectSpecialistManifest(
           schemaVersion: '1.0',
           installed: false,
@@ -120,6 +131,10 @@ void main() {
             'calculator',
           },
         ),
+        modelAssetChecker: (_) async {
+          assetChecks++;
+          return true;
+        },
       );
 
       final observations = await runtime.infer(
@@ -127,6 +142,40 @@ void main() {
         frame: _frame(),
       );
 
+      expect(observations, isEmpty);
+      expect(runtime.available, isFalse);
+      expect(assetChecks, 0);
+      expect(nativeCalls, 0);
+    },
+  );
+
+  test(
+    'missing exact specialist model blocks native initialization and inference',
+    () async {
+      var nativeCalls = 0;
+      String? checkedPath;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            nativeCalls++;
+            return true;
+          });
+
+      final runtime = _runtime(
+        modelAssetChecker: (path) async {
+          checkedPath = path;
+          return false;
+        },
+      );
+
+      final observations = await runtime.infer(
+        request: _request(),
+        frame: _frame(),
+      );
+
+      expect(
+        checkedPath,
+        'assets/models/e1_small_object_specialist/model.int8.onnx',
+      );
       expect(observations, isEmpty);
       expect(runtime.available, isFalse);
       expect(nativeCalls, 0);
@@ -170,9 +219,7 @@ void main() {
             return null;
           });
 
-      final runtime = E1SmallObjectSpecialistRuntimeBridge(
-        manifestLoader: () async => _installedManifest(),
-      );
+      final runtime = _runtime();
       final observations = await runtime.infer(
         request: _request(),
         frame: _frame(),
@@ -243,9 +290,7 @@ void main() {
           return null;
         });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
-    );
+    final runtime = _runtime();
     final observations = await runtime.infer(
       request: _request(),
       frame: _frame(),
@@ -280,9 +325,7 @@ void main() {
           return null;
         });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
-    );
+    final runtime = _runtime();
     final observations = await runtime.infer(
       request: _request(),
       frame: _frame(),
@@ -317,9 +360,7 @@ void main() {
           return null;
         });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
-    );
+    final runtime = _runtime();
     final observations = await runtime.infer(
       request: _request(
         targets: const <E1SmallObjectTarget>{E1SmallObjectTarget.earbud},
@@ -338,9 +379,7 @@ void main() {
           return true;
         });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
-    );
+    final runtime = _runtime();
     final observations = await runtime.infer(
       request: _request(),
       frame: _frame(sourceFrameId: 99),
@@ -360,9 +399,7 @@ void main() {
             return true;
           });
 
-      final runtime = E1SmallObjectSpecialistRuntimeBridge(
-        manifestLoader: () async => _installedManifest(),
-      );
+      final runtime = _runtime();
       final observations = await runtime.infer(
         request: _request(roi: null),
         frame: _frame(),
