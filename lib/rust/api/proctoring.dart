@@ -15,7 +15,7 @@ AcousticSampleDecision processAcousticSample({
   required double lossThresholdDbfs,
   required int lossStreak,
   required int lossSamplesToTrigger,
-}) => BrainCoreApi.instance.api.crateApiProctoringProcessAcousticSample(
+}) => RustLib.instance.api.crateApiProctoringProcessAcousticSample(
   dbfs: dbfs,
   lossThresholdDbfs: lossThresholdDbfs,
   lossStreak: lossStreak,
@@ -33,7 +33,7 @@ AcousticAnalysisDecision analyzeAcousticChunk({
   required PlatformInt64 lastSpeechStrikeAtMs,
   required PlatformInt64 speechCooldownMs,
   required PlatformInt64 nowMs,
-}) => BrainCoreApi.instance.api.crateApiProctoringAnalyzeAcousticChunk(
+}) => RustLib.instance.api.crateApiProctoringAnalyzeAcousticChunk(
   pcm16Bytes: pcm16Bytes,
   lossThresholdDbfs: lossThresholdDbfs,
   lossStreak: lossStreak,
@@ -60,7 +60,7 @@ MotionAnalysisDecision analyzeMotionSample({
   required PlatformInt64 windowMs,
   required int burstCount,
   required int burstThreshold,
-}) => BrainCoreApi.instance.api.crateApiProctoringAnalyzeMotionSample(
+}) => RustLib.instance.api.crateApiProctoringAnalyzeMotionSample(
   x: x,
   y: y,
   z: z,
@@ -85,7 +85,7 @@ RotationAnalysisDecision updateRotationProgress({
   required double deltaScale,
   required double minDelta,
   required double targetAccumulated,
-}) => BrainCoreApi.instance.api.crateApiProctoringUpdateRotationProgress(
+}) => RustLib.instance.api.crateApiProctoringUpdateRotationProgress(
   x: x,
   y: y,
   z: z,
@@ -110,7 +110,7 @@ FaceAnalysisDecision analyzeFaceState({
   required PlatformInt64 gazeWarningCooldownMs,
   required double yawThreshold,
   required double pitchThreshold,
-}) => BrainCoreApi.instance.api.crateApiProctoringAnalyzeFaceState(
+}) => RustLib.instance.api.crateApiProctoringAnalyzeFaceState(
   faceCount: faceCount,
   includeGaze: includeGaze,
   yaw: yaw,
@@ -131,7 +131,7 @@ EnvironmentFrameDecision analyzeEnvironmentFrame({
   required double lightingScore,
   required bool rotationCovered,
   required List<String> forbiddenKeywords,
-}) => BrainCoreApi.instance.api.crateApiProctoringAnalyzeEnvironmentFrame(
+}) => RustLib.instance.api.crateApiProctoringAnalyzeEnvironmentFrame(
   objectLabels: objectLabels,
   lightingScore: lightingScore,
   rotationCovered: rotationCovered,
@@ -141,7 +141,7 @@ EnvironmentFrameDecision analyzeEnvironmentFrame({
 double estimateLightingFromLuma({
   required List<int> lumaBytes,
   required int sampleStride,
-}) => BrainCoreApi.instance.api.crateApiProctoringEstimateLightingFromLuma(
+}) => RustLib.instance.api.crateApiProctoringEstimateLightingFromLuma(
   lumaBytes: lumaBytes,
   sampleStride: sampleStride,
 );
@@ -154,7 +154,7 @@ GazeHeadPoseDecision? analyzeGazeHeadPoseFrame({
   required double previousYaw,
   required double previousPitch,
   required double previousRoll,
-}) => BrainCoreApi.instance.api.crateApiProctoringAnalyzeGazeHeadPoseFrame(
+}) => RustLib.instance.api.crateApiProctoringAnalyzeGazeHeadPoseFrame(
   plane0Bytes: plane0Bytes,
   width: width,
   height: height,
@@ -167,16 +167,16 @@ GazeHeadPoseDecision? analyzeGazeHeadPoseFrame({
 VisionModelStatus loadVisionModel({
   required String manifestJson,
   required List<int> modelBytes,
-}) => BrainCoreApi.instance.api.crateApiProctoringLoadVisionModel(
+}) => RustLib.instance.api.crateApiProctoringLoadVisionModel(
   manifestJson: manifestJson,
   modelBytes: modelBytes,
 );
 
 void clearVisionModel() =>
-    BrainCoreApi.instance.api.crateApiProctoringClearVisionModel();
+    RustLib.instance.api.crateApiProctoringClearVisionModel();
 
 VisionModelStatus currentVisionModelStatus() =>
-    BrainCoreApi.instance.api.crateApiProctoringCurrentVisionModelStatus();
+    RustLib.instance.api.crateApiProctoringCurrentVisionModelStatus();
 
 ScanFrameDecision analyzeScanFrame({
   required List<int> plane0Bytes,
@@ -184,7 +184,7 @@ ScanFrameDecision analyzeScanFrame({
   required int height,
   required int bytesPerRow,
   required String pixelFormat,
-}) => BrainCoreApi.instance.api.crateApiProctoringAnalyzeScanFrame(
+}) => RustLib.instance.api.crateApiProctoringAnalyzeScanFrame(
   plane0Bytes: plane0Bytes,
   width: width,
   height: height,

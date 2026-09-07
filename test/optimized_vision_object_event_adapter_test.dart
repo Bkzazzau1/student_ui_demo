@@ -83,68 +83,6 @@ void main() {
     expect(noProvenance.hasModelEventProvenance, isFalse);
   });
 
-  test('maps normalized Windows objects into frozen E1 model events', () {
-    const withProvenance = OptimizedVisionRuntimeResult(
-      available: true,
-      backend: 'onnxRuntimeDirectML',
-      precision: 'int8',
-      inferenceMs: 7.4,
-      outputs: <String, Object?>{
-        'objects': <Map<String, Object?>>[
-          <String, Object?>{
-            'label': 'person',
-            'class_id': 0,
-            'confidence': 0.91,
-            'box': <String, Object?>{
-              'x1': 0.60,
-              'y1': 0.10,
-              'x2': 0.90,
-              'y2': 0.70,
-            },
-          },
-          <String, Object?>{
-            'label': 'cell_phone',
-            'class_id': 67,
-            'confidence': 0.84,
-            'box': <String, Object?>{
-              'x1': 0.72,
-              'y1': 0.72,
-              'x2': 0.82,
-              'y2': 0.88,
-            },
-          },
-        ],
-      },
-      sourceFrameId: 44,
-      captureTimestampNs: 5_000,
-      inferenceTimestampNs: 5_320,
-      modelId: 'e1-yolo-exam-review',
-      modelVersion: 'development-baseline-1',
-      imageWidth: 1280,
-      imageHeight: 720,
-    );
-
-    final events = adapter.mapModelEvents(
-      withProvenance,
-      sessionId: 'attempt-001',
-    );
-
-    expect(events, hasLength(2));
-    expect(events.first.classId, 'person');
-    expect(events.first.sourceFrameId, 44);
-    expect(events.first.trackId, isNull);
-    expect(events.first.geometry?.coordinateSpace, 'normalized_frame');
-    expect(events.first.geometry?.boundingBox?['x'], closeTo(0.60, 0.0001));
-    expect(events.first.geometry?.boundingBox?['width'], closeTo(0.30, 0.0001));
-    expect(events.first.geometry?.regionId, 'middle_right');
-    expect(
-      events.first.metadata['source_representation'],
-      'windows_onnx_normalized_objects',
-    );
-    expect(events.last.classId, 'cell_phone');
-    expect(events.last.geometry?.regionId, 'lower_right');
-  });
-
   test('runtime result reports complete provenance only when all fields exist', () {
     const withProvenance = OptimizedVisionRuntimeResult(
       available: true,

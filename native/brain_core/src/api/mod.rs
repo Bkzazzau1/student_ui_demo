@@ -13,12 +13,11 @@ pub mod hand_landmark_runtime;
 pub mod hand_vision;
 pub mod liveness_challenge;
 pub mod lockdown;
-/// flutter_rust_bridge:ignore
 pub mod model_event;
 pub mod model_event_memory;
 pub mod native_vision;
+mod person_tracker;
 pub mod proctoring;
-/// flutter_rust_bridge:ignore
 pub mod spatiotemporal_buffer;
 pub mod system_security;
 
@@ -37,7 +36,9 @@ pub use hand_landmark_runtime::*;
 pub use hand_vision::*;
 pub use liveness_challenge::*;
 pub use lockdown::*;
+pub use model_event::*;
 pub use model_event_memory::*;
 pub use native_vision::*;
 pub use proctoring::*;
+pub use spatiotemporal_buffer::*;
 pub use system_security::*;

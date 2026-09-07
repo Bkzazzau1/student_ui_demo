@@ -13,25 +13,25 @@ NativeSecureLockdownReviewResult analyzeSecureLockdownReport({
   required String platformName,
   required String processReport,
   int? displayCount,
-}) => BrainCoreApi.instance.api.crateApiLockdownAnalyzeSecureLockdownReport(
+}) => RustLib.instance.api.crateApiLockdownAnalyzeSecureLockdownReport(
   platformName: platformName,
   processReport: processReport,
   displayCount: displayCount,
 );
 
 Future<String> collectLockdownProcessReport({required String platformName}) =>
-    BrainCoreApi.instance.api.crateApiLockdownCollectLockdownProcessReport(
+    RustLib.instance.api.crateApiLockdownCollectLockdownProcessReport(
       platformName: platformName,
     );
 
 Future<int?> collectLockdownDisplayCount({required String platformName}) =>
-    BrainCoreApi.instance.api.crateApiLockdownCollectLockdownDisplayCount(
+    RustLib.instance.api.crateApiLockdownCollectLockdownDisplayCount(
       platformName: platformName,
     );
 
 Future<NativeSecureLockdownReviewResult> runSecureLockdownReview({
   required String platformName,
-}) => BrainCoreApi.instance.api.crateApiLockdownRunSecureLockdownReview(
+}) => RustLib.instance.api.crateApiLockdownRunSecureLockdownReview(
   platformName: platformName,
 );
 

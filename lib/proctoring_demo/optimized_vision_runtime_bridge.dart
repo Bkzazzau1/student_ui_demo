@@ -159,11 +159,6 @@ class OptimizedVisionRuntimeBridge {
       final elapsedMs =
           DateTime.now().difference(started).inMicroseconds / 1000.0;
       final available = response['available'] == true;
-      final outputs = _applyManifestClassLabels(
-        Map<String, Object?>.from(
-          response['outputs'] as Map? ?? const <String, Object?>{},
-        ),
-      );
       return OptimizedVisionRuntimeResult(
         available: available,
         backend: response['backend']?.toString() ?? _policy.backend.name,
@@ -171,7 +166,9 @@ class OptimizedVisionRuntimeBridge {
         inferenceMs:
             double.tryParse(response['inference_ms']?.toString() ?? '') ??
             elapsedMs,
-        outputs: outputs,
+        outputs: Map<String, Object?>.from(
+          response['outputs'] as Map? ?? const <String, Object?>{},
+        ),
         sourceFrameId: sourceFrameId,
         captureTimestampNs: captureTimestampNs,
         inferenceTimestampNs: inferenceTimestampNs,
@@ -230,11 +227,6 @@ class OptimizedVisionRuntimeBridge {
       final elapsedMs =
           DateTime.now().difference(started).inMicroseconds / 1000.0;
       final available = response['available'] == true;
-      final outputs = _applyManifestClassLabels(
-        Map<String, Object?>.from(
-          response['outputs'] as Map? ?? const <String, Object?>{},
-        ),
-      );
       return OptimizedVisionRuntimeResult(
         available: available,
         backend: response['backend']?.toString() ?? _policy.backend.name,
@@ -242,7 +234,9 @@ class OptimizedVisionRuntimeBridge {
         inferenceMs:
             double.tryParse(response['inference_ms']?.toString() ?? '') ??
             elapsedMs,
-        outputs: outputs,
+        outputs: Map<String, Object?>.from(
+          response['outputs'] as Map? ?? const <String, Object?>{},
+        ),
         sourceFrameId: sourceFrameId,
         captureTimestampNs: captureTimestampNs,
         inferenceTimestampNs: inferenceTimestampNs,
@@ -257,51 +251,5 @@ class OptimizedVisionRuntimeBridge {
     } catch (_) {
       return null;
     }
-  }
-
-  Map<String, Object?> _applyManifestClassLabels(
-    Map<String, Object?> outputs,
-  ) {
-    final manifest = _manifest;
-    final rawObjects = outputs['objects'];
-    if (manifest == null || rawObjects is! Iterable) return outputs;
-
-    final normalizedObjects = <Map<String, Object?>>[];
-    for (final raw in rawObjects) {
-      if (raw is! Map) continue;
-      final object = <String, Object?>{};
-      for (final entry in raw.entries) {
-        object[entry.key.toString()] = entry.value;
-      }
-
-      final classId = _readClassId(object['class_id']);
-      if (classId != null &&
-          classId >= 0 &&
-          classId < manifest.classNames.length) {
-        final manifestLabel = manifest.classNames[classId];
-        final nativeLabel = object['label']?.toString();
-        if (nativeLabel != null && nativeLabel != manifestLabel) {
-          object['native_label'] = nativeLabel;
-        }
-        object['label'] = manifestLabel;
-        object['label_source'] = 'manifest_class_names';
-      }
-      normalizedObjects.add(object);
-    }
-
-    return <String, Object?>{
-      ...outputs,
-      'objects': normalizedObjects,
-      'class_names': manifest.classNames,
-      'model_family': manifest.modelFamily,
-      'model_id': manifest.modelId,
-      'model_version': manifest.modelVersion,
-    };
-  }
-
-  int? _readClassId(Object? value) {
-    if (value is int) return value;
-    if (value is num) return value.round();
-    return int.tryParse(value?.toString() ?? '');
   }
 }

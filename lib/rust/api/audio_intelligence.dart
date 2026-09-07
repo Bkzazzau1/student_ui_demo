@@ -14,7 +14,7 @@ NativeAudioIntelligenceResult? analyzeAudioPcm16({
   required List<int> bytes,
   required int sampleRate,
   String? previousFingerprint,
-}) => BrainCoreApi.instance.api.crateApiAudioIntelligenceAnalyzeAudioPcm16(
+}) => RustLib.instance.api.crateApiAudioIntelligenceAnalyzeAudioPcm16(
   bytes: bytes,
   sampleRate: sampleRate,
   previousFingerprint: previousFingerprint,

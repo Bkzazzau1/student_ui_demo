@@ -10,13 +10,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 EyeIntelligenceResult analyzeEyeRegionSignal({
   required EyeRegionSignal signal,
-}) => BrainCoreApi.instance.api.crateApiEyeIntelligenceAnalyzeEyeRegionSignal(
+}) => RustLib.instance.api.crateApiEyeIntelligenceAnalyzeEyeRegionSignal(
   signal: signal,
 );
 
-String describeEyeZoneForStudent({required String zone}) => BrainCoreApi
-    .instance
-    .api
+String describeEyeZoneForStudent({required String zone}) => RustLib.instance.api
     .crateApiEyeIntelligenceDescribeEyeZoneForStudent(zone: zone);
 
 class EyeIntelligenceResult {
