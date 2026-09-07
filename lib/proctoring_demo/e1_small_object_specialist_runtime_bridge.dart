@@ -219,12 +219,7 @@ class E1SmallObjectSpecialistRuntimeBridge
     final x2 = _readDouble(box['x2']);
     final y2 = _readDouble(box['y2']);
     if (x1 == null || y1 == null || x2 == null || y2 == null) return null;
-    final roi = E1NormalizedRoi(
-      x: x1,
-      y: y1,
-      width: x2 - x1,
-      height: y2 - y1,
-    );
+    final roi = E1NormalizedRoi(x: x1, y: y1, width: x2 - x1, height: y2 - y1);
     return roi.isValid ? roi.toBoundingBox() : null;
   }
 
