@@ -1,0 +1,6 @@
+# Development-only tooling and synthetic numerical tests; never exam runtime.
+numpy==2.5.3
+onnx==1.22.0
+onnxruntime==1.29.0
+onnxconverter-common==1.16.0
+Pillow==12.3.0
