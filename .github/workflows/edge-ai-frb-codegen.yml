@@ -7,7 +7,9 @@ on:
       - 'edge-ai/e1-person-tracking'
     paths:
       - 'native/brain_core/src/api/**'
+      - 'native/brain_core/src/runtime/**'
       - 'native/brain_core/src/lib.rs'
+      - 'flutter_rust_bridge.yaml'
       - 'pubspec.yaml'
       - '.github/workflows/edge-ai-frb-codegen.yml'
 
