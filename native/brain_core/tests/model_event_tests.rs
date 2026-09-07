@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use brain_core::api::model_event::{
+use brain_core::runtime::model_event::{
     BoundingBoxV1, KeypointV1, MODEL_EVENT_CORE_FIELDS, MODEL_EVENT_SCHEMA_VERSION, ModelEventV1,
     ModelGeometryV1, ValidityIntervalV1,
 };
