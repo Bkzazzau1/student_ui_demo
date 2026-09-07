@@ -1,0 +1,39 @@
+{
+  "example_only": true,
+  "collection_schema_version": "1.0",
+  "dataset_id": "example-e1-controlled-pilot",
+  "dataset_version": "example-v1",
+  "model_role": "base",
+  "split_seed": "example-seed-only",
+  "split_weights": {
+    "train": 8,
+    "validation": 1,
+    "test": 1
+  },
+  "records": [
+    {
+      "source_group_id": "example-session-001",
+      "image_path": "images/session-001/frame-0001.jpg",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "source_group_id": "example-session-001",
+      "image_path": "images/session-001/frame-0002.jpg",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "source_group_id": "example-session-002",
+      "image_path": "images/session-002/frame-0001.jpg",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "source_group_id": "example-session-003",
+      "image_path": "images/session-003/frame-0001.jpg",
+      "width": 1920,
+      "height": 1080
+    }
+  ]
+}
