@@ -119,6 +119,32 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      - name: Check E1 Dart formatting
+        run: >-
+          dart format --output=none --set-exit-if-changed
+          lib/proctoring_demo/e1_model_event_memory_coordinator.dart
+          lib/proctoring_demo/e1_small_object_cascade_coordinator.dart
+          lib/proctoring_demo/e1_small_object_specialist_manifest.dart
+          lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart
+          lib/proctoring_demo/live_camera_frame_bus.dart
+          lib/proctoring_demo/optimized_vision_runtime_bridge.dart
+          test/e1_small_object_cascade_coordinator_test.dart
+          test/e1_small_object_specialist_manifest_test.dart
+          test/e1_small_object_specialist_runtime_bridge_test.dart
+
+      - name: Analyze E1 live cascade slice
+        run: >-
+          flutter analyze
+          lib/proctoring_demo/e1_model_event_memory_coordinator.dart
+          lib/proctoring_demo/e1_small_object_cascade_coordinator.dart
+          lib/proctoring_demo/e1_small_object_specialist_manifest.dart
+          lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart
+          lib/proctoring_demo/live_camera_frame_bus.dart
+          lib/proctoring_demo/optimized_vision_runtime_bridge.dart
+          test/e1_small_object_cascade_coordinator_test.dart
+          test/e1_small_object_specialist_manifest_test.dart
+          test/e1_small_object_specialist_runtime_bridge_test.dart
+
       - name: Run E1 contract and adapter tests
         run: >-
           flutter test
@@ -138,3 +164,31 @@ jobs:
           test/e1_specialist_memory_ingress_test.dart
           test/object_review_event_mapper_test.dart
           test/optimized_vision_object_event_adapter_test.dart
+
+  windows-e1-native:
+    name: Windows E1 native build
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout with Git LFS assets
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Build Windows debug app
+        run: flutter build windows --debug
