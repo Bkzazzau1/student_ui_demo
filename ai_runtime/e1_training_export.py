@@ -49,6 +49,14 @@ SPECIALIST_YOLO_CLASS_ORDER = (
 
 _ALLOWED_SPLITS = ("train", "validation", "test")
 _REQUIRED_SPLITS = frozenset({"train", "validation"})
+_SAFE_SAMPLE_ID_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+)
+_WINDOWS_RESERVED_STEMS = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{index}" for index in range(1, 10)}
+    | {f"LPT{index}" for index in range(1, 10)}
+)
 
 
 class E1TrainingExportInputError(ValueError):
@@ -111,6 +119,15 @@ def _normalized_split(value: Any) -> str:
     return _read_string(value).lower()
 
 
+def _safe_sample_id(value: str) -> bool:
+    if not value or len(value) > 128 or value in {".", ".."}:
+        return False
+    if any(character not in _SAFE_SAMPLE_ID_CHARS for character in value):
+        return False
+    windows_stem = value.split(".", 1)[0].upper()
+    return windows_stem not in _WINDOWS_RESERVED_STEMS
+
+
 def _resolve_image_path(manifest_path: Path, image_path: str) -> Path:
     source = Path(image_path)
     if source.is_absolute():
@@ -164,7 +181,10 @@ def _dataset_yaml(class_order: Sequence[str], available_splits: set[str]) -> str
     if "test" in available_splits:
         lines.append("test: images/test")
     lines.append("names:")
-    lines.extend(f"  {index}: {canonical_id}" for index, canonical_id in enumerate(class_order))
+    lines.extend(
+        f"  {index}: {canonical_id}"
+        for index, canonical_id in enumerate(class_order)
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -179,11 +199,19 @@ def _validate_manifest_collection(
             manifest = _load_json_object(path)
         except E1TrainingExportInputError as exc:
             issues.append(
-                {"code": exc.code, "path": "$", "message": exc.message, "source": str(path)}
+                {
+                    "code": exc.code,
+                    "path": "$",
+                    "message": exc.message,
+                    "source": str(path),
+                }
             )
             continue
         loaded.append((path, manifest))
-        issues.extend(_issue_dict(issue, path) for issue in validate_dataset_manifest(manifest))
+        issues.extend(
+            _issue_dict(issue, path)
+            for issue in validate_dataset_manifest(manifest)
+        )
 
     if loaded:
         manifests = [manifest for _, manifest in loaded]
@@ -192,11 +220,21 @@ def _validate_manifest_collection(
             for issue in validate_split_disjointness(manifests)
         )
 
-        dataset_ids = {_read_string(manifest.get("dataset_id")) for manifest in manifests}
-        versions = {_read_string(manifest.get("dataset_version")) for manifest in manifests}
-        roles = {_normalized_role(manifest.get("model_role")) for manifest in manifests}
-        taxonomies = {_read_string(manifest.get("taxonomy_version")) for manifest in manifests}
-        splits = [_normalized_split(manifest.get("split")) for manifest in manifests]
+        dataset_ids = {
+            _read_string(manifest.get("dataset_id")) for manifest in manifests
+        }
+        versions = {
+            _read_string(manifest.get("dataset_version")) for manifest in manifests
+        }
+        roles = {
+            _normalized_role(manifest.get("model_role")) for manifest in manifests
+        }
+        taxonomies = {
+            _read_string(manifest.get("taxonomy_version")) for manifest in manifests
+        }
+        splits = [
+            _normalized_split(manifest.get("split")) for manifest in manifests
+        ]
 
         if len(dataset_ids) != 1:
             issues.append(
@@ -270,7 +308,8 @@ def export_training_package(
 
     if not manifest_paths:
         raise E1TrainingExportInputError(
-            "no_manifests", "At least train and validation manifest paths are required."
+            "no_manifests",
+            "At least train and validation manifest paths are required.",
         )
     if output_dir.exists():
         raise E1TrainingExportInputError(
@@ -290,11 +329,15 @@ def export_training_package(
             "class_order_contract_mismatch",
             f"YOLO class order does not match frozen {role} trainable classes.",
         )
-    class_index = {canonical_id: index for index, canonical_id in enumerate(class_order)}
+    class_index = {
+        canonical_id: index for index, canonical_id in enumerate(class_order)
+    }
 
     dataset_id = _read_string(loaded[0][1].get("dataset_id"))
     dataset_version = _read_string(loaded[0][1].get("dataset_version"))
-    available_splits = {_normalized_split(manifest.get("split")) for _, manifest in loaded}
+    available_splits = {
+        _normalized_split(manifest.get("split")) for _, manifest in loaded
+    }
 
     output_parent = output_dir.parent.resolve()
     output_parent.mkdir(parents=True, exist_ok=True)
@@ -320,6 +363,12 @@ def export_training_package(
                 sample_id = _read_string(raw_sample.get("sample_id"))
                 source_group_id = _read_string(raw_sample.get("source_group_id"))
                 image_path = _read_string(raw_sample.get("image_path"))
+                if not _safe_sample_id(sample_id):
+                    raise E1TrainingExportInputError(
+                        "unsafe_sample_id",
+                        "sample_id must be a portable filename stem using only "
+                        f"letters, digits, dot, underscore or hyphen: {sample_id!r}",
+                    )
                 source_image = _resolve_image_path(manifest_path, image_path)
                 if not source_image.is_file():
                     raise E1TrainingExportInputError(
@@ -340,7 +389,9 @@ def export_training_package(
                 shutil.copy2(source_image, export_image)
 
                 annotations = list(raw_sample.get("annotations", []))
-                annotations.sort(key=lambda item: _read_string(item.get("annotation_id")))
+                annotations.sort(
+                    key=lambda item: _read_string(item.get("annotation_id"))
+                )
                 label_lines = [
                     _yolo_line(annotation, class_index=class_index)
                     for annotation in annotations
@@ -419,8 +470,15 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="python -m ai_runtime.e1_training_export",
         description="Export validated E1 manifests into a self-contained YOLO package.",
     )
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON status output.")
-    parser.add_argument("--output", required=True, type=Path, help="New output directory; must not already exist.")
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON status output."
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        type=Path,
+        help="New output directory; must not already exist.",
+    )
     parser.add_argument("manifests", nargs="+", type=Path)
     return parser
 
@@ -435,7 +493,9 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None) -> 
         result = {
             "ok": False,
             "output_dir": str(args.output),
-            "issues": [{"code": exc.code, "path": "$", "message": exc.message}],
+            "issues": [
+                {"code": exc.code, "path": "$", "message": exc.message}
+            ],
         }
 
     json.dump(result, output, indent=2 if args.pretty else None, sort_keys=True)
