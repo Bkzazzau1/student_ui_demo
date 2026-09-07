@@ -39,7 +39,7 @@ class ObjectReviewEventMapper {
 
     final phoneLike = _matchingCanonical(
       resolutions,
-      const <String>{'phone', 'remote'},
+      const <String>{'phone'},
     );
     if (phoneLike.isNotEmpty) {
       decisions.add(
