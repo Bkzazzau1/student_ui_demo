@@ -1,3 +1,4 @@
+import 'e1_exam_object_taxonomy.dart';
 import 'model_event_v1.dart';
 import 'native_vision_bridge.dart';
 
@@ -31,8 +32,10 @@ class E1FrameInferenceContext {
 
 /// Converts E1 detector outputs into the frozen Stage 3 observation envelope.
 ///
-/// Persistent tracking is deliberately not invented here. Until E1 tracking is
-/// implemented, `track_id` remains null even for person detections.
+/// The adapter emits observable detector classes only. Contextual states such
+/// as `additional_person` are deliberately not inferred here. Person track IDs
+/// also remain null at this boundary and are assigned conservatively by the
+/// Rust-owned person tracker before events enter spatiotemporal memory.
 class E1ModelEventAdapter {
   const E1ModelEventAdapter();
 
@@ -47,7 +50,9 @@ class E1ModelEventAdapter {
     final output = <ModelEventV1Payload>[];
     for (var index = 0; index < review.detections.length; index++) {
       final detection = review.detections[index];
-      final classId = _normalizeClassId(detection.label);
+      final classId = E1ExamObjectTaxonomy.canonicalizeDetectorLabel(
+        detection.label,
+      );
       if (classId.isEmpty) continue;
 
       final boundingBox = _normalizedBoundingBox(detection, context);
@@ -84,9 +89,17 @@ class E1ModelEventAdapter {
             'producer': 'e1_person_object_ai',
             'raw_class_id': detection.classId,
             'raw_label': detection.label,
+            'canonical_taxonomy_id': E1ExamObjectTaxonomy.taxonomyId,
+            'canonical_taxonomy_version': E1ExamObjectTaxonomy.taxonomyVersion,
+            'taxonomy_known_class':
+                E1ExamObjectTaxonomy.isKnownCanonicalClass(classId),
+            'required_detector_class':
+                E1ExamObjectTaxonomy.isRequiredDetectorClass(classId),
             'backend': context.backend,
             'precision': context.precision,
-            'persistent_tracking_available': false,
+            'tracking_assignment_stage': classId == 'person'
+                ? 'rust_memory_ingress'
+                : 'not_applicable',
             'observable_behaviour_only': true,
           },
         ),
@@ -149,13 +162,5 @@ class E1ModelEventAdapter {
   }) {
     final source = context.sourceFrameId?.toString() ?? 'no-frame';
     return '${context.sessionId}:e1:$source:${context.captureTimestampNs}:$classId:$detectionIndex';
-  }
-
-  String _normalizeClassId(String label) {
-    return label
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
   }
 }
