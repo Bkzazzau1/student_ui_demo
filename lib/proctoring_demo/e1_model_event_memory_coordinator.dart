@@ -62,9 +62,12 @@ class E1ModelEventMemoryCoordinator {
 
     // The live specialist path is deliberately evidence-neutral when no
     // validated specialist model is installed. It may only inspect the exact
-    // camera frame that produced this base result; missing provenance remains
-    // UNKNOWN and skips specialist inference rather than reconstructing it.
-    await _runLiveSpecialistCascade(result: result, sessionId: sessionId);
+    // camera frame and formal geometry that produced this base result.
+    await _runLiveSpecialistCascade(
+      result: result,
+      sessionId: sessionId,
+      baseEvents: events,
+    );
 
     return baseSummary;
   }
@@ -72,6 +75,7 @@ class E1ModelEventMemoryCoordinator {
   Future<void> _runLiveSpecialistCascade({
     required OptimizedVisionRuntimeResult result,
     required String sessionId,
+    required Iterable<ModelEventV1Payload> baseEvents,
   }) async {
     if (sessionId.trim().isEmpty ||
         !result.available ||
@@ -126,7 +130,12 @@ class E1ModelEventMemoryCoordinator {
     );
 
     try {
-      await cascade.run(sessionId: sessionId, baseResult: result, frame: frame);
+      await cascade.run(
+        sessionId: sessionId,
+        baseResult: result,
+        baseEvents: baseEvents,
+        frame: frame,
+      );
     } catch (_) {
       // Specialist observability must never crash or block base E1 evidence.
     }

@@ -7,6 +7,13 @@ import 'package:students_ui_demo/proctoring_demo/e1_specialist_frame.dart';
 
 const _channel = MethodChannel('kslas.e1_small_object_specialist_runtime');
 
+const _roi = <String, double>{
+  'x': 0.25,
+  'y': 0.25,
+  'width': 0.5,
+  'height': 0.5,
+};
+
 E1SmallObjectSpecialistManifest _installedManifest() {
   return const E1SmallObjectSpecialistManifest(
     schemaVersion: '1.0',
@@ -31,22 +38,34 @@ E1SmallObjectSpecialistManifest _installedManifest() {
   );
 }
 
+E1SmallObjectSpecialistRuntimeBridge _runtime({
+  E1SpecialistManifestLoader? manifestLoader,
+  E1SpecialistModelAssetChecker? modelAssetChecker,
+}) {
+  return E1SmallObjectSpecialistRuntimeBridge(
+    manifestLoader: manifestLoader ?? () async => _installedManifest(),
+    modelAssetChecker: modelAssetChecker ?? (_) async => true,
+  );
+}
+
 E1SmallObjectSpecialistRequest _request({
   Set<E1SmallObjectTarget> targets = const <E1SmallObjectTarget>{
     E1SmallObjectTarget.smartwatch,
   },
+  Map<String, double>? roi = _roi,
 }) {
   return E1SmallObjectSpecialistRequest(
     sessionId: 'attempt-1',
     sourceFrameId: 42,
     captureTimestampNs: 1000,
-    imageWidth: 2,
-    imageHeight: 2,
+    imageWidth: 100,
+    imageHeight: 100,
     targets: targets,
     reason: 'test_specialist_request',
-    roiHint: const E1SpecialistRoiHint(
-      strategy: 'person_relative_wearable',
+    roiHint: E1SpecialistRoiHint(
+      strategy: 'person_arm_watch',
       anchorCanonicalObjectId: 'person',
+      boundingBox: roi,
     ),
   );
 }
@@ -54,20 +73,31 @@ E1SmallObjectSpecialistRequest _request({
 E1SpecialistFrameInput _frame({int sourceFrameId = 42}) {
   return E1SpecialistFrameInput(
     format: 'rgb888',
-    width: 2,
-    height: 2,
+    width: 100,
+    height: 100,
     sourceFrameId: sourceFrameId,
     captureTimestampNs: 1000,
     planes: <E1SpecialistFramePlane>[
       E1SpecialistFramePlane(
-        bytes: Uint8List.fromList(<int>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        bytesPerRow: 6,
+        bytes: Uint8List(100 * 100 * 3),
+        bytesPerRow: 300,
         bytesPerPixel: 3,
-        width: 2,
-        height: 2,
+        width: 100,
+        height: 100,
       ),
     ],
   );
+}
+
+Map<String, Object?> _nativeOutputs({
+  Map<String, double> sourceRoi = _roi,
+  List<Map<String, Object?>> objects = const <Map<String, Object?>>[],
+}) {
+  return <String, Object?>{
+    'output_coordinate_space': 'normalized_roi',
+    'source_roi': sourceRoi,
+    'objects': objects,
+  };
 }
 
 void main() {
@@ -79,16 +109,17 @@ void main() {
   });
 
   test(
-    'uninstalled manifest never calls native inference and emits nothing',
+    'uninstalled manifest never checks model asset or calls native inference',
     () async {
       var nativeCalls = 0;
+      var assetChecks = 0;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_channel, (call) async {
             nativeCalls++;
             return true;
           });
 
-      final runtime = E1SmallObjectSpecialistRuntimeBridge(
+      final runtime = _runtime(
         manifestLoader: () async => const E1SmallObjectSpecialistManifest(
           schemaVersion: '1.0',
           installed: false,
@@ -100,6 +131,10 @@ void main() {
             'calculator',
           },
         ),
+        modelAssetChecker: (_) async {
+          assetChecks++;
+          return true;
+        },
       );
 
       final observations = await runtime.infer(
@@ -109,23 +144,61 @@ void main() {
 
       expect(observations, isEmpty);
       expect(runtime.available, isFalse);
+      expect(assetChecks, 0);
       expect(nativeCalls, 0);
     },
   );
 
   test(
-    'native class id maps through specialist manifest, not native label',
+    'missing exact specialist model blocks native initialization and inference',
+    () async {
+      var nativeCalls = 0;
+      String? checkedPath;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            nativeCalls++;
+            return true;
+          });
+
+      final runtime = _runtime(
+        modelAssetChecker: (path) async {
+          checkedPath = path;
+          return false;
+        },
+      );
+
+      final observations = await runtime.infer(
+        request: _request(),
+        frame: _frame(),
+      );
+
+      expect(
+        checkedPath,
+        'assets/models/e1_small_object_specialist/model.int8.onnx',
+      );
+      expect(observations, isEmpty);
+      expect(runtime.available, isFalse);
+      expect(nativeCalls, 0);
+    },
+  );
+
+  test(
+    'native crop-space box remaps from applied ROI to full-frame coordinates',
     () async {
       final methods = <String>[];
+      Map<Object?, Object?>? runFrameArguments;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_channel, (call) async {
             methods.add(call.method);
             if (call.method == 'initialize') return true;
             if (call.method == 'runFrame') {
+              runFrameArguments = Map<Object?, Object?>.from(
+                call.arguments as Map,
+              );
               return <String, Object?>{
                 'available': true,
-                'outputs': <String, Object?>{
-                  'objects': <Map<String, Object?>>[
+                'outputs': _nativeOutputs(
+                  objects: <Map<String, Object?>>[
                     <String, Object?>{
                       // Deliberately wrong/base-model label. The specialist bridge
                       // must use class_id + manifest class_names instead.
@@ -140,15 +213,13 @@ void main() {
                       },
                     },
                   ],
-                },
+                ),
               };
             }
             return null;
           });
 
-      final runtime = E1SmallObjectSpecialistRuntimeBridge(
-        manifestLoader: () async => _installedManifest(),
-      );
+      final runtime = _runtime();
       final observations = await runtime.infer(
         request: _request(),
         frame: _frame(),
@@ -163,12 +234,72 @@ void main() {
       expect(observation.sourceFrameId, 42);
       expect(observation.captureTimestampNs, 1000);
       expect(observation.inferenceTimestampNs, greaterThanOrEqualTo(1000));
-      expect(observation.boundingBox['x'], closeTo(0.1, 0.0001));
-      expect(observation.boundingBox['width'], closeTo(0.2, 0.0001));
+
+      // Applied crop is [0.25, 0.25, 0.5, 0.5]. Local box
+      // [0.1, 0.2, 0.2, 0.2] therefore maps back to
+      // [0.30, 0.35, 0.10, 0.10] in the original frame.
+      expect(observation.boundingBox['x'], closeTo(0.30, 0.0001));
+      expect(observation.boundingBox['y'], closeTo(0.35, 0.0001));
+      expect(observation.boundingBox['width'], closeTo(0.10, 0.0001));
+      expect(observation.boundingBox['height'], closeTo(0.10, 0.0001));
+
+      final roiHint = Map<Object?, Object?>.from(
+        runFrameArguments!['roi_hint'] as Map,
+      );
+      expect(
+        Map<Object?, Object?>.from(roiHint['bounding_box'] as Map),
+        equals(<Object?, Object?>{
+          'x': 0.25,
+          'y': 0.25,
+          'width': 0.5,
+          'height': 0.5,
+        }),
+      );
     },
   );
 
-  test('unrequested specialist class is dropped', () async {
+  test('native ROI outside one-pixel tolerance is rejected', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          if (call.method == 'initialize') return true;
+          if (call.method == 'runFrame') {
+            return <String, Object?>{
+              'available': true,
+              'outputs': _nativeOutputs(
+                sourceRoi: const <String, double>{
+                  'x': 0.10,
+                  'y': 0.25,
+                  'width': 0.5,
+                  'height': 0.5,
+                },
+                objects: <Map<String, Object?>>[
+                  <String, Object?>{
+                    'class_id': 0,
+                    'confidence': 0.95,
+                    'box': <String, Object?>{
+                      'x': 0.1,
+                      'y': 0.1,
+                      'width': 0.2,
+                      'height': 0.2,
+                    },
+                  },
+                ],
+              ),
+            };
+          }
+          return null;
+        });
+
+    final runtime = _runtime();
+    final observations = await runtime.infer(
+      request: _request(),
+      frame: _frame(),
+    );
+
+    expect(observations, isEmpty);
+  });
+
+  test('missing native ROI coordinate metadata is rejected', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, (call) async {
           if (call.method == 'initialize') return true;
@@ -194,9 +325,42 @@ void main() {
           return null;
         });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
+    final runtime = _runtime();
+    final observations = await runtime.infer(
+      request: _request(),
+      frame: _frame(),
     );
+
+    expect(observations, isEmpty);
+  });
+
+  test('unrequested specialist class is dropped', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_channel, (call) async {
+          if (call.method == 'initialize') return true;
+          if (call.method == 'runFrame') {
+            return <String, Object?>{
+              'available': true,
+              'outputs': _nativeOutputs(
+                objects: <Map<String, Object?>>[
+                  <String, Object?>{
+                    'class_id': 0,
+                    'confidence': 0.95,
+                    'box': <String, Object?>{
+                      'x': 0.1,
+                      'y': 0.1,
+                      'width': 0.2,
+                      'height': 0.2,
+                    },
+                  },
+                ],
+              ),
+            };
+          }
+          return null;
+        });
+
+    final runtime = _runtime();
     final observations = await runtime.infer(
       request: _request(
         targets: const <E1SmallObjectTarget>{E1SmallObjectTarget.earbud},
@@ -215,9 +379,7 @@ void main() {
           return true;
         });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
-    );
+    final runtime = _runtime();
     final observations = await runtime.infer(
       request: _request(),
       frame: _frame(sourceFrameId: 99),
@@ -226,4 +388,25 @@ void main() {
     expect(observations, isEmpty);
     expect(nativeCalls, 0);
   });
+
+  test(
+    'missing ROI blocks native calls rather than falling back to full frame',
+    () async {
+      var nativeCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            nativeCalls++;
+            return true;
+          });
+
+      final runtime = _runtime();
+      final observations = await runtime.infer(
+        request: _request(roi: null),
+        frame: _frame(),
+      );
+
+      expect(observations, isEmpty);
+      expect(nativeCalls, 0);
+    },
+  );
 }

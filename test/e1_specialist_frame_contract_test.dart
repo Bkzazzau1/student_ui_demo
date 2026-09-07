@@ -49,8 +49,17 @@ const _request = E1SmallObjectSpecialistRequest(
   imageWidth: 2,
   imageHeight: 2,
   targets: <E1SmallObjectTarget>{E1SmallObjectTarget.calculator},
-  reason: 'desk_anchor_available_for_small_object_specialist',
-  roiHint: E1SpecialistRoiHint(strategy: 'desk_relative_small_object'),
+  reason: 'desk_geometry_available_for_small_object_specialist',
+  roiHint: E1SpecialistRoiHint(
+    strategy: 'desk_anchor_union',
+    anchorCanonicalObjectId: 'desk_context',
+    boundingBox: <String, double>{
+      'x': 0.0,
+      'y': 0.5,
+      'width': 1.0,
+      'height': 0.5,
+    },
+  ),
 );
 
 void main() {
