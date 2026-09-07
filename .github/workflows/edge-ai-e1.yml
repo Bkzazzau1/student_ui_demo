@@ -54,6 +54,7 @@ on:
       - 'edge-ai/e1-specialist-event-wiring'
       - 'edge-ai/e1-specialist-frame-contract'
       - 'edge-ai/e1-live-specialist-cascade'
+      - 'edge-ai/e1-roi-specialist-cascade'
     paths:
       - 'assets/models/yolo_exam_review/**'
       - 'assets/models/e1_small_object_specialist/**'
@@ -126,11 +127,13 @@ jobs:
           dart format --output=none --set-exit-if-changed
           lib/proctoring_demo/e1_model_event_memory_coordinator.dart
           lib/proctoring_demo/e1_small_object_cascade_coordinator.dart
+          lib/proctoring_demo/e1_small_object_specialist.dart
           lib/proctoring_demo/e1_small_object_specialist_manifest.dart
           lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart
           lib/proctoring_demo/live_camera_frame_bus.dart
           lib/proctoring_demo/optimized_vision_runtime_bridge.dart
           test/e1_small_object_cascade_coordinator_test.dart
+          test/e1_small_object_specialist_test.dart
           test/e1_small_object_specialist_manifest_test.dart
           test/e1_small_object_specialist_runtime_bridge_test.dart
 
@@ -141,21 +144,25 @@ jobs:
           dart format \
             lib/proctoring_demo/e1_model_event_memory_coordinator.dart \
             lib/proctoring_demo/e1_small_object_cascade_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_specialist.dart \
             lib/proctoring_demo/e1_small_object_specialist_manifest.dart \
             lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart \
             lib/proctoring_demo/live_camera_frame_bus.dart \
             lib/proctoring_demo/optimized_vision_runtime_bridge.dart \
             test/e1_small_object_cascade_coordinator_test.dart \
+            test/e1_small_object_specialist_test.dart \
             test/e1_small_object_specialist_manifest_test.dart \
             test/e1_small_object_specialist_runtime_bridge_test.dart
           git diff -- \
             lib/proctoring_demo/e1_model_event_memory_coordinator.dart \
             lib/proctoring_demo/e1_small_object_cascade_coordinator.dart \
+            lib/proctoring_demo/e1_small_object_specialist.dart \
             lib/proctoring_demo/e1_small_object_specialist_manifest.dart \
             lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart \
             lib/proctoring_demo/live_camera_frame_bus.dart \
             lib/proctoring_demo/optimized_vision_runtime_bridge.dart \
             test/e1_small_object_cascade_coordinator_test.dart \
+            test/e1_small_object_specialist_test.dart \
             test/e1_small_object_specialist_manifest_test.dart \
             test/e1_small_object_specialist_runtime_bridge_test.dart \
             > dartfmt.patch
@@ -172,11 +179,13 @@ jobs:
           flutter analyze
           lib/proctoring_demo/e1_model_event_memory_coordinator.dart
           lib/proctoring_demo/e1_small_object_cascade_coordinator.dart
+          lib/proctoring_demo/e1_small_object_specialist.dart
           lib/proctoring_demo/e1_small_object_specialist_manifest.dart
           lib/proctoring_demo/e1_small_object_specialist_runtime_bridge.dart
           lib/proctoring_demo/live_camera_frame_bus.dart
           lib/proctoring_demo/optimized_vision_runtime_bridge.dart
           test/e1_small_object_cascade_coordinator_test.dart
+          test/e1_small_object_specialist_test.dart
           test/e1_small_object_specialist_manifest_test.dart
           test/e1_small_object_specialist_runtime_bridge_test.dart
 
