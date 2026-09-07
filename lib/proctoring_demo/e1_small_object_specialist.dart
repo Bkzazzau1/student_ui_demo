@@ -3,13 +3,7 @@ import 'model_event_v1.dart';
 
 /// The exam-relevant small-object targets that are intentionally not claimed
 /// by the current COCO YOLO development baseline.
-enum E1SmallObjectTarget {
-  smartwatch,
-  earbud,
-  tablet,
-  paperNote,
-  calculator,
-}
+enum E1SmallObjectTarget { smartwatch, earbud, tablet, paperNote, calculator }
 
 extension E1SmallObjectTargetWireValue on E1SmallObjectTarget {
   String get canonicalObjectId {
@@ -236,10 +230,11 @@ class E1SmallObjectCascadePlanner {
         .toList(growable: false);
 
     final requests = <E1SmallObjectSpecialistRequest>[];
-    final people = anchors
-        .where((anchor) => anchor.canonicalObjectId == 'person')
-        .toList(growable: false)
-      ..sort(_compareAnchors);
+    final people =
+        anchors
+            .where((anchor) => anchor.canonicalObjectId == 'person')
+            .toList(growable: false)
+          ..sort(_compareAnchors);
 
     for (final person in people.take(maxPersonAnchors)) {
       final earRoi = _personEarRoi(person.roi);
@@ -270,7 +265,9 @@ class E1SmallObjectCascadePlanner {
             captureTimestampNs: captureTimestampNs,
             imageWidth: imageWidth,
             imageHeight: imageHeight,
-            targets: const <E1SmallObjectTarget>{E1SmallObjectTarget.smartwatch},
+            targets: const <E1SmallObjectTarget>{
+              E1SmallObjectTarget.smartwatch,
+            },
             reason: 'person_geometry_available_for_watch_specialist',
             roiHint: E1SpecialistRoiHint(
               strategy: 'person_arm_watch',
@@ -328,7 +325,9 @@ class E1SmallObjectCascadePlanner {
     }
     final canonicalObjectId =
         event.metadata['canonical_object_id']?.toString().trim() ?? '';
-    if (canonicalObjectId.isEmpty || canonicalObjectId == 'unknown') return null;
+    if (canonicalObjectId.isEmpty || canonicalObjectId == 'unknown') {
+      return null;
+    }
     final roi = E1NormalizedRoi.tryFrom(event.geometry?.boundingBox);
     if (roi == null) return null;
     return _E1GeometryAnchor(
