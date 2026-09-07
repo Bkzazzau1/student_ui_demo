@@ -57,9 +57,11 @@ jobs:
         shell: bash
         run: |
           rustfmt --edition 2024 --check \
+            native/brain_core/src/api/mod.rs \
             native/brain_core/src/api/model_event.rs \
             native/brain_core/src/api/spatiotemporal_buffer.rs \
             native/brain_core/src/api/model_event_memory.rs \
+            native/brain_core/src/api/person_tracker.rs \
             native/brain_core/tests/model_event_tests.rs \
             native/brain_core/tests/spatiotemporal_buffer_tests.rs
 
@@ -68,15 +70,19 @@ jobs:
         shell: bash
         run: |
           rustfmt --edition 2024 \
+            native/brain_core/src/api/mod.rs \
             native/brain_core/src/api/model_event.rs \
             native/brain_core/src/api/spatiotemporal_buffer.rs \
             native/brain_core/src/api/model_event_memory.rs \
+            native/brain_core/src/api/person_tracker.rs \
             native/brain_core/tests/model_event_tests.rs \
             native/brain_core/tests/spatiotemporal_buffer_tests.rs
           git diff -- \
+            native/brain_core/src/api/mod.rs \
             native/brain_core/src/api/model_event.rs \
             native/brain_core/src/api/spatiotemporal_buffer.rs \
             native/brain_core/src/api/model_event_memory.rs \
+            native/brain_core/src/api/person_tracker.rs \
             native/brain_core/tests/model_event_tests.rs \
             native/brain_core/tests/spatiotemporal_buffer_tests.rs \
             > rustfmt.patch
