@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:students_ui_demo/proctoring_demo/e1_small_object_specialist.dart';
@@ -62,20 +60,7 @@ E1SpecialistFrameInput _frame({int sourceFrameId = 42}) {
     captureTimestampNs: 1000,
     planes: <E1SpecialistFramePlane>[
       E1SpecialistFramePlane(
-        bytes: Uint8List.fromList(<int>[
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-        ]),
+        bytes: Uint8List.fromList(<int>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
         bytesPerRow: 6,
         bytesPerPixel: 3,
         width: 2,
@@ -93,89 +78,95 @@ void main() {
         .setMockMethodCallHandler(_channel, null);
   });
 
-  test('uninstalled manifest never calls native inference and emits nothing', () async {
-    var nativeCalls = 0;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, (call) async {
-          nativeCalls++;
-          return true;
-        });
+  test(
+    'uninstalled manifest never calls native inference and emits nothing',
+    () async {
+      var nativeCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            nativeCalls++;
+            return true;
+          });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => const E1SmallObjectSpecialistManifest(
-        schemaVersion: '1.0',
-        installed: false,
-        requiredCanonicalClasses: <String>{
-          'smartwatch',
-          'earbud',
-          'tablet',
-          'paper_note',
-          'calculator',
-        },
-      ),
-    );
+      final runtime = E1SmallObjectSpecialistRuntimeBridge(
+        manifestLoader: () async => const E1SmallObjectSpecialistManifest(
+          schemaVersion: '1.0',
+          installed: false,
+          requiredCanonicalClasses: <String>{
+            'smartwatch',
+            'earbud',
+            'tablet',
+            'paper_note',
+            'calculator',
+          },
+        ),
+      );
 
-    final observations = await runtime.infer(
-      request: _request(),
-      frame: _frame(),
-    );
+      final observations = await runtime.infer(
+        request: _request(),
+        frame: _frame(),
+      );
 
-    expect(observations, isEmpty);
-    expect(runtime.available, isFalse);
-    expect(nativeCalls, 0);
-  });
+      expect(observations, isEmpty);
+      expect(runtime.available, isFalse);
+      expect(nativeCalls, 0);
+    },
+  );
 
-  test('native class id maps through specialist manifest, not native label', () async {
-    final methods = <String>[];
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, (call) async {
-          methods.add(call.method);
-          if (call.method == 'initialize') return true;
-          if (call.method == 'runFrame') {
-            return <String, Object?>{
-              'available': true,
-              'outputs': <String, Object?>{
-                'objects': <Map<String, Object?>>[
-                  <String, Object?>{
-                    // Deliberately wrong/base-model label. The specialist bridge
-                    // must use class_id + manifest class_names instead.
-                    'label': 'person',
-                    'class_id': 0,
-                    'confidence': 0.91,
-                    'box': <String, Object?>{
-                      'x1': 0.1,
-                      'y1': 0.2,
-                      'x2': 0.3,
-                      'y2': 0.4,
+  test(
+    'native class id maps through specialist manifest, not native label',
+    () async {
+      final methods = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            methods.add(call.method);
+            if (call.method == 'initialize') return true;
+            if (call.method == 'runFrame') {
+              return <String, Object?>{
+                'available': true,
+                'outputs': <String, Object?>{
+                  'objects': <Map<String, Object?>>[
+                    <String, Object?>{
+                      // Deliberately wrong/base-model label. The specialist bridge
+                      // must use class_id + manifest class_names instead.
+                      'label': 'person',
+                      'class_id': 0,
+                      'confidence': 0.91,
+                      'box': <String, Object?>{
+                        'x1': 0.1,
+                        'y1': 0.2,
+                        'x2': 0.3,
+                        'y2': 0.4,
+                      },
                     },
-                  },
-                ],
-              },
-            };
-          }
-          return null;
-        });
+                  ],
+                },
+              };
+            }
+            return null;
+          });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
-    );
-    final observations = await runtime.infer(
-      request: _request(),
-      frame: _frame(),
-    );
+      final runtime = E1SmallObjectSpecialistRuntimeBridge(
+        manifestLoader: () async => _installedManifest(),
+      );
+      final observations = await runtime.infer(
+        request: _request(),
+        frame: _frame(),
+      );
 
-    expect(methods, equals(<String>['initialize', 'runFrame']));
-    expect(observations, hasLength(1));
-    final observation = observations.single;
-    expect(observation.canonicalObjectId, 'smartwatch');
-    expect(observation.modelId, 'e1-small-object-specialist');
-    expect(observation.modelVersion, '1.0.0');
-    expect(observation.sourceFrameId, 42);
-    expect(observation.captureTimestampNs, 1000);
-    expect(observation.inferenceTimestampNs, greaterThanOrEqualTo(1000));
-    expect(observation.boundingBox['x'], closeTo(0.1, 0.0001));
-    expect(observation.boundingBox['width'], closeTo(0.2, 0.0001));
-  });
+      expect(methods, equals(<String>['initialize', 'runFrame']));
+      expect(observations, hasLength(1));
+      final observation = observations.single;
+      expect(observation.canonicalObjectId, 'smartwatch');
+      expect(observation.modelId, 'e1-small-object-specialist');
+      expect(observation.modelVersion, '1.0.0');
+      expect(observation.sourceFrameId, 42);
+      expect(observation.captureTimestampNs, 1000);
+      expect(observation.inferenceTimestampNs, greaterThanOrEqualTo(1000));
+      expect(observation.boundingBox['x'], closeTo(0.1, 0.0001));
+      expect(observation.boundingBox['width'], closeTo(0.2, 0.0001));
+    },
+  );
 
   test('unrequested specialist class is dropped', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
