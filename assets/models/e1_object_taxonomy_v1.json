@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "taxonomy_id": "e1-exam-object-taxonomy",
+  "taxonomy_version": "1.0.0",
+  "description": "Canonical observable E1 person/object taxonomy. Detector classes are kept separate from contextual states such as additional-person or additional-display so policy semantics are not invented by a single-frame detector.",
+  "required_detector_classes": [
+    "person",
+    "phone",
+    "tablet",
+    "smartwatch",
+    "earbud",
+    "headphone",
+    "paper",
+    "book",
+    "note",
+    "calculator",
+    "laptop",
+    "display"
+  ],
+  "derived_context_states": [
+    "partial_person",
+    "additional_person",
+    "additional_laptop",
+    "additional_display"
+  ],
+  "canonical_aliases": {
+    "person": "person",
+    "human": "person",
+    "cell phone": "phone",
+    "mobile phone": "phone",
+    "smartphone": "phone",
+    "phone": "phone",
+    "tablet": "tablet",
+    "tablet computer": "tablet",
+    "smart watch": "smartwatch",
+    "smartwatch": "smartwatch",
+    "wristwatch": "smartwatch",
+    "earbud": "earbud",
+    "earbuds": "earbud",
+    "earphone": "earbud",
+    "earphones": "earbud",
+    "headphone": "headphone",
+    "headphones": "headphone",
+    "paper": "paper",
+    "sheet of paper": "paper",
+    "document": "paper",
+    "book": "book",
+    "textbook": "book",
+    "note": "note",
+    "notes": "note",
+    "written note": "note",
+    "calculator": "calculator",
+    "laptop": "laptop",
+    "notebook computer": "laptop",
+    "tv": "display",
+    "television": "display",
+    "monitor": "display",
+    "computer monitor": "display",
+    "screen": "display",
+    "display": "display"
+  },
+  "contextual_observation_classes": [
+    "keyboard",
+    "mouse",
+    "remote"
+  ],
+  "rules": {
+    "do_not_infer_additional_from_object_class_alone": true,
+    "do_not_map_ambiguous_notebook_label": true,
+    "unknown_labels_remain_observable_unknown_classes": true,
+    "long_gap_person_identity_requires_e2_identity": true
+  }
+}
