@@ -69,4 +69,40 @@ void main() {
 
     expect(adapter.mapResult(unavailable), isEmpty);
   });
+
+  test('does not emit formal E1 events without capture provenance', () {
+    final noProvenance = result(<String, Object?>{
+      'model_family': 'yolo',
+      'yolo_output': <double>[],
+    });
+
+    expect(
+      adapter.mapModelEvents(noProvenance, sessionId: 'attempt-001'),
+      isEmpty,
+    );
+    expect(noProvenance.hasModelEventProvenance, isFalse);
+  });
+
+  test('runtime result reports complete provenance only when all fields exist', () {
+    const withProvenance = OptimizedVisionRuntimeResult(
+      available: true,
+      backend: 'onnxRuntimeDirectML',
+      precision: 'fp16',
+      inferenceMs: 8.2,
+      outputs: <String, Object?>{},
+      sourceFrameId: 12,
+      captureTimestampNs: 1_000,
+      inferenceTimestampNs: 1_200,
+      modelId: 'e1-yolo-exam-review',
+      modelVersion: 'development-baseline-1',
+      imageWidth: 640,
+      imageHeight: 480,
+    );
+
+    expect(withProvenance.hasModelEventProvenance, isTrue);
+    final json = withProvenance.toJson();
+    expect(json['source_frame_id'], 12);
+    expect(json['capture_timestamp_ns'], 1_000);
+    expect(json['inference_timestamp_ns'], 1_200);
+  });
 }
