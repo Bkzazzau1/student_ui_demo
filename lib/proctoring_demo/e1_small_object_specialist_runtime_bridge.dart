@@ -8,6 +8,16 @@ import 'monotonic_timebase.dart';
 
 typedef E1SpecialistManifestLoader =
     Future<E1SmallObjectSpecialistManifest?> Function();
+typedef E1SpecialistModelAssetChecker = Future<bool> Function(String modelPath);
+
+Future<bool> _defaultModelAssetChecker(String modelPath) async {
+  try {
+    final data = await rootBundle.load(modelPath);
+    return data.lengthInBytes > 0;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Dedicated local/native runtime for the E1 small-object specialist.
 ///
@@ -20,16 +30,19 @@ class E1SmallObjectSpecialistRuntimeBridge
   E1SmallObjectSpecialistRuntimeBridge({
     MethodChannel? channel,
     E1SpecialistManifestLoader? manifestLoader,
+    E1SpecialistModelAssetChecker? modelAssetChecker,
     E1SpecialistRuntimeGuard guard = const E1SpecialistRuntimeGuard(),
   }) : _channel =
            channel ??
            const MethodChannel('kslas.e1_small_object_specialist_runtime'),
        _manifestLoader =
            manifestLoader ?? (() => E1SmallObjectSpecialistManifest.load()),
+       _modelAssetChecker = modelAssetChecker ?? _defaultModelAssetChecker,
        _guard = guard;
 
   final MethodChannel _channel;
   final E1SpecialistManifestLoader _manifestLoader;
+  final E1SpecialistModelAssetChecker _modelAssetChecker;
   final E1SpecialistRuntimeGuard _guard;
 
   bool _initialized = false;
@@ -50,6 +63,17 @@ class E1SmallObjectSpecialistRuntimeBridge
         return false;
       }
       _manifest = manifest;
+
+      // Fail closed before native initialization unless the exact specialist
+      // model declared by the manifest is present locally and non-empty. This
+      // keeps the shared native engine's base-detector fallback unreachable
+      // through the production specialist bridge.
+      final modelPath = manifest.modelPath?.trim() ?? '';
+      if (modelPath.isEmpty || !await _modelAssetChecker(modelPath)) {
+        _available = false;
+        return false;
+      }
+
       final initialized = await _channel.invokeMethod<bool>(
         'initialize',
         manifest.toNativePolicy(),
