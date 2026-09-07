@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 
+import 'monotonic_timebase.dart';
+
 class LiveCameraFrame {
   const LiveCameraFrame({
     required this.sequence,
@@ -11,6 +13,7 @@ class LiveCameraFrame {
     required this.purpose,
     required this.image,
     required this.capturedAt,
+    required this.captureTimestampNs,
   });
 
   final int sequence;
@@ -19,18 +22,23 @@ class LiveCameraFrame {
   final CameraImage image;
   final DateTime capturedAt;
 
+  /// Process-monotonic capture time used for cross-model temporal alignment.
+  final int captureTimestampNs;
+
   int get width => image.width;
   int get height => image.height;
   String get formatGroup => image.format.group.name;
 
   Map<String, Object?> toMetadata() => <String, Object?>{
     'frame_sequence': sequence,
+    'source_frame_id': sequence,
     'frame_owner': owner,
     'frame_purpose': purpose,
     'frame_width': width,
     'frame_height': height,
     'frame_format': formatGroup,
     'captured_at': capturedAt.toUtc().toIso8601String(),
+    'capture_timestamp_ns': captureTimestampNs,
   };
 }
 
@@ -60,12 +68,14 @@ class LiveCameraFrameBus {
     required String purpose,
     required CameraImage image,
   }) {
+    final captureTimestampNs = MonotonicTimebase.instance.nowNs;
     final frame = LiveCameraFrame(
       sequence: ++_sequence,
       owner: owner,
       purpose: purpose,
       image: image,
       capturedAt: DateTime.now(),
+      captureTimestampNs: captureTimestampNs,
     );
     _latestFrame = frame;
     if (!_controller.isClosed) {
@@ -77,6 +87,7 @@ class LiveCameraFrameBus {
   Map<String, Object?> currentState() => <String, Object?>{
     'latest_frame_sequence': _latestFrame?.sequence,
     'latest_frame_at': _latestFrame?.capturedAt.toUtc().toIso8601String(),
+    'latest_capture_timestamp_ns': _latestFrame?.captureTimestampNs,
     'has_listeners': hasListeners,
   };
 }
