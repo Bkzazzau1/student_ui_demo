@@ -1,9 +1,13 @@
-import 'e1_model_event_memory_coordinator.dart';
 import 'e1_small_object_specialist.dart';
 import 'e1_small_object_specialist_runtime.dart';
 import 'e1_specialist_frame.dart';
 import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
+
+typedef E1SpecialistObservationIngestor =
+    Future<({int ingested, int failed})> Function(
+      Iterable<E1SmallObjectSpecialistObservation> observations,
+    );
 
 class E1SmallObjectCascadeSummary {
   const E1SmallObjectCascadeSummary({
@@ -22,22 +26,22 @@ class E1SmallObjectCascadeSummary {
 }
 
 /// Runs specialist inference only from real E1 frame provenance and sends only
-/// validated specialist observations into the existing Rust-owned memory.
+/// validated specialist observations into the caller-owned evidence sink.
 ///
 /// The coordinator never creates evidence from a planner request. A request is
 /// merely a routing decision; only a validated local specialist observation can
-/// become a ModelEventV1.
+/// become a ModelEventV1 downstream.
 class E1SmallObjectCascadeCoordinator {
   const E1SmallObjectCascadeCoordinator({
     required this.runtime,
-    required this.memory,
+    required this.ingestObservations,
     this.planner = const E1SmallObjectCascadePlanner(),
     this.guard = const E1SpecialistRuntimeGuard(),
     this.baseAdapter = const OptimizedVisionObjectEventAdapter(),
   });
 
   final E1SmallObjectSpecialistRuntime runtime;
-  final E1ModelEventMemoryCoordinator memory;
+  final E1SpecialistObservationIngestor ingestObservations;
   final E1SmallObjectCascadePlanner planner;
   final E1SpecialistRuntimeGuard guard;
   final OptimizedVisionObjectEventAdapter baseAdapter;
@@ -96,10 +100,7 @@ class E1SmallObjectCascadeCoordinator {
       if (accepted.isEmpty) continue;
       observationsAccepted += accepted.length;
 
-      final ingest = await memory.ingestSpecialistObservations(
-        sessionId: sessionId,
-        observations: accepted,
-      );
+      final ingest = await ingestObservations(accepted);
       eventsIngested += ingest.ingested;
       ingestFailures += ingest.failed;
     }
