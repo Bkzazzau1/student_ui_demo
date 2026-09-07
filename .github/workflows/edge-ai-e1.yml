@@ -10,6 +10,8 @@ on:
       - 'lib/proctoring_demo/optimized_vision_object_event_adapter.dart'
       - 'lib/proctoring_demo/optimized_vision_runtime_bridge.dart'
       - 'lib/proctoring_demo/yolo_exam_review_manifest.dart'
+      - 'lib/rust/**'
+      - 'test/brain_core_runtime_entrypoint_test.dart'
       - 'test/e1_model_event_adapter_test.dart'
       - 'test/e1_model_event_memory_coordinator_test.dart'
       - 'test/model_event_v1_test.dart'
@@ -27,6 +29,8 @@ on:
       - 'lib/proctoring_demo/optimized_vision_object_event_adapter.dart'
       - 'lib/proctoring_demo/optimized_vision_runtime_bridge.dart'
       - 'lib/proctoring_demo/yolo_exam_review_manifest.dart'
+      - 'lib/rust/**'
+      - 'test/brain_core_runtime_entrypoint_test.dart'
       - 'test/e1_model_event_adapter_test.dart'
       - 'test/e1_model_event_memory_coordinator_test.dart'
       - 'test/model_event_v1_test.dart'
@@ -56,6 +60,7 @@ jobs:
       - name: Run E1 contract and adapter tests
         run: >-
           flutter test
+          test/brain_core_runtime_entrypoint_test.dart
           test/model_event_v1_test.dart
           test/e1_model_event_adapter_test.dart
           test/e1_model_event_memory_coordinator_test.dart
