@@ -1,0 +1,40 @@
+name: E1 Live Memory Migration
+
+on:
+  push:
+    branches:
+      - 'edge-ai/e1-event-wiring'
+    paths:
+      - 'tooling/edge_ai/wire_e1_model_event_memory.py'
+      - '.github/workflows/e1-live-memory-migration.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    name: Wire live E1 events into Rust memory
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: edge-ai/e1-event-wiring
+
+      - name: Apply exact source migration
+        run: python tooling/edge_ai/wire_e1_model_event_memory.py
+
+      - name: Verify only intended live file changed
+        shell: bash
+        run: |
+          changed="$(git diff --name-only)"
+          test "$changed" = 'lib/proctoring_demo/live_exam_monitor.dart'
+
+      - name: Commit live ingress wiring
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib/proctoring_demo/live_exam_monitor.dart
+          git commit -m 'feat: wire live E1 ModelEventV1 into Rust memory'
+          git push
