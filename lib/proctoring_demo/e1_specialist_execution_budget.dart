@@ -81,8 +81,12 @@ class E1SpecialistExecutionBudget {
 
     final groups = <String, List<E1SmallObjectSpecialistRequest>>{};
     for (final request in eligible) {
-      groups.putIfAbsent(_routeKey(request), () => <E1SmallObjectSpecialistRequest>[])
-        ..add(request);
+      groups
+          .putIfAbsent(
+            _routeKey(request),
+            () => <E1SmallObjectSpecialistRequest>[],
+          )
+          .add(request);
     }
     if (groups.isEmpty) {
       return const <E1SmallObjectSpecialistRequest>[];
@@ -116,10 +120,7 @@ class E1SpecialistExecutionBudget {
   }
 
   /// Releases the in-flight reservation for the exact scheduled batch.
-  void complete({
-    required String sessionId,
-    required int captureTimestampNs,
-  }) {
+  void complete({required String sessionId, required int captureTimestampNs}) {
     if (_sessionId != sessionId ||
         _reservedCaptureTimestampNs != captureTimestampNs) {
       return;
@@ -149,10 +150,11 @@ class E1SpecialistExecutionBudget {
   }
 
   String _routeKey(E1SmallObjectSpecialistRequest request) {
-    final targets = request.targets
-        .map((target) => target.canonicalObjectId)
-        .toList(growable: false)
-      ..sort();
+    final targets =
+        request.targets
+            .map((target) => target.canonicalObjectId)
+            .toList(growable: false)
+          ..sort();
     return '${request.roiHint.strategy}|${targets.join(',')}';
   }
 }
