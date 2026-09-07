@@ -5,9 +5,9 @@ use flutter_rust_bridge::frb;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use super::model_event::ModelEventV1;
-use super::person_tracker::PersonTrackerV1;
-use super::spatiotemporal_buffer::{RingBufferInsertResultV1, SpatiotemporalRingBufferV1};
+use crate::runtime::model_event::ModelEventV1;
+use crate::runtime::person_tracker::PersonTrackerV1;
+use crate::runtime::spatiotemporal_buffer::{RingBufferInsertResultV1, SpatiotemporalRingBufferV1};
 
 const DEFAULT_MODEL_EVENT_CAPACITY: usize = 4096;
 const MAX_MODEL_EVENT_CAPACITY: usize = 100_000;
@@ -205,7 +205,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
-    use crate::api::model_event::{
+    use crate::runtime::model_event::{
         BoundingBoxV1, MODEL_EVENT_SCHEMA_VERSION, ModelGeometryV1, ValidityIntervalV1,
     };
 
