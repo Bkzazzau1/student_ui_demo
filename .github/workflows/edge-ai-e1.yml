@@ -22,6 +22,7 @@ on:
       - 'test/e1_object_taxonomy_test.dart'
       - 'test/e1_object_taxonomy_manifest_alignment_test.dart'
       - 'test/e1_small_object_specialist_test.dart'
+      - 'test/e1_small_object_specialist_compile_guard_test.dart'
       - 'test/model_event_v1_test.dart'
       - 'test/object_review_event_mapper_test.dart'
       - 'test/optimized_vision_object_event_adapter_test.dart'
@@ -51,6 +52,7 @@ on:
       - 'test/e1_object_taxonomy_test.dart'
       - 'test/e1_object_taxonomy_manifest_alignment_test.dart'
       - 'test/e1_small_object_specialist_test.dart'
+      - 'test/e1_small_object_specialist_compile_guard_test.dart'
       - 'test/model_event_v1_test.dart'
       - 'test/object_review_event_mapper_test.dart'
       - 'test/optimized_vision_object_event_adapter_test.dart'
@@ -86,5 +88,6 @@ jobs:
           test/e1_object_taxonomy_test.dart
           test/e1_object_taxonomy_manifest_alignment_test.dart
           test/e1_small_object_specialist_test.dart
+          test/e1_small_object_specialist_compile_guard_test.dart
           test/object_review_event_mapper_test.dart
           test/optimized_vision_object_event_adapter_test.dart
