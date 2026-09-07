@@ -165,133 +165,142 @@ void main() {
       expect(roi.bottom, greaterThanOrEqualTo(0.8));
     });
 
-    test('missing, malformed, or mismatched geometry produces no ROI request', () {
-      final missing = planner.plan(
-        sessionId: 'attempt-001',
-        sourceFrameId: 12,
-        captureTimestampNs: 1000,
-        imageWidth: 640,
-        imageHeight: 480,
-        baseEvents: <ModelEventV1Payload>[
-          _baseEvent(canonicalObjectId: 'person'),
-        ],
-      );
-      expect(missing, isEmpty);
+    test(
+      'missing, malformed, or mismatched geometry produces no ROI request',
+      () {
+        final missing = planner.plan(
+          sessionId: 'attempt-001',
+          sourceFrameId: 12,
+          captureTimestampNs: 1000,
+          imageWidth: 640,
+          imageHeight: 480,
+          baseEvents: <ModelEventV1Payload>[
+            _baseEvent(canonicalObjectId: 'person'),
+          ],
+        );
+        expect(missing, isEmpty);
 
-      final malformed = planner.plan(
-        sessionId: 'attempt-001',
-        sourceFrameId: 12,
-        captureTimestampNs: 1000,
-        imageWidth: 640,
-        imageHeight: 480,
-        baseEvents: <ModelEventV1Payload>[
-          _baseEvent(
-            canonicalObjectId: 'person',
-            box: const <String, Object?>{
-              'x': 0.9,
-              'y': 0.1,
-              'width': 0.3,
-              'height': 0.4,
-            },
-          ),
-        ],
-      );
-      expect(malformed, isEmpty);
+        final malformed = planner.plan(
+          sessionId: 'attempt-001',
+          sourceFrameId: 12,
+          captureTimestampNs: 1000,
+          imageWidth: 640,
+          imageHeight: 480,
+          baseEvents: <ModelEventV1Payload>[
+            _baseEvent(
+              canonicalObjectId: 'person',
+              box: const <String, Object?>{
+                'x': 0.9,
+                'y': 0.1,
+                'width': 0.3,
+                'height': 0.4,
+              },
+            ),
+          ],
+        );
+        expect(malformed, isEmpty);
 
-      final wrongFrame = planner.plan(
-        sessionId: 'attempt-001',
-        sourceFrameId: 12,
-        captureTimestampNs: 1000,
-        imageWidth: 640,
-        imageHeight: 480,
-        baseEvents: <ModelEventV1Payload>[
-          _baseEvent(
-            canonicalObjectId: 'person',
-            sourceFrameId: 99,
-            box: const <String, Object?>{
-              'x': 0.2,
-              'y': 0.1,
-              'width': 0.4,
-              'height': 0.8,
-            },
-          ),
-        ],
-      );
-      expect(wrongFrame, isEmpty);
-    });
+        final wrongFrame = planner.plan(
+          sessionId: 'attempt-001',
+          sourceFrameId: 12,
+          captureTimestampNs: 1000,
+          imageWidth: 640,
+          imageHeight: 480,
+          baseEvents: <ModelEventV1Payload>[
+            _baseEvent(
+              canonicalObjectId: 'person',
+              sourceFrameId: 99,
+              box: const <String, Object?>{
+                'x': 0.2,
+                'y': 0.1,
+                'width': 0.4,
+                'height': 0.8,
+              },
+            ),
+          ],
+        );
+        expect(wrongFrame, isEmpty);
+      },
+    );
   });
 
   group('E1SmallObjectSpecialistObservation', () {
-    test('accepts specialist evidence only with valid provenance and geometry', () {
-      const observation = E1SmallObjectSpecialistObservation(
-        canonicalObjectId: 'smartwatch',
-        confidence: 0.88,
-        boundingBox: <String, double>{
-          'x': 0.2,
-          'y': 0.3,
-          'width': 0.1,
-          'height': 0.1,
-        },
-        modelId: 'e1-small-object-specialist',
-        modelVersion: 'test-version-1',
-        sourceFrameId: 42,
-        captureTimestampNs: 1000,
-        inferenceTimestampNs: 1100,
-      );
+    test(
+      'accepts specialist evidence only with valid provenance and geometry',
+      () {
+        const observation = E1SmallObjectSpecialistObservation(
+          canonicalObjectId: 'smartwatch',
+          confidence: 0.88,
+          boundingBox: <String, double>{
+            'x': 0.2,
+            'y': 0.3,
+            'width': 0.1,
+            'height': 0.1,
+          },
+          modelId: 'e1-small-object-specialist',
+          modelVersion: 'test-version-1',
+          sourceFrameId: 42,
+          captureTimestampNs: 1000,
+          inferenceTimestampNs: 1100,
+        );
 
-      expect(observation.isValid, isTrue);
-    });
+        expect(observation.isValid, isTrue);
+      },
+    );
 
-    test('rejects unsupported class, missing model provenance, and time reversal', () {
-      const unsupported = E1SmallObjectSpecialistObservation(
-        canonicalObjectId: 'phone',
-        confidence: 0.9,
-        boundingBox: <String, double>{
-          'x': 0.1,
-          'y': 0.1,
-          'width': 0.2,
-          'height': 0.2,
-        },
-        modelId: 'specialist',
-        modelVersion: '1',
-        sourceFrameId: 1,
-        captureTimestampNs: 10,
-        inferenceTimestampNs: 11,
-      );
-      const missingModel = E1SmallObjectSpecialistObservation(
-        canonicalObjectId: 'earbud',
-        confidence: 0.9,
-        boundingBox: <String, double>{
-          'x': 0.1,
-          'y': 0.1,
-          'width': 0.2,
-          'height': 0.2,
-        },
-        modelId: '',
-        modelVersion: '1',
-        sourceFrameId: 1,
-        captureTimestampNs: 10,
-        inferenceTimestampNs: 11,
-      );
-      const reversedTime = E1SmallObjectSpecialistObservation(
-        canonicalObjectId: 'calculator',
-        confidence: 0.9,
-        boundingBox: <String, double>{
-          'x': 0.1,
-          'y': 0.1,
-          'width': 0.2,
-          'height': 0.2,
-        },
-        modelId: 'specialist',
-        modelVersion: '1',
-        sourceFrameId: 1,
-        captureTimestampNs: 20,
-        inferenceTimestampNs: 19,
-      );
+    test(
+      'rejects unsupported class, missing model provenance, and time reversal',
+      () {
+        const unsupported = E1SmallObjectSpecialistObservation(
+          canonicalObjectId: 'phone',
+          confidence: 0.9,
+          boundingBox: <String, double>{
+            'x': 0.1,
+            'y': 0.1,
+            'width': 0.2,
+            'height': 0.2,
+          },
+          modelId: 'specialist',
+          modelVersion: '1',
+          sourceFrameId: 1,
+          captureTimestampNs: 10,
+          inferenceTimestampNs: 11,
+        );
+        const missingModel = E1SmallObjectSpecialistObservation(
+          canonicalObjectId: 'earbud',
+          confidence: 0.9,
+          boundingBox: <String, double>{
+            'x': 0.1,
+            'y': 0.1,
+            'width': 0.2,
+            'height': 0.2,
+          },
+          modelId: '',
+          modelVersion: '1',
+          sourceFrameId: 1,
+          captureTimestampNs: 10,
+          inferenceTimestampNs: 11,
+        );
+        const reversedTime = E1SmallObjectSpecialistObservation(
+          canonicalObjectId: 'calculator',
+          confidence: 0.9,
+          boundingBox: <String, double>{
+            'x': 0.1,
+            'y': 0.1,
+            'width': 0.2,
+            'height': 0.2,
+          },
+          modelId: 'specialist',
+          modelVersion: '1',
+          sourceFrameId: 1,
+          captureTimestampNs: 20,
+          inferenceTimestampNs: 19,
+        );
 
-      expect(unsupported.isValid, isFalse);
-      expect(missingModel.isValid, isFalse);
-      expect(reversedTime.isValid, isFalse);
-    });
+        expect(unsupported.isValid, isFalse);
+        expect(missingModel.isValid, isFalse);
+        expect(reversedTime.isValid, isFalse);
+      },
+    );
   });
 }
