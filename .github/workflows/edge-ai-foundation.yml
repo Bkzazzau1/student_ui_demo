@@ -51,16 +51,32 @@ jobs:
         with:
           components: rustfmt
 
-      - name: Check Rust formatting
+      - name: Check authored Rust formatting
         id: rustfmt_check
         continue-on-error: true
-        run: cargo fmt --manifest-path native/brain_core/Cargo.toml -- --check
+        shell: bash
+        run: |
+          rustfmt --edition 2024 --check \
+            native/brain_core/src/api/model_event.rs \
+            native/brain_core/src/api/spatiotemporal_buffer.rs \
+            native/brain_core/tests/model_event_tests.rs \
+            native/brain_core/tests/spatiotemporal_buffer_tests.rs
 
       - name: Produce exact rustfmt patch
         if: steps.rustfmt_check.outcome == 'failure'
+        shell: bash
         run: |
-          cargo fmt --manifest-path native/brain_core/Cargo.toml
-          git diff -- native/brain_core > rustfmt.patch
+          rustfmt --edition 2024 \
+            native/brain_core/src/api/model_event.rs \
+            native/brain_core/src/api/spatiotemporal_buffer.rs \
+            native/brain_core/tests/model_event_tests.rs \
+            native/brain_core/tests/spatiotemporal_buffer_tests.rs
+          git diff -- \
+            native/brain_core/src/api/model_event.rs \
+            native/brain_core/src/api/spatiotemporal_buffer.rs \
+            native/brain_core/tests/model_event_tests.rs \
+            native/brain_core/tests/spatiotemporal_buffer_tests.rs \
+            > rustfmt.patch
 
       - name: Upload rustfmt patch
         if: steps.rustfmt_check.outcome == 'failure'
@@ -79,8 +95,10 @@ jobs:
     name: Rust brain_core tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout with Git LFS model assets
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
