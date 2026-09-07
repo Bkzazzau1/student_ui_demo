@@ -1,0 +1,35 @@
+{
+  "example_only": true,
+  "experiment_schema_version": "1.0",
+  "experiment_id": "example-e1-base-exp-001",
+  "model_role": "base",
+  "framework": {
+    "name": "example-yolo-framework",
+    "version": "0.0-example"
+  },
+  "model": {
+    "architecture": "example-architecture-not-selected-for-e1",
+    "initialization": "scratch",
+    "checkpoint": null
+  },
+  "training": {
+    "seed": 17,
+    "image_size": 320,
+    "epochs": 1,
+    "batch_size": 1,
+    "optimizer": "example-optimizer",
+    "learning_rate": 0.001,
+    "weight_decay": 0.0,
+    "workers": 0,
+    "precision": "fp32",
+    "deterministic": true
+  },
+  "augmentation": {
+    "enabled": false,
+    "parameters": {}
+  },
+  "execution": {
+    "device": "example-device"
+  },
+  "warning": "Format illustration only. No value in this file is a selected E1 model, hyperparameter, benchmark result, acceptance target, or production setting."
+}
