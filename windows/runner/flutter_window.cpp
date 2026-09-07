@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "e1_small_object_specialist_runtime_channel.h"
 #include "exam_window_channel.h"
 #include "face_landmarker_runtime_channel.h"
 #include "face_embedding_runtime_channel.h"
@@ -30,6 +31,8 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   RegisterOptimizedVisionRuntimeChannel(flutter_controller_->engine()->messenger());
+  RegisterE1SmallObjectSpecialistRuntimeChannel(
+      flutter_controller_->engine()->messenger());
   RegisterFaceLandmarkerRuntimeChannel(flutter_controller_->engine()->messenger());
   RegisterFaceEmbeddingRuntimeChannel(flutter_controller_->engine()->messenger());
   RegisterExamWindowChannel(flutter_controller_->engine()->messenger(), GetHandle());
