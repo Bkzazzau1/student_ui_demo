@@ -137,7 +137,9 @@ impl SpatiotemporalRingBufferV1 {
                 event.capture_timestamp_ns <= at_or_before_capture_timestamp_ns
                     && event.class_id == class_id
                     && match track_id {
-                        Some(expected_track_id) => event.track_id.as_deref() == Some(expected_track_id),
+                        Some(expected_track_id) => {
+                            event.track_id.as_deref() == Some(expected_track_id)
+                        }
                         None => true,
                     }
             })
@@ -157,6 +159,9 @@ impl SpatiotemporalRingBufferV1 {
 fn event_order(left: &ModelEventV1, right: &ModelEventV1) -> Ordering {
     left.capture_timestamp_ns
         .cmp(&right.capture_timestamp_ns)
-        .then_with(|| left.inference_timestamp_ns.cmp(&right.inference_timestamp_ns))
+        .then_with(|| {
+            left.inference_timestamp_ns
+                .cmp(&right.inference_timestamp_ns)
+        })
         .then_with(|| left.event_id.cmp(&right.event_id))
 }
