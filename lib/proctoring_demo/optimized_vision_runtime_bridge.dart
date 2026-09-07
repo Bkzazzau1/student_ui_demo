@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 
+import 'live_camera_frame_bus.dart';
 import 'monotonic_timebase.dart';
 import 'optimized_vision_runtime_policy.dart';
 import 'yolo_exam_review_manifest.dart';
@@ -126,6 +127,14 @@ class OptimizedVisionRuntimeBridge {
   }) async {
     if (!await initialize()) return null;
     try {
+      final publishedFrame =
+          sourceFrameId == null || captureTimestampNs == null
+          ? LiveCameraFrameBus.instance.frameForImage(image)
+          : null;
+      final resolvedSourceFrameId = sourceFrameId ?? publishedFrame?.sequence;
+      final resolvedCaptureTimestampNs =
+          captureTimestampNs ?? publishedFrame?.captureTimestampNs;
+
       final started = DateTime.now();
       final response = await _channel.invokeMapMethod<String, Object?>(
         'runFrame',
@@ -139,8 +148,8 @@ class OptimizedVisionRuntimeBridge {
           'height': image.height,
           'format': image.format.group.name,
           'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
-          'source_frame_id': sourceFrameId,
-          'capture_timestamp_ns': captureTimestampNs,
+          'source_frame_id': resolvedSourceFrameId,
+          'capture_timestamp_ns': resolvedCaptureTimestampNs,
           'planes': image.planes
               .map(
                 (plane) => <String, Object?>{
@@ -169,8 +178,8 @@ class OptimizedVisionRuntimeBridge {
         outputs: Map<String, Object?>.from(
           response['outputs'] as Map? ?? const <String, Object?>{},
         ),
-        sourceFrameId: sourceFrameId,
-        captureTimestampNs: captureTimestampNs,
+        sourceFrameId: resolvedSourceFrameId,
+        captureTimestampNs: resolvedCaptureTimestampNs,
         inferenceTimestampNs: inferenceTimestampNs,
         modelId: _manifest?.modelId,
         modelVersion: _manifest?.modelVersion,
