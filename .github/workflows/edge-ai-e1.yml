@@ -1,0 +1,56 @@
+name: Edge AI E1 Wiring
+
+on:
+  pull_request:
+    paths:
+      - 'assets/models/yolo_exam_review/**'
+      - 'lib/proctoring_demo/e1_model_event_adapter.dart'
+      - 'lib/proctoring_demo/model_event_v1.dart'
+      - 'lib/proctoring_demo/optimized_vision_object_event_adapter.dart'
+      - 'lib/proctoring_demo/optimized_vision_runtime_bridge.dart'
+      - 'lib/proctoring_demo/yolo_exam_review_manifest.dart'
+      - 'test/e1_model_event_adapter_test.dart'
+      - 'test/model_event_v1_test.dart'
+      - 'test/optimized_vision_object_event_adapter_test.dart'
+      - '.github/workflows/edge-ai-e1.yml'
+  push:
+    branches:
+      - 'edge-ai/e1-event-wiring'
+    paths:
+      - 'assets/models/yolo_exam_review/**'
+      - 'lib/proctoring_demo/e1_model_event_adapter.dart'
+      - 'lib/proctoring_demo/model_event_v1.dart'
+      - 'lib/proctoring_demo/optimized_vision_object_event_adapter.dart'
+      - 'lib/proctoring_demo/optimized_vision_runtime_bridge.dart'
+      - 'lib/proctoring_demo/yolo_exam_review_manifest.dart'
+      - 'test/e1_model_event_adapter_test.dart'
+      - 'test/model_event_v1_test.dart'
+      - 'test/optimized_vision_object_event_adapter_test.dart'
+      - '.github/workflows/edge-ai-e1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-e1:
+    name: Flutter E1 contract and adapter tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Run E1 contract and adapter tests
+        run: >-
+          flutter test
+          test/model_event_v1_test.dart
+          test/e1_model_event_adapter_test.dart
+          test/optimized_vision_object_event_adapter_test.dart
