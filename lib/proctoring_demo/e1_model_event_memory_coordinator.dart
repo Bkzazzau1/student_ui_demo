@@ -1,6 +1,7 @@
 import 'e1_small_object_cascade_coordinator.dart';
 import 'e1_small_object_specialist.dart';
 import 'e1_small_object_specialist_runtime_bridge.dart';
+import 'e1_specialist_execution_budget.dart';
 import 'e1_specialist_frame.dart';
 import 'e1_specialist_model_event_adapter.dart';
 import 'live_camera_frame_bus.dart';
@@ -43,6 +44,8 @@ class E1ModelEventMemoryCoordinator {
 
   static final E1SmallObjectSpecialistRuntimeBridge _liveSpecialistRuntime =
       E1SmallObjectSpecialistRuntimeBridge();
+  static final E1SpecialistExecutionBudget _liveSpecialistExecutionBudget =
+      E1SpecialistExecutionBudget();
 
   final ModelEventMemorySink sink;
   final OptimizedVisionObjectEventAdapter adapter;
@@ -120,6 +123,7 @@ class E1ModelEventMemoryCoordinator {
 
     final cascade = E1SmallObjectCascadeCoordinator(
       runtime: _liveSpecialistRuntime,
+      executionBudget: _liveSpecialistExecutionBudget,
       ingestObservations: (observations) async {
         final summary = await ingestSpecialistObservations(
           sessionId: sessionId,
@@ -203,6 +207,7 @@ class E1ModelEventMemoryCoordinator {
     if (sessionId.trim().isEmpty) return false;
     try {
       await sink.clearSession(sessionId);
+      _liveSpecialistExecutionBudget.clearSession(sessionId);
       return true;
     } catch (_) {
       return false;
