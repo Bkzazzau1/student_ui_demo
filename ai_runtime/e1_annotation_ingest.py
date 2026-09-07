@@ -46,6 +46,10 @@ class E1AnnotationIngestInputError(ValueError):
         self.message = message
 
 
+def _issue(code: str, path: str, message: str) -> ValidationIssue:
+    return ValidationIssue(code=code, path=path, message=message)
+
+
 def _read_string(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
 
@@ -63,8 +67,8 @@ def _positive_int(value: Any) -> int | None:
 def _finite_number(value: Any) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    number = float(value)
-    return number if math.isfinite(number) else None
+    numeric = float(value)
+    return numeric if math.isfinite(numeric) else None
 
 
 def _normalized_path(value: Any) -> str:
@@ -76,77 +80,84 @@ def _normalized_path(value: Any) -> str:
 
 def _stable_id(prefix: str, *parts: str) -> str:
     payload = "\x1f".join(parts).encode("utf-8")
-    digest = hashlib.sha256(payload).hexdigest()[:20]
-    return f"{prefix}_{digest}"
+    return f"{prefix}_{hashlib.sha256(payload).hexdigest()[:20]}"
 
 
-def _round_normalized(value: float) -> float:
+def _round_unit(value: float) -> float:
     return round(value, 10)
 
 
-def _box_signature(box: Sequence[float]) -> str:
-    return ",".join(f"{value:.10f}" for value in box)
+def _canonical_box(x: float, y: float, width: float, height: float) -> dict[str, float]:
+    return {
+        "x": _round_unit(x),
+        "y": _round_unit(y),
+        "width": _round_unit(width),
+        "height": _round_unit(height),
+    }
 
 
-def _issue(code: str, path: str, message: str) -> ValidationIssue:
-    return ValidationIssue(code=code, path=path, message=message)
+def _box_signature(box: Mapping[str, float]) -> str:
+    return ",".join(
+        f"{box[key]:.10f}" for key in ("x", "y", "width", "height")
+    )
 
 
-def _validate_unit_xywh(
+def _four_numbers(raw_box: Any, *, path: str) -> tuple[list[float] | None, list[ValidationIssue]]:
+    if (
+        not isinstance(raw_box, Sequence)
+        or isinstance(raw_box, (str, bytes))
+        or len(raw_box) != 4
+    ):
+        return None, [
+            _issue("invalid_bbox", path, "Bounding box must contain exactly four numbers.")
+        ]
+    values = [_finite_number(value) for value in raw_box]
+    if any(value is None for value in values):
+        return None, [
+            _issue("invalid_bbox", path, "Bounding box values must be finite numbers.")
+        ]
+    return [float(value) for value in values if value is not None], []
+
+
+def _normalized_xywh(
     raw_box: Any,
     *,
     path: str,
-) -> tuple[list[float] | None, list[ValidationIssue]]:
-    issues: list[ValidationIssue] = []
-    if not isinstance(raw_box, Sequence) or isinstance(raw_box, (str, bytes)):
-        return None, [_issue("invalid_bbox", path, "Bounding box must be a four-number list.")]
-    if len(raw_box) != 4:
-        return None, [_issue("invalid_bbox", path, "Bounding box must contain exactly four numbers.")]
-
-    values = [_finite_number(value) for value in raw_box]
-    if any(value is None for value in values):
-        return None, [_issue("invalid_bbox", path, "Bounding box values must be finite numbers.")]
-
-    x, y, width, height = (float(value) for value in values if value is not None)
+) -> tuple[dict[str, float] | None, list[ValidationIssue]]:
+    values, issues = _four_numbers(raw_box, path=path)
+    if values is None:
+        return None, issues
+    x, y, width, height = values
     if x < 0 or y < 0 or width <= 0 or height <= 0:
-        issues.append(
+        return None, [
             _issue(
                 "invalid_bbox_geometry",
                 path,
                 "Normalized x/y must be non-negative and width/height must be positive.",
             )
-        )
+        ]
     if x + width > 1.0 + 1e-9 or y + height > 1.0 + 1e-9:
-        issues.append(
+        return None, [
             _issue(
                 "bbox_out_of_bounds",
                 path,
                 "Normalized bounding box must stay inside the full source image.",
             )
-        )
-    if issues:
-        return None, issues
-    return [
-        _round_normalized(x),
-        _round_normalized(y),
-        _round_normalized(width),
-        _round_normalized(height),
-    ], []
+        ]
+    return _canonical_box(x, y, width, height), []
 
 
-def _validate_pixel_xywh(
+def _pixel_xywh(
     raw_box: Any,
     *,
     image_width: int,
     image_height: int,
     path: str,
-) -> tuple[list[float] | None, list[ValidationIssue]]:
-    if not isinstance(raw_box, Sequence) or isinstance(raw_box, (str, bytes)) or len(raw_box) != 4:
-        return None, [_issue("invalid_bbox", path, "Pixel xywh box must contain exactly four numbers.")]
-    values = [_finite_number(value) for value in raw_box]
-    if any(value is None for value in values):
-        return None, [_issue("invalid_bbox", path, "Pixel xywh values must be finite numbers.")]
-    x, y, width, height = (float(value) for value in values if value is not None)
+) -> tuple[dict[str, float] | None, list[ValidationIssue]]:
+    values, issues = _four_numbers(raw_box, path=path)
+    if values is None:
+        return None, issues
+    x, y, width, height = values
     if x < 0 or y < 0 or width <= 0 or height <= 0:
         return None, [
             _issue(
@@ -163,25 +174,25 @@ def _validate_pixel_xywh(
                 "Pixel bounding box must stay inside the full source image.",
             )
         ]
-    return _validate_unit_xywh(
-        [x / image_width, y / image_height, width / image_width, height / image_height],
-        path=path,
-    )
+    return _canonical_box(
+        x / image_width,
+        y / image_height,
+        width / image_width,
+        height / image_height,
+    ), []
 
 
-def _validate_pixel_xyxy(
+def _pixel_xyxy(
     raw_box: Any,
     *,
     image_width: int,
     image_height: int,
     path: str,
-) -> tuple[list[float] | None, list[ValidationIssue]]:
-    if not isinstance(raw_box, Sequence) or isinstance(raw_box, (str, bytes)) or len(raw_box) != 4:
-        return None, [_issue("invalid_bbox", path, "Pixel xyxy box must contain exactly four numbers.")]
-    values = [_finite_number(value) for value in raw_box]
-    if any(value is None for value in values):
-        return None, [_issue("invalid_bbox", path, "Pixel xyxy values must be finite numbers.")]
-    x1, y1, x2, y2 = (float(value) for value in values if value is not None)
+) -> tuple[dict[str, float] | None, list[ValidationIssue]]:
+    values, issues = _four_numbers(raw_box, path=path)
+    if values is None:
+        return None, issues
+    x1, y1, x2, y2 = values
     if x1 < 0 or y1 < 0 or x2 <= x1 or y2 <= y1:
         return None, [
             _issue(
@@ -198,12 +209,12 @@ def _validate_pixel_xyxy(
                 "Pixel bounding box must stay inside the full source image.",
             )
         ]
-    return _validate_pixel_xywh(
-        [x1, y1, x2 - x1, y2 - y1],
-        image_width=image_width,
-        image_height=image_height,
-        path=path,
-    )
+    return _canonical_box(
+        x1 / image_width,
+        y1 / image_height,
+        (x2 - x1) / image_width,
+        (y2 - y1) / image_height,
+    ), []
 
 
 def _convert_geometry(
@@ -212,7 +223,7 @@ def _convert_geometry(
     image_width: int,
     image_height: int,
     path: str,
-) -> tuple[list[float] | None, list[ValidationIssue]]:
+) -> tuple[dict[str, float] | None, list[ValidationIssue]]:
     present = [key for key in _GEOMETRY_KEYS if key in annotation]
     if len(present) != 1:
         return None, [
@@ -222,19 +233,18 @@ def _convert_geometry(
                 "Each annotation must provide exactly one of bbox_xywh_normalized, bbox_xywh_pixels, or bbox_xyxy_pixels.",
             )
         ]
-
     key = present[0]
     box_path = f"{path}.{key}"
     if key == "bbox_xywh_normalized":
-        return _validate_unit_xywh(annotation[key], path=box_path)
+        return _normalized_xywh(annotation[key], path=box_path)
     if key == "bbox_xywh_pixels":
-        return _validate_pixel_xywh(
+        return _pixel_xywh(
             annotation[key],
             image_width=image_width,
             image_height=image_height,
             path=box_path,
         )
-    return _validate_pixel_xyxy(
+    return _pixel_xyxy(
         annotation[key],
         image_width=image_width,
         image_height=image_height,
@@ -248,8 +258,7 @@ def build_dataset_manifest(
     """Build one frozen E1 manifest from one staged annotation JSON object."""
 
     issues: list[ValidationIssue] = []
-    ingest_version = _read_string(staging.get("ingest_schema_version"))
-    if ingest_version != E1_ANNOTATION_INGEST_SCHEMA_VERSION:
+    if _read_string(staging.get("ingest_schema_version")) != E1_ANNOTATION_INGEST_SCHEMA_VERSION:
         issues.append(
             _issue(
                 "invalid_ingest_schema_version",
@@ -310,15 +319,23 @@ def build_dataset_manifest(
                 )
             )
         if not image_path:
-            issues.append(_issue("missing_image_path", f"{record_path}.image_path", "image_path is required."))
+            issues.append(
+                _issue("missing_image_path", f"{record_path}.image_path", "image_path is required.")
+            )
         if image_width is None:
-            issues.append(_issue("invalid_width", f"{record_path}.width", "width must be a positive integer."))
+            issues.append(
+                _issue("invalid_width", f"{record_path}.width", "width must be a positive integer.")
+            )
         if image_height is None:
-            issues.append(_issue("invalid_height", f"{record_path}.height", "height must be a positive integer."))
+            issues.append(
+                _issue("invalid_height", f"{record_path}.height", "height must be a positive integer.")
+            )
 
         negative_tags_raw = raw_record.get("negative_tags", [])
         negative_tags: list[str] = []
-        if not isinstance(negative_tags_raw, Sequence) or isinstance(negative_tags_raw, (str, bytes)):
+        if not isinstance(negative_tags_raw, Sequence) or isinstance(
+            negative_tags_raw, (str, bytes)
+        ):
             issues.append(
                 _issue(
                     "invalid_negative_tags",
@@ -327,25 +344,24 @@ def build_dataset_manifest(
                 )
             )
         else:
-            invalid_tag = False
             for tag in negative_tags_raw:
                 normalized_tag = _read_lower_string(tag)
                 if not normalized_tag:
-                    invalid_tag = True
+                    issues.append(
+                        _issue(
+                            "invalid_negative_tags",
+                            f"{record_path}.negative_tags",
+                            "negative_tags must contain only non-empty strings.",
+                        )
+                    )
                     break
                 negative_tags.append(normalized_tag)
-            if invalid_tag:
-                issues.append(
-                    _issue(
-                        "invalid_negative_tags",
-                        f"{record_path}.negative_tags",
-                        "negative_tags must contain only non-empty strings.",
-                    )
-                )
             negative_tags = sorted(set(negative_tags))
 
         annotations_raw = raw_record.get("annotations")
-        if not isinstance(annotations_raw, Sequence) or isinstance(annotations_raw, (str, bytes)):
+        if not isinstance(annotations_raw, Sequence) or isinstance(
+            annotations_raw, (str, bytes)
+        ):
             issues.append(
                 _issue(
                     "invalid_annotations",
@@ -589,15 +605,17 @@ def ingest_annotation_file(
             "issues": [_issue_dict(issue) for issue in issues],
         }
 
+    temporary = output_path.with_name(f".{output_path.name}.tmp")
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = output_path.with_name(f".{output_path.name}.tmp")
         temporary.write_text(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         temporary.replace(output_path)
     except OSError as exc:
+        with suppress(OSError):
+            temporary.unlink()
         return {
             "command": "ingest",
             "ok": False,
