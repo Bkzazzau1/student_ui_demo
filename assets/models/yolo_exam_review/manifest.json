@@ -1,6 +1,9 @@
 {
+  "manifest_schema_version": "1.0",
+  "model_id": "e1-yolo-exam-review",
+  "model_version": "development-baseline-1",
   "model_name": "K-SLAS Exam Review YOLO",
-  "description": "Local YOLO object detection model for exam review. The ONNX model file must be provided separately; detections must never be faked when the model is missing.",
+  "description": "Local YOLO object detection development baseline for exam review. The ONNX model file must be provided separately; detections must never be faked when the model is missing. This COCO-class baseline is not the final exam-specific E1 model.",
   "model_family": "yolo",
   "model_path_int8": "assets/models/yolo_exam_review/yolo_exam_review.int8.onnx",
   "model_path_fp16": "assets/models/yolo_exam_review/yolo_exam_review.fp16.onnx",

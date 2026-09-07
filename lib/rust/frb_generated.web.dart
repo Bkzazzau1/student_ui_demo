@@ -21,6 +21,7 @@ import 'api/hand_landmark_runtime.dart';
 import 'api/hand_vision.dart';
 import 'api/liveness_challenge.dart';
 import 'api/lockdown.dart';
+import 'api/model_event_memory.dart';
 import 'api/native_vision.dart';
 import 'api/proctoring.dart';
 import 'api/system_security.dart';
@@ -116,6 +117,9 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   NativeAudioIntelligenceResult
   dco_decode_box_autoadd_native_audio_intelligence_result(dynamic raw);
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
 
   @protected
   EnvironmentFrameDecision dco_decode_environment_frame_decision(dynamic raw);
@@ -266,6 +270,16 @@ abstract class BrainCoreApiApiImplPlatform
   LivenessObservation dco_decode_liveness_observation(dynamic raw);
 
   @protected
+  ModelEventIngestResultV1 dco_decode_model_event_ingest_result_v_1(
+    dynamic raw,
+  );
+
+  @protected
+  ModelEventMemoryStatusV1 dco_decode_model_event_memory_status_v_1(
+    dynamic raw,
+  );
+
+  @protected
   MotionAnalysisDecision dco_decode_motion_analysis_decision(dynamic raw);
 
   @protected
@@ -322,6 +336,9 @@ abstract class BrainCoreApiApiImplPlatform
   dco_decode_opt_box_autoadd_native_audio_intelligence_result(dynamic raw);
 
   @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
   RotationAnalysisDecision dco_decode_rotation_analysis_decision(dynamic raw);
 
   @protected
@@ -329,6 +346,9 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   int dco_decode_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -437,6 +457,9 @@ abstract class BrainCoreApiApiImplPlatform
   sse_decode_box_autoadd_native_audio_intelligence_result(
     SseDeserializer deserializer,
   );
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
 
   @protected
   EnvironmentFrameDecision sse_decode_environment_frame_decision(
@@ -641,6 +664,16 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  ModelEventIngestResultV1 sse_decode_model_event_ingest_result_v_1(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ModelEventMemoryStatusV1 sse_decode_model_event_memory_status_v_1(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   MotionAnalysisDecision sse_decode_motion_analysis_decision(
     SseDeserializer deserializer,
   );
@@ -709,6 +742,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
   RotationAnalysisDecision sse_decode_rotation_analysis_decision(
     SseDeserializer deserializer,
   );
@@ -720,6 +756,9 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -854,6 +893,9 @@ abstract class BrainCoreApiApiImplPlatform
     NativeAudioIntelligenceResult self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_environment_frame_decision(
@@ -1114,6 +1156,18 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_model_event_ingest_result_v_1(
+    ModelEventIngestResultV1 self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_model_event_memory_status_v_1(
+    ModelEventMemoryStatusV1 self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_motion_analysis_decision(
     MotionAnalysisDecision self,
     SseSerializer serializer,
@@ -1198,6 +1252,9 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_rotation_analysis_decision(
     RotationAnalysisDecision self,
     SseSerializer serializer,
@@ -1211,6 +1268,9 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);

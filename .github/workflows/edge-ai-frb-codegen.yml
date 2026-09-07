@@ -1,0 +1,76 @@
+name: Edge AI FRB Codegen
+
+on:
+  push:
+    branches:
+      - 'edge-ai/e1-event-wiring-clean'
+      - 'edge-ai/e1-person-tracking'
+    paths:
+      - 'native/brain_core/src/api/**'
+      - 'native/brain_core/src/runtime/**'
+      - 'native/brain_core/src/lib.rs'
+      - 'flutter_rust_bridge.yaml'
+      - 'pubspec.yaml'
+      - '.github/workflows/edge-ai-frb-codegen.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  frb-codegen:
+    name: Regenerate Flutter Rust Bridge bindings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+
+      - name: Install matching FRB codegen
+        run: cargo install flutter_rust_bridge_codegen --version 2.11.1 --locked
+
+      - name: Regenerate bindings
+        run: >-
+          flutter_rust_bridge_codegen generate
+          --rust-root native/brain_core
+          --rust-input crate::api
+          --dart-output lib/rust
+
+      - name: Capture generated diff
+        shell: bash
+        run: |
+          git diff -- lib/rust native/brain_core/src/frb_generated.rs > frb-codegen.patch
+          git status --short > frb-codegen-status.txt
+
+      - name: Upload generated bridge diff
+        uses: actions/upload-artifact@v4
+        with:
+          name: frb-codegen-diff
+          path: |
+            frb-codegen.patch
+            frb-codegen-status.txt
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Commit exact generated bindings
+        shell: bash
+        run: |
+          git add lib/rust native/brain_core/src/frb_generated.rs
+          if git diff --cached --quiet; then
+            echo 'FRB bindings are already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(rust): regenerate FRB bindings for model event memory'
+          git push origin HEAD:${GITHUB_REF_NAME}

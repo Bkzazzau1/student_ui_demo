@@ -53,6 +53,10 @@ impl SpatiotemporalRingBufferV1 {
         self.events.is_empty()
     }
 
+    pub fn contains_event_id(&self, event_id: &str) -> bool {
+        self.event_ids.contains(event_id)
+    }
+
     pub fn push(&mut self, event: ModelEventV1) -> Result<RingBufferInsertResultV1, String> {
         event.validate()?;
         if event.session_id != self.session_id {

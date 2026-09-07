@@ -6,6 +6,9 @@ import 'optimized_vision_runtime_policy.dart';
 
 class YoloExamReviewManifest {
   const YoloExamReviewManifest({
+    required this.manifestSchemaVersion,
+    required this.modelId,
+    required this.modelVersion,
     required this.modelName,
     required this.modelFamily,
     required this.modelPathInt8,
@@ -24,6 +27,9 @@ class YoloExamReviewManifest {
   static const String defaultAssetPath =
       'assets/models/yolo_exam_review/manifest.json';
 
+  final String manifestSchemaVersion;
+  final String modelId;
+  final String modelVersion;
   final String modelName;
   final String modelFamily;
   final String modelPathInt8;
@@ -40,6 +46,10 @@ class YoloExamReviewManifest {
 
   factory YoloExamReviewManifest.fromJson(Map<String, Object?> json) {
     return YoloExamReviewManifest(
+      manifestSchemaVersion:
+          json['manifest_schema_version']?.toString() ?? '1.0',
+      modelId: json['model_id']?.toString() ?? '',
+      modelVersion: json['model_version']?.toString() ?? '',
       modelName: json['model_name']?.toString() ?? 'K-SLAS Exam Review YOLO',
       modelFamily: json['model_family']?.toString() ?? 'yolo',
       modelPathInt8: json['model_path_int8']?.toString() ?? '',
@@ -74,6 +84,9 @@ class YoloExamReviewManifest {
   }
 
   bool get isUsable =>
+      manifestSchemaVersion.trim() == '1.0' &&
+      modelId.trim().isNotEmpty &&
+      modelVersion.trim().isNotEmpty &&
       modelFamily.trim().toLowerCase() == 'yolo' &&
       selectedModelPath(
         const OptimizedVisionRuntimePolicy(
@@ -104,6 +117,9 @@ class YoloExamReviewManifest {
 
   Map<String, Object?> toPolicyJson(OptimizedVisionRuntimePolicy policy) {
     return <String, Object?>{
+      'manifest_schema_version': manifestSchemaVersion,
+      'model_id': modelId,
+      'model_version': modelVersion,
       'model_family': modelFamily,
       'model_name': modelName,
       'model_path': selectedModelPath(policy),

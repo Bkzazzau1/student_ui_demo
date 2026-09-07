@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 
+import 'monotonic_timebase.dart';
 import 'optimized_vision_runtime_policy.dart';
 import 'yolo_exam_review_manifest.dart';
 
@@ -11,6 +12,13 @@ class OptimizedVisionRuntimeResult {
     required this.precision,
     required this.inferenceMs,
     required this.outputs,
+    this.sourceFrameId,
+    this.captureTimestampNs,
+    this.inferenceTimestampNs,
+    this.modelId,
+    this.modelVersion,
+    this.imageWidth = 0,
+    this.imageHeight = 0,
   });
 
   final bool available;
@@ -19,12 +27,45 @@ class OptimizedVisionRuntimeResult {
   final double inferenceMs;
   final Map<String, Object?> outputs;
 
+  /// Original frame sequence when this inference came from the live frame bus.
+  final int? sourceFrameId;
+
+  /// Original process-monotonic capture time. Null means the caller did not
+  /// provide trustworthy capture provenance; consumers must preserve UNKNOWN.
+  final int? captureTimestampNs;
+
+  /// Process-monotonic time when the native inference call completed.
+  final int? inferenceTimestampNs;
+
+  /// Explicit model provenance from the validated model manifest.
+  final String? modelId;
+  final String? modelVersion;
+
+  final int imageWidth;
+  final int imageHeight;
+
+  bool get hasModelEventProvenance =>
+      sourceFrameId != null &&
+      captureTimestampNs != null &&
+      inferenceTimestampNs != null &&
+      (modelId?.trim().isNotEmpty ?? false) &&
+      (modelVersion?.trim().isNotEmpty ?? false) &&
+      imageWidth > 0 &&
+      imageHeight > 0;
+
   Map<String, Object?> toJson() => <String, Object?>{
     'available': available,
     'backend': backend,
     'precision': precision,
     'inference_ms': inferenceMs,
     'outputs': outputs,
+    'source_frame_id': sourceFrameId,
+    'capture_timestamp_ns': captureTimestampNs,
+    'inference_timestamp_ns': inferenceTimestampNs,
+    'model_id': modelId,
+    'model_version': modelVersion,
+    'image_width': imageWidth,
+    'image_height': imageHeight,
   };
 }
 
@@ -80,6 +121,8 @@ class OptimizedVisionRuntimeBridge {
   Future<OptimizedVisionRuntimeResult?> runFrame({
     required CameraImage image,
     required List<String> tasks,
+    int? sourceFrameId,
+    int? captureTimestampNs,
   }) async {
     if (!await initialize()) return null;
     try {
@@ -96,6 +139,8 @@ class OptimizedVisionRuntimeBridge {
           'height': image.height,
           'format': image.format.group.name,
           'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
+          'source_frame_id': sourceFrameId,
+          'capture_timestamp_ns': captureTimestampNs,
           'planes': image.planes
               .map(
                 (plane) => <String, Object?>{
@@ -110,6 +155,7 @@ class OptimizedVisionRuntimeBridge {
         },
       );
       if (response == null) return null;
+      final inferenceTimestampNs = MonotonicTimebase.instance.nowNs;
       final elapsedMs =
           DateTime.now().difference(started).inMicroseconds / 1000.0;
       final available = response['available'] == true;
@@ -123,6 +169,13 @@ class OptimizedVisionRuntimeBridge {
         outputs: Map<String, Object?>.from(
           response['outputs'] as Map? ?? const <String, Object?>{},
         ),
+        sourceFrameId: sourceFrameId,
+        captureTimestampNs: captureTimestampNs,
+        inferenceTimestampNs: inferenceTimestampNs,
+        modelId: _manifest?.modelId,
+        modelVersion: _manifest?.modelVersion,
+        imageWidth: image.width,
+        imageHeight: image.height,
       );
     } on MissingPluginException {
       _available = false;
@@ -137,6 +190,8 @@ class OptimizedVisionRuntimeBridge {
     required int width,
     required int height,
     required List<String> tasks,
+    int? sourceFrameId,
+    int? captureTimestampNs,
   }) async {
     if (!await initialize()) return null;
     if (width <= 0 || height <= 0 || rgbBytes.isEmpty) return null;
@@ -154,6 +209,8 @@ class OptimizedVisionRuntimeBridge {
           'height': height,
           'format': 'rgb888',
           'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
+          'source_frame_id': sourceFrameId,
+          'capture_timestamp_ns': captureTimestampNs,
           'planes': <Map<String, Object?>>[
             <String, Object?>{
               'bytes': rgbBytes,
@@ -166,6 +223,7 @@ class OptimizedVisionRuntimeBridge {
         },
       );
       if (response == null) return null;
+      final inferenceTimestampNs = MonotonicTimebase.instance.nowNs;
       final elapsedMs =
           DateTime.now().difference(started).inMicroseconds / 1000.0;
       final available = response['available'] == true;
@@ -179,6 +237,13 @@ class OptimizedVisionRuntimeBridge {
         outputs: Map<String, Object?>.from(
           response['outputs'] as Map? ?? const <String, Object?>{},
         ),
+        sourceFrameId: sourceFrameId,
+        captureTimestampNs: captureTimestampNs,
+        inferenceTimestampNs: inferenceTimestampNs,
+        modelId: _manifest?.modelId,
+        modelVersion: _manifest?.modelVersion,
+        imageWidth: width,
+        imageHeight: height,
       );
     } on MissingPluginException {
       _available = false;
