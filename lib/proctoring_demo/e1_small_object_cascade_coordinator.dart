@@ -1,7 +1,7 @@
 import 'e1_small_object_specialist.dart';
 import 'e1_small_object_specialist_runtime.dart';
 import 'e1_specialist_frame.dart';
-import 'optimized_vision_object_event_adapter.dart';
+import 'model_event_v1.dart';
 import 'optimized_vision_runtime_bridge.dart';
 
 typedef E1SpecialistObservationIngestor =
@@ -25,30 +25,25 @@ class E1SmallObjectCascadeSummary {
   final int ingestFailures;
 }
 
-/// Runs specialist inference only from real E1 frame provenance and sends only
-/// validated specialist observations into the caller-owned evidence sink.
-///
-/// The coordinator never creates evidence from a planner request. A request is
-/// merely a routing decision; only a validated local specialist observation can
-/// become a ModelEventV1 downstream.
+/// Runs specialist inference only from real E1 frame provenance and formal base
+/// detection geometry, then sends only validated observations into evidence.
 class E1SmallObjectCascadeCoordinator {
   const E1SmallObjectCascadeCoordinator({
     required this.runtime,
     required this.ingestObservations,
     this.planner = const E1SmallObjectCascadePlanner(),
     this.guard = const E1SpecialistRuntimeGuard(),
-    this.baseAdapter = const OptimizedVisionObjectEventAdapter(),
   });
 
   final E1SmallObjectSpecialistRuntime runtime;
   final E1SpecialistObservationIngestor ingestObservations;
   final E1SmallObjectCascadePlanner planner;
   final E1SpecialistRuntimeGuard guard;
-  final OptimizedVisionObjectEventAdapter baseAdapter;
 
   Future<E1SmallObjectCascadeSummary> run({
     required String sessionId,
     required OptimizedVisionRuntimeResult baseResult,
+    required Iterable<ModelEventV1Payload> baseEvents,
     required E1SpecialistFrameInput frame,
   }) async {
     if (sessionId.trim().isEmpty ||
@@ -68,14 +63,13 @@ class E1SmallObjectCascadeCoordinator {
       );
     }
 
-    final baseLabels = baseAdapter.extractObjectLabels(baseResult.outputs);
     final requests = planner.plan(
       sessionId: sessionId,
       sourceFrameId: baseResult.sourceFrameId,
       captureTimestampNs: baseResult.captureTimestampNs!,
       imageWidth: baseResult.imageWidth,
       imageHeight: baseResult.imageHeight,
-      baseLabels: baseLabels,
+      baseEvents: baseEvents,
     );
 
     var requestsExecuted = 0;
