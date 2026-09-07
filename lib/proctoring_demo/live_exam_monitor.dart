@@ -22,6 +22,7 @@ import 'camera_event_evidence_policy.dart';
 import 'camera_runtime_coordinator.dart';
 import 'calibrated_gaze_service.dart';
 import 'continuous_biometric_liveness_service.dart';
+import 'e1_model_event_memory_coordinator.dart';
 import 'edge_ai_review_coordinator.dart';
 import 'gaze_head_pose_estimator.dart';
 import 'landmark_gaze_runtime_selector.dart';
@@ -32,6 +33,7 @@ import 'live_monitoring_profile.dart';
 import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'native_edge_ai_action_authorizer.dart';
+import 'native_model_event_memory_sink.dart';
 import 'object_review_event_mapper.dart';
 import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
@@ -128,6 +130,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       OptimizedVisionRuntimeBridge();
   final OptimizedVisionObjectEventAdapter _objectEventAdapter =
       const OptimizedVisionObjectEventAdapter();
+  final E1ModelEventMemoryCoordinator _modelEventMemory =
+      const E1ModelEventMemoryCoordinator(
+        sink: NativeModelEventMemorySink(),
+      );
   final SnapshotGazeFallbackService _snapshotGazeFallback =
       SnapshotGazeFallbackService();
   final VisionComputeBudgetService _visionBudget = VisionComputeBudgetService();
@@ -1107,6 +1113,13 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   }
 
   void _handleOptimizedVisionResult(OptimizedVisionRuntimeResult result) {
+    unawaited(
+      _modelEventMemory.ingestVisionResult(
+        result: result,
+        sessionId: widget.attemptId,
+      ),
+    );
+
     final objects = (result.outputs['objects'] as List? ?? const <Object?>[])
         .whereType<Map>()
         .map((item) => Map<String, Object?>.from(item))
