@@ -29,6 +29,34 @@ class OptimizedVisionObjectEventAdapter {
     if (!result.available || !result.hasModelEventProvenance) {
       return const <ModelEventV1Payload>[];
     }
+
+    final context = E1FrameInferenceContext(
+      sessionId: sessionId,
+      sourceFrameId: result.sourceFrameId,
+      captureTimestampNs: result.captureTimestampNs!,
+      inferenceTimestampNs: result.inferenceTimestampNs!,
+      modelId: result.modelId!,
+      modelVersion: result.modelVersion!,
+      imageWidth: result.imageWidth,
+      imageHeight: result.imageHeight,
+      quality: quality,
+      backend: result.backend,
+      precision: result.precision,
+    );
+
+    // The Windows ONNX runtime already decodes its detections and returns
+    // normalized boxes. Preserve that coordinate space directly rather than
+    // pretending those values are raw YOLO tensor coordinates.
+    final normalizedObjects = _readObjectMaps(result.outputs['objects']);
+    if (normalizedObjects.isNotEmpty) {
+      return e1ModelEvents.fromNormalizedObjects(
+        objects: normalizedObjects,
+        context: context,
+      );
+    }
+
+    // Other runtimes may expose a raw YOLO tensor that still needs the Rust
+    // decoder. Keep that path as a supported fallback.
     final nativeReview = _decodeNativeYoloReview(result.outputs);
     if (nativeReview == null) {
       return const <ModelEventV1Payload>[];
@@ -36,19 +64,7 @@ class OptimizedVisionObjectEventAdapter {
 
     return e1ModelEvents.fromNativeReview(
       review: nativeReview,
-      context: E1FrameInferenceContext(
-        sessionId: sessionId,
-        sourceFrameId: result.sourceFrameId,
-        captureTimestampNs: result.captureTimestampNs!,
-        inferenceTimestampNs: result.inferenceTimestampNs!,
-        modelId: result.modelId!,
-        modelVersion: result.modelVersion!,
-        imageWidth: result.imageWidth,
-        imageHeight: result.imageHeight,
-        quality: quality,
-        backend: result.backend,
-        precision: result.precision,
-      ),
+      context: context,
     );
   }
 
@@ -139,6 +155,23 @@ class OptimizedVisionObjectEventAdapter {
     final family =
         outputs['model_family']?.toString().trim().toLowerCase() ?? '';
     return family == 'yolo' || outputs['requires_rust_decode'] == true;
+  }
+
+  List<Map<String, Object?>> _readObjectMaps(Object? value) {
+    if (value is! Iterable) return const <Map<String, Object?>>[];
+    final objects = <Map<String, Object?>>[];
+    for (final raw in value) {
+      if (raw is! Map) continue;
+      final object = <String, Object?>{};
+      for (final entry in raw.entries) {
+        object[entry.key.toString()] = entry.value;
+      }
+      if (_readConfidence(Map<Object?, Object?>.from(raw)) < minimumConfidence) {
+        continue;
+      }
+      objects.add(object);
+    }
+    return objects;
   }
 
   NativeObjectReviewSnapshot? _decodeNativeYoloReview(
