@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
 
-use brain_core::api::model_event::{MODEL_EVENT_SCHEMA_VERSION, ModelEventV1, ValidityIntervalV1};
-use brain_core::api::spatiotemporal_buffer::SpatiotemporalRingBufferV1;
+use brain_core::runtime::model_event::{
+    MODEL_EVENT_SCHEMA_VERSION, ModelEventV1, ValidityIntervalV1,
+};
+use brain_core::runtime::spatiotemporal_buffer::SpatiotemporalRingBufferV1;
 
 fn event(
     event_id: &str,
