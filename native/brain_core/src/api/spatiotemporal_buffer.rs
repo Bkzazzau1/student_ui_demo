@@ -118,7 +118,7 @@ impl SpatiotemporalRingBufferV1 {
                     && event
                         .validity_interval
                         .end_timestamp_ns
-                        .is_none_or(|end| end >= timestamp_ns)
+                        .map_or(true, |end| end >= timestamp_ns)
             })
             .cloned()
             .collect()
