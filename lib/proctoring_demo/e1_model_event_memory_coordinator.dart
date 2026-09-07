@@ -64,10 +64,7 @@ class E1ModelEventMemoryCoordinator {
     // validated specialist model is installed. It may only inspect the exact
     // camera frame that produced this base result; missing provenance remains
     // UNKNOWN and skips specialist inference rather than reconstructing it.
-    await _runLiveSpecialistCascade(
-      result: result,
-      sessionId: sessionId,
-    );
+    await _runLiveSpecialistCascade(result: result, sessionId: sessionId);
 
     return baseSummary;
   }
@@ -129,11 +126,7 @@ class E1ModelEventMemoryCoordinator {
     );
 
     try {
-      await cascade.run(
-        sessionId: sessionId,
-        baseResult: result,
-        frame: frame,
-      );
+      await cascade.run(sessionId: sessionId, baseResult: result, frame: frame);
     } catch (_) {
       // Specialist observability must never crash or block base E1 evidence.
     }
