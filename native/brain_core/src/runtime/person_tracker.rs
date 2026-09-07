@@ -395,7 +395,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::*;
-    use crate::api::model_event::{
+    use crate::runtime::model_event::{
         MODEL_EVENT_SCHEMA_VERSION, ModelGeometryV1, ValidityIntervalV1,
     };
 
