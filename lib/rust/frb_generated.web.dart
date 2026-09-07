@@ -21,17 +21,13 @@ import 'api/hand_landmark_runtime.dart';
 import 'api/hand_vision.dart';
 import 'api/liveness_challenge.dart';
 import 'api/lockdown.dart';
-import 'api/model_event.dart';
 import 'api/model_event_memory.dart';
 import 'api/native_vision.dart';
-import 'api/person_tracker.dart';
 import 'api/proctoring.dart';
-import 'api/spatiotemporal_buffer.dart';
 import 'api/system_security.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
-import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 abstract class BrainCoreApiApiImplPlatform
@@ -42,97 +38,6 @@ abstract class BrainCoreApiApiImplPlatform
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
-
-  CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_BTreeMapStringValuePtr => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue;
-
-  CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_ModelEventV1Ptr => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1;
-
-  CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1Ptr => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1;
-
-  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_StrPtr => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr;
-
-  @protected
-  BTreeMapStringValue
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    dynamic raw,
-  );
-
-  @protected
-  ModelEventV1
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    dynamic raw,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    dynamic raw,
-  );
-
-  @protected
-  ModelEventV1
-  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    dynamic raw,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    dynamic raw,
-  );
-
-  @protected
-  ModelEventV1
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    dynamic raw,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    dynamic raw,
-  );
-
-  @protected
-  Str
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    dynamic raw,
-  );
-
-  @protected
-  Map<String, PersonTrackStateV1>
-  dco_decode_Map_String_person_track_state_v_1_None(dynamic raw);
-
-  @protected
-  BTreeMapStringValue
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    dynamic raw,
-  );
-
-  @protected
-  ModelEventV1
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    dynamic raw,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    dynamic raw,
-  );
-
-  @protected
-  Str
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    dynamic raw,
-  );
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -162,21 +67,6 @@ abstract class BrainCoreApiApiImplPlatform
   bool dco_decode_bool(dynamic raw);
 
   @protected
-  BoundingBoxV1 dco_decode_bounding_box_v_1(dynamic raw);
-
-  @protected
-  ModelEventV1
-  dco_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    dynamic raw,
-  );
-
-  @protected
-  Str
-  dco_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    dynamic raw,
-  );
-
-  @protected
   AirBoardActivitySummary dco_decode_box_autoadd_air_board_activity_summary(
     dynamic raw,
   );
@@ -185,18 +75,12 @@ abstract class BrainCoreApiApiImplPlatform
   AirBoardContext dco_decode_box_autoadd_air_board_context(dynamic raw);
 
   @protected
-  BoundingBoxV1 dco_decode_box_autoadd_bounding_box_v_1(dynamic raw);
-
-  @protected
   ExamBehaviourContext dco_decode_box_autoadd_exam_behaviour_context(
     dynamic raw,
   );
 
   @protected
   EyeRegionSignal dco_decode_box_autoadd_eye_region_signal(dynamic raw);
-
-  @protected
-  double dco_decode_box_autoadd_f_32(dynamic raw);
 
   @protected
   GazeCalibrationProfile dco_decode_box_autoadd_gaze_calibration_profile(
@@ -231,17 +115,11 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
-  ModelGeometryV1 dco_decode_box_autoadd_model_geometry_v_1(dynamic raw);
-
-  @protected
   NativeAudioIntelligenceResult
   dco_decode_box_autoadd_native_audio_intelligence_result(dynamic raw);
 
   @protected
   BigInt dco_decode_box_autoadd_u_64(dynamic raw);
-
-  @protected
-  ValidityIntervalV1 dco_decode_box_autoadd_validity_interval_v_1(dynamic raw);
 
   @protected
   EnvironmentFrameDecision dco_decode_environment_frame_decision(dynamic raw);
@@ -336,15 +214,6 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
-  KeypointV1 dco_decode_keypoint_v_1(dynamic raw);
-
-  @protected
-  List<ModelEventV1>
-  dco_decode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    dynamic raw,
-  );
-
-  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -365,9 +234,6 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   List<HandLandmarkPoint> dco_decode_list_hand_landmark_point(dynamic raw);
-
-  @protected
-  List<KeypointV1> dco_decode_list_keypoint_v_1(dynamic raw);
 
   @protected
   List<Float32List> dco_decode_list_list_prim_f_32_strict(dynamic raw);
@@ -398,10 +264,6 @@ abstract class BrainCoreApiApiImplPlatform
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
-  List<(String, PersonTrackStateV1)>
-  dco_decode_list_record_string_person_track_state_v_1(dynamic raw);
-
-  @protected
   LivenessChallengeResult dco_decode_liveness_challenge_result(dynamic raw);
 
   @protected
@@ -416,9 +278,6 @@ abstract class BrainCoreApiApiImplPlatform
   ModelEventMemoryStatusV1 dco_decode_model_event_memory_status_v_1(
     dynamic raw,
   );
-
-  @protected
-  ModelGeometryV1 dco_decode_model_geometry_v_1(dynamic raw);
 
   @protected
   MotionAnalysisDecision dco_decode_motion_analysis_decision(dynamic raw);
@@ -462,24 +321,6 @@ abstract class BrainCoreApiApiImplPlatform
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
-  ModelEventV1?
-  dco_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    dynamic raw,
-  );
-
-  @protected
-  Str?
-  dco_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    dynamic raw,
-  );
-
-  @protected
-  BoundingBoxV1? dco_decode_opt_box_autoadd_bounding_box_v_1(dynamic raw);
-
-  @protected
-  double? dco_decode_opt_box_autoadd_f_32(dynamic raw);
-
-  @protected
   GazeHeadPoseDecision? dco_decode_opt_box_autoadd_gaze_head_pose_decision(
     dynamic raw,
   );
@@ -491,33 +332,11 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
 
   @protected
-  ModelGeometryV1? dco_decode_opt_box_autoadd_model_geometry_v_1(dynamic raw);
-
-  @protected
   NativeAudioIntelligenceResult?
   dco_decode_opt_box_autoadd_native_audio_intelligence_result(dynamic raw);
 
   @protected
   BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
-
-  @protected
-  Float32List? dco_decode_opt_list_prim_f_32_strict(dynamic raw);
-
-  @protected
-  PersonTrackStateV1 dco_decode_person_track_state_v_1(dynamic raw);
-
-  @protected
-  PersonTrackerV1 dco_decode_person_tracker_v_1(dynamic raw);
-
-  @protected
-  (String, PersonTrackStateV1) dco_decode_record_string_person_track_state_v_1(
-    dynamic raw,
-  );
-
-  @protected
-  RingBufferInsertResultV1 dco_decode_ring_buffer_insert_result_v_1(
-    dynamic raw,
-  );
 
   @protected
   RotationAnalysisDecision dco_decode_rotation_analysis_decision(dynamic raw);
@@ -538,91 +357,7 @@ abstract class BrainCoreApiApiImplPlatform
   void dco_decode_unit(dynamic raw);
 
   @protected
-  BigInt dco_decode_usize(dynamic raw);
-
-  @protected
-  ValidityIntervalV1 dco_decode_validity_interval_v_1(dynamic raw);
-
-  @protected
   VisionModelStatus dco_decode_vision_model_status(dynamic raw);
-
-  @protected
-  BTreeMapStringValue
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  ModelEventV1
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  ModelEventV1
-  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  ModelEventV1
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  Str
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  Map<String, PersonTrackStateV1>
-  sse_decode_Map_String_person_track_state_v_1_None(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  BTreeMapStringValue
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  ModelEventV1
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  SpatiotemporalRingBufferV1
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  Str
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    SseDeserializer deserializer,
-  );
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
@@ -662,32 +397,12 @@ abstract class BrainCoreApiApiImplPlatform
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
-  BoundingBoxV1 sse_decode_bounding_box_v_1(SseDeserializer deserializer);
-
-  @protected
-  ModelEventV1
-  sse_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  Str
-  sse_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   AirBoardActivitySummary sse_decode_box_autoadd_air_board_activity_summary(
     SseDeserializer deserializer,
   );
 
   @protected
   AirBoardContext sse_decode_box_autoadd_air_board_context(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  BoundingBoxV1 sse_decode_box_autoadd_bounding_box_v_1(
     SseDeserializer deserializer,
   );
 
@@ -700,9 +415,6 @@ abstract class BrainCoreApiApiImplPlatform
   EyeRegionSignal sse_decode_box_autoadd_eye_region_signal(
     SseDeserializer deserializer,
   );
-
-  @protected
-  double sse_decode_box_autoadd_f_32(SseDeserializer deserializer);
 
   @protected
   GazeCalibrationProfile sse_decode_box_autoadd_gaze_calibration_profile(
@@ -741,11 +453,6 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
-  ModelGeometryV1 sse_decode_box_autoadd_model_geometry_v_1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativeAudioIntelligenceResult
   sse_decode_box_autoadd_native_audio_intelligence_result(
     SseDeserializer deserializer,
@@ -753,11 +460,6 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
-
-  @protected
-  ValidityIntervalV1 sse_decode_box_autoadd_validity_interval_v_1(
-    SseDeserializer deserializer,
-  );
 
   @protected
   EnvironmentFrameDecision sse_decode_environment_frame_decision(
@@ -892,15 +594,6 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
-  KeypointV1 sse_decode_keypoint_v_1(SseDeserializer deserializer);
-
-  @protected
-  List<ModelEventV1>
-  sse_decode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -927,9 +620,6 @@ abstract class BrainCoreApiApiImplPlatform
   List<HandLandmarkPoint> sse_decode_list_hand_landmark_point(
     SseDeserializer deserializer,
   );
-
-  @protected
-  List<KeypointV1> sse_decode_list_keypoint_v_1(SseDeserializer deserializer);
 
   @protected
   List<Float32List> sse_decode_list_list_prim_f_32_strict(
@@ -964,12 +654,6 @@ abstract class BrainCoreApiApiImplPlatform
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
-  List<(String, PersonTrackStateV1)>
-  sse_decode_list_record_string_person_track_state_v_1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   LivenessChallengeResult sse_decode_liveness_challenge_result(
     SseDeserializer deserializer,
   );
@@ -988,9 +672,6 @@ abstract class BrainCoreApiApiImplPlatform
   ModelEventMemoryStatusV1 sse_decode_model_event_memory_status_v_1(
     SseDeserializer deserializer,
   );
-
-  @protected
-  ModelGeometryV1 sse_decode_model_geometry_v_1(SseDeserializer deserializer);
 
   @protected
   MotionAnalysisDecision sse_decode_motion_analysis_decision(
@@ -1044,26 +725,6 @@ abstract class BrainCoreApiApiImplPlatform
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
-  ModelEventV1?
-  sse_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  Str?
-  sse_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  BoundingBoxV1? sse_decode_opt_box_autoadd_bounding_box_v_1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer);
-
-  @protected
   GazeHeadPoseDecision? sse_decode_opt_box_autoadd_gaze_head_pose_decision(
     SseDeserializer deserializer,
   );
@@ -1075,11 +736,6 @@ abstract class BrainCoreApiApiImplPlatform
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
-  ModelGeometryV1? sse_decode_opt_box_autoadd_model_geometry_v_1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativeAudioIntelligenceResult?
   sse_decode_opt_box_autoadd_native_audio_intelligence_result(
     SseDeserializer deserializer,
@@ -1087,29 +743,6 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
-
-  @protected
-  Float32List? sse_decode_opt_list_prim_f_32_strict(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  PersonTrackStateV1 sse_decode_person_track_state_v_1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  PersonTrackerV1 sse_decode_person_tracker_v_1(SseDeserializer deserializer);
-
-  @protected
-  (String, PersonTrackStateV1) sse_decode_record_string_person_track_state_v_1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  RingBufferInsertResultV1 sse_decode_ring_buffer_insert_result_v_1(
-    SseDeserializer deserializer,
-  );
 
   @protected
   RotationAnalysisDecision sse_decode_rotation_analysis_decision(
@@ -1134,106 +767,8 @@ abstract class BrainCoreApiApiImplPlatform
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  BigInt sse_decode_usize(SseDeserializer deserializer);
-
-  @protected
-  ValidityIntervalV1 sse_decode_validity_interval_v_1(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   VisionModelStatus sse_decode_vision_model_status(
     SseDeserializer deserializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    BTreeMapStringValue self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    ModelEventV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SpatiotemporalRingBufferV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    ModelEventV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SpatiotemporalRingBufferV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    ModelEventV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SpatiotemporalRingBufferV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    Str self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_Map_String_person_track_state_v_1_None(
-    Map<String, PersonTrackStateV1> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    BTreeMapStringValue self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    ModelEventV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    SpatiotemporalRingBufferV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    Str self,
-    SseSerializer serializer,
   );
 
   @protected
@@ -1285,26 +820,6 @@ abstract class BrainCoreApiApiImplPlatform
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
-  void sse_encode_bounding_box_v_1(
-    BoundingBoxV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    ModelEventV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    Str self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_box_autoadd_air_board_activity_summary(
     AirBoardActivitySummary self,
     SseSerializer serializer,
@@ -1313,12 +828,6 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_box_autoadd_air_board_context(
     AirBoardContext self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_bounding_box_v_1(
-    BoundingBoxV1 self,
     SseSerializer serializer,
   );
 
@@ -1333,9 +842,6 @@ abstract class BrainCoreApiApiImplPlatform
     EyeRegionSignal self,
     SseSerializer serializer,
   );
-
-  @protected
-  void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_gaze_calibration_profile(
@@ -1383,12 +889,6 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
-  void sse_encode_box_autoadd_model_geometry_v_1(
-    ModelGeometryV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_box_autoadd_native_audio_intelligence_result(
     NativeAudioIntelligenceResult self,
     SseSerializer serializer,
@@ -1396,12 +896,6 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_validity_interval_v_1(
-    ValidityIntervalV1 self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_environment_frame_decision(
@@ -1572,16 +1066,6 @@ abstract class BrainCoreApiApiImplPlatform
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
-  void sse_encode_keypoint_v_1(KeypointV1 self, SseSerializer serializer);
-
-  @protected
-  void
-  sse_encode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    List<ModelEventV1> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
@@ -1611,12 +1095,6 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_list_hand_landmark_point(
     List<HandLandmarkPoint> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_keypoint_v_1(
-    List<KeypointV1> self,
     SseSerializer serializer,
   );
 
@@ -1666,12 +1144,6 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
-  void sse_encode_list_record_string_person_track_state_v_1(
-    List<(String, PersonTrackStateV1)> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_liveness_challenge_result(
     LivenessChallengeResult self,
     SseSerializer serializer,
@@ -1692,12 +1164,6 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_model_event_memory_status_v_1(
     ModelEventMemoryStatusV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_model_geometry_v_1(
-    ModelGeometryV1 self,
     SseSerializer serializer,
   );
 
@@ -1765,29 +1231,6 @@ abstract class BrainCoreApiApiImplPlatform
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
-  void
-  sse_encode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    ModelEventV1? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    Str? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_bounding_box_v_1(
-    BoundingBoxV1? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer);
-
-  @protected
   void sse_encode_opt_box_autoadd_gaze_head_pose_decision(
     GazeHeadPoseDecision? self,
     SseSerializer serializer,
@@ -1803,12 +1246,6 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
-  void sse_encode_opt_box_autoadd_model_geometry_v_1(
-    ModelGeometryV1? self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_opt_box_autoadd_native_audio_intelligence_result(
     NativeAudioIntelligenceResult? self,
     SseSerializer serializer,
@@ -1816,36 +1253,6 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_list_prim_f_32_strict(
-    Float32List? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_person_track_state_v_1(
-    PersonTrackStateV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_person_tracker_v_1(
-    PersonTrackerV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_record_string_person_track_state_v_1(
-    (String, PersonTrackStateV1) self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_ring_buffer_insert_result_v_1(
-    RingBufferInsertResultV1 self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_rotation_analysis_decision(
@@ -1872,15 +1279,6 @@ abstract class BrainCoreApiApiImplPlatform
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
-  void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_validity_interval_v_1(
-    ValidityIntervalV1 self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_vision_model_status(
     VisionModelStatus self,
     SseSerializer serializer,
@@ -1891,70 +1289,6 @@ abstract class BrainCoreApiApiImplPlatform
 
 class BrainCoreApiWire implements BaseWire {
   BrainCoreApiWire.fromExternalLibrary(ExternalLibrary lib);
-
-  void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-        ptr,
-      );
-
-  void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-        ptr,
-      );
-
-  void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-        ptr,
-      );
-
-  void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-        ptr,
-      );
-
-  void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-        ptr,
-      );
-
-  void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-        ptr,
-      );
-
-  void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-        ptr,
-      );
-
-  void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    int ptr,
-  ) => wasmModule
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-        ptr,
-      );
 }
 
 @JS('wasm_bindgen')
@@ -1962,44 +1296,4 @@ external BrainCoreApiWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type BrainCoreApiWasmModule._(JSObject _) implements JSObject {
-  external void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    int ptr,
-  );
-
-  external void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
-    int ptr,
-  );
-
-  external void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    int ptr,
-  );
-
-  external void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
-    int ptr,
-  );
-
-  external void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    int ptr,
-  );
-
-  external void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
-    int ptr,
-  );
-
-  external void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    int ptr,
-  );
-
-  external void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
-    int ptr,
-  );
-}
+extension type BrainCoreApiWasmModule._(JSObject _) implements JSObject {}
