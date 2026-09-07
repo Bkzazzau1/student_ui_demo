@@ -18,28 +18,31 @@ import 'api/hand_landmark_runtime.dart';
 import 'api/hand_vision.dart';
 import 'api/liveness_challenge.dart';
 import 'api/lockdown.dart';
+import 'api/model_event.dart';
+import 'api/model_event_memory.dart';
 import 'api/native_vision.dart';
+import 'api/person_tracker.dart';
 import 'api/proctoring.dart';
+import 'api/spatiotemporal_buffer.dart';
 import 'api/system_security.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// Main entrypoint of the Rust API
-class BrainCoreApi
-    extends
-        BaseEntrypoint<BrainCoreApiApi, BrainCoreApiApiImpl, BrainCoreApiWire> {
+class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   @internal
-  static final instance = BrainCoreApi._();
+  static final instance = RustLib._();
 
-  BrainCoreApi._();
+  RustLib._();
 
   /// Initialize flutter_rust_bridge
   static Future<void> init({
-    BrainCoreApiApi? api,
+    RustLibApi? api,
     BaseHandler? handler,
     ExternalLibrary? externalLibrary,
     bool forceSameCodegenVersion = true,
@@ -54,7 +57,7 @@ class BrainCoreApi
 
   /// Initialize flutter_rust_bridge in mock mode.
   /// No libraries for FFI are loaded.
-  static void initMock({required BrainCoreApiApi api}) {
+  static void initMock({required RustLibApi api}) {
     instance.initMockImpl(api: api);
   }
 
@@ -65,12 +68,12 @@ class BrainCoreApi
   static void dispose() => instance.disposeImpl();
 
   @override
-  ApiImplConstructor<BrainCoreApiApiImpl, BrainCoreApiWire>
-  get apiImplConstructor => BrainCoreApiApiImpl.new;
+  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor =>
+      RustLibApiImpl.new;
 
   @override
-  WireConstructor<BrainCoreApiWire> get wireConstructor =>
-      BrainCoreApiWire.fromExternalLibrary;
+  WireConstructor<RustLibWire> get wireConstructor =>
+      RustLibWire.fromExternalLibrary;
 
   @override
   Future<void> executeRustInitializers() async {}
@@ -83,7 +86,7 @@ class BrainCoreApi
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 686924898;
+  int get rustContentHash => 1375119656;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -93,7 +96,220 @@ class BrainCoreApi
       );
 }
 
-abstract class BrainCoreApiApi extends BaseApi {
+abstract class RustLibApi extends BaseApi {
+  BigInt crateApiModelEventModelEventV1AutoAccessorGetCaptureTimestampNs({
+    required ModelEventV1 that,
+  });
+
+  String crateApiModelEventModelEventV1AutoAccessorGetClassId({
+    required ModelEventV1 that,
+  });
+
+  double? crateApiModelEventModelEventV1AutoAccessorGetConfidence({
+    required ModelEventV1 that,
+  });
+
+  String crateApiModelEventModelEventV1AutoAccessorGetEventId({
+    required ModelEventV1 that,
+  });
+
+  ModelGeometryV1? crateApiModelEventModelEventV1AutoAccessorGetGeometry({
+    required ModelEventV1 that,
+  });
+
+  BigInt crateApiModelEventModelEventV1AutoAccessorGetInferenceTimestampNs({
+    required ModelEventV1 that,
+  });
+
+  BTreeMapStringValue crateApiModelEventModelEventV1AutoAccessorGetMetadata({
+    required ModelEventV1 that,
+  });
+
+  String crateApiModelEventModelEventV1AutoAccessorGetModelId({
+    required ModelEventV1 that,
+  });
+
+  String crateApiModelEventModelEventV1AutoAccessorGetModelVersion({
+    required ModelEventV1 that,
+  });
+
+  double? crateApiModelEventModelEventV1AutoAccessorGetQuality({
+    required ModelEventV1 that,
+  });
+
+  String crateApiModelEventModelEventV1AutoAccessorGetSchemaVersion({
+    required ModelEventV1 that,
+  });
+
+  String crateApiModelEventModelEventV1AutoAccessorGetSessionId({
+    required ModelEventV1 that,
+  });
+
+  BigInt? crateApiModelEventModelEventV1AutoAccessorGetSourceFrameId({
+    required ModelEventV1 that,
+  });
+
+  String? crateApiModelEventModelEventV1AutoAccessorGetTrackId({
+    required ModelEventV1 that,
+  });
+
+  ValidityIntervalV1
+  crateApiModelEventModelEventV1AutoAccessorGetValidityInterval({
+    required ModelEventV1 that,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetCaptureTimestampNs({
+    required ModelEventV1 that,
+    required BigInt captureTimestampNs,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetClassId({
+    required ModelEventV1 that,
+    required String classId,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetConfidence({
+    required ModelEventV1 that,
+    double? confidence,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetEventId({
+    required ModelEventV1 that,
+    required String eventId,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetGeometry({
+    required ModelEventV1 that,
+    ModelGeometryV1? geometry,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetInferenceTimestampNs({
+    required ModelEventV1 that,
+    required BigInt inferenceTimestampNs,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetMetadata({
+    required ModelEventV1 that,
+    required BTreeMapStringValue metadata,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetModelId({
+    required ModelEventV1 that,
+    required String modelId,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetModelVersion({
+    required ModelEventV1 that,
+    required String modelVersion,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetQuality({
+    required ModelEventV1 that,
+    double? quality,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetSchemaVersion({
+    required ModelEventV1 that,
+    required String schemaVersion,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetSessionId({
+    required ModelEventV1 that,
+    required String sessionId,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetSourceFrameId({
+    required ModelEventV1 that,
+    BigInt? sourceFrameId,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetTrackId({
+    required ModelEventV1 that,
+    String? trackId,
+  });
+
+  void crateApiModelEventModelEventV1AutoAccessorSetValidityInterval({
+    required ModelEventV1 that,
+    required ValidityIntervalV1 validityInterval,
+  });
+
+  Future<ModelEventV1> crateApiModelEventModelEventV1FromJson({
+    required String value,
+  });
+
+  Future<String> crateApiModelEventModelEventV1ToJson({
+    required ModelEventV1 that,
+  });
+
+  Future<void> crateApiModelEventModelEventV1Validate({
+    required ModelEventV1 that,
+  });
+
+  Future<BigInt>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Capacity({
+    required SpatiotemporalRingBufferV1 that,
+  });
+
+  Future<void> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Clear({
+    required SpatiotemporalRingBufferV1 that,
+  });
+
+  Future<bool>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ContainsEventId({
+    required SpatiotemporalRingBufferV1 that,
+    required String eventId,
+  });
+
+  Future<List<ModelEventV1>>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsActiveAt({
+    required SpatiotemporalRingBufferV1 that,
+    required BigInt timestampNs,
+  });
+
+  Future<List<ModelEventV1>>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsBetween({
+    required SpatiotemporalRingBufferV1 that,
+    required BigInt startCaptureTimestampNs,
+    required BigInt endCaptureTimestampNs,
+  });
+
+  Future<bool> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1IsEmpty({
+    required SpatiotemporalRingBufferV1 that,
+  });
+
+  Future<ModelEventV1?>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LatestForClass({
+    required SpatiotemporalRingBufferV1 that,
+    required String classId,
+    Str? trackId,
+    required BigInt atOrBeforeCaptureTimestampNs,
+  });
+
+  Future<BigInt> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Len({
+    required SpatiotemporalRingBufferV1 that,
+  });
+
+  Future<SpatiotemporalRingBufferV1>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1New({
+    required String sessionId,
+    required BigInt capacity,
+  });
+
+  Future<RingBufferInsertResultV1>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Push({
+    required SpatiotemporalRingBufferV1 that,
+    required ModelEventV1 event,
+  });
+
+  Future<void> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SessionId({
+    required SpatiotemporalRingBufferV1 that,
+  });
+
+  Future<List<ModelEventV1>>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Snapshot({
+    required SpatiotemporalRingBufferV1 that,
+  });
+
   AcousticAnalysisDecision crateApiProctoringAnalyzeAcousticChunk({
     required List<int> pcm16Bytes,
     required double lossThresholdDbfs,
@@ -296,6 +512,10 @@ abstract class BrainCoreApiApi extends BaseApi {
 
   void crateApiHandVisionClearHandVisionModel();
 
+  bool crateApiModelEventMemoryClearModelEventMemoryV1({
+    required String sessionId,
+  });
+
   void crateApiProctoringClearVisionModel();
 
   Future<int?> crateApiLockdownCollectLockdownDisplayCount({
@@ -340,6 +560,11 @@ abstract class BrainCoreApiApi extends BaseApi {
 
   String crateApiEvidenceVaultEvidenceSha256Hex({required List<int> bytes});
 
+  ModelEventIngestResultV1 crateApiModelEventMemoryIngestModelEventV1Json({
+    required String eventJson,
+    BigInt? requestedCapacity,
+  });
+
   HandLandmarkModelStatus crateApiHandLandmarkRuntimeLoadHandLandmarkModel({
     required String manifestJson,
     required List<int> modelBytes,
@@ -354,6 +579,18 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String manifestJson,
     required List<int> modelBytes,
   });
+
+  ModelEventMemoryStatusV1 crateApiModelEventMemoryModelEventMemoryStatusV1({
+    required String sessionId,
+  });
+
+  Future<ModelGeometryV1> crateApiModelEventModelGeometryV1Default();
+
+  Future<void> crateApiModelEventModelGeometryV1Validate({
+    required ModelGeometryV1 that,
+  });
+
+  Future<PersonTrackerV1> crateApiPersonTrackerPersonTrackerV1Default();
 
   GazeZonePrediction crateApiGazeCalibrationPredictCalibratedGazeZone({
     required GazeCalibrationProfile profile,
@@ -386,6 +623,17 @@ abstract class BrainCoreApiApi extends BaseApi {
     required String studentId,
     required String examId,
     required String attemptId,
+  });
+
+  String crateApiModelEventMemoryReadModelEventsActiveAtV1Json({
+    required String sessionId,
+    required BigInt timestampNs,
+  });
+
+  String crateApiModelEventMemoryReadModelEventsBetweenV1Json({
+    required String sessionId,
+    required BigInt startCaptureTimestampNs,
+    required BigInt endCaptureTimestampNs,
   });
 
   HandVisionResult crateApiHandVisionReviewHandDetections({
@@ -465,6 +713,10 @@ abstract class BrainCoreApiApi extends BaseApi {
     required PlatformInt64 nowMs,
   });
 
+  Future<void> crateApiModelEventValidityIntervalV1Validate({
+    required ValidityIntervalV1 that,
+  });
+
   NativeAttemptRecoveryCheck crateApiAttemptRecoveryVerifyAttemptSnapshot({
     required String payloadJson,
     required String checksum,
@@ -478,16 +730,1673 @@ abstract class BrainCoreApiApi extends BaseApi {
     required double matchThreshold,
     required PlatformInt64 nowMs,
   });
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_BTreeMapStringValue;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_BTreeMapStringValue;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_BTreeMapStringValuePtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_ModelEventV1;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_ModelEventV1;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_ModelEventV1Ptr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SpatiotemporalRingBufferV1;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1Ptr;
+
+  RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_Str;
+
+  RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_Str;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_StrPtr;
 }
 
-class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
-    implements BrainCoreApiApi {
-  BrainCoreApiApiImpl({
+class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
+  RustLibApiImpl({
     required super.handler,
     required super.wire,
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  @override
+  BigInt crateApiModelEventModelEventV1AutoAccessorGetCaptureTimestampNs({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_64,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetCaptureTimestampNsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetCaptureTimestampNsConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_capture_timestamp_ns",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiModelEventModelEventV1AutoAccessorGetClassId({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetClassIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetClassIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_class_id",
+        argNames: ["that"],
+      );
+
+  @override
+  double? crateApiModelEventModelEventV1AutoAccessorGetConfidence({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_f_32,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetConfidenceConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetConfidenceConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_confidence",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiModelEventModelEventV1AutoAccessorGetEventId({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetEventIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetEventIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_event_id",
+        argNames: ["that"],
+      );
+
+  @override
+  ModelGeometryV1? crateApiModelEventModelEventV1AutoAccessorGetGeometry({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_model_geometry_v_1,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetGeometryConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetGeometryConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_geometry",
+        argNames: ["that"],
+      );
+
+  @override
+  BigInt crateApiModelEventModelEventV1AutoAccessorGetInferenceTimestampNs({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_64,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetInferenceTimestampNsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetInferenceTimestampNsConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_inference_timestamp_ns",
+        argNames: ["that"],
+      );
+
+  @override
+  BTreeMapStringValue crateApiModelEventModelEventV1AutoAccessorGetMetadata({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetMetadataConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetMetadataConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_metadata",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiModelEventModelEventV1AutoAccessorGetModelId({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetModelIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetModelIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_model_id",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiModelEventModelEventV1AutoAccessorGetModelVersion({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetModelVersionConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetModelVersionConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_model_version",
+        argNames: ["that"],
+      );
+
+  @override
+  double? crateApiModelEventModelEventV1AutoAccessorGetQuality({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_f_32,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetQualityConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetQualityConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_quality",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiModelEventModelEventV1AutoAccessorGetSchemaVersion({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetSchemaVersionConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetSchemaVersionConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_schema_version",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiModelEventModelEventV1AutoAccessorGetSessionId({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetSessionIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetSessionIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_session_id",
+        argNames: ["that"],
+      );
+
+  @override
+  BigInt? crateApiModelEventModelEventV1AutoAccessorGetSourceFrameId({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_u_64,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetSourceFrameIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetSourceFrameIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_source_frame_id",
+        argNames: ["that"],
+      );
+
+  @override
+  String? crateApiModelEventModelEventV1AutoAccessorGetTrackId({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetTrackIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetTrackIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_track_id",
+        argNames: ["that"],
+      );
+
+  @override
+  ValidityIntervalV1
+  crateApiModelEventModelEventV1AutoAccessorGetValidityInterval({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_validity_interval_v_1,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorGetValidityIntervalConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorGetValidityIntervalConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_get_validity_interval",
+        argNames: ["that"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetCaptureTimestampNs({
+    required ModelEventV1 that,
+    required BigInt captureTimestampNs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(captureTimestampNs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetCaptureTimestampNsConstMeta,
+        argValues: [that, captureTimestampNs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetCaptureTimestampNsConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_capture_timestamp_ns",
+        argNames: ["that", "captureTimestampNs"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetClassId({
+    required ModelEventV1 that,
+    required String classId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(classId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetClassIdConstMeta,
+        argValues: [that, classId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetClassIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_class_id",
+        argNames: ["that", "classId"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetConfidence({
+    required ModelEventV1 that,
+    double? confidence,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_opt_box_autoadd_f_32(confidence, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetConfidenceConstMeta,
+        argValues: [that, confidence],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetConfidenceConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_confidence",
+        argNames: ["that", "confidence"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetEventId({
+    required ModelEventV1 that,
+    required String eventId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(eventId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetEventIdConstMeta,
+        argValues: [that, eventId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetEventIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_event_id",
+        argNames: ["that", "eventId"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetGeometry({
+    required ModelEventV1 that,
+    ModelGeometryV1? geometry,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_opt_box_autoadd_model_geometry_v_1(geometry, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetGeometryConstMeta,
+        argValues: [that, geometry],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetGeometryConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_geometry",
+        argNames: ["that", "geometry"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetInferenceTimestampNs({
+    required ModelEventV1 that,
+    required BigInt inferenceTimestampNs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(inferenceTimestampNs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetInferenceTimestampNsConstMeta,
+        argValues: [that, inferenceTimestampNs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetInferenceTimestampNsConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_inference_timestamp_ns",
+        argNames: ["that", "inferenceTimestampNs"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetMetadata({
+    required ModelEventV1 that,
+    required BTreeMapStringValue metadata,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
+            metadata,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetMetadataConstMeta,
+        argValues: [that, metadata],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetMetadataConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_metadata",
+        argNames: ["that", "metadata"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetModelId({
+    required ModelEventV1 that,
+    required String modelId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(modelId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetModelIdConstMeta,
+        argValues: [that, modelId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetModelIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_model_id",
+        argNames: ["that", "modelId"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetModelVersion({
+    required ModelEventV1 that,
+    required String modelVersion,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(modelVersion, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetModelVersionConstMeta,
+        argValues: [that, modelVersion],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetModelVersionConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_model_version",
+        argNames: ["that", "modelVersion"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetQuality({
+    required ModelEventV1 that,
+    double? quality,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_opt_box_autoadd_f_32(quality, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetQualityConstMeta,
+        argValues: [that, quality],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetQualityConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_quality",
+        argNames: ["that", "quality"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetSchemaVersion({
+    required ModelEventV1 that,
+    required String schemaVersion,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(schemaVersion, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetSchemaVersionConstMeta,
+        argValues: [that, schemaVersion],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetSchemaVersionConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_schema_version",
+        argNames: ["that", "schemaVersion"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetSessionId({
+    required ModelEventV1 that,
+    required String sessionId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(sessionId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetSessionIdConstMeta,
+        argValues: [that, sessionId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetSessionIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_session_id",
+        argNames: ["that", "sessionId"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetSourceFrameId({
+    required ModelEventV1 that,
+    BigInt? sourceFrameId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_opt_box_autoadd_u_64(sourceFrameId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetSourceFrameIdConstMeta,
+        argValues: [that, sourceFrameId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetSourceFrameIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_source_frame_id",
+        argNames: ["that", "sourceFrameId"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetTrackId({
+    required ModelEventV1 that,
+    String? trackId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_opt_String(trackId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetTrackIdConstMeta,
+        argValues: [that, trackId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetTrackIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_track_id",
+        argNames: ["that", "trackId"],
+      );
+
+  @override
+  void crateApiModelEventModelEventV1AutoAccessorSetValidityInterval({
+    required ModelEventV1 that,
+    required ValidityIntervalV1 validityInterval,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          sse_encode_validity_interval_v_1(validityInterval, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiModelEventModelEventV1AutoAccessorSetValidityIntervalConstMeta,
+        argValues: [that, validityInterval],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventModelEventV1AutoAccessorSetValidityIntervalConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_auto_accessor_set_validity_interval",
+        argNames: ["that", "validityInterval"],
+      );
+
+  @override
+  Future<ModelEventV1> crateApiModelEventModelEventV1FromJson({
+    required String value,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(value, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 31,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventModelEventV1FromJsonConstMeta,
+        argValues: [value],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventModelEventV1FromJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_from_json",
+        argNames: ["value"],
+      );
+
+  @override
+  Future<String> crateApiModelEventModelEventV1ToJson({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 32,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventModelEventV1ToJsonConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventModelEventV1ToJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_to_json",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiModelEventModelEventV1Validate({
+    required ModelEventV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 33,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventModelEventV1ValidateConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventModelEventV1ValidateConstMeta =>
+      const TaskConstMeta(
+        debugName: "ModelEventV1_validate",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<BigInt>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Capacity({
+    required SpatiotemporalRingBufferV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 34,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_usize,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1CapacityConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1CapacityConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_capacity",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Clear({
+    required SpatiotemporalRingBufferV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 35,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ClearConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ClearConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_clear",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<bool>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ContainsEventId({
+    required SpatiotemporalRingBufferV1 that,
+    required String eventId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(eventId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 36,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ContainsEventIdConstMeta,
+        argValues: [that, eventId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ContainsEventIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_contains_event_id",
+        argNames: ["that", "eventId"],
+      );
+
+  @override
+  Future<List<ModelEventV1>>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsActiveAt({
+    required SpatiotemporalRingBufferV1 that,
+    required BigInt timestampNs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(timestampNs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 37,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsActiveAtConstMeta,
+        argValues: [that, timestampNs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsActiveAtConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_events_active_at",
+        argNames: ["that", "timestampNs"],
+      );
+
+  @override
+  Future<List<ModelEventV1>>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsBetween({
+    required SpatiotemporalRingBufferV1 that,
+    required BigInt startCaptureTimestampNs,
+    required BigInt endCaptureTimestampNs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(startCaptureTimestampNs, serializer);
+          sse_encode_u_64(endCaptureTimestampNs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 38,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsBetweenConstMeta,
+        argValues: [that, startCaptureTimestampNs, endCaptureTimestampNs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsBetweenConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_events_between",
+        argNames: ["that", "startCaptureTimestampNs", "endCaptureTimestampNs"],
+      );
+
+  @override
+  Future<bool> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1IsEmpty({
+    required SpatiotemporalRingBufferV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 39,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1IsEmptyConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1IsEmptyConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_is_empty",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<ModelEventV1?>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LatestForClass({
+    required SpatiotemporalRingBufferV1 that,
+    required String classId,
+    Str? trackId,
+    required BigInt atOrBeforeCaptureTimestampNs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          sse_encode_String(classId, serializer);
+          sse_encode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+            trackId,
+            serializer,
+          );
+          sse_encode_u_64(atOrBeforeCaptureTimestampNs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 40,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LatestForClassConstMeta,
+        argValues: [that, classId, trackId, atOrBeforeCaptureTimestampNs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LatestForClassConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_latest_for_class",
+        argNames: [
+          "that",
+          "classId",
+          "trackId",
+          "atOrBeforeCaptureTimestampNs",
+        ],
+      );
+
+  @override
+  Future<BigInt> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Len({
+    required SpatiotemporalRingBufferV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_usize,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LenConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LenConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_len",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<SpatiotemporalRingBufferV1>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1New({
+    required String sessionId,
+    required BigInt capacity,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sessionId, serializer);
+          sse_encode_usize(capacity, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 42,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1NewConstMeta,
+        argValues: [sessionId, capacity],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1NewConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_new",
+        argNames: ["sessionId", "capacity"],
+      );
+
+  @override
+  Future<RingBufferInsertResultV1>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Push({
+    required SpatiotemporalRingBufferV1 that,
+    required ModelEventV1 event,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            event,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 43,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ring_buffer_insert_result_v_1,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1PushConstMeta,
+        argValues: [that, event],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1PushConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_push",
+        argNames: ["that", "event"],
+      );
+
+  @override
+  Future<void> crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SessionId({
+    required SpatiotemporalRingBufferV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 44,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SessionIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SessionIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_session_id",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<List<ModelEventV1>>
+  crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Snapshot({
+    required SpatiotemporalRingBufferV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 45,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SnapshotConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SnapshotConstMeta =>
+      const TaskConstMeta(
+        debugName: "SpatiotemporalRingBufferV1_snapshot",
+        argNames: ["that"],
+      );
 
   @override
   AcousticAnalysisDecision crateApiProctoringAnalyzeAcousticChunk({
@@ -516,7 +2425,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_64(lastSpeechStrikeAtMs, serializer);
           sse_encode_i_64(speechCooldownMs, serializer);
           sse_encode_i_64(nowMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_acoustic_analysis_decision,
@@ -566,7 +2475,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_air_board_context(context, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_air_board_activity_summary,
@@ -598,7 +2507,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_i_32(sampleRate, serializer);
           sse_encode_opt_String(previousFingerprint, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -633,7 +2542,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lightingScore, serializer);
           sse_encode_bool(rotationCovered, serializer);
           sse_encode_list_String(forbiddenKeywords, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 49)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_environment_frame_decision,
@@ -671,7 +2580,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_exam_behaviour_context(context, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 50)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_exam_behaviour_decision,
@@ -699,7 +2608,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_eye_region_signal(signal, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 51)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_eye_intelligence_result,
@@ -751,7 +2660,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_64(gazeWarningCooldownMs, serializer);
           sse_encode_f_64(yawThreshold, serializer);
           sse_encode_f_64(pitchThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 52)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_face_analysis_decision,
@@ -819,7 +2728,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(previousYaw, serializer);
           sse_encode_f_64(previousPitch, serializer);
           sse_encode_f_64(previousRoll, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 53)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_box_autoadd_gaze_head_pose_decision,
@@ -863,7 +2772,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_hand_air_board_context(context, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 54)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_air_board_decision,
@@ -900,7 +2809,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(cropHeight, serializer);
           sse_encode_bool(mirrored, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 55)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_landmark_inference_result,
@@ -936,7 +2845,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_hand_gesture_input(input, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 56)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_gesture_result,
@@ -972,7 +2881,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(imageHeight, serializer);
           sse_encode_box_autoadd_hand_vision_zones(zones, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 57)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_result,
@@ -1024,7 +2933,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(mouthY, serializer);
           sse_encode_f_32(faceWidth, serializer);
           sse_encode_f_32(faceHeight, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 58)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_head_pose_review_result,
@@ -1082,7 +2991,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_64(startedAtMs, serializer);
           sse_encode_i_64(deadlineMs, serializer);
           sse_encode_i_64(nowMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 59)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_liveness_challenge_result,
@@ -1141,7 +3050,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_64(windowMs, serializer);
           sse_encode_u_32(burstCount, serializer);
           sse_encode_u_32(burstThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 60)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_motion_analysis_decision,
@@ -1201,7 +3110,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(width, serializer);
           sse_encode_i_32(height, serializer);
           sse_encode_list_prim_u_8_loose(rgbBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 61)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_vision_frame_quality,
@@ -1237,7 +3146,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_u_32(height, serializer);
           sse_encode_u_32(bytesPerRow, serializer);
           sse_encode_String(pixelFormat, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 62)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_scan_frame_decision,
@@ -1275,7 +3184,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(platformName, serializer);
           sse_encode_String(processReport, serializer);
           sse_encode_opt_box_autoadd_i_32(displayCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 63)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_secure_lockdown_review_result,
@@ -1306,7 +3215,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(report, serializer);
           sse_encode_String(platformName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 64)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_system_security_review_result,
@@ -1333,7 +3242,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(payloadJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 65)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1363,7 +3272,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(action, serializer);
           sse_encode_bool(examActive, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 66)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_ai_action_authorization,
@@ -1398,7 +3307,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
             summary,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 67)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1426,7 +3335,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_gaze_calibration_sample(samples, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 68)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_gaze_calibration_profile,
@@ -1480,7 +3389,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(modelSha256, serializer);
           sse_encode_i_64(createdAtMs, serializer);
           sse_encode_i_64(expiresAtMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 69)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_gaze_calibration_profile_v_2,
@@ -1554,7 +3463,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(qualityScore, serializer);
           sse_encode_i_64(createdAtMs, serializer);
           sse_encode_i_64(expiresAtMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 70)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1600,7 +3509,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 71)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1623,7 +3532,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 72)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1640,12 +3549,40 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       const TaskConstMeta(debugName: "clear_hand_vision_model", argNames: []);
 
   @override
+  bool crateApiModelEventMemoryClearModelEventMemoryV1({
+    required String sessionId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sessionId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 73)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventMemoryClearModelEventMemoryV1ConstMeta,
+        argValues: [sessionId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventMemoryClearModelEventMemoryV1ConstMeta =>
+      const TaskConstMeta(
+        debugName: "clear_model_event_memory_v1",
+        argNames: ["sessionId"],
+      );
+
+  @override
   void crateApiProctoringClearVisionModel() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 74)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1673,7 +3610,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 75,
             port: port_,
           );
         },
@@ -1706,7 +3643,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 76,
             port: port_,
           );
         },
@@ -1739,7 +3676,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 77,
             port: port_,
           );
         },
@@ -1768,7 +3705,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 78)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_landmark_model_status,
@@ -1795,7 +3732,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 79)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_model_status,
@@ -1820,7 +3757,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 80)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -1864,7 +3801,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(iouThreshold, serializer);
           sse_encode_String(layout, serializer);
           sse_encode_list_String(classNames, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 81)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -1912,7 +3849,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(zone, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 82)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1943,7 +3880,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(lumaBytes, serializer);
           sse_encode_u_32(sampleStride, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 83)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_f_64,
@@ -1969,7 +3906,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 84)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1989,6 +3926,36 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  ModelEventIngestResultV1 crateApiModelEventMemoryIngestModelEventV1Json({
+    required String eventJson,
+    BigInt? requestedCapacity,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(eventJson, serializer);
+          sse_encode_opt_box_autoadd_u_64(requestedCapacity, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 85)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_model_event_ingest_result_v_1,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventMemoryIngestModelEventV1JsonConstMeta,
+        argValues: [eventJson, requestedCapacity],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventMemoryIngestModelEventV1JsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "ingest_model_event_v1_json",
+        argNames: ["eventJson", "requestedCapacity"],
+      );
+
+  @override
   HandLandmarkModelStatus crateApiHandLandmarkRuntimeLoadHandLandmarkModel({
     required String manifestJson,
     required List<int> modelBytes,
@@ -1999,7 +3966,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 86)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_landmark_model_status,
@@ -2030,7 +3997,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 87)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_model_status,
@@ -2060,7 +4027,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(manifestJson, serializer);
           sse_encode_list_prim_u_8_loose(modelBytes, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 88)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_vision_model_status,
@@ -2077,6 +4044,128 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       const TaskConstMeta(
         debugName: "load_vision_model",
         argNames: ["manifestJson", "modelBytes"],
+      );
+
+  @override
+  ModelEventMemoryStatusV1 crateApiModelEventMemoryModelEventMemoryStatusV1({
+    required String sessionId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sessionId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 89)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_model_event_memory_status_v_1,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventMemoryModelEventMemoryStatusV1ConstMeta,
+        argValues: [sessionId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventMemoryModelEventMemoryStatusV1ConstMeta =>
+      const TaskConstMeta(
+        debugName: "model_event_memory_status_v1",
+        argNames: ["sessionId"],
+      );
+
+  @override
+  Future<ModelGeometryV1> crateApiModelEventModelGeometryV1Default() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 90,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_model_geometry_v_1,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiModelEventModelGeometryV1DefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventModelGeometryV1DefaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "model_geometry_v_1_default",
+        argNames: [],
+      );
+
+  @override
+  Future<void> crateApiModelEventModelGeometryV1Validate({
+    required ModelGeometryV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_model_geometry_v_1(that, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 91,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventModelGeometryV1ValidateConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventModelGeometryV1ValidateConstMeta =>
+      const TaskConstMeta(
+        debugName: "model_geometry_v_1_validate",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<PersonTrackerV1> crateApiPersonTrackerPersonTrackerV1Default() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 92,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_person_tracker_v_1,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPersonTrackerPersonTrackerV1DefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPersonTrackerPersonTrackerV1DefaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "person_tracker_v_1_default",
+        argNames: [],
       );
 
   @override
@@ -2098,7 +4187,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(headYaw, serializer);
           sse_encode_f_32(headPitch, serializer);
           sse_encode_f_32(signalConfidence, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 93)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_gaze_zone_prediction,
@@ -2149,7 +4238,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(headPitch, serializer);
           sse_encode_f_32(signalConfidence, serializer);
           sse_encode_i_64(nowMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 94)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_gaze_zone_prediction_v_2,
@@ -2200,7 +4289,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(lossThresholdDbfs, serializer);
           sse_encode_u_32(lossStreak, serializer);
           sse_encode_u_32(lossSamplesToTrigger, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 95)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_acoustic_sample_decision,
@@ -2239,7 +4328,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(studentId, serializer);
           sse_encode_String(examId, serializer);
           sse_encode_String(attemptId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 96)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -2259,6 +4348,76 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  String crateApiModelEventMemoryReadModelEventsActiveAtV1Json({
+    required String sessionId,
+    required BigInt timestampNs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sessionId, serializer);
+          sse_encode_u_64(timestampNs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 97)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiModelEventMemoryReadModelEventsActiveAtV1JsonConstMeta,
+        argValues: [sessionId, timestampNs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventMemoryReadModelEventsActiveAtV1JsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "read_model_events_active_at_v1_json",
+        argNames: ["sessionId", "timestampNs"],
+      );
+
+  @override
+  String crateApiModelEventMemoryReadModelEventsBetweenV1Json({
+    required String sessionId,
+    required BigInt startCaptureTimestampNs,
+    required BigInt endCaptureTimestampNs,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sessionId, serializer);
+          sse_encode_u_64(startCaptureTimestampNs, serializer);
+          sse_encode_u_64(endCaptureTimestampNs, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 98)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiModelEventMemoryReadModelEventsBetweenV1JsonConstMeta,
+        argValues: [sessionId, startCaptureTimestampNs, endCaptureTimestampNs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiModelEventMemoryReadModelEventsBetweenV1JsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "read_model_events_between_v1_json",
+        argNames: [
+          "sessionId",
+          "startCaptureTimestampNs",
+          "endCaptureTimestampNs",
+        ],
+      );
+
+  @override
   HandVisionResult crateApiHandVisionReviewHandDetections({
     required List<NativeVisionDetection> detections,
     required int imageWidth,
@@ -2275,7 +4434,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(imageHeight, serializer);
           sse_encode_box_autoadd_hand_vision_zones(zones, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 99)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_result,
@@ -2326,7 +4485,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_i_32(frameHeight, serializer);
           sse_encode_bool(mirrored, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 100,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_landmark_inference_result,
@@ -2396,7 +4559,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_list_String(classNames, serializer);
           sse_encode_box_autoadd_hand_vision_zones(zones, serializer);
           sse_encode_i_64(timestampMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 101,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_hand_vision_result,
@@ -2450,7 +4617,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_native_vision_detection(detections, serializer);
           sse_encode_f_32(iouThreshold, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 49)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 102,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_object_review_result,
@@ -2480,7 +4651,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 103,
             port: port_,
           );
         },
@@ -2514,7 +4685,7 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 51,
+            funcId: 104,
             port: port_,
           );
         },
@@ -2560,7 +4731,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(reviewReason, serializer);
           sse_encode_list_prim_u_8_loose(bytes, serializer);
           sse_encode_String(metadataJson, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 52)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 105,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -2622,7 +4797,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_64(deltaScale, serializer);
           sse_encode_f_64(minDelta, serializer);
           sse_encode_f_64(targetAccumulated, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 53)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 106,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_rotation_analysis_decision,
@@ -2676,7 +4855,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(expectedModelId, serializer);
           sse_encode_String(expectedModelSha256, serializer);
           sse_encode_i_64(nowMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 54)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 107,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_face_template_status,
@@ -2710,6 +4893,39 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       );
 
   @override
+  Future<void> crateApiModelEventValidityIntervalV1Validate({
+    required ValidityIntervalV1 that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_validity_interval_v_1(that, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 108,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiModelEventValidityIntervalV1ValidateConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiModelEventValidityIntervalV1ValidateConstMeta =>
+      const TaskConstMeta(
+        debugName: "validity_interval_v_1_validate",
+        argNames: ["that"],
+      );
+
+  @override
   NativeAttemptRecoveryCheck crateApiAttemptRecoveryVerifyAttemptSnapshot({
     required String payloadJson,
     required String checksum,
@@ -2722,7 +4938,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_String(payloadJson, serializer);
           sse_encode_String(checksum, serializer);
           sse_encode_String(recoveredFrom, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 55)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 109,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_native_attempt_recovery_check,
@@ -2758,7 +4978,11 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           sse_encode_f_32(signalQuality, serializer);
           sse_encode_f_32(matchThreshold, serializer);
           sse_encode_i_64(nowMs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 56)!;
+          return pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 110,
+          )!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_face_verification_result,
@@ -2788,6 +5012,165 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
           "nowMs",
         ],
       );
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_BTreeMapStringValue => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_BTreeMapStringValue => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_ModelEventV1 => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_ModelEventV1 => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SpatiotemporalRingBufferV1 => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1 => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_Str => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_Str => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr;
+
+  @protected
+  BTreeMapStringValue
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return BTreeMapStringValueImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  ModelEventV1
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  ModelEventV1
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  ModelEventV1
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  Str
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return StrImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  Map<String, PersonTrackStateV1>
+  dco_decode_Map_String_person_track_state_v_1_None(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return Map.fromEntries(
+      dco_decode_list_record_string_person_track_state_v_1(
+        raw,
+      ).map((e) => MapEntry(e.$1, e.$2)),
+    );
+  }
+
+  @protected
+  BTreeMapStringValue
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return BTreeMapStringValueImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  ModelEventV1
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  Str
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return StrImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
 
   @protected
   String dco_decode_String(dynamic raw) {
@@ -2913,6 +5296,42 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  BoundingBoxV1 dco_decode_bounding_box_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return BoundingBoxV1(
+      x: dco_decode_f_32(arr[0]),
+      y: dco_decode_f_32(arr[1]),
+      width: dco_decode_f_32(arr[2]),
+      height: dco_decode_f_32(arr[3]),
+    );
+  }
+
+  @protected
+  ModelEventV1
+  dco_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+      raw,
+    );
+  }
+
+  @protected
+  Str
+  dco_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+      raw,
+    );
+  }
+
+  @protected
   AirBoardActivitySummary dco_decode_box_autoadd_air_board_activity_summary(
     dynamic raw,
   ) {
@@ -2927,6 +5346,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  BoundingBoxV1 dco_decode_box_autoadd_bounding_box_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_bounding_box_v_1(raw);
+  }
+
+  @protected
   ExamBehaviourContext dco_decode_box_autoadd_exam_behaviour_context(
     dynamic raw,
   ) {
@@ -2938,6 +5363,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   EyeRegionSignal dco_decode_box_autoadd_eye_region_signal(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_eye_region_signal(raw);
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
   }
 
   @protected
@@ -2997,10 +5428,28 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ModelGeometryV1 dco_decode_box_autoadd_model_geometry_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_model_geometry_v_1(raw);
+  }
+
+  @protected
   NativeAudioIntelligenceResult
   dco_decode_box_autoadd_native_audio_intelligence_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_native_audio_intelligence_result(raw);
+  }
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_u_64(raw);
+  }
+
+  @protected
+  ValidityIntervalV1 dco_decode_box_autoadd_validity_interval_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_validity_interval_v_1(raw);
   }
 
   @protected
@@ -3497,6 +5946,33 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  KeypointV1 dco_decode_keypoint_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return KeypointV1(
+      x: dco_decode_f_32(arr[0]),
+      y: dco_decode_f_32(arr[1]),
+      confidence: dco_decode_opt_box_autoadd_f_32(arr[2]),
+      label: dco_decode_opt_String(arr[3]),
+    );
+  }
+
+  @protected
+  List<ModelEventV1>
+  dco_decode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(
+          dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1,
+        )
+        .toList();
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
@@ -3542,6 +6018,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   List<HandLandmarkPoint> dco_decode_list_hand_landmark_point(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_hand_landmark_point).toList();
+  }
+
+  @protected
+  List<KeypointV1> dco_decode_list_keypoint_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_keypoint_v_1).toList();
   }
 
   @protected
@@ -3603,6 +6085,15 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  List<(String, PersonTrackStateV1)>
+  dco_decode_list_record_string_person_track_state_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_record_string_person_track_state_v_1)
+        .toList();
+  }
+
+  @protected
   LivenessChallengeResult dco_decode_liveness_challenge_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3636,6 +6127,55 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       motionScore: dco_decode_f_32(arr[6]),
       repeatedFrame: dco_decode_bool(arr[7]),
       flatTexture: dco_decode_bool(arr[8]),
+    );
+  }
+
+  @protected
+  ModelEventIngestResultV1 dco_decode_model_event_ingest_result_v_1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ModelEventIngestResultV1(
+      sessionId: dco_decode_String(arr[0]),
+      eventId: dco_decode_String(arr[1]),
+      retained: dco_decode_bool(arr[2]),
+      evictedEventId: dco_decode_opt_String(arr[3]),
+      len: dco_decode_u_64(arr[4]),
+      capacity: dco_decode_u_64(arr[5]),
+    );
+  }
+
+  @protected
+  ModelEventMemoryStatusV1 dco_decode_model_event_memory_status_v_1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ModelEventMemoryStatusV1(
+      sessionId: dco_decode_String(arr[0]),
+      exists: dco_decode_bool(arr[1]),
+      len: dco_decode_u_64(arr[2]),
+      capacity: dco_decode_u_64(arr[3]),
+    );
+  }
+
+  @protected
+  ModelGeometryV1 dco_decode_model_geometry_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ModelGeometryV1(
+      coordinateSpace: dco_decode_opt_String(arr[0]),
+      boundingBox: dco_decode_opt_box_autoadd_bounding_box_v_1(arr[1]),
+      keypoints: dco_decode_list_keypoint_v_1(arr[2]),
+      vector: dco_decode_opt_list_prim_f_32_strict(arr[3]),
+      regionId: dco_decode_opt_String(arr[4]),
     );
   }
 
@@ -3830,6 +6370,44 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ModelEventV1?
+  dco_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+            raw,
+          );
+  }
+
+  @protected
+  Str?
+  dco_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+            raw,
+          );
+  }
+
+  @protected
+  BoundingBoxV1? dco_decode_opt_box_autoadd_bounding_box_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_bounding_box_v_1(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_32(raw);
+  }
+
+  @protected
   GazeHeadPoseDecision? dco_decode_opt_box_autoadd_gaze_head_pose_decision(
     dynamic raw,
   ) {
@@ -3852,12 +6430,93 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ModelGeometryV1? dco_decode_opt_box_autoadd_model_geometry_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_model_geometry_v_1(raw);
+  }
+
+  @protected
   NativeAudioIntelligenceResult?
   dco_decode_opt_box_autoadd_native_audio_intelligence_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null
         ? null
         : dco_decode_box_autoadd_native_audio_intelligence_result(raw);
+  }
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
+  Float32List? dco_decode_opt_list_prim_f_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_prim_f_32_strict(raw);
+  }
+
+  @protected
+  PersonTrackStateV1 dco_decode_person_track_state_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return PersonTrackStateV1(
+      trackId: dco_decode_String(arr[0]),
+      firstSeenNs: dco_decode_u_64(arr[1]),
+      lastSeenNs: dco_decode_u_64(arr[2]),
+      lastSourceFrameId: dco_decode_opt_box_autoadd_u_64(arr[3]),
+      lastBox: dco_decode_bounding_box_v_1(arr[4]),
+      velocityXPerSecond: dco_decode_f_32(arr[5]),
+      velocityYPerSecond: dco_decode_f_32(arr[6]),
+      hitCount: dco_decode_u_64(arr[7]),
+      gapRecoveryCount: dco_decode_u_64(arr[8]),
+    );
+  }
+
+  @protected
+  PersonTrackerV1 dco_decode_person_tracker_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PersonTrackerV1(
+      nextTrackNumber: dco_decode_u_64(arr[0]),
+      latestCaptureTimestampNs: dco_decode_opt_box_autoadd_u_64(arr[1]),
+      tracks: dco_decode_Map_String_person_track_state_v_1_None(arr[2]),
+    );
+  }
+
+  @protected
+  (String, PersonTrackStateV1) dco_decode_record_string_person_track_state_v_1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (
+      dco_decode_String(arr[0]),
+      dco_decode_person_track_state_v_1(arr[1]),
+    );
+  }
+
+  @protected
+  RingBufferInsertResultV1 dco_decode_ring_buffer_insert_result_v_1(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return RingBufferInsertResultV1(
+      retained: dco_decode_bool(arr[0]),
+      evictedEventId: dco_decode_opt_String(arr[1]),
+      len: dco_decode_usize(arr[2]),
+      capacity: dco_decode_usize(arr[3]),
+    );
   }
 
   @protected
@@ -3895,6 +6554,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -3904,6 +6569,24 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   void dco_decode_unit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return;
+  }
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  ValidityIntervalV1 dco_decode_validity_interval_v_1(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ValidityIntervalV1(
+      startTimestampNs: dco_decode_u_64(arr[0]),
+      endTimestampNs: dco_decode_opt_box_autoadd_u_64(arr[1]),
+    );
   }
 
   @protected
@@ -3920,6 +6603,162 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       confidenceThreshold: dco_decode_f_64(arr[4]),
       labelCount: dco_decode_u_32(arr[5]),
       message: dco_decode_String(arr[6]),
+    );
+  }
+
+  @protected
+  BTreeMapStringValue
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return BTreeMapStringValueImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  ModelEventV1
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  ModelEventV1
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  ModelEventV1
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  Str
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return StrImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  Map<String, PersonTrackStateV1>
+  sse_decode_Map_String_person_track_state_v_1_None(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_record_string_person_track_state_v_1(
+      deserializer,
+    );
+    return Map.fromEntries(inner.map((e) => MapEntry(e.$1, e.$2)));
+  }
+
+  @protected
+  BTreeMapStringValue
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return BTreeMapStringValueImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  ModelEventV1
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ModelEventV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  SpatiotemporalRingBufferV1
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SpatiotemporalRingBufferV1Impl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  Str
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return StrImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
     );
   }
 
@@ -4078,6 +6917,43 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  BoundingBoxV1 sse_decode_bounding_box_v_1(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_x = sse_decode_f_32(deserializer);
+    var var_y = sse_decode_f_32(deserializer);
+    var var_width = sse_decode_f_32(deserializer);
+    var var_height = sse_decode_f_32(deserializer);
+    return BoundingBoxV1(
+      x: var_x,
+      y: var_y,
+      width: var_width,
+      height: var_height,
+    );
+  }
+
+  @protected
+  ModelEventV1
+  sse_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+      deserializer,
+    ));
+  }
+
+  @protected
+  Str
+  sse_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+      deserializer,
+    ));
+  }
+
+  @protected
   AirBoardActivitySummary sse_decode_box_autoadd_air_board_activity_summary(
     SseDeserializer deserializer,
   ) {
@@ -4094,6 +6970,14 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  BoundingBoxV1 sse_decode_box_autoadd_bounding_box_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_bounding_box_v_1(deserializer));
+  }
+
+  @protected
   ExamBehaviourContext sse_decode_box_autoadd_exam_behaviour_context(
     SseDeserializer deserializer,
   ) {
@@ -4107,6 +6991,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_eye_region_signal(deserializer));
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_32(deserializer));
   }
 
   @protected
@@ -4170,12 +7060,34 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ModelGeometryV1 sse_decode_box_autoadd_model_geometry_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_model_geometry_v_1(deserializer));
+  }
+
+  @protected
   NativeAudioIntelligenceResult
   sse_decode_box_autoadd_native_audio_intelligence_result(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_native_audio_intelligence_result(deserializer));
+  }
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_64(deserializer));
+  }
+
+  @protected
+  ValidityIntervalV1 sse_decode_box_autoadd_validity_interval_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_validity_interval_v_1(deserializer));
   }
 
   @protected
@@ -4839,6 +7751,40 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  KeypointV1 sse_decode_keypoint_v_1(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_x = sse_decode_f_32(deserializer);
+    var var_y = sse_decode_f_32(deserializer);
+    var var_confidence = sse_decode_opt_box_autoadd_f_32(deserializer);
+    var var_label = sse_decode_opt_String(deserializer);
+    return KeypointV1(
+      x: var_x,
+      y: var_y,
+      confidence: var_confidence,
+      label: var_label,
+    );
+  }
+
+  @protected
+  List<ModelEventV1>
+  sse_decode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ModelEventV1>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(
+        sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+          deserializer,
+        ),
+      );
+    }
+    return ans_;
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -4916,6 +7862,18 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     var ans_ = <HandLandmarkPoint>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_hand_landmark_point(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<KeypointV1> sse_decode_list_keypoint_v_1(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <KeypointV1>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_keypoint_v_1(deserializer));
     }
     return ans_;
   }
@@ -5005,6 +7963,21 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  List<(String, PersonTrackStateV1)>
+  sse_decode_list_record_string_person_track_state_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <(String, PersonTrackStateV1)>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_record_string_person_track_state_v_1(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   LivenessChallengeResult sse_decode_liveness_challenge_result(
     SseDeserializer deserializer,
   ) {
@@ -5053,6 +8026,63 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       motionScore: var_motionScore,
       repeatedFrame: var_repeatedFrame,
       flatTexture: var_flatTexture,
+    );
+  }
+
+  @protected
+  ModelEventIngestResultV1 sse_decode_model_event_ingest_result_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sessionId = sse_decode_String(deserializer);
+    var var_eventId = sse_decode_String(deserializer);
+    var var_retained = sse_decode_bool(deserializer);
+    var var_evictedEventId = sse_decode_opt_String(deserializer);
+    var var_len = sse_decode_u_64(deserializer);
+    var var_capacity = sse_decode_u_64(deserializer);
+    return ModelEventIngestResultV1(
+      sessionId: var_sessionId,
+      eventId: var_eventId,
+      retained: var_retained,
+      evictedEventId: var_evictedEventId,
+      len: var_len,
+      capacity: var_capacity,
+    );
+  }
+
+  @protected
+  ModelEventMemoryStatusV1 sse_decode_model_event_memory_status_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sessionId = sse_decode_String(deserializer);
+    var var_exists = sse_decode_bool(deserializer);
+    var var_len = sse_decode_u_64(deserializer);
+    var var_capacity = sse_decode_u_64(deserializer);
+    return ModelEventMemoryStatusV1(
+      sessionId: var_sessionId,
+      exists: var_exists,
+      len: var_len,
+      capacity: var_capacity,
+    );
+  }
+
+  @protected
+  ModelGeometryV1 sse_decode_model_geometry_v_1(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_coordinateSpace = sse_decode_opt_String(deserializer);
+    var var_boundingBox = sse_decode_opt_box_autoadd_bounding_box_v_1(
+      deserializer,
+    );
+    var var_keypoints = sse_decode_list_keypoint_v_1(deserializer);
+    var var_vector = sse_decode_opt_list_prim_f_32_strict(deserializer);
+    var var_regionId = sse_decode_opt_String(deserializer);
+    return ModelGeometryV1(
+      coordinateSpace: var_coordinateSpace,
+      boundingBox: var_boundingBox,
+      keypoints: var_keypoints,
+      vector: var_vector,
+      regionId: var_regionId,
     );
   }
 
@@ -5312,6 +8342,62 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ModelEventV1?
+  sse_decode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+        deserializer,
+      ));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Str?
+  sse_decode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+        deserializer,
+      ));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  BoundingBoxV1? sse_decode_opt_box_autoadd_bounding_box_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_bounding_box_v_1(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   GazeHeadPoseDecision? sse_decode_opt_box_autoadd_gaze_head_pose_decision(
     SseDeserializer deserializer,
   ) {
@@ -5347,6 +8433,19 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  ModelGeometryV1? sse_decode_opt_box_autoadd_model_geometry_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_model_geometry_v_1(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   NativeAudioIntelligenceResult?
   sse_decode_opt_box_autoadd_native_audio_intelligence_result(
     SseDeserializer deserializer,
@@ -5360,6 +8459,101 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     } else {
       return null;
     }
+  }
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Float32List? sse_decode_opt_list_prim_f_32_strict(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_prim_f_32_strict(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PersonTrackStateV1 sse_decode_person_track_state_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_trackId = sse_decode_String(deserializer);
+    var var_firstSeenNs = sse_decode_u_64(deserializer);
+    var var_lastSeenNs = sse_decode_u_64(deserializer);
+    var var_lastSourceFrameId = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_lastBox = sse_decode_bounding_box_v_1(deserializer);
+    var var_velocityXPerSecond = sse_decode_f_32(deserializer);
+    var var_velocityYPerSecond = sse_decode_f_32(deserializer);
+    var var_hitCount = sse_decode_u_64(deserializer);
+    var var_gapRecoveryCount = sse_decode_u_64(deserializer);
+    return PersonTrackStateV1(
+      trackId: var_trackId,
+      firstSeenNs: var_firstSeenNs,
+      lastSeenNs: var_lastSeenNs,
+      lastSourceFrameId: var_lastSourceFrameId,
+      lastBox: var_lastBox,
+      velocityXPerSecond: var_velocityXPerSecond,
+      velocityYPerSecond: var_velocityYPerSecond,
+      hitCount: var_hitCount,
+      gapRecoveryCount: var_gapRecoveryCount,
+    );
+  }
+
+  @protected
+  PersonTrackerV1 sse_decode_person_tracker_v_1(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_nextTrackNumber = sse_decode_u_64(deserializer);
+    var var_latestCaptureTimestampNs = sse_decode_opt_box_autoadd_u_64(
+      deserializer,
+    );
+    var var_tracks = sse_decode_Map_String_person_track_state_v_1_None(
+      deserializer,
+    );
+    return PersonTrackerV1(
+      nextTrackNumber: var_nextTrackNumber,
+      latestCaptureTimestampNs: var_latestCaptureTimestampNs,
+      tracks: var_tracks,
+    );
+  }
+
+  @protected
+  (String, PersonTrackStateV1) sse_decode_record_string_person_track_state_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_String(deserializer);
+    var var_field1 = sse_decode_person_track_state_v_1(deserializer);
+    return (var_field0, var_field1);
+  }
+
+  @protected
+  RingBufferInsertResultV1 sse_decode_ring_buffer_insert_result_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_retained = sse_decode_bool(deserializer);
+    var var_evictedEventId = sse_decode_opt_String(deserializer);
+    var var_len = sse_decode_usize(deserializer);
+    var var_capacity = sse_decode_usize(deserializer);
+    return RingBufferInsertResultV1(
+      retained: var_retained,
+      evictedEventId: var_evictedEventId,
+      len: var_len,
+      capacity: var_capacity,
+    );
   }
 
   @protected
@@ -5403,6 +8597,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
@@ -5411,6 +8611,25 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   @protected
   void sse_decode_unit(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  ValidityIntervalV1 sse_decode_validity_interval_v_1(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_startTimestampNs = sse_decode_u_64(deserializer);
+    var var_endTimestampNs = sse_decode_opt_box_autoadd_u_64(deserializer);
+    return ValidityIntervalV1(
+      startTimestampNs: var_startTimestampNs,
+      endTimestampNs: var_endTimestampNs,
+    );
   }
 
   @protected
@@ -5433,6 +8652,178 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
       confidenceThreshold: var_confidenceThreshold,
       labelCount: var_labelCount,
       message: var_message,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
+    BTreeMapStringValue self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as BTreeMapStringValueImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    ModelEventV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ModelEventV1Impl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SpatiotemporalRingBufferV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SpatiotemporalRingBufferV1Impl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    ModelEventV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ModelEventV1Impl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SpatiotemporalRingBufferV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SpatiotemporalRingBufferV1Impl).frbInternalSseEncode(
+        move: false,
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    ModelEventV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ModelEventV1Impl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SpatiotemporalRingBufferV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SpatiotemporalRingBufferV1Impl).frbInternalSseEncode(
+        move: false,
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    Str self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as StrImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_Map_String_person_track_state_v_1_None(
+    Map<String, PersonTrackStateV1> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_record_string_person_track_state_v_1(
+      self.entries.map((e) => (e.key, e.value)).toList(),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerBTreeMapStringValue(
+    BTreeMapStringValue self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as BTreeMapStringValueImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    ModelEventV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ModelEventV1Impl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSpatiotemporalRingBufferV1(
+    SpatiotemporalRingBufferV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SpatiotemporalRingBufferV1Impl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    Str self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as StrImpl).frbInternalSseEncode(move: null),
+      serializer,
     );
   }
 
@@ -5546,6 +8937,44 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_bounding_box_v_1(
+    BoundingBoxV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.x, serializer);
+    sse_encode_f_32(self.y, serializer);
+    sse_encode_f_32(self.width, serializer);
+    sse_encode_f_32(self.height, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    ModelEventV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+      self,
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    Str self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+      self,
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_box_autoadd_air_board_activity_summary(
     AirBoardActivitySummary self,
     SseSerializer serializer,
@@ -5564,6 +8993,15 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_bounding_box_v_1(
+    BoundingBoxV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bounding_box_v_1(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_exam_behaviour_context(
     ExamBehaviourContext self,
     SseSerializer serializer,
@@ -5579,6 +9017,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_eye_region_signal(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self, serializer);
   }
 
   @protected
@@ -5651,12 +9095,36 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_model_geometry_v_1(
+    ModelGeometryV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_model_geometry_v_1(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_native_audio_intelligence_result(
     NativeAudioIntelligenceResult self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_native_audio_intelligence_result(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_validity_interval_v_1(
+    ValidityIntervalV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_validity_interval_v_1(self, serializer);
   }
 
   @protected
@@ -6100,6 +9568,31 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_keypoint_v_1(KeypointV1 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.x, serializer);
+    sse_encode_f_32(self.y, serializer);
+    sse_encode_opt_box_autoadd_f_32(self.confidence, serializer);
+    sse_encode_opt_String(self.label, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_list_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    List<ModelEventV1> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+        item,
+        serializer,
+      );
+    }
+  }
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
@@ -6165,6 +9658,18 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_hand_landmark_point(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_keypoint_v_1(
+    List<KeypointV1> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_keypoint_v_1(item, serializer);
     }
   }
 
@@ -6261,6 +9766,18 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_record_string_person_track_state_v_1(
+    List<(String, PersonTrackStateV1)> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_record_string_person_track_state_v_1(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_liveness_challenge_result(
     LivenessChallengeResult self,
     SseSerializer serializer,
@@ -6291,6 +9808,45 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_f_32(self.motionScore, serializer);
     sse_encode_bool(self.repeatedFrame, serializer);
     sse_encode_bool(self.flatTexture, serializer);
+  }
+
+  @protected
+  void sse_encode_model_event_ingest_result_v_1(
+    ModelEventIngestResultV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.sessionId, serializer);
+    sse_encode_String(self.eventId, serializer);
+    sse_encode_bool(self.retained, serializer);
+    sse_encode_opt_String(self.evictedEventId, serializer);
+    sse_encode_u_64(self.len, serializer);
+    sse_encode_u_64(self.capacity, serializer);
+  }
+
+  @protected
+  void sse_encode_model_event_memory_status_v_1(
+    ModelEventMemoryStatusV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.sessionId, serializer);
+    sse_encode_bool(self.exists, serializer);
+    sse_encode_u_64(self.len, serializer);
+    sse_encode_u_64(self.capacity, serializer);
+  }
+
+  @protected
+  void sse_encode_model_geometry_v_1(
+    ModelGeometryV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.coordinateSpace, serializer);
+    sse_encode_opt_box_autoadd_bounding_box_v_1(self.boundingBox, serializer);
+    sse_encode_list_keypoint_v_1(self.keypoints, serializer);
+    sse_encode_opt_list_prim_f_32_strict(self.vector, serializer);
+    sse_encode_opt_String(self.regionId, serializer);
   }
 
   @protected
@@ -6460,6 +10016,63 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void
+  sse_encode_opt_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+    ModelEventV1? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerModelEventV1(
+        self,
+        serializer,
+      );
+    }
+  }
+
+  @protected
+  void
+  sse_encode_opt_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+    Str? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerstr(
+        self,
+        serializer,
+      );
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_bounding_box_v_1(
+    BoundingBoxV1? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_bounding_box_v_1(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_32(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_32(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_gaze_head_pose_decision(
     GazeHeadPoseDecision? self,
     SseSerializer serializer,
@@ -6496,6 +10109,19 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_model_geometry_v_1(
+    ModelGeometryV1? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_model_geometry_v_1(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_native_audio_intelligence_result(
     NativeAudioIntelligenceResult? self,
     SseSerializer serializer,
@@ -6506,6 +10132,79 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     if (self != null) {
       sse_encode_box_autoadd_native_audio_intelligence_result(self, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_prim_f_32_strict(
+    Float32List? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_prim_f_32_strict(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_person_track_state_v_1(
+    PersonTrackStateV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.trackId, serializer);
+    sse_encode_u_64(self.firstSeenNs, serializer);
+    sse_encode_u_64(self.lastSeenNs, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.lastSourceFrameId, serializer);
+    sse_encode_bounding_box_v_1(self.lastBox, serializer);
+    sse_encode_f_32(self.velocityXPerSecond, serializer);
+    sse_encode_f_32(self.velocityYPerSecond, serializer);
+    sse_encode_u_64(self.hitCount, serializer);
+    sse_encode_u_64(self.gapRecoveryCount, serializer);
+  }
+
+  @protected
+  void sse_encode_person_tracker_v_1(
+    PersonTrackerV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.nextTrackNumber, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.latestCaptureTimestampNs, serializer);
+    sse_encode_Map_String_person_track_state_v_1_None(self.tracks, serializer);
+  }
+
+  @protected
+  void sse_encode_record_string_person_track_state_v_1(
+    (String, PersonTrackStateV1) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.$1, serializer);
+    sse_encode_person_track_state_v_1(self.$2, serializer);
+  }
+
+  @protected
+  void sse_encode_ring_buffer_insert_result_v_1(
+    RingBufferInsertResultV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.retained, serializer);
+    sse_encode_opt_String(self.evictedEventId, serializer);
+    sse_encode_usize(self.len, serializer);
+    sse_encode_usize(self.capacity, serializer);
   }
 
   @protected
@@ -6539,6 +10238,12 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   }
 
   @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self);
@@ -6547,6 +10252,22 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_validity_interval_v_1(
+    ValidityIntervalV1 self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.startTimestampNs, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.endTimestampNs, serializer);
   }
 
   @protected
@@ -6563,4 +10284,321 @@ class BrainCoreApiApiImpl extends BrainCoreApiApiImplPlatform
     sse_encode_u_32(self.labelCount, serializer);
     sse_encode_String(self.message, serializer);
   }
+}
+
+@sealed
+class BTreeMapStringValueImpl extends RustOpaque
+    implements BTreeMapStringValue {
+  // Not to be used by end users
+  BTreeMapStringValueImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  BTreeMapStringValueImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_BTreeMapStringValue,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_BTreeMapStringValue,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_BTreeMapStringValuePtr,
+  );
+}
+
+@sealed
+class ModelEventV1Impl extends RustOpaque implements ModelEventV1 {
+  // Not to be used by end users
+  ModelEventV1Impl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  ModelEventV1Impl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_ModelEventV1,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_ModelEventV1,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_ModelEventV1Ptr,
+  );
+
+  BigInt get captureTimestampNs => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetCaptureTimestampNs(
+        that: this,
+      );
+
+  String get classId => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetClassId(that: this);
+
+  double? get confidence => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetConfidence(that: this);
+
+  String get eventId => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetEventId(that: this);
+
+  ModelGeometryV1? get geometry => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetGeometry(that: this);
+
+  BigInt get inferenceTimestampNs => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetInferenceTimestampNs(
+        that: this,
+      );
+
+  BTreeMapStringValue get metadata => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetMetadata(that: this);
+
+  String get modelId => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetModelId(that: this);
+
+  String get modelVersion => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetModelVersion(that: this);
+
+  double? get quality => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetQuality(that: this);
+
+  String get schemaVersion => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetSchemaVersion(that: this);
+
+  String get sessionId => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetSessionId(that: this);
+
+  BigInt? get sourceFrameId => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetSourceFrameId(that: this);
+
+  String? get trackId => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetTrackId(that: this);
+
+  ValidityIntervalV1 get validityInterval => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorGetValidityInterval(
+        that: this,
+      );
+
+  set captureTimestampNs(BigInt captureTimestampNs) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetCaptureTimestampNs(
+        that: this,
+        captureTimestampNs: captureTimestampNs,
+      );
+
+  set classId(String classId) =>
+      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetClassId(
+        that: this,
+        classId: classId,
+      );
+
+  set confidence(double? confidence) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetConfidence(
+        that: this,
+        confidence: confidence,
+      );
+
+  set eventId(String eventId) =>
+      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetEventId(
+        that: this,
+        eventId: eventId,
+      );
+
+  set geometry(ModelGeometryV1? geometry) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetGeometry(
+        that: this,
+        geometry: geometry,
+      );
+
+  set inferenceTimestampNs(BigInt inferenceTimestampNs) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetInferenceTimestampNs(
+        that: this,
+        inferenceTimestampNs: inferenceTimestampNs,
+      );
+
+  set metadata(BTreeMapStringValue metadata) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetMetadata(
+        that: this,
+        metadata: metadata,
+      );
+
+  set modelId(String modelId) =>
+      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetModelId(
+        that: this,
+        modelId: modelId,
+      );
+
+  set modelVersion(String modelVersion) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetModelVersion(
+        that: this,
+        modelVersion: modelVersion,
+      );
+
+  set quality(double? quality) =>
+      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetQuality(
+        that: this,
+        quality: quality,
+      );
+
+  set schemaVersion(String schemaVersion) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetSchemaVersion(
+        that: this,
+        schemaVersion: schemaVersion,
+      );
+
+  set sessionId(String sessionId) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetSessionId(
+        that: this,
+        sessionId: sessionId,
+      );
+
+  set sourceFrameId(BigInt? sourceFrameId) => RustLib.instance.api
+      .crateApiModelEventModelEventV1AutoAccessorSetSourceFrameId(
+        that: this,
+        sourceFrameId: sourceFrameId,
+      );
+
+  set trackId(String? trackId) =>
+      RustLib.instance.api.crateApiModelEventModelEventV1AutoAccessorSetTrackId(
+        that: this,
+        trackId: trackId,
+      );
+
+  set validityInterval(ValidityIntervalV1 validityInterval) => RustLib
+      .instance
+      .api
+      .crateApiModelEventModelEventV1AutoAccessorSetValidityInterval(
+        that: this,
+        validityInterval: validityInterval,
+      );
+
+  Future<String> toJson() =>
+      RustLib.instance.api.crateApiModelEventModelEventV1ToJson(that: this);
+
+  Future<void> validate() =>
+      RustLib.instance.api.crateApiModelEventModelEventV1Validate(that: this);
+}
+
+@sealed
+class SpatiotemporalRingBufferV1Impl extends RustOpaque
+    implements SpatiotemporalRingBufferV1 {
+  // Not to be used by end users
+  SpatiotemporalRingBufferV1Impl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  SpatiotemporalRingBufferV1Impl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_SpatiotemporalRingBufferV1,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_SpatiotemporalRingBufferV1Ptr,
+  );
+
+  Future<BigInt> capacity() => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Capacity(
+        that: this,
+      );
+
+  Future<void> clear() => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Clear(that: this);
+
+  Future<bool> containsEventId({required String eventId}) => RustLib
+      .instance
+      .api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1ContainsEventId(
+        that: this,
+        eventId: eventId,
+      );
+
+  Future<List<ModelEventV1>> eventsActiveAt({required BigInt timestampNs}) =>
+      RustLib.instance.api
+          .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsActiveAt(
+            that: this,
+            timestampNs: timestampNs,
+          );
+
+  Future<List<ModelEventV1>> eventsBetween({
+    required BigInt startCaptureTimestampNs,
+    required BigInt endCaptureTimestampNs,
+  }) => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1EventsBetween(
+        that: this,
+        startCaptureTimestampNs: startCaptureTimestampNs,
+        endCaptureTimestampNs: endCaptureTimestampNs,
+      );
+
+  Future<bool> isEmpty() => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1IsEmpty(
+        that: this,
+      );
+
+  Future<ModelEventV1?> latestForClass({
+    required String classId,
+    Str? trackId,
+    required BigInt atOrBeforeCaptureTimestampNs,
+  }) => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1LatestForClass(
+        that: this,
+        classId: classId,
+        trackId: trackId,
+        atOrBeforeCaptureTimestampNs: atOrBeforeCaptureTimestampNs,
+      );
+
+  Future<BigInt> len() => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Len(that: this);
+
+  Future<RingBufferInsertResultV1> push({required ModelEventV1 event}) =>
+      RustLib.instance.api
+          .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Push(
+            that: this,
+            event: event,
+          );
+
+  Future<void> sessionId() => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1SessionId(
+        that: this,
+      );
+
+  Future<List<ModelEventV1>> snapshot() => RustLib.instance.api
+      .crateApiSpatiotemporalBufferSpatiotemporalRingBufferV1Snapshot(
+        that: this,
+      );
+}
+
+@sealed
+class StrImpl extends RustOpaque implements Str {
+  // Not to be used by end users
+  StrImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  StrImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_Str,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_Str,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_StrPtr,
+  );
 }

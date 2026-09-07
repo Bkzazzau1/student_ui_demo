@@ -12,20 +12,19 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 NativeSystemSecurityReviewResult analyzeSystemSecurityReport({
   required String report,
   required String platformName,
-}) =>
-    BrainCoreApi.instance.api.crateApiSystemSecurityAnalyzeSystemSecurityReport(
-      report: report,
-      platformName: platformName,
-    );
+}) => RustLib.instance.api.crateApiSystemSecurityAnalyzeSystemSecurityReport(
+  report: report,
+  platformName: platformName,
+);
 
 Future<String> collectSystemSecurityReport({required String platformName}) =>
-    BrainCoreApi.instance.api.crateApiSystemSecurityCollectSystemSecurityReport(
+    RustLib.instance.api.crateApiSystemSecurityCollectSystemSecurityReport(
       platformName: platformName,
     );
 
 Future<NativeSystemSecurityReviewResult> runSystemSecurityReview({
   required String platformName,
-}) => BrainCoreApi.instance.api.crateApiSystemSecurityRunSystemSecurityReview(
+}) => RustLib.instance.api.crateApiSystemSecurityRunSystemSecurityReview(
   platformName: platformName,
 );
 

@@ -23,22 +23,21 @@ GazeCalibrationProfileV2 buildGazeCalibrationProfileV2({
   required String modelSha256,
   required PlatformInt64 createdAtMs,
   required PlatformInt64 expiresAtMs,
-}) => BrainCoreApi.instance.api
-    .crateApiGazeCalibrationBuildGazeCalibrationProfileV2(
-      samples: samples,
-      studentId: studentId,
-      deviceId: deviceId,
-      examId: examId,
-      attemptId: attemptId,
-      cameraId: cameraId,
-      screenWidth: screenWidth,
-      screenHeight: screenHeight,
-      displayScale: displayScale,
-      modelId: modelId,
-      modelSha256: modelSha256,
-      createdAtMs: createdAtMs,
-      expiresAtMs: expiresAtMs,
-    );
+}) => RustLib.instance.api.crateApiGazeCalibrationBuildGazeCalibrationProfileV2(
+  samples: samples,
+  studentId: studentId,
+  deviceId: deviceId,
+  examId: examId,
+  attemptId: attemptId,
+  cameraId: cameraId,
+  screenWidth: screenWidth,
+  screenHeight: screenHeight,
+  displayScale: displayScale,
+  modelId: modelId,
+  modelSha256: modelSha256,
+  createdAtMs: createdAtMs,
+  expiresAtMs: expiresAtMs,
+);
 
 GazeZonePredictionV2 predictCalibratedGazeZoneV2({
   required GazeCalibrationProfileV2 profile,
@@ -48,21 +47,21 @@ GazeZonePredictionV2 predictCalibratedGazeZoneV2({
   required double headPitch,
   required double signalConfidence,
   required PlatformInt64 nowMs,
-}) => BrainCoreApi.instance.api
-    .crateApiGazeCalibrationPredictCalibratedGazeZoneV2(
-      profile: profile,
-      eyeX: eyeX,
-      eyeY: eyeY,
-      headYaw: headYaw,
-      headPitch: headPitch,
-      signalConfidence: signalConfidence,
-      nowMs: nowMs,
-    );
+}) => RustLib.instance.api.crateApiGazeCalibrationPredictCalibratedGazeZoneV2(
+  profile: profile,
+  eyeX: eyeX,
+  eyeY: eyeY,
+  headYaw: headYaw,
+  headPitch: headPitch,
+  signalConfidence: signalConfidence,
+  nowMs: nowMs,
+);
 
 GazeCalibrationProfile buildGazeCalibrationProfile({
   required List<GazeCalibrationSample> samples,
-}) => BrainCoreApi.instance.api
-    .crateApiGazeCalibrationBuildGazeCalibrationProfile(samples: samples);
+}) => RustLib.instance.api.crateApiGazeCalibrationBuildGazeCalibrationProfile(
+  samples: samples,
+);
 
 GazeZonePrediction predictCalibratedGazeZone({
   required GazeCalibrationProfile profile,
@@ -71,15 +70,14 @@ GazeZonePrediction predictCalibratedGazeZone({
   required double headYaw,
   required double headPitch,
   required double signalConfidence,
-}) =>
-    BrainCoreApi.instance.api.crateApiGazeCalibrationPredictCalibratedGazeZone(
-      profile: profile,
-      eyeX: eyeX,
-      eyeY: eyeY,
-      headYaw: headYaw,
-      headPitch: headPitch,
-      signalConfidence: signalConfidence,
-    );
+}) => RustLib.instance.api.crateApiGazeCalibrationPredictCalibratedGazeZone(
+  profile: profile,
+  eyeX: eyeX,
+  eyeY: eyeY,
+  headYaw: headYaw,
+  headPitch: headPitch,
+  signalConfidence: signalConfidence,
+);
 
 class GazeCalibrationProfile {
   final bool usable;

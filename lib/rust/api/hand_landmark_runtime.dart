@@ -14,18 +14,15 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 HandLandmarkModelStatus loadHandLandmarkModel({
   required String manifestJson,
   required List<int> modelBytes,
-}) =>
-    BrainCoreApi.instance.api.crateApiHandLandmarkRuntimeLoadHandLandmarkModel(
-      manifestJson: manifestJson,
-      modelBytes: modelBytes,
-    );
+}) => RustLib.instance.api.crateApiHandLandmarkRuntimeLoadHandLandmarkModel(
+  manifestJson: manifestJson,
+  modelBytes: modelBytes,
+);
 
-void clearHandLandmarkModel() => BrainCoreApi.instance.api
-    .crateApiHandLandmarkRuntimeClearHandLandmarkModel();
+void clearHandLandmarkModel() =>
+    RustLib.instance.api.crateApiHandLandmarkRuntimeClearHandLandmarkModel();
 
-HandLandmarkModelStatus currentHandLandmarkModelStatus() => BrainCoreApi
-    .instance
-    .api
+HandLandmarkModelStatus currentHandLandmarkModelStatus() => RustLib.instance.api
     .crateApiHandLandmarkRuntimeCurrentHandLandmarkModelStatus();
 
 HandLandmarkInferenceResult analyzeHandLandmarkRgbCrop({
@@ -34,8 +31,8 @@ HandLandmarkInferenceResult analyzeHandLandmarkRgbCrop({
   required int cropHeight,
   required bool mirrored,
   required PlatformInt64 timestampMs,
-}) => BrainCoreApi.instance.api
-    .crateApiHandLandmarkRuntimeAnalyzeHandLandmarkRgbCrop(
+}) =>
+    RustLib.instance.api.crateApiHandLandmarkRuntimeAnalyzeHandLandmarkRgbCrop(
       rgbBytes: rgbBytes,
       cropWidth: cropWidth,
       cropHeight: cropHeight,
@@ -53,18 +50,17 @@ HandLandmarkInferenceResult reviewHandLandmarkOutput({
   required int frameHeight,
   required bool mirrored,
   required PlatformInt64 timestampMs,
-}) => BrainCoreApi.instance.api
-    .crateApiHandLandmarkRuntimeReviewHandLandmarkOutput(
-      output: output,
-      landmarkCount: landmarkCount,
-      outputLayout: outputLayout,
-      coordinateMode: coordinateMode,
-      confidenceIndex: confidenceIndex,
-      frameWidth: frameWidth,
-      frameHeight: frameHeight,
-      mirrored: mirrored,
-      timestampMs: timestampMs,
-    );
+}) => RustLib.instance.api.crateApiHandLandmarkRuntimeReviewHandLandmarkOutput(
+  output: output,
+  landmarkCount: landmarkCount,
+  outputLayout: outputLayout,
+  coordinateMode: coordinateMode,
+  confidenceIndex: confidenceIndex,
+  frameWidth: frameWidth,
+  frameHeight: frameHeight,
+  mirrored: mirrored,
+  timestampMs: timestampMs,
+);
 
 class HandLandmarkInferenceResult {
   final List<HandLandmarkPoint> landmarks;
