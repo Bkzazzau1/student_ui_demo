@@ -8,6 +8,7 @@ on:
       - 'lib/proctoring_demo/e1_model_event_memory_coordinator.dart'
       - 'lib/proctoring_demo/e1_object_taxonomy.dart'
       - 'lib/proctoring_demo/e1_small_object_specialist.dart'
+      - 'lib/proctoring_demo/e1_specialist_model_event_adapter.dart'
       - 'lib/proctoring_demo/live_exam_monitor.dart'
       - 'lib/proctoring_demo/model_event_v1.dart'
       - 'lib/proctoring_demo/native_model_event_memory_sink.dart'
@@ -23,6 +24,8 @@ on:
       - 'test/e1_object_taxonomy_manifest_alignment_test.dart'
       - 'test/e1_small_object_specialist_test.dart'
       - 'test/e1_small_object_specialist_compile_guard_test.dart'
+      - 'test/e1_specialist_model_event_adapter_test.dart'
+      - 'test/e1_specialist_memory_ingress_test.dart'
       - 'test/model_event_v1_test.dart'
       - 'test/object_review_event_mapper_test.dart'
       - 'test/optimized_vision_object_event_adapter_test.dart'
@@ -32,12 +35,14 @@ on:
       - 'edge-ai/e1-event-wiring'
       - 'edge-ai/e1-person-tracking'
       - 'edge-ai/e1-object-taxonomy-small-object'
+      - 'edge-ai/e1-specialist-event-wiring'
     paths:
       - 'assets/models/yolo_exam_review/**'
       - 'lib/proctoring_demo/e1_model_event_adapter.dart'
       - 'lib/proctoring_demo/e1_model_event_memory_coordinator.dart'
       - 'lib/proctoring_demo/e1_object_taxonomy.dart'
       - 'lib/proctoring_demo/e1_small_object_specialist.dart'
+      - 'lib/proctoring_demo/e1_specialist_model_event_adapter.dart'
       - 'lib/proctoring_demo/live_exam_monitor.dart'
       - 'lib/proctoring_demo/model_event_v1.dart'
       - 'lib/proctoring_demo/native_model_event_memory_sink.dart'
@@ -53,6 +58,8 @@ on:
       - 'test/e1_object_taxonomy_manifest_alignment_test.dart'
       - 'test/e1_small_object_specialist_test.dart'
       - 'test/e1_small_object_specialist_compile_guard_test.dart'
+      - 'test/e1_specialist_model_event_adapter_test.dart'
+      - 'test/e1_specialist_memory_ingress_test.dart'
       - 'test/model_event_v1_test.dart'
       - 'test/object_review_event_mapper_test.dart'
       - 'test/optimized_vision_object_event_adapter_test.dart'
@@ -89,5 +96,7 @@ jobs:
           test/e1_object_taxonomy_manifest_alignment_test.dart
           test/e1_small_object_specialist_test.dart
           test/e1_small_object_specialist_compile_guard_test.dart
+          test/e1_specialist_model_event_adapter_test.dart
+          test/e1_specialist_memory_ingress_test.dart
           test/object_review_event_mapper_test.dart
           test/optimized_vision_object_event_adapter_test.dart
