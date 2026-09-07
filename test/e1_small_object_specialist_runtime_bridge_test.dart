@@ -143,7 +143,9 @@ void main() {
             methods.add(call.method);
             if (call.method == 'initialize') return true;
             if (call.method == 'runFrame') {
-              runFrameArguments = Map<Object?, Object?>.from(call.arguments as Map);
+              runFrameArguments = Map<Object?, Object?>.from(
+                call.arguments as Map,
+              );
               return <String, Object?>{
                 'available': true,
                 'outputs': _nativeOutputs(
@@ -348,23 +350,26 @@ void main() {
     expect(nativeCalls, 0);
   });
 
-  test('missing ROI blocks native calls rather than falling back to full frame', () async {
-    var nativeCalls = 0;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, (call) async {
-          nativeCalls++;
-          return true;
-        });
+  test(
+    'missing ROI blocks native calls rather than falling back to full frame',
+    () async {
+      var nativeCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            nativeCalls++;
+            return true;
+          });
 
-    final runtime = E1SmallObjectSpecialistRuntimeBridge(
-      manifestLoader: () async => _installedManifest(),
-    );
-    final observations = await runtime.infer(
-      request: _request(roi: null),
-      frame: _frame(),
-    );
+      final runtime = E1SmallObjectSpecialistRuntimeBridge(
+        manifestLoader: () async => _installedManifest(),
+      );
+      final observations = await runtime.infer(
+        request: _request(roi: null),
+        frame: _frame(),
+      );
 
-    expect(observations, isEmpty);
-    expect(nativeCalls, 0);
-  });
+      expect(observations, isEmpty);
+      expect(nativeCalls, 0);
+    },
+  );
 }
