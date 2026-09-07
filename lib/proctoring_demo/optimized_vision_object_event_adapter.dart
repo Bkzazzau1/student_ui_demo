@@ -1,3 +1,5 @@
+import 'e1_model_event_adapter.dart';
+import 'model_event_v1.dart';
 import 'native_vision_bridge.dart';
 import 'object_review_event_mapper.dart';
 import 'optimized_vision_runtime_bridge.dart';
@@ -6,12 +8,49 @@ class OptimizedVisionObjectEventAdapter {
   const OptimizedVisionObjectEventAdapter({
     this.mapper = const ObjectReviewEventMapper(),
     this.nativeVision = const GeneratedNativeVisionBridge(),
+    this.e1ModelEvents = const E1ModelEventAdapter(),
     this.minimumConfidence = 0.25,
   });
 
   final ObjectReviewEventMapper mapper;
   final NativeVisionBridge nativeVision;
+  final E1ModelEventAdapter e1ModelEvents;
   final double minimumConfidence;
+
+  /// Produces frozen Stage 3 E1 observations only when the runtime result has
+  /// trustworthy source-frame, capture-time, inference-time, and model
+  /// provenance. Missing provenance remains UNKNOWN and yields no formal model
+  /// event rather than a fabricated timestamp or model identity.
+  List<ModelEventV1Payload> mapModelEvents(
+    OptimizedVisionRuntimeResult result, {
+    required String sessionId,
+    double? quality,
+  }) {
+    if (!result.available || !result.hasModelEventProvenance) {
+      return const <ModelEventV1Payload>[];
+    }
+    final nativeReview = _decodeNativeYoloReview(result.outputs);
+    if (nativeReview == null) {
+      return const <ModelEventV1Payload>[];
+    }
+
+    return e1ModelEvents.fromNativeReview(
+      review: nativeReview,
+      context: E1FrameInferenceContext(
+        sessionId: sessionId,
+        sourceFrameId: result.sourceFrameId,
+        captureTimestampNs: result.captureTimestampNs!,
+        inferenceTimestampNs: result.inferenceTimestampNs!,
+        modelId: result.modelId!,
+        modelVersion: result.modelVersion!,
+        imageWidth: result.imageWidth,
+        imageHeight: result.imageHeight,
+        quality: quality,
+        backend: result.backend,
+        precision: result.precision,
+      ),
+    );
+  }
 
   List<ObjectReviewEventDecision> mapResult(
     OptimizedVisionRuntimeResult result, {
