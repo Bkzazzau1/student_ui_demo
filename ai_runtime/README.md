@@ -47,6 +47,26 @@ the candidate device.
 The frozen runtime/training boundary is documented in
 `docs/edge_ai/e1_runtime_training_readiness.md`.
 
+## E1 collection split planning
+
+`e1_collection_split.py` turns a collected-image inventory into a deterministic
+source-group-safe train/validation/test plan before annotation. The collection
+workflow must explicitly provide `source_group_id`, `split_seed`, and all three
+split weights. The tool does not invent a default ratio.
+
+```powershell
+python -m ai_runtime.e1_collection_split --pretty data/collection/e1_base_inventory.json data/collection/e1_base_split_plan.json
+```
+
+All records sharing one `source_group_id` remain in the same split. Whole-group
+integrity takes priority over matching the requested record weights exactly, so
+the plan reports both target and actual record counts/fractions. A zero weight
+intentionally disables a split; missing weights are invalid.
+
+The split plan contains no annotations and does not turn unannotated images into
+negative examples. See `docs/edge_ai/e1_dataset_splitting.md` and the synthetic
+`docs/edge_ai/examples/e1_collection_inventory.example.json`.
+
 ## E1 annotation ingest
 
 `e1_annotation_ingest.py` converts staged annotation records into the frozen E1
