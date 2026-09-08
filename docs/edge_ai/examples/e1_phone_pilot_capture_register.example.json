@@ -1,0 +1,38 @@
+{
+  "example_only": true,
+  "pilot_id": "example-e1-phone-pilot-001",
+  "model_role": "base",
+  "participant_code": "p001",
+  "sessions": [
+    {
+      "source_group_id": "base-pilot-p001-phone-hand-001",
+      "scenario": "phone_positive",
+      "expected_canonical_objects": ["person", "phone"],
+      "confusion_target": null,
+      "recording_reference": "private-storage://replace-with-real-recording-reference",
+      "retained_frames": []
+    },
+    {
+      "source_group_id": "base-pilot-p001-remote-hand-001",
+      "scenario": "remote_hard_negative_for_phone",
+      "expected_canonical_objects": ["person", "remote"],
+      "confusion_target": "phone",
+      "recording_reference": "private-storage://replace-with-real-recording-reference",
+      "retained_frames": []
+    },
+    {
+      "source_group_id": "base-pilot-p001-empty-hand-001",
+      "scenario": "empty_hand_negative_for_phone",
+      "expected_canonical_objects": ["person"],
+      "confusion_target": "phone",
+      "recording_reference": "private-storage://replace-with-real-recording-reference",
+      "retained_frames": []
+    }
+  ],
+  "notes": [
+    "This file is a format example only, not real training evidence.",
+    "Do not store participant names, matric numbers, emails or phone numbers in source-group IDs.",
+    "Do not commit raw participant images or recordings to the application repository.",
+    "The three source groups are a workflow-learning pilot and are not a scientifically meaningful train/validation/test dataset."
+  ]
+}
