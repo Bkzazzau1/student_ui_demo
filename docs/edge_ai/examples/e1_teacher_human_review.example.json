@@ -1,0 +1,13 @@
+{
+  "example_only": true,
+  "review_packet_id": "example-e1-teacher-consensus-001",
+  "candidate_id": "candidate-phone-001",
+  "teacher_report_status": "teacher_agreement",
+  "human_review": {
+    "reviewer_id": "reviewer-example-001",
+    "decision": "pending",
+    "canonical_object_id": null,
+    "bbox_xywh_normalized": null,
+    "notes": "Teacher agreement is not ground truth. A human reviewer must explicitly approve, correct, exclude, or keep the candidate unresolved before annotation ingest."
+  }
+}
