@@ -1,0 +1,30 @@
+{
+  "example_only": true,
+  "capture_schema_version": "1.0",
+  "campaign_id": "example-e1-pilot",
+  "model_role": "base",
+  "source_group_id": "base-pilot-p001-phone-desk-001",
+  "participant_code": "p001",
+  "scenario": "phone_on_desk",
+  "environment": {
+    "room_category": "private_room",
+    "lighting": "mixed_daylight",
+    "camera_position": "laptop_webcam_front"
+  },
+  "capture_device": {
+    "device_code": "camera-example-001",
+    "notes": "Example only. Do not store participant names or machine-specific paths here."
+  },
+  "records": [
+    {
+      "image_path": "images/base-pilot-p001-phone-desk-001/frame-0001.jpg",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "image_path": "images/base-pilot-p001-phone-desk-001/frame-0002.jpg",
+      "width": 1920,
+      "height": 1080
+    }
+  ]
+}
