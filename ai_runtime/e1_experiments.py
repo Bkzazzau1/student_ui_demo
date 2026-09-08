@@ -308,6 +308,7 @@ def parity(model, checkpoint, fixture, metadata, atol, rtol, confidence, nms_iou
 
 def benchmark(model, fixture, provider, warmup, repeats):
     import numpy as np
+    import onnxruntime as ort
     integer(warmup, "warmup", 0)
     integer(repeats, "repeats")
     runtime = session(model, provider)
@@ -327,7 +328,7 @@ def benchmark(model, fixture, provider, warmup, repeats):
     return {"model_sha256": sha256(model), "fixture_sha256": sha256(fixture),
             "requested_provider": provider, "session_providers": runtime.get_providers(),
             "platform": platform.platform(), "processor": platform.processor(),
-            "onnxruntime_version": importlib.metadata.version("onnxruntime"),
+            "onnxruntime_version": ort.__version__,
             "iterations": len(times), "warmup": warmup, "latency_ms": {
                 "mean": float(np.mean(times)), "p50": float(np.percentile(times, 50)),
                 "p95": float(np.percentile(times, 95)), "max": max(times)},
