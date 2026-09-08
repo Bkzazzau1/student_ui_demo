@@ -107,6 +107,14 @@ def _evaluate_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     vote_counts = Counter(keys)
     has_unknown = "unknown" in vote_counts
     effective = [key for key in keys if key not in {"abstain", "unknown"}]
+    # Agreement requires independent providers among the EFFECTIVE votes, not
+    # just among all votes: a provider that abstains still counts toward
+    # provider_count, which would otherwise let a single provider's repeated
+    # calls (under different teacher_id configs) masquerade as multi-provider
+    # consensus while every other provider abstained.
+    effective_provider_count = len(
+        {vote["provider"] for vote, key in zip(votes, keys) if key not in {"abstain", "unknown"}}
+    )
 
     status: str
     suggested_decision: dict[str, Any] | None = None
@@ -117,6 +125,8 @@ def _evaluate_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
         status = "needs_human_review"
     elif not effective:
         status = "unresolved"
+    elif effective_provider_count < 2:
+        status = "insufficient_review"
     elif len(set(effective)) == 1:
         status = "teacher_agreement"
         agreed = effective[0]
@@ -150,6 +160,7 @@ def _evaluate_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
         "candidate_id": candidate["candidate_id"],
         "status": status,
         "teacher_provider_count": provider_count,
+        "teacher_effective_provider_count": effective_provider_count,
         "teacher_vote_count": len(votes),
         "vote_counts": dict(sorted(vote_counts.items())),
         "suggested_decision": suggested_decision,

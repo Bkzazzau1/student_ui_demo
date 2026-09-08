@@ -118,6 +118,29 @@ class TeacherConsensusTests(unittest.TestCase):
         self.assertEqual(candidate["teacher_provider_count"], 1)
         self.assertIsNone(candidate["suggested_decision"])
 
+    def test_repeated_calls_from_one_effective_provider_are_not_agreement(self) -> None:
+        # A second provider is represented in the packet (satisfying the naive
+        # "at least two providers" check), but it only abstained. The single
+        # remaining provider answering twice under two teacher_id configs must
+        # not be treated as independent multi-provider agreement.
+        packet = _packet()
+        votes = packet["candidates"][0]["teacher_votes"]
+        votes[0]["decision"] = "abstain"
+        votes[0].pop("canonical_object_id")
+        votes[0].pop("bbox_xywh_normalized")
+        votes[2]["provider"] = votes[1]["provider"]
+        votes[2]["teacher_id"] = votes[1]["teacher_id"] + "-second-call"
+
+        report, issues = evaluate_teacher_packet(packet)
+
+        self.assertEqual(issues, ())
+        assert report is not None
+        candidate = report["candidates"][0]
+        self.assertEqual(candidate["teacher_provider_count"], 2)
+        self.assertEqual(candidate["teacher_effective_provider_count"], 1)
+        self.assertEqual(candidate["status"], "insufficient_review")
+        self.assertIsNone(candidate["suggested_decision"])
+
     def test_no_object_agreement_is_not_an_annotation(self) -> None:
         packet = _packet()
         for vote in packet["candidates"][0]["teacher_votes"]:
