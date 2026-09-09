@@ -51,11 +51,13 @@ The current COCO baseline exposes its large-screen class as `tv`. Generic `monit
 
 The canonical trainable specialist classes are:
 
-- `smartwatch`
+- `wrist_device`
 - `earbud`
 - `tablet`
 - `paper_note`
 - `calculator`
+
+Taxonomy `1.1` replaced `smartwatch` with `wrist_device` in place (same class index); `smartwatch` is retired, not an alias, and is rejected rather than silently accepted under the current taxonomy. See `docs/edge_ai/e1_object_taxonomy.md` for full `wrist_device` semantics and the exam-policy wording it supports.
 
 Until a validated specialist model and manifest are installed, the live specialist path must emit zero specialist observations.
 
@@ -113,7 +115,7 @@ Files under `docs/edge_ai/examples/` are synthetic format examples only. Their p
 
 Hard-negative collection is required for realistic exam deployment. Initial categories include:
 
-- ordinary watch vs smartwatch;
+- bracelet/jewelry/wristband vs wrist_device;
 - earring vs earbud;
 - remote control vs phone;
 - hand without phone;

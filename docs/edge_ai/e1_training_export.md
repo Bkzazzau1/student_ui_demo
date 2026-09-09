@@ -45,7 +45,7 @@ splits; the exporter rejects cross-split `source_group_id` leakage.
 
 | YOLO index | Canonical class |
 |---:|---|
-| 0 | `smartwatch` |
+| 0 | `wrist_device` |
 | 1 | `earbud` |
 | 2 | `tablet` |
 | 3 | `paper_note` |
@@ -54,6 +54,12 @@ splits; the exporter rejects cross-split `source_group_id` leakage.
 The exporter asserts that these ordered sets still match the frozen canonical
 training-role sets. A mismatch fails closed rather than silently reindexing a
 model class.
+
+Taxonomy `1.1` replaced `smartwatch` with `wrist_device` in place at index 0,
+so `earbud`, `tablet`, `paper_note`, and `calculator` keep their existing
+indices. This is a locked regression, not a convention to rely on for future
+taxonomy edits: any further class change must again preserve unrelated
+indices or fail closed.
 
 ## Geometry conversion
 

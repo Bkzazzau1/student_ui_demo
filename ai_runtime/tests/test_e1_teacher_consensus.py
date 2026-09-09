@@ -169,7 +169,7 @@ class TeacherConsensusTests(unittest.TestCase):
 
     def test_specialist_class_cannot_enter_base_teacher_packet(self) -> None:
         packet = _packet()
-        packet["candidates"][0]["teacher_votes"][0]["canonical_object_id"] = "smartwatch"
+        packet["candidates"][0]["teacher_votes"][0]["canonical_object_id"] = "wrist_device"
 
         report, issues = evaluate_teacher_packet(packet)
 
@@ -190,6 +190,34 @@ class TeacherConsensusTests(unittest.TestCase):
             report["candidates"][0]["suggested_decision"],
             {"decision": "canonical", "canonical_object_id": "earbud"},
         )
+
+    def test_specialist_role_accepts_wrist_device_taxonomy_1_1_class(self) -> None:
+        # Taxonomy 1.1: wrist_device replaced smartwatch as the specialist class.
+        packet = _packet()
+        packet["model_role"] = "specialist"
+        for vote in packet["candidates"][0]["teacher_votes"]:
+            vote["canonical_object_id"] = "wrist_device"
+
+        report, issues = evaluate_teacher_packet(packet)
+
+        self.assertEqual(issues, ())
+        assert report is not None
+        self.assertEqual(
+            report["candidates"][0]["suggested_decision"],
+            {"decision": "canonical", "canonical_object_id": "wrist_device"},
+        )
+
+    def test_legacy_smartwatch_label_is_not_silently_accepted_under_taxonomy_1_1(self) -> None:
+        # smartwatch is retired, not an alias for wrist_device; it must be
+        # rejected rather than silently promoted to the new canonical class.
+        packet = _packet()
+        packet["model_role"] = "specialist"
+        packet["candidates"][0]["teacher_votes"][0]["canonical_object_id"] = "smartwatch"
+
+        report, issues = evaluate_teacher_packet(packet)
+
+        self.assertIsNone(report)
+        self.assertIn("class_not_allowed_for_role", {issue.code for issue in issues})
 
     def test_invalid_geometry_is_rejected(self) -> None:
         packet = _packet()

@@ -3,13 +3,13 @@ import 'model_event_v1.dart';
 
 /// The exam-relevant small-object targets that are intentionally not claimed
 /// by the current COCO YOLO development baseline.
-enum E1SmallObjectTarget { smartwatch, earbud, tablet, paperNote, calculator }
+enum E1SmallObjectTarget { wristDevice, earbud, tablet, paperNote, calculator }
 
 extension E1SmallObjectTargetWireValue on E1SmallObjectTarget {
   String get canonicalObjectId {
     switch (this) {
-      case E1SmallObjectTarget.smartwatch:
-        return 'smartwatch';
+      case E1SmallObjectTarget.wristDevice:
+        return 'wrist_device';
       case E1SmallObjectTarget.earbud:
         return 'earbud';
       case E1SmallObjectTarget.tablet:
@@ -266,7 +266,7 @@ class E1SmallObjectCascadePlanner {
             imageWidth: imageWidth,
             imageHeight: imageHeight,
             targets: const <E1SmallObjectTarget>{
-              E1SmallObjectTarget.smartwatch,
+              E1SmallObjectTarget.wristDevice,
             },
             reason: 'person_geometry_available_for_watch_specialist',
             roiHint: E1SpecialistRoiHint(

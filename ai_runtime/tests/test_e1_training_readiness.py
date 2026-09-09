@@ -37,7 +37,7 @@ def _sample(canonical_object_id: str, *, sample_id: str = "sample-1", group_id: 
 def _manifest(role: str, split: str, sample):
     return {
         "schema_version": "1.0",
-        "taxonomy_version": "1.0",
+        "taxonomy_version": "1.1",
         "dataset_id": f"e1-{role}-dataset",
         "dataset_version": "v1",
         "model_role": role,
@@ -65,7 +65,7 @@ def _evaluation_report(role: str):
     }
     return {
         "schema_version": "1.0",
-        "taxonomy_version": "1.0",
+        "taxonomy_version": "1.1",
         "model_id": f"e1-{role}",
         "model_version": "candidate-1",
         "evaluation_dataset_id": f"e1-{role}-heldout",
@@ -73,7 +73,7 @@ def _evaluation_report(role: str):
         "evaluation_split": "validation",
         "class_metrics": class_metrics,
         "hard_negative_metrics": {
-            "ordinary_watch": {
+            "bracelet_or_wristband": {
                 "sample_count": 10,
                 "false_positive_rate": 0.1,
             }
@@ -102,7 +102,7 @@ class E1TrainingReadinessTests(unittest.TestCase):
         self.assertEqual(
             SPECIALIST_TRAINABLE_CLASSES,
             frozenset(
-                {"smartwatch", "earbud", "tablet", "paper_note", "calculator"}
+                {"wrist_device", "earbud", "tablet", "paper_note", "calculator"}
             ),
         )
         self.assertTrue(BASE_TRAINABLE_CLASSES.isdisjoint(SPECIALIST_TRAINABLE_CLASSES))
@@ -118,7 +118,7 @@ class E1TrainingReadinessTests(unittest.TestCase):
         self.assertEqual(validate_dataset_manifest(specialist), ())
 
     def test_role_boundary_rejects_wrong_or_derived_classes(self):
-        wrong_role = _manifest("base", "train", _sample("smartwatch"))
+        wrong_role = _manifest("base", "train", _sample("wrist_device"))
         derived = _manifest("base", "train", _sample("additional_person"))
 
         self.assertIn(

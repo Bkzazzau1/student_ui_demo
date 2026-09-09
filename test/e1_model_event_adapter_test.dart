@@ -61,7 +61,7 @@ void main() {
       expect(event.metadata['canonical_object_id'], 'phone');
       expect(event.metadata['object_group'], 'communication_device');
       expect(event.metadata['object_coverage'], 'base_detector');
-      expect(event.metadata['taxonomy_version'], '1.0');
+      expect(event.metadata['taxonomy_version'], '1.1');
       final box = event.geometry!.boundingBox!;
       expect(box['x'], closeTo(0.4, 0.0001));
       expect(box['y'], closeTo(0.4, 0.0001));

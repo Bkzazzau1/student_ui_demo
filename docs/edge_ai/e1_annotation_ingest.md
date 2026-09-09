@@ -62,7 +62,9 @@ Examples:
 - `cell phone` is rejected rather than silently promoted to `phone`;
 - `tv_monitor` is rejected at ingest unless the annotation workflow has already
   resolved it to canonical `television`;
-- `smartwatch` cannot enter a base-detector staging file;
+- `wrist_device` cannot enter a base-detector staging file;
+- `smartwatch` is retired (taxonomy 1.1 replaced it with `wrist_device`) and is
+  rejected rather than silently promoted to `wrist_device`;
 - `phone` cannot enter a specialist staging file.
 
 Base trainable classes:
@@ -71,7 +73,7 @@ Base trainable classes:
 
 Specialist trainable classes:
 
-`smartwatch`, `earbud`, `tablet`, `paper_note`, `calculator`.
+`wrist_device`, `earbud`, `tablet`, `paper_note`, `calculator`.
 
 ## Geometry accepted from annotation tools
 
@@ -120,11 +122,11 @@ A record may intentionally contain no positive annotations:
 
 ```json
 {
-  "source_group_id": "session-negative-watch-001",
-  "image_path": "images/negative-watch/frame-001.jpg",
+  "source_group_id": "session-negative-bracelet-001",
+  "image_path": "images/negative-bracelet/frame-001.jpg",
   "width": 1920,
   "height": 1080,
-  "negative_tags": ["ordinary_watch"],
+  "negative_tags": ["bracelet_or_wristband"],
   "annotations": []
 }
 ```

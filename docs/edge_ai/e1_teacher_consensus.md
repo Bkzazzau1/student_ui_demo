@@ -85,13 +85,13 @@ Teacher responses must already use the frozen E1 canonical taxonomy.
 
 ### Specialist role
 
-- `smartwatch`
+- `wrist_device`
 - `earbud`
 - `tablet`
 - `paper_note`
 - `calculator`
 
-Teacher output such as `cell phone`, `tv monitor`, or another semantic alias is not silently converted by the consensus evaluator.
+Teacher output such as `cell phone`, `tv monitor`, or another semantic alias is not silently converted by the consensus evaluator. `smartwatch` is retired under taxonomy `1.1` (replaced in place by `wrist_device`) and is likewise rejected rather than silently accepted as canonical.
 
 The annotation workflow must resolve the class explicitly before ingest.
 
