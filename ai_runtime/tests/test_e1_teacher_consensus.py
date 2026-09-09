@@ -251,6 +251,32 @@ class TeacherConsensusCliTests(unittest.TestCase):
             replaced = review_teacher_file(input_path, output_path, force=True)
             self.assertTrue(replaced["ok"])
 
+    def test_input_output_same_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            shared_path = directory / "packet.json"
+            original_text = json.dumps(_packet())
+            shared_path.write_text(original_text, encoding="utf-8")
+
+            result = review_teacher_file(shared_path, shared_path)
+
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["issues"][0]["code"], "input_output_same")
+            self.assertEqual(shared_path.read_text(encoding="utf-8"), original_text)
+
+    def test_input_output_same_path_is_rejected_even_with_force(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            shared_path = directory / "packet.json"
+            original_text = json.dumps(_packet())
+            shared_path.write_text(original_text, encoding="utf-8")
+
+            result = review_teacher_file(shared_path, shared_path, force=True)
+
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["issues"][0]["code"], "input_output_same")
+            self.assertEqual(shared_path.read_text(encoding="utf-8"), original_text)
+
     def test_invalid_packet_does_not_create_output(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)

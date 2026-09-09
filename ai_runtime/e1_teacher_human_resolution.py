@@ -11,8 +11,10 @@ import argparse
 from dataclasses import dataclass
 import json
 import math
+import os
 from pathlib import Path
 import sys
+import tempfile
 from typing import Any, Sequence, TextIO
 
 
@@ -296,6 +298,32 @@ def build_annotation_staging(
     return staging, ()
 
 
+def _write_json_atomic(path: Path, value: dict[str, Any], *, pretty: bool) -> None:
+    """Write JSON to a unique temp file beside ``path``, then atomically replace it.
+
+    A predictable shared temp name (e.g. ``.name.tmp``) would itself collide if two
+    calls raced on the same output path; a unique name avoids that and still leaves
+    no partially written file at ``path`` if the process is interrupted mid-write.
+    """
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    indent = 2 if pretty else None
+    text = json.dumps(value, indent=indent, sort_keys=pretty) + "\n"
+    descriptor, temp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(temp_name, path)
+    except OSError:
+        try:
+            os.remove(temp_name)
+        except OSError:
+            pass
+        raise
+
+
 def resolve_files(
     teacher_report_path: Path,
     human_review_path: Path,
@@ -304,6 +332,22 @@ def resolve_files(
     force: bool = False,
     pretty: bool = False,
 ) -> dict[str, Any]:
+    try:
+        resolved_output = output_path.resolve()
+        if resolved_output in (teacher_report_path.resolve(), human_review_path.resolve()):
+            return {
+                "ok": False,
+                "issues": [
+                    ResolutionIssue(
+                        "input_output_same",
+                        "output must not be the same file as the teacher report or human review input",
+                        str(output_path),
+                    ).as_dict()
+                ],
+            }
+    except OSError:
+        pass
+
     if output_path.exists() and not force:
         return {
             "ok": False,
@@ -319,9 +363,13 @@ def resolve_files(
     if issues or staging is None:
         return {"ok": False, "issues": [issue.as_dict() for issue in issues]}
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    indent = 2 if pretty else None
-    output_path.write_text(json.dumps(staging, indent=indent, sort_keys=pretty) + "\n", encoding="utf-8")
+    try:
+        _write_json_atomic(output_path, staging, pretty=pretty)
+    except OSError as error:
+        return {
+            "ok": False,
+            "issues": [ResolutionIssue("output_write_error", str(error), str(output_path)).as_dict()],
+        }
     record = staging["records"][0]
     return {
         "ok": True,

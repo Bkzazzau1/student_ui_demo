@@ -288,6 +288,36 @@ class HumanResolutionCliTests(unittest.TestCase):
             self.assertTrue(replaced["ok"])
             self.assertNotEqual(output_path.read_text(encoding="utf-8"), "keep")
 
+    def test_output_same_as_teacher_report_is_rejected_even_with_force(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            teacher_path = directory / "teacher.json"
+            review_path = directory / "review.json"
+            teacher_text = json.dumps(_teacher_report())
+            teacher_path.write_text(teacher_text, encoding="utf-8")
+            review_path.write_text(json.dumps(_human_review()), encoding="utf-8")
+
+            result = resolve_files(teacher_path, review_path, teacher_path, force=True)
+
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["issues"][0]["code"], "input_output_same")
+            self.assertEqual(teacher_path.read_text(encoding="utf-8"), teacher_text)
+
+    def test_output_same_as_human_review_is_rejected_even_with_force(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            teacher_path = directory / "teacher.json"
+            review_path = directory / "review.json"
+            teacher_path.write_text(json.dumps(_teacher_report()), encoding="utf-8")
+            review_text = json.dumps(_human_review())
+            review_path.write_text(review_text, encoding="utf-8")
+
+            result = resolve_files(teacher_path, review_path, review_path, force=True)
+
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["issues"][0]["code"], "input_output_same")
+            self.assertEqual(review_path.read_text(encoding="utf-8"), review_text)
+
 
 if __name__ == "__main__":
     unittest.main()
