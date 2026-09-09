@@ -42,11 +42,11 @@ void main() {
     expect(decisions.every((decision) => decision.metadata['specialist_required'] == true), isTrue);
   });
 
-  test('maps smartwatch and earbud to dedicated E1 events', () {
+  test('maps wrist device and earbud to dedicated E1 events', () {
     final decisions = mapper.mapLabels(const <String>['smart watch', 'earbuds']);
     final eventTypes = decisions.map((decision) => decision.eventType).toSet();
 
-    expect(eventTypes, contains('e1_smartwatch_detected'));
+    expect(eventTypes, contains('e1_wrist_device_detected'));
     expect(eventTypes, contains('e1_earbud_detected'));
     expect(decisions.every((decision) => decision.metadata['specialist_required'] == true), isTrue);
   });

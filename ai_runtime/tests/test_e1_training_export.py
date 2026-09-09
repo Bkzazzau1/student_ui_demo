@@ -44,7 +44,7 @@ def _sample(sample_id: str, group_id: str, image_path: str, annotations, negativ
 def _manifest(role: str, split: str, samples, *, dataset_id="e1-dataset", version="v1"):
     return {
         "schema_version": "1.0",
-        "taxonomy_version": "1.0",
+        "taxonomy_version": "1.1",
         "dataset_id": dataset_id,
         "dataset_version": version,
         "model_role": role,
@@ -74,6 +74,14 @@ class E1TrainingExportTests(unittest.TestCase):
         self.assertEqual(class_order_for_role("BASE"), BASE_YOLO_CLASS_ORDER)
         self.assertEqual(class_order_for_role("specialist"), SPECIALIST_YOLO_CLASS_ORDER)
         self.assertEqual(class_order_for_role("unknown"), ())
+
+    def test_specialist_yolo_class_index_mapping_is_locked(self):
+        # Taxonomy 1.1 replaced smartwatch with wrist_device in place at index 0;
+        # this must never silently renumber earbud/tablet/paper_note/calculator.
+        self.assertEqual(
+            SPECIALIST_YOLO_CLASS_ORDER,
+            ("wrist_device", "earbud", "tablet", "paper_note", "calculator"),
+        )
 
     def test_base_export_materializes_images_labels_yaml_and_provenance(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -180,7 +188,7 @@ class E1TrainingExportTests(unittest.TestCase):
                             "s-train",
                             "g-train",
                             "train.jpg",
-                            [_annotation("ann-watch", "smartwatch")],
+                            [_annotation("ann-watch", "wrist_device")],
                         )
                     ],
                 ),

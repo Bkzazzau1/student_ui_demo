@@ -63,7 +63,7 @@ def _human_review() -> dict:
             "width": 1000,
             "height": 500,
         },
-        "negative_tags": ["ordinary_watch", "ordinary_watch"],
+        "negative_tags": ["bracelet_or_wristband", "bracelet_or_wristband"],
         "candidate_reviews": [
             {
                 "candidate_id": "candidate-phone-001",
@@ -91,7 +91,7 @@ class BuildAnnotationStagingTests(unittest.TestCase):
         self.assertEqual(staging["model_role"], "base")
         record = staging["records"][0]
         self.assertEqual(record["source_group_id"], "session-001")
-        self.assertEqual(record["negative_tags"], ["ordinary_watch"])
+        self.assertEqual(record["negative_tags"], ["bracelet_or_wristband"])
         self.assertEqual(
             record["annotations"],
             [
@@ -177,9 +177,37 @@ class BuildAnnotationStagingTests(unittest.TestCase):
 
     def test_specialist_class_cannot_enter_base_review(self) -> None:
         review = _human_review()
-        review["candidate_reviews"][0]["canonical_object_id"] = "smartwatch"
+        review["candidate_reviews"][0]["canonical_object_id"] = "wrist_device"
 
         staging, issues = build_annotation_staging(_teacher_report(), review)
+
+        self.assertIsNone(staging)
+        self.assertIn("class_not_allowed_for_role", {issue.code for issue in issues})
+
+    def test_wrist_device_is_accepted_as_specialist_canonical_class(self) -> None:
+        # Taxonomy 1.1: wrist_device replaced smartwatch as the specialist class;
+        # human resolution must accept it as a valid canonical label.
+        teacher_report = _teacher_report()
+        teacher_report["model_role"] = "specialist"
+        review = _human_review()
+        review["candidate_reviews"][0]["canonical_object_id"] = "wrist_device"
+
+        staging, issues = build_annotation_staging(teacher_report, review)
+
+        self.assertEqual(issues, ())
+        assert staging is not None
+        self.assertEqual(
+            staging["records"][0]["annotations"][0]["canonical_object_id"],
+            "wrist_device",
+        )
+
+    def test_legacy_smartwatch_label_is_rejected_under_taxonomy_1_1(self) -> None:
+        teacher_report = _teacher_report()
+        teacher_report["model_role"] = "specialist"
+        review = _human_review()
+        review["candidate_reviews"][0]["canonical_object_id"] = "smartwatch"
+
+        staging, issues = build_annotation_staging(teacher_report, review)
 
         self.assertIsNone(staging)
         self.assertIn("class_not_allowed_for_role", {issue.code for issue in issues})

@@ -49,7 +49,9 @@ A hard negative is a negative example that visually resembles a target class and
 
 Examples:
 
-- ordinary wristwatch when training `smartwatch`;
+- jewelry bracelet, decorative bracelet, or plain non-device wristband when
+  training `wrist_device` (an ordinary analogue/digital watch is now a
+  **positive** `wrist_device` example, not a hard negative — see Section 8a);
 - earring when training `earbud`;
 - remote control when evaluating confusion with `phone`;
 - hand-only poses that resemble phone holding;
@@ -77,7 +79,7 @@ The base E1 detector may be trained only on:
 
 The specialist may be trained only on:
 
-- `smartwatch`
+- `wrist_device`
 - `earbud`
 - `tablet`
 - `paper_note`
@@ -169,7 +171,7 @@ data/
         base-pilot-p002-clean-desk-001/
           frame-0001.jpg
       specialist/
-        specialist-pilot-p003-ordinary-watch-001/
+        specialist-pilot-p003-watch-conventional-001/
           frame-0001.jpg
 ```
 
@@ -200,8 +202,9 @@ base-pilot-p001-phone-desk-001
 base-pilot-p001-phone-hand-002
 base-pilot-p002-clean-desk-001
 base-pilot-p003-book-reading-001
-specialist-pilot-p004-ordinary-watch-001
-specialist-pilot-p004-smartwatch-wrist-002
+specialist-pilot-p004-watch-conventional-001
+specialist-pilot-p004-watch-smart-002
+specialist-pilot-p004-bracelet-negative-003
 ```
 
 Participant codes should be pseudonymous collection IDs, not names, matric numbers, email addresses, or phone numbers.
@@ -326,6 +329,54 @@ Capture:
 
 Do not convert loose sheets into `book`. Loose paper belongs to the specialist `paper_note` class only when the specialist annotation policy supports it.
 
+## 8a. Specialist wrist-device capture matrix
+
+Taxonomy `1.1` replaced the specialist class `smartwatch` with `wrist_device`.
+`wrist_device` means any visually identifiable wrist-worn timekeeping or
+electronic wearable that exam policy prohibits — the annotator does not need
+to judge whether a watch is "smart." A jewelry bracelet, decorative bracelet,
+or plain non-device wristband is not `wrist_device` merely because it sits on
+a wrist.
+
+Cover at least these four controlled scenarios, each its own independent
+source group:
+
+### A. Conventional watch positive
+
+An analogue or digital wristwatch, clearly visible on the wrist.
+
+- canonical class: `wrist_device`
+
+### B. Smart wearable positive
+
+A smartwatch, fitness tracker, or smart band, clearly visible on the wrist.
+
+- canonical class: `wrist_device`
+
+### C. Wrist accessory hard negative
+
+A bracelet, decorative wristband, or other jewelry item with no
+timekeeping/electronic function.
+
+- no `wrist_device` annotation is added;
+- hard-negative tag: `bracelet_or_wristband`.
+
+### D. Empty wrist negative
+
+A comparable pose/framing with no wrist object present at all.
+
+Keep each continuous video/burst/scripted scene inside one `source_group_id`,
+exactly as with base-detector collection (Section 3). Do not invent sample
+counts or train/validation/test ratios for this matrix; split weights remain
+an explicit project decision (Section 13), not something this protocol
+presumes. Raw participant media stays outside Git, same as every other
+capture (Section 5).
+
+If a wrist object is ambiguous, blurred, or occluded such that it cannot be
+reliably distinguished between `wrist_device` and jewelry/accessory, treat it
+as UNKNOWN, route it to human review, or exclude it from canonical
+annotation. Do not guess.
+
 ## 9. Negative and hard-negative collection
 
 Collect negative source groups intentionally, not as leftovers.
@@ -348,7 +399,9 @@ Examples to preserve as explicit negative scenarios:
 - hand pose without phone;
 - remote near phone-like orientation;
 - calculator-like object when training/evaluating base phone/remote confusion;
-- ordinary analogue/digital watch for specialist smartwatch training;
+- jewelry bracelet or decorative wristband for specialist `wrist_device`
+  training (an ordinary analogue/digital watch is a positive `wrist_device`
+  example, not a negative — see Section 8a);
 - earrings for specialist earbud training;
 - printed clothing/patterns for paper-note confusion;
 - book pages versus loose paper-note boundary;

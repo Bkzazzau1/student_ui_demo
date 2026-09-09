@@ -26,7 +26,7 @@ def _base_staging() -> dict:
                 "image_path": ".\\images\\session-001\\frame-0001.jpg",
                 "width": 1000,
                 "height": 500,
-                "negative_tags": ["Hand_Without_Phone", "ordinary_watch", "ordinary_watch"],
+                "negative_tags": ["Hand_Without_Phone", "bracelet_or_wristband", "bracelet_or_wristband"],
                 "annotations": [
                     {
                         "canonical_object_id": "Phone",
@@ -50,7 +50,7 @@ class BuildDatasetManifestTests(unittest.TestCase):
         self.assertEqual(sample["image_path"], "images/session-001/frame-0001.jpg")
         self.assertEqual(
             sample["negative_tags"],
-            ["hand_without_phone", "ordinary_watch"],
+            ["bracelet_or_wristband", "hand_without_phone"],
         )
         annotation = sample["annotations"][0]
         self.assertEqual(annotation["canonical_object_id"], "phone")
@@ -126,7 +126,7 @@ class BuildDatasetManifestTests(unittest.TestCase):
     def test_hard_negative_only_sample_is_valid(self) -> None:
         staging = _base_staging()
         staging["records"][0]["annotations"] = []
-        staging["records"][0]["negative_tags"] = ["earring", "ordinary_watch"]
+        staging["records"][0]["negative_tags"] = ["bracelet_or_wristband", "earring"]
 
         manifest, issues = build_dataset_manifest(staging)
 
@@ -135,7 +135,7 @@ class BuildDatasetManifestTests(unittest.TestCase):
         self.assertEqual(manifest["samples"][0]["annotations"], [])
         self.assertEqual(
             manifest["samples"][0]["negative_tags"],
-            ["earring", "ordinary_watch"],
+            ["bracelet_or_wristband", "earring"],
         )
 
     def test_missing_source_group_is_rejected_without_inference(self) -> None:
@@ -158,7 +158,7 @@ class BuildDatasetManifestTests(unittest.TestCase):
 
     def test_specialist_class_cannot_enter_base_manifest(self) -> None:
         staging = _base_staging()
-        staging["records"][0]["annotations"][0]["canonical_object_id"] = "smartwatch"
+        staging["records"][0]["annotations"][0]["canonical_object_id"] = "wrist_device"
 
         manifest, issues = build_dataset_manifest(staging)
 

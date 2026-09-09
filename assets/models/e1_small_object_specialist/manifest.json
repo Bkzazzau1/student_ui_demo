@@ -3,7 +3,7 @@
   "installed": false,
   "description": "Reserved local E1 small-object specialist slot. No validated specialist ONNX model is packaged in the live exam app yet, so runtime inference must remain unavailable and emit zero specialist observations.",
   "required_canonical_classes": [
-    "smartwatch",
+    "wrist_device",
     "earbud",
     "tablet",
     "paper_note",

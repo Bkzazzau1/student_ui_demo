@@ -32,12 +32,20 @@ Base canonical classes:
 person, phone, laptop, television, keyboard, mouse, remote, book
 
 Specialist canonical classes:
-smartwatch, earbud, tablet, paper_note, calculator
+wrist_device, earbud, tablet, paper_note, calculator
 
 Important truth rules:
 - remote is not phone
 - book is not loose paper
-- ordinary watch is not smartwatch
+- wrist_device means any visually identifiable wrist-worn timekeeping or
+  electronic wearable: analogue watches, digital watches, smartwatches,
+  fitness trackers, and smart bands are all wrist_device. You do not need to
+  decide whether the watch is "smart".
+- a jewelry bracelet, decorative bracelet, or plain non-device wristband is
+  NOT wrist_device merely because it is worn on a wrist. If you cannot
+  reliably tell a wrist device apart from jewelry/an accessory, use unknown
+  rather than guessing.
+- smartwatch is a retired label; always use wrist_device instead.
 - UNKNOWN must remain UNKNOWN
 - confidence is not required and will not be used for consensus weighting
 - this response is only teacher advice and requires human review before any training annotation is approved

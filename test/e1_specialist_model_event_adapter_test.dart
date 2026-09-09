@@ -7,7 +7,7 @@ void main() {
 
   test('preserves specialist provenance in canonical ModelEventV1', () {
     const observation = E1SmallObjectSpecialistObservation(
-      canonicalObjectId: 'smartwatch',
+      canonicalObjectId: 'wrist_device',
       confidence: 0.87,
       boundingBox: <String, double>{
         'x': 0.20,
@@ -29,15 +29,15 @@ void main() {
     );
 
     expect(event, isNotNull);
-    expect(event!.classId, 'smartwatch');
+    expect(event!.classId, 'wrist_device');
     expect(event.trackId, isNull);
     expect(event.sourceFrameId, 42);
     expect(event.captureTimestampNs, 1_000);
     expect(event.inferenceTimestampNs, 1_140);
     expect(event.modelId, 'e1-wearable-specialist');
     expect(event.modelVersion, 'candidate-1');
-    expect(event.metadata['canonical_object_id'], 'smartwatch');
-    expect(event.metadata['object_group'], 'wearable_screen');
+    expect(event.metadata['canonical_object_id'], 'wrist_device');
+    expect(event.metadata['object_group'], 'wearable_device');
     expect(event.metadata['object_coverage'], 'specialist_required');
     expect(event.metadata['specialist_observation'], isTrue);
     expect(event.geometry!.coordinateSpace, 'normalized_frame');

@@ -16,7 +16,7 @@ void main() {
       expect(
         manifest.requiredCanonicalClasses,
         equals(<String>{
-          'smartwatch',
+          'wrist_device',
           'earbud',
           'tablet',
           'paper_note',
@@ -32,7 +32,7 @@ void main() {
       'manifest_schema_version': '1.0',
       'installed': true,
       'required_canonical_classes': <String>[
-        'smartwatch',
+        'wrist_device',
         'earbud',
         'tablet',
         'paper_note',
@@ -58,14 +58,14 @@ void main() {
       'confidence_threshold': 0.55,
       'iou_threshold': 0.4,
       'required_canonical_classes': <String>[
-        'smartwatch',
+        'wrist_device',
         'earbud',
         'tablet',
         'paper_note',
         'calculator',
       ],
       'class_names': <String>[
-        'smartwatch',
+        'wrist_device',
         'earbud',
         'tablet',
         'paper_note',
@@ -83,7 +83,7 @@ void main() {
     expect(
       manifest.toNativePolicy()['class_names'],
       equals(<String>[
-        'smartwatch',
+        'wrist_device',
         'earbud',
         'tablet',
         'paper_note',

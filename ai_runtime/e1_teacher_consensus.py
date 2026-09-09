@@ -36,7 +36,7 @@ BASE_CLASSES = (
     "book",
 )
 SPECIALIST_CLASSES = (
-    "smartwatch",
+    "wrist_device",
     "earbud",
     "tablet",
     "paper_note",

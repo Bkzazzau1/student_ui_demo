@@ -182,13 +182,13 @@ Base:
 
 Specialist:
 
-- `smartwatch`
+- `wrist_device`
 - `earbud`
 - `tablet`
 - `paper_note`
 - `calculator`
 
-Semantic aliases are not guessed. For example, `cell phone` is not silently converted to `phone`.
+Semantic aliases are not guessed. For example, `cell phone` is not silently converted to `phone`. `smartwatch` is retired under taxonomy `1.1` (replaced in place by `wrist_device`) and is likewise rejected rather than silently accepted as canonical.
 
 ## Output
 
