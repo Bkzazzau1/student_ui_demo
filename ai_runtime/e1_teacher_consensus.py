@@ -17,8 +17,10 @@ from collections import Counter
 from dataclasses import dataclass
 import json
 import math
+import os
 from pathlib import Path
 import sys
+import tempfile
 from typing import Any, Iterable, Sequence, TextIO
 
 
@@ -403,6 +405,32 @@ def evaluate_teacher_packet(
     return report, ()
 
 
+def _write_json_atomic(path: Path, value: dict[str, Any], *, pretty: bool) -> None:
+    """Write JSON to a unique temp file beside ``path``, then atomically replace it.
+
+    A predictable shared temp name (e.g. ``.name.tmp``) would itself collide if two
+    calls raced on the same output path; a unique name avoids that and still leaves
+    no partially written file at ``path`` if the process is interrupted mid-write.
+    """
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    indent = 2 if pretty else None
+    text = json.dumps(value, indent=indent, sort_keys=pretty) + "\n"
+    descriptor, temp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(temp_name, path)
+    except OSError:
+        try:
+            os.remove(temp_name)
+        except OSError:
+            pass
+        raise
+
+
 def review_teacher_file(
     input_path: Path,
     output_path: Path,
@@ -410,6 +438,21 @@ def review_teacher_file(
     force: bool = False,
     pretty: bool = False,
 ) -> dict[str, Any]:
+    try:
+        if input_path.resolve() == output_path.resolve():
+            return {
+                "ok": False,
+                "issues": [
+                    ReviewIssue(
+                        "input_output_same",
+                        "teacher packet input and human-review report output must be different files",
+                        str(output_path),
+                    ).as_dict()
+                ],
+            }
+    except OSError:
+        pass
+
     if output_path.exists() and not force:
         return {
             "ok": False,
@@ -433,12 +476,13 @@ def review_teacher_file(
     if issues or report is None:
         return {"ok": False, "issues": [issue.as_dict() for issue in issues]}
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    indent = 2 if pretty else None
-    output_path.write_text(
-        json.dumps(report, indent=indent, sort_keys=pretty) + "\n",
-        encoding="utf-8",
-    )
+    try:
+        _write_json_atomic(output_path, report, pretty=pretty)
+    except OSError as error:
+        return {
+            "ok": False,
+            "issues": [ReviewIssue("output_write_error", str(error), str(output_path)).as_dict()],
+        }
     return {"ok": True, "summary": report["summary"], "output_path": str(output_path)}
 
 
