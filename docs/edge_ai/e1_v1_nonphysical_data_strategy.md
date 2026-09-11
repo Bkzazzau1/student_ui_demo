@@ -107,22 +107,29 @@ The invariant remains:
 one source_group_id -> one split only
 ```
 
-## 5. Teacher workflow
+## 5. Required execution order
 
-The preferred V1 pipeline is:
+The split plan still comes **before annotation**. Moving to non-physical sources does not change that leakage rule.
+
+Use this order:
 
 ```text
 synthetic/open-source/openly licensed media
     -> provenance + source-group registration
+    -> inventory
+    -> source-group-safe split plan
     -> candidate / box proposal
     -> independent teacher reviews
     -> strict teacher consensus
         -> accepted V1 evidence
         -> disagreement / UNKNOWN -> quarantine
+    -> V1 dataset resolver for the already-assigned split
     -> canonical ingest
-    -> source-group-safe train/validation/test datasets
-    -> local-model training/evaluation
+    -> readiness / leakage checks
+    -> training export
 ```
+
+Do not annotate a pool first and then move near-duplicate source groups between train/validation/test based on the labels or model results.
 
 Teacher examples may include:
 
@@ -176,6 +183,8 @@ label_quality = teacher_consensus_eval
 They are **not** gold and **not** human ground truth.
 
 Metrics measured against them are useful for provisional V1 development, regression checking, model comparison, and deciding whether the pipeline is improving. They must not be presented as final human-grounded accuracy.
+
+The held-out source groups must remain disjoint from training even when the same teacher providers are used for labeling. Using the same teacher process across splits does not make the evaluation human ground truth.
 
 A future human-verified evaluation set can upgrade the evidence quality without changing the detector taxonomy.
 
@@ -254,6 +263,8 @@ V1 can proceed with `silver` + `teacher_consensus_eval`.
 
 Do not call teacher-consensus evaluation "gold accuracy," "human accuracy," or final production calibration.
 
+The current canonical annotation ingest is intentionally generic and does not preserve the full `v1_audit` block in the canonical manifest. Therefore the original V1 staging JSON/audit record must be retained alongside the canonical manifest as provenance. Do not discard it after ingest.
+
 ## 12. V1 -> V2 learning loop
 
 The intended progression is:
@@ -282,7 +293,7 @@ python -m ai_runtime.e1_v1_dataset_resolution --pretty `
   data/staging/e1_v1_staging.json
 ```
 
-The request must include the non-physical source provenance defined above.
+The request must include the non-physical source provenance defined above and the split already assigned by the source-group-safe split plan.
 
 Routes are explicit:
 
@@ -321,5 +332,7 @@ It is simply **not a prerequisite for Version 1**.
 10. Train silver data and teacher-consensus evaluation data remain distinct evidence tiers.
 11. Teacher-consensus validation/test is not called gold or final human-grounded accuracy.
 12. Source-group leakage remains forbidden.
-13. No misconduct or punishment conclusion is produced by the dataset pipeline.
-14. Invigilator-reviewed field evidence is reserved for curated V2 improvement.
+13. V1 split assignment occurs before annotation and teacher resolution.
+14. V1 staging/audit provenance is retained after canonical ingest.
+15. No misconduct or punishment conclusion is produced by the dataset pipeline.
+16. Invigilator-reviewed field evidence is reserved for curated V2 improvement.
