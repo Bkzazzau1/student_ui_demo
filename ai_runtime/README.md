@@ -162,3 +162,19 @@ Run all Python runtime and training-readiness contract tests with:
 ```powershell
 python -m unittest discover -s ai_runtime/tests -v
 ```
+
+## E1 development ML experiments
+
+The development-only `e1_ml_pipeline` CLI extends the canonical ingestion,
+split planning and YOLO package export with training configurations, held-out
+metrics, measured calibration ingestion, ONNX export/parity, precision variants,
+inference benchmarking, candidate manifests and native trace assertions.
+
+```powershell
+python -m ai_runtime.e1_ml_pipeline --help
+```
+
+See [the pipeline guide](../docs/edge_ai/e1_ml_pipeline.md) for input schemas,
+commands, optional dependencies and empirical acceptance boundaries. No real
+training data, metrics or thresholds are included. Generated model manifests
+remain uninstalled; live E1 remains entirely local and Rust owns tracking.
