@@ -155,6 +155,24 @@ This export step prepares data; it does not select model architecture,
 hyperparameters, scientific acceptance thresholds, or calibration values. See
 `docs/edge_ai/e1_training_export.md`.
 
+## E1 base data from COCO 2017
+
+`e1_coco_source.py` maps COCO 2017's existing human annotations onto the eight
+E1 base classes through one fixed, exact category table and feeds the existing
+split, ingest and export tools unchanged. Labels carry the evidence tier
+`open_dataset_human`: human-made by the open dataset, not K-SLAS-verified gold
+and not teacher consensus. Crowd, out-of-bounds, degenerate-box and
+disallowed-license images are excluded whole. COCO train2017 feeds E1 train
+only and val2017 feeds validation/test only, so COCO-pretrained checkpoints do
+not contaminate held-out metrics.
+
+```powershell
+python -m ai_runtime.e1_coco_source inventory --instances <coco>/annotations/instances_train2017.json --selection train_selection.json --output inventory_train.json
+python -m ai_runtime.e1_coco_source stage --instances <coco>/annotations/instances_train2017.json --plan plan_train.json --selection train_selection.json --split train --output staging_train.json
+```
+
+See `docs/edge_ai/e1_coco_base_source.md`.
+
 ## Tests
 
 Run all Python runtime and training-readiness contract tests with:
