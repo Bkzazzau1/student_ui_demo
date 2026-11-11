@@ -111,17 +111,17 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final smartwatch = _matchingCanonical(
+    final wristDevice = _matchingCanonical(
       resolutions,
-      const <String>{'smartwatch'},
+      const <String>{'wrist_device'},
     );
-    if (smartwatch.isNotEmpty) {
+    if (wristDevice.isNotEmpty) {
       decisions.add(
         _decision(
-          eventType: 'e1_smartwatch_detected',
+          eventType: 'e1_wrist_device_detected',
           severity: 'warning',
-          message: 'Smartwatch-like object noticed in camera view.',
-          matches: smartwatch,
+          message: 'Wrist-worn device noticed in camera view.',
+          matches: wristDevice,
           source: source,
           target: target,
         ),

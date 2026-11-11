@@ -19,7 +19,7 @@ E1SmallObjectSpecialistManifest _installedManifest() {
     schemaVersion: '1.0',
     installed: true,
     requiredCanonicalClasses: <String>{
-      'smartwatch',
+      'wrist_device',
       'earbud',
       'tablet',
       'paper_note',
@@ -29,7 +29,7 @@ E1SmallObjectSpecialistManifest _installedManifest() {
     modelVersion: '1.0.0',
     modelPath: 'assets/models/e1_small_object_specialist/model.int8.onnx',
     classNames: <String>[
-      'smartwatch',
+      'wrist_device',
       'earbud',
       'tablet',
       'paper_note',
@@ -50,7 +50,7 @@ E1SmallObjectSpecialistRuntimeBridge _runtime({
 
 E1SmallObjectSpecialistRequest _request({
   Set<E1SmallObjectTarget> targets = const <E1SmallObjectTarget>{
-    E1SmallObjectTarget.smartwatch,
+    E1SmallObjectTarget.wristDevice,
   },
   Map<String, double>? roi = _roi,
 }) {
@@ -124,7 +124,7 @@ void main() {
           schemaVersion: '1.0',
           installed: false,
           requiredCanonicalClasses: <String>{
-            'smartwatch',
+            'wrist_device',
             'earbud',
             'tablet',
             'paper_note',
@@ -228,7 +228,7 @@ void main() {
       expect(methods, equals(<String>['initialize', 'runFrame']));
       expect(observations, hasLength(1));
       final observation = observations.single;
-      expect(observation.canonicalObjectId, 'smartwatch');
+      expect(observation.canonicalObjectId, 'wrist_device');
       expect(observation.modelId, 'e1-small-object-specialist');
       expect(observation.modelVersion, '1.0.0');
       expect(observation.sourceFrameId, 42);

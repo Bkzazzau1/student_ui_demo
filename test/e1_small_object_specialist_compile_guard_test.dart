@@ -21,7 +21,7 @@ void main() {
       captureTimestampNs: 10,
       imageWidth: 640,
       imageHeight: 480,
-      targets: <E1SmallObjectTarget>{E1SmallObjectTarget.smartwatch},
+      targets: <E1SmallObjectTarget>{E1SmallObjectTarget.wristDevice},
       reason: 'compile_guard',
       roiHint: E1SpecialistRoiHint(
         strategy: 'person_arm_watch',

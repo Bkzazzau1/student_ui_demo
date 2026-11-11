@@ -17,7 +17,7 @@ void main() {
     expect(classNames, contains('book'));
 
     for (final specialistLabel in <String>[
-      'smartwatch',
+      'wrist device',
       'earbud',
       'tablet',
       'calculator',

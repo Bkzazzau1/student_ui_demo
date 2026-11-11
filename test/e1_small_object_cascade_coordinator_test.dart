@@ -18,10 +18,10 @@ class _FakeSpecialistRuntime implements E1SmallObjectSpecialistRuntime {
     required E1SpecialistFrameInput frame,
   }) async {
     calls++;
-    if (request.targets.contains(E1SmallObjectTarget.smartwatch)) {
+    if (request.targets.contains(E1SmallObjectTarget.wristDevice)) {
       return <E1SmallObjectSpecialistObservation>[
         E1SmallObjectSpecialistObservation(
-          canonicalObjectId: 'smartwatch',
+          canonicalObjectId: 'wrist_device',
           confidence: 0.88,
           boundingBox: const <String, double>{
             'x': 0.1,
@@ -211,7 +211,7 @@ void main() {
       expect(summary.ingestFailures, 0);
       expect(
         ingested.map((item) => item.canonicalObjectId).toSet(),
-        equals(<String>{'smartwatch', 'calculator'}),
+        equals(<String>{'wrist_device', 'calculator'}),
       );
       expect(ingested.every((item) => item.sourceFrameId == 7), isTrue);
     },

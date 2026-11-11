@@ -57,10 +57,10 @@ class E1ObjectTaxonomyResolution {
 }
 
 abstract final class E1ObjectTaxonomyV1 {
-  static const String version = '1.0';
+  static const String version = '1.1';
 
   static const Set<String> specialistCanonicalIds = <String>{
-    'smartwatch',
+    'wrist_device',
     'earbud',
     'tablet',
     'paper_note',
@@ -69,7 +69,7 @@ abstract final class E1ObjectTaxonomyV1 {
 
   /// Resolve a raw detector/specialist label into a stable exam object ID.
   ///
-  /// Generic `clock` is deliberately not an alias for `smartwatch`, and
+  /// Generic `clock` is deliberately not an alias for `wrist_device`, and
   /// generic audio/head labels are not promoted to `earbud`. Ambiguous
   /// evidence stays ambiguous instead of being invented into a stronger class.
   static E1ObjectTaxonomyResolution resolve(String rawLabel) {
@@ -241,13 +241,13 @@ abstract final class E1ObjectTaxonomyV1 {
           E1ObjectCoverage.specialistRequired,
         ),
         'smartwatch': _E1TaxonomyEntry(
-          'smartwatch',
-          'wearable_screen',
+          'wrist_device',
+          'wearable_device',
           E1ObjectCoverage.specialistRequired,
         ),
         'smart watch': _E1TaxonomyEntry(
-          'smartwatch',
-          'wearable_screen',
+          'wrist_device',
+          'wearable_device',
           E1ObjectCoverage.specialistRequired,
         ),
         'earbud': _E1TaxonomyEntry(

@@ -68,7 +68,7 @@ void main() {
         (request) => request.targets.contains(E1SmallObjectTarget.earbud),
       );
       final watch = requests.firstWhere(
-        (request) => request.targets.contains(E1SmallObjectTarget.smartwatch),
+        (request) => request.targets.contains(E1SmallObjectTarget.wristDevice),
       );
 
       expect(ear.isValid, isTrue);
@@ -229,7 +229,7 @@ void main() {
       'accepts specialist evidence only with valid provenance and geometry',
       () {
         const observation = E1SmallObjectSpecialistObservation(
-          canonicalObjectId: 'smartwatch',
+          canonicalObjectId: 'wrist_device',
           confidence: 0.88,
           boundingBox: <String, double>{
             'x': 0.2,

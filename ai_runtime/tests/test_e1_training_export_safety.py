@@ -37,7 +37,7 @@ def _sample(sample_id: str, group_id: str, image_path: str, annotation_id: str):
 def _manifest(split: str, sample):
     return {
         "schema_version": "1.0",
-        "taxonomy_version": "1.0",
+        "taxonomy_version": "1.1",
         "dataset_id": "e1-base-dataset",
         "dataset_version": "v1",
         "model_role": "base",

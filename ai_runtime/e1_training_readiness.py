@@ -13,7 +13,7 @@ import math
 from typing import Any, Iterable, Mapping, Sequence
 
 
-E1_TAXONOMY_VERSION = "1.0"
+E1_TAXONOMY_VERSION = "1.1"
 E1_TRAINING_SCHEMA_VERSION = "1.0"
 
 BASE_TRAINABLE_CLASSES = frozenset(
@@ -31,7 +31,7 @@ BASE_TRAINABLE_CLASSES = frozenset(
 
 SPECIALIST_TRAINABLE_CLASSES = frozenset(
     {
-        "smartwatch",
+        "wrist_device",
         "earbud",
         "tablet",
         "paper_note",
@@ -49,7 +49,7 @@ DERIVED_ONLY_CLASSES = frozenset(
 
 RECOMMENDED_HARD_NEGATIVE_TAGS = frozenset(
     {
-        "ordinary_watch",
+        "bracelet_or_wristband",
         "earring",
         "remote_control",
         "hand_without_phone",

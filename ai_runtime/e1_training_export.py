@@ -40,7 +40,7 @@ BASE_YOLO_CLASS_ORDER = (
 )
 
 SPECIALIST_YOLO_CLASS_ORDER = (
-    "smartwatch",
+    "wrist_device",
     "earbud",
     "tablet",
     "paper_note",

@@ -43,6 +43,26 @@ void main() {
       }
     });
 
+    test(
+      'taxonomy 1.1: wrist_device replaces smartwatch as the canonical wrist class',
+      () {
+        final smartwatchLabel = E1ObjectTaxonomyV1.resolve('smartwatch');
+        final smartWatchLabel = E1ObjectTaxonomyV1.resolve('smart watch');
+
+        expect(smartwatchLabel.canonicalObjectId, 'wrist_device');
+        expect(smartwatchLabel.coverage, E1ObjectCoverage.specialistRequired);
+        expect(smartWatchLabel.canonicalObjectId, 'wrist_device');
+        expect(
+          E1ObjectTaxonomyV1.specialistCanonicalIds,
+          contains('wrist_device'),
+        );
+        expect(
+          E1ObjectTaxonomyV1.specialistCanonicalIds,
+          isNot(contains('smartwatch')),
+        );
+      },
+    );
+
     test('does not promote ambiguous clock or unknown labels', () {
       final clock = E1ObjectTaxonomyV1.resolve('clock');
       final unknown = E1ObjectTaxonomyV1.resolve('mystery device');

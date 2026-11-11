@@ -91,8 +91,8 @@ class E1SpecialistModelEventAdapter {
 
   String _groupFor(String canonicalId) {
     switch (canonicalId) {
-      case 'smartwatch':
-        return 'wearable_screen';
+      case 'wrist_device':
+        return 'wearable_device';
       case 'earbud':
         return 'wearable_audio';
       case 'tablet':

@@ -44,7 +44,7 @@ def _sample(
 def _manifest(split: str, sample):
     return {
         "schema_version": "1.0",
-        "taxonomy_version": "1.0",
+        "taxonomy_version": "1.1",
         "dataset_id": "e1-base-dataset",
         "dataset_version": "v1",
         "model_role": "base",
@@ -78,7 +78,7 @@ def _evaluation_report(*, support: int = 10, calibrated: bool = False):
 
     return {
         "schema_version": "1.0",
-        "taxonomy_version": "1.0",
+        "taxonomy_version": "1.1",
         "model_id": "e1-base-candidate",
         "model_version": "candidate-1",
         "evaluation_dataset_id": "e1-base-heldout-v1",

@@ -1,0 +1,31 @@
+{
+  "example_only": true,
+  "review_schema_version": "1.0",
+  "review_packet_id": "example-e1-teacher-consensus-001",
+  "dataset_id": "example-e1-controlled-pilot",
+  "dataset_version": "example-2026.09.1",
+  "split": "train",
+  "source_group_id": "base-pilot-p001-phone-hand-001",
+  "image": {
+    "image_path": "images/base-pilot-p001-phone-hand-001/frame-0001.jpg",
+    "width": 1920,
+    "height": 1080
+  },
+  "negative_tags": [],
+  "candidate_reviews": [
+    {
+      "candidate_id": "candidate-phone-001",
+      "reviewer_id": "reviewer-example-001",
+      "decision": "canonical",
+      "canonical_object_id": "phone",
+      "bbox_xywh_normalized": [0.34, 0.42, 0.09, 0.16],
+      "notes": "Example only. The reviewer explicitly approved/corrected both class and geometry; teacher agreement alone was not sufficient."
+    }
+  ],
+  "notes": [
+    "This is a format example only, not real training evidence.",
+    "Replace reviewer-example-001 with a real review identity or project-approved pseudonymous reviewer code when doing actual dataset work.",
+    "Do not infer source_group_id from the teacher models.",
+    "Any unresolved candidate blocks annotation-staging export."
+  ]
+}

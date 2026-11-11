@@ -40,7 +40,7 @@ List<E1SmallObjectSpecialistRequest> _threeRoutes(int captureTimestampNs) {
     _request(
       captureTimestampNs: captureTimestampNs,
       strategy: 'person_arm_watch',
-      target: E1SmallObjectTarget.smartwatch,
+      target: E1SmallObjectTarget.wristDevice,
     ),
     _request(
       captureTimestampNs: captureTimestampNs,

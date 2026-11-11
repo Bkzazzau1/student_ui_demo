@@ -1,0 +1,102 @@
+{
+  "example_only": true,
+  "teacher_schema_version": "1.0",
+  "packet_id": "example-e1-teacher-consensus-001",
+  "model_role": "base",
+  "image": {
+    "image_path": "images/example-only/frame-0001.jpg",
+    "width": 1280,
+    "height": 720
+  },
+  "candidates": [
+    {
+      "candidate_id": "candidate-phone-001",
+      "teacher_votes": [
+        {
+          "teacher_id": "openai-teacher-example",
+          "provider": "openai",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "phone",
+          "bbox_xywh_normalized": [0.4, 0.3, 0.1, 0.2]
+        },
+        {
+          "teacher_id": "anthropic-teacher-example",
+          "provider": "anthropic",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "phone",
+          "bbox_xywh_normalized": [0.41, 0.31, 0.09, 0.19]
+        },
+        {
+          "teacher_id": "google-teacher-example",
+          "provider": "google",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "phone",
+          "bbox_xywh_normalized": [0.39, 0.3, 0.11, 0.2]
+        }
+      ]
+    },
+    {
+      "candidate_id": "candidate-remote-001",
+      "teacher_votes": [
+        {
+          "teacher_id": "openai-teacher-example",
+          "provider": "openai",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "remote",
+          "bbox_xywh_normalized": [0.25, 0.36, 0.08, 0.18]
+        },
+        {
+          "teacher_id": "anthropic-teacher-example",
+          "provider": "anthropic",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "remote",
+          "bbox_xywh_normalized": [0.24, 0.35, 0.09, 0.19]
+        },
+        {
+          "teacher_id": "google-teacher-example",
+          "provider": "google",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "remote",
+          "bbox_xywh_normalized": [0.25, 0.35, 0.08, 0.19]
+        }
+      ]
+    },
+    {
+      "candidate_id": "candidate-ambiguous-001",
+      "teacher_votes": [
+        {
+          "teacher_id": "openai-teacher-example",
+          "provider": "openai",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "phone"
+        },
+        {
+          "teacher_id": "anthropic-teacher-example",
+          "provider": "anthropic",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "canonical",
+          "canonical_object_id": "remote"
+        },
+        {
+          "teacher_id": "google-teacher-example",
+          "provider": "google",
+          "model_id": "REPLACE_WITH_ACTUAL_MODEL_ID",
+          "decision": "unknown"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Synthetic format example only; this is not real participant data or training evidence.",
+    "Replace placeholder model IDs only when an actual teacher model is used.",
+    "Teacher agreement remains human-review input, not ground truth.",
+    "No external teacher model is part of live exam inference."
+  ]
+}
