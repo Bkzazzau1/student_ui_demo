@@ -181,9 +181,13 @@ class CocoIndex:
             x1, y1, x2, y2 = x, y, x + w, y + h
             if x1 < -_EDGE_TOLERANCE_PX or y1 < -_EDGE_TOLERANCE_PX or x2 > width + _EDGE_TOLERANCE_PX or y2 > height + _EDGE_TOLERANCE_PX:
                 return "excluded_target_box_outside_image", []
-            x1, y1 = max(0.0, x1), max(0.0, y1)
-            x2, y2 = min(float(width), x2), min(float(height), y2)
-            cw, ch = x2 - x1, y2 - y1
+            needs_clip = x1 < 0.0 or y1 < 0.0 or x2 > width or y2 > height
+            if needs_clip:
+                x1, y1 = max(0.0, x1), max(0.0, y1)
+                cw, ch = min(float(width), x2) - x1, min(float(height), y2) - y1
+            else:
+                # Keep COCO's own numbers; recomputing (x + w) - x adds float noise.
+                cw, ch = w, h
             if cw < _MIN_SIDE_PX or ch < _MIN_SIDE_PX:
                 return "excluded_degenerate_target_box", []
             # Same identity rule as e1_annotation_ingest (class + normalized box at 1e-10).
@@ -195,7 +199,7 @@ class CocoIndex:
                 "canonical_object_id": e1_class,
                 "bbox_xywh_pixels": [x1, y1, cw, ch],
                 "coco_annotation_id": annotation.get("id"),
-                "clipped": (x1, y1, cw, ch) != (x, y, w, h),
+                "clipped": needs_clip,
             })
         if not boxes:
             return ("background" if all_annotations else "excluded_unannotated_image"), []

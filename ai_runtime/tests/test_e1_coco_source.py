@@ -41,7 +41,7 @@ def instances():
     images = [_image(i) for i in range(1, 13)]
     images[8]["license"] = 1  # image 9: license not allowed
     anns = [
-        _ann(1, 1, 77, [10, 10, 20, 30]),            # phone
+        _ann(1, 1, 77, [10.37, 20.11, 30.29, 15.73]),  # phone, float box inside image (not clipped)
         _ann(2, 1, 1, [0, 0, 50, 80]),               # person
         _ann(3, 2, 1, [5, 5, 40, 60]),               # person only
         _ann(4, 3, 1, [5, 5, 40, 60]),               # person only
@@ -132,6 +132,8 @@ class StagingTests(unittest.TestCase):
         tv = by_group["coco2017:train2017:6"]["annotations"][0]
         self.assertAlmostEqual(tv["bbox_xywh_pixels"][0] + tv["bbox_xywh_pixels"][2], 100.0)
         self.assertEqual(by_group["coco2017:train2017:1"]["provenance"]["license"]["name"], "BY")
+        phone = [a for a in by_group["coco2017:train2017:1"]["annotations"] if a["canonical_object_id"] == "phone"][0]
+        self.assertEqual(phone["bbox_xywh_pixels"], [10.37, 20.11, 30.29, 15.73])  # COCO numbers kept exactly
         manifest, issues = build_dataset_manifest(staging)
         self.assertEqual(issues, ())
         self.assertEqual(manifest["split"], "train")
