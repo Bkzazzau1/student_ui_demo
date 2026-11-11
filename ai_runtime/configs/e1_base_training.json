@@ -1,0 +1,11 @@
+{
+  "model_role": "base",
+  "checkpoint": null,
+  "epochs": null,
+  "batch": null,
+  "imgsz": null,
+  "seed": null,
+  "device": null,
+  "experiment_basis": null,
+  "hyperparameters": {}
+}

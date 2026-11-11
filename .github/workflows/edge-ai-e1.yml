@@ -50,14 +50,7 @@ on:
       - '.github/workflows/edge-ai-e1.yml'
   push:
     branches:
-      - 'edge-ai/e1-event-wiring'
-      - 'edge-ai/e1-person-tracking'
-      - 'edge-ai/e1-object-taxonomy-small-object'
-      - 'edge-ai/e1-specialist-event-wiring'
-      - 'edge-ai/e1-specialist-frame-contract'
-      - 'edge-ai/e1-live-specialist-cascade'
-      - 'edge-ai/e1-roi-specialist-cascade'
-      - 'edge-ai/e1-specialist-scheduling'
+      - 'edge-ai/**'
     paths:
       - 'assets/models/yolo_exam_review/**'
       - 'assets/models/e1_small_object_specialist/**'
