@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from ai_runtime.e1_evaluation import evaluate, fingerprint, ingest_calibration
-from ai_runtime.e1_experiments import candidate_manifest, inspect_package, train
+from ai_runtime.e1_experiments import candidate_manifest, inspect_package, resume, train
 from ai_runtime.e1_ml_common import load, save
 from ai_runtime.e1_ml_pipeline import main
 from ai_runtime.e1_scenarios import check_scenarios
@@ -227,6 +227,24 @@ class PackageTests(unittest.TestCase):
                 with self.assertRaises(ValueError):  # other unlisted files are still rejected
                     train({**config, "checkpoint": str(root / "init.pt")}, package, root / "run-extra")
                 (package / "labels/train/unlisted.txt").unlink()
+
+                # Resume: an interrupted run continues from its own last.pt, audited.
+                run = root / "run-init.pt"
+                (run / "training_result.json").unlink()  # simulate interruption before completion
+                (run / "fit/weights").mkdir(parents=True)
+                (run / "fit/weights/last.pt").write_bytes(b"partial")
+                (package / "labels/validation.cache").write_bytes(b"cache")
+                result = resume(run)
+                self.assertEqual(calls[-1], {"resume": True})
+                self.assertEqual(result["resume_count"], 1)
+                self.assertEqual(load(run / "resume-1.json")["removed_framework_caches"], ["labels/validation.cache"])
+                with self.assertRaises(ValueError):  # completed runs are not resumed
+                    resume(run)
+                (run / "training_result.json").unlink()
+                label = next((package / "labels/train").iterdir())
+                label.write_text(label.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+                with self.assertRaises(ValueError):  # changed package is refused
+                    resume(run)
                 (root / "weights.bin").write_bytes(b"x")
                 with self.assertRaises(ValueError):
                     train({**config, "checkpoint": str(root / "weights.bin")}, package, root / "run-bin")

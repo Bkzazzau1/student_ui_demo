@@ -86,6 +86,22 @@ The generated absolute-path dataset YAML avoids resolving the existing package's
 `training_result.json` with `trained_not_validated`, checkpoint hash and request
 hash. It never changes model assets or sets `installed: true`.
 
+A `.pt` checkpoint is fine-tuned from its own weights; a `.yaml` architecture
+trains from random initialization. The choice is recorded as `initialization`
+in `request.json`. Label caches that Ultralytics leaves in the package
+(`labels/<split>.cache`) are removed before the package gate and rebuilt.
+
+If a run is interrupted (power loss, sleep, crash), continue it from its own
+`fit/weights/last.pt` instead of starting over:
+
+```powershell
+python -m ai_runtime.e1_ml_pipeline resume --run work/base-run-1
+```
+
+Resume refuses a completed run and refuses a package whose files no longer
+match the original request's input ledger. Each resume is recorded as
+`resume-<n>.json`, and `training_result.json` reports `resume_count`.
+
 ## ONNX export and input preparation
 
 ```powershell

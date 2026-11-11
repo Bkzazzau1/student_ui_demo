@@ -169,16 +169,48 @@ def train(config, package, output):
                 epochs=config["epochs"], batch=config["batch"], imgsz=config["imgsz"],
                 seed=config["seed"], device=config["device"], deterministic=True,
                 **hyperparameters)
+    return _finish_training(model, output, manifest["model_role"], {})
+
+
+def _finish_training(model, output, role, extra):
     best = Path(model.trainer.best)
     if not best.is_file():
         raise ValueError("Training did not produce a best checkpoint")
-    check_names(_yolo(best), manifest["model_role"])
+    check_names(_yolo(best), role)
     result = {"status": "trained_not_validated", "checkpoint": str(best),
               "checkpoint_sha256": sha256(best), "request_sha256": sha256(output / "request.json"),
               "ultralytics_version": importlib.metadata.version("ultralytics"),
-              "torch_version": importlib.metadata.version("torch"), "production_accepted": False}
+              "torch_version": importlib.metadata.version("torch"), "production_accepted": False,
+              **extra}
     save(output / "training_result.json", result)
     return result
+
+
+def resume(run):
+    """Continue an interrupted ``train`` run from its own ``fit/weights/last.pt``.
+
+    The original request is not changed. The package must still match the
+    request's input ledger exactly; each resume is recorded as resume-<n>.json.
+    """
+    run = Path(run).resolve()
+    request = load(run / "request.json")
+    if (run / "training_result.json").exists():
+        raise ValueError("Run already completed; start a new run instead of resuming")
+    last = run / "fit" / "weights" / "last.pt"
+    if not last.is_file():
+        raise ValueError("No fit/weights/last.pt checkpoint to resume from")
+    package = Path(load(run / "dataset.yaml")["path"])
+    removed = remove_framework_label_caches(package)
+    manifest, ledger = inspect_package(package)
+    if manifest != request["package"] or ledger != request["input_ledger"]:
+        raise ValueError("Training package changed since the run was requested")
+    count = len(list(run.glob("resume-*.json"))) + 1
+    save(run / f"resume-{count}.json", {"resumed_from": str(last), "resumed_from_sha256": sha256(last),
+                                         "removed_framework_caches": removed,
+                                         "resumed_at_unix": int(time.time())})
+    model = _yolo(last)
+    model.train(resume=True)
+    return _finish_training(model, run, manifest["model_role"], {"resume_count": count})
 
 
 def export_onnx(checkpoint, role, size, output, model_id, version):
