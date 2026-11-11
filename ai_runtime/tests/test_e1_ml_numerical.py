@@ -20,6 +20,38 @@ from ai_runtime.tests.test_e1_ml_pipeline import fixtures
 AVAILABLE = all(importlib.util.find_spec(m) for m in ("numpy", "onnx", "onnxruntime", "onnxconverter_common", "PIL"))
 
 
+def _scalar_reference_decode(raw, classes, width, height, confidence, nms_iou, roi=(0, 0, 1, 1)):
+    """The original per-anchor decode, kept verbatim as the equivalence oracle."""
+    import numpy as np
+    from ai_runtime.e1_evaluation import box, iou
+    rx, ry, rw, rh = box(dict(zip(("x", "y", "width", "height"), roi)))
+    found = []
+    for row in np.asarray(raw)[0].T:
+        index = int(np.argmax(row[4:]))
+        score = float(row[4 + index])
+        if score < confidence:
+            continue
+        cx, cy, w, h = map(float, row[:4])
+        if w <= 0 or h <= 0:
+            continue
+        x1, y1 = max(0, (cx-w/2)/width), max(0, (cy-h/2)/height)
+        x2, y2 = min(1, (cx+w/2)/width), min(1, (cy+h/2)/height)
+        if x2 <= x1 or y2 <= y1:
+            continue
+        found.append({"canonical_object_id": classes[index], "confidence": score,
+                      "bbox_xywh_normalized": {"x": x1, "y": y1, "width": x2-x1, "height": y2-y1}})
+    kept = []
+    for detection in sorted(found, key=lambda d: -d["confidence"]):
+        if any(d["canonical_object_id"] == detection["canonical_object_id"] and
+               iou(d["bbox_xywh_normalized"], detection["bbox_xywh_normalized"]) > nms_iou for d in kept):
+            continue
+        kept.append(detection)
+    for detection in kept:
+        b = detection["bbox_xywh_normalized"]
+        b.update(x=rx+b["x"]*rw, y=ry+b["y"]*rh, width=b["width"]*rw, height=b["height"]*rh)
+    return kept
+
+
 @unittest.skipUnless(AVAILABLE, "Optional numerical dependencies are not installed")
 class NumericalTests(unittest.TestCase):
     def setUp(self):
@@ -80,6 +112,23 @@ class NumericalTests(unittest.TestCase):
             decode(raw, self.metadata["class_names"], 4, 4, .5, .5)
         with self.assertRaises(ValueError):
             decode(self.raw, self.metadata["class_names"], 4, 4, .5, .5, (0, 0, 2, 1))
+
+    def test_vectorized_decode_matches_scalar_reference_exactly(self):
+        np = self.np
+        rng = np.random.default_rng(20261111)
+        classes = self.metadata["class_names"]
+        for trial in range(40):
+            anchors = int(rng.integers(1, 400))
+            raw = np.empty((1, 4 + len(classes), anchors), dtype=np.float32)
+            raw[0, 0:2] = rng.uniform(-20, 436, (2, anchors))      # centres, some outside the image
+            raw[0, 2:4] = rng.uniform(-5, 200, (2, anchors))       # sizes, some non-positive
+            raw[0, 4:] = rng.uniform(0, 1, (len(classes), anchors))
+            if trial % 4 == 0:  # force duplicate boxes and tied scores
+                raw[0, :, anchors // 2:] = raw[0, :, :anchors - anchors // 2]
+            roi = (.1, .2, .5, .6) if trial % 3 == 0 else (0, 0, 1, 1)
+            for floor, nms in ((0.001, .7), (.5, .45), (.9, .3)):
+                expected = _scalar_reference_decode(raw, classes, 416, 416, floor, nms, roi)
+                self.assertEqual(decode(raw, classes, 416, 416, floor, nms, roi), expected)
 
     def test_wrong_role_tensor_contract_fails(self):
         with self.assertRaises(ValueError):

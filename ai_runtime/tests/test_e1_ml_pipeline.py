@@ -6,10 +6,12 @@ import io
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from ai_runtime.e1_evaluation import evaluate, fingerprint, ingest_calibration
-from ai_runtime.e1_experiments import candidate_manifest, inspect_package
+from ai_runtime.e1_experiments import candidate_manifest, inspect_package, train
 from ai_runtime.e1_ml_common import load, save
 from ai_runtime.e1_ml_pipeline import main
 from ai_runtime.e1_scenarios import check_scenarios
@@ -184,6 +186,50 @@ class PackageTests(unittest.TestCase):
             (package / "images/train/unlisted.png").write_bytes(b"extra")
             with self.assertRaises(ValueError):
                 inspect_package(package)
+
+    def test_train_keeps_checkpoint_weights_and_scratch_for_yaml(self):
+        manifests, _ = fixtures()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for m in manifests:
+                for sample in m["samples"]:
+                    (root / sample["image_path"]).write_bytes(sample["sample_id"].encode())
+                save(root / (m["split"] + ".json"), m)
+            package = root / "package"
+            self.assertTrue(export_training_package([root / (m["split"] + ".json") for m in manifests], package)["ok"])
+            best = root / "best.pt"
+            best.write_bytes(b"weights")
+            calls = []
+
+            class FakeYolo:
+                names = list(class_order_for_role("base"))
+                trainer = SimpleNamespace(best=str(best))
+
+                def train(self, **kwargs):
+                    calls.append(kwargs)
+
+            config = {"model_role": "base", "epochs": 1, "batch": 2, "imgsz": 32, "seed": 0,
+                      "device": "cpu", "experiment_basis": "unit test", "hyperparameters": {}}
+            with patch("ai_runtime.e1_experiments._yolo", return_value=FakeYolo()), \
+                    patch("ai_runtime.e1_experiments.importlib.metadata.version", return_value="test"):
+                for name, expected, initialization in (("init.pt", True, "checkpoint_weights"),
+                                                       ("arch.yaml", False, "architecture_scratch")):
+                    (root / name).write_bytes(b"x")
+                    output = root / f"run-{name}"
+                    train({**config, "checkpoint": str(root / name)}, package, output)
+                    self.assertIs(calls[-1]["pretrained"], expected)
+                    self.assertEqual(load(output / "request.json")["initialization"], initialization)
+                    # Simulate the label cache Ultralytics leaves behind; the next run must still pass the gate.
+                    (package / "labels/train.cache").write_bytes(b"cache")
+                self.assertEqual(load(root / "run-arch.yaml" / "request.json")["removed_framework_caches"],
+                                 ["labels/train.cache"])
+                (package / "labels/train/unlisted.txt").write_bytes(b"extra")
+                with self.assertRaises(ValueError):  # other unlisted files are still rejected
+                    train({**config, "checkpoint": str(root / "init.pt")}, package, root / "run-extra")
+                (package / "labels/train/unlisted.txt").unlink()
+                (root / "weights.bin").write_bytes(b"x")
+                with self.assertRaises(ValueError):
+                    train({**config, "checkpoint": str(root / "weights.bin")}, package, root / "run-bin")
 
 
 def scenario_fixture():

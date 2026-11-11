@@ -12,7 +12,7 @@ import time
 
 from .e1_ml_common import integer, load, number, required, save, sha256
 from .e1_training_export import class_order_for_role
-from .e1_evaluation import fingerprint, iou
+from .e1_evaluation import fingerprint
 
 
 def local_file(root, relative):
@@ -103,7 +103,24 @@ def check_names(model, role):
         raise ValueError("Checkpoint class indexing differs from the frozen E1 role")
 
 
+def remove_framework_label_caches(package):
+    """Delete Ultralytics label caches left in a package by an earlier run.
+
+    Ultralytics writes ``labels/<split>.cache`` beside the label folders. They are
+    not export artifacts, so the package gate rejects them; removing them makes
+    the framework rebuild its cache from the verified label files.
+    """
+    removed = []
+    for split in ("train", "validation", "test"):
+        cache = Path(package).resolve() / "labels" / f"{split}.cache"
+        if cache.is_file():
+            cache.unlink()
+            removed.append(f"labels/{split}.cache")
+    return removed
+
+
 def train(config, package, output):
+    removed_caches = remove_framework_label_caches(package)
     manifest, ledger = inspect_package(package)
     if config.get("model_role") != manifest["model_role"]:
         raise ValueError("Configuration/package role mismatch")
@@ -123,6 +140,16 @@ def train(config, package, output):
     checkpoint = Path(required(config.get("checkpoint"), "checkpoint")).resolve()
     if not checkpoint.is_file():
         raise ValueError("Local checkpoint/architecture is missing")
+    # A .pt checkpoint is fine-tuned from its own weights; an architecture YAML
+    # starts from random initialization. Ultralytics 8.4 treats pretrained=False
+    # as "discard the loaded checkpoint weights", so it must follow the input.
+    suffix = checkpoint.suffix.lower()
+    if suffix == ".pt":
+        initialization = "checkpoint_weights"
+    elif suffix in (".yaml", ".yml"):
+        initialization = "architecture_scratch"
+    else:
+        raise ValueError("checkpoint must be a local .pt checkpoint or .yaml architecture")
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     # JSON is valid YAML; absolute path avoids Ultralytics resolving `path: .`
@@ -134,10 +161,11 @@ def train(config, package, output):
     save(output / "dataset.yaml", data)
     save(output / "request.json", {"config": config, "package": manifest,
         "input_ledger": ledger, "checkpoint_sha256": sha256(checkpoint),
+        "initialization": initialization, "removed_framework_caches": removed_caches,
         "status": "requested", "production_accepted": False})
     model = _yolo(checkpoint)
     model.train(data=str(output / "dataset.yaml"), project=str(output), name="fit",
-                exist_ok=False, pretrained=False, resume=False,
+                exist_ok=False, pretrained=initialization == "checkpoint_weights", resume=False,
                 epochs=config["epochs"], batch=config["batch"], imgsz=config["imgsz"],
                 seed=config["seed"], device=config["device"], deterministic=True,
                 **hyperparameters)
@@ -217,32 +245,43 @@ def decode(raw, classes, width, height, confidence, nms_iou, roi=(0, 0, 1, 1)):
     raw = np.asarray(raw)
     if raw.ndim != 3 or raw.shape[:2] != (1, 4 + len(classes)) or not np.isfinite(raw).all():
         raise ValueError("Invalid raw detector tensor")
-    found = []
-    for row in raw[0].T:
-        if np.any(row[4:] < 0) or np.any(row[4:] > 1):
-            raise ValueError("Output contract requires probabilities, not logits")
-        index = int(np.argmax(row[4:]))
-        score = float(row[4 + index])
-        if score < confidence:
-            continue
-        cx, cy, w, h = map(float, row[:4])
-        if w <= 0 or h <= 0:
-            continue
-        x1, y1 = max(0, (cx-w/2)/width), max(0, (cy-h/2)/height)
-        x2, y2 = min(1, (cx+w/2)/width), min(1, (cy+h/2)/height)
-        if x2 <= x1 or y2 <= y1:
-            continue
-        found.append({"canonical_object_id": classes[index], "confidence": score,
-                      "bbox_xywh_normalized": {"x": x1, "y": y1, "width": x2-x1, "height": y2-y1}})
+    probabilities = raw[0, 4:, :]
+    if np.any(probabilities < 0) or np.any(probabilities > 1):
+        raise ValueError("Output contract requires probabilities, not logits")
+    # Vectorized form of the per-anchor reference loop; the same float64
+    # operations in the same order keep results identical to the scalar loop.
+    index = np.argmax(probabilities, axis=0)
+    score = probabilities[index, np.arange(probabilities.shape[1])].astype(np.float64)
+    cx, cy, w, h = (raw[0, k, :].astype(np.float64) for k in range(4))
+    x1 = np.maximum(0.0, (cx - w / 2) / width) + 0.0
+    y1 = np.maximum(0.0, (cy - h / 2) / height) + 0.0
+    x2 = np.minimum(1.0, (cx + w / 2) / width)
+    y2 = np.minimum(1.0, (cy + h / 2) / height)
+    valid = (score >= confidence) & (w > 0) & (h > 0) & (x2 > x1) & (y2 > y1)
+    candidates = np.flatnonzero(valid)
+    order = candidates[np.argsort(-score[candidates], kind="stable")]
+    bw, bh = x2 - x1, y2 - y1
+    kept_ranks = []
+    for class_index in np.unique(index[order]):
+        members = order[index[order] == class_index]  # still confidence-ordered
+        ranks = np.flatnonzero(index[order] == class_index)
+        alive = np.ones(len(members), dtype=bool)
+        for position in range(len(members)):
+            if not alive[position]:
+                continue
+            kept_ranks.append(ranks[position])
+            current, rest = members[position], members[position + 1:]
+            overlap = np.maximum(0.0, np.minimum(x1[current] + bw[current], x1[rest] + bw[rest]) -
+                                 np.maximum(x1[current], x1[rest])) * np.maximum(
+                0.0, np.minimum(y1[current] + bh[current], y1[rest] + bh[rest]) - np.maximum(y1[current], y1[rest]))
+            union = bw[current] * bh[current] + bw[rest] * bh[rest] - overlap
+            alive[position + 1:] &= ~(overlap / union > nms_iou)
     kept = []
-    for detection in sorted(found, key=lambda d: -d["confidence"]):
-        if any(d["canonical_object_id"] == detection["canonical_object_id"] and
-               iou(d["bbox_xywh_normalized"], detection["bbox_xywh_normalized"]) > nms_iou for d in kept):
-            continue
-        kept.append(detection)
-    for detection in kept:
-        b = detection["bbox_xywh_normalized"]
-        b.update(x=rx+b["x"]*rw, y=ry+b["y"]*rh, width=b["width"]*rw, height=b["height"]*rh)
+    for rank in sorted(kept_ranks):
+        anchor = order[rank]
+        kept.append({"canonical_object_id": classes[int(index[anchor])], "confidence": float(score[anchor]),
+                     "bbox_xywh_normalized": {"x": rx + float(x1[anchor]) * rw, "y": ry + float(y1[anchor]) * rh,
+                                              "width": float(bw[anchor]) * rw, "height": float(bh[anchor]) * rh}})
     return kept
 
 
