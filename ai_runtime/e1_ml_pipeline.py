@@ -22,6 +22,7 @@ def parser():
     train.add_argument("--output", required=True, type=Path)
     resume = commands.add_parser("resume", help="Continue an interrupted train run from its last.pt")
     resume.add_argument("--run", required=True, type=Path)
+    resume.add_argument("--workers", type=int, help="Optional lower data-loader worker count (memory only)")
     export = commands.add_parser("export-onnx")
     export.add_argument("--checkpoint", required=True, type=Path)
     export.add_argument("--role", required=True, choices=("base", "specialist"))
@@ -79,7 +80,7 @@ def main(argv=None):
             raise ValueError("Refusing to overwrite an existing output")
         from . import e1_experiments as experiments
         if args.command == "resume":
-            result = experiments.resume(args.run)
+            result = experiments.resume(args.run, args.workers)
         elif args.command == "prepare-tensors":
             from .e1_tensor_fixtures import prepare
             result = prepare(args.manifest, args.size, args.output)

@@ -129,6 +129,11 @@ def train(config, package, output):
     integer(config.get("seed"), "seed", 0)
     required(config.get("device"), "device")
     required(config.get("experiment_basis"), "experiment_basis")
+    # Optional data-loader worker count (resource setting; recorded with the config).
+    # On Windows every worker is a full process, so fewer workers save memory.
+    resources = {}
+    if config.get("workers") is not None:
+        resources["workers"] = integer(config["workers"], "workers", 0)
     allowed = {"lr0", "lrf", "momentum", "weight_decay", "warmup_epochs", "hsv_h",
                "hsv_s", "hsv_v", "degrees", "translate", "scale", "shear", "perspective",
                "flipud", "fliplr", "mosaic", "mixup"}
@@ -168,7 +173,7 @@ def train(config, package, output):
                 exist_ok=False, pretrained=initialization == "checkpoint_weights", resume=False,
                 epochs=config["epochs"], batch=config["batch"], imgsz=config["imgsz"],
                 seed=config["seed"], device=config["device"], deterministic=True,
-                **hyperparameters)
+                **resources, **hyperparameters)
     return _finish_training(model, output, manifest["model_role"], {})
 
 
@@ -186,12 +191,14 @@ def _finish_training(model, output, role, extra):
     return result
 
 
-def resume(run):
+def resume(run, workers=None):
     """Continue an interrupted ``train`` run from its own ``fit/weights/last.pt``.
 
     The original request is not changed. The package must still match the
     request's input ledger exactly; each resume is recorded as resume-<n>.json.
+    ``workers`` optionally lowers the data-loader worker count (memory only).
     """
+    overrides = {} if workers is None else {"workers": integer(workers, "workers", 0)}
     run = Path(run).resolve()
     request = load(run / "request.json")
     if (run / "training_result.json").exists():
@@ -206,10 +213,10 @@ def resume(run):
         raise ValueError("Training package changed since the run was requested")
     count = len(list(run.glob("resume-*.json"))) + 1
     save(run / f"resume-{count}.json", {"resumed_from": str(last), "resumed_from_sha256": sha256(last),
-                                         "removed_framework_caches": removed,
+                                         "removed_framework_caches": removed, "overrides": overrides,
                                          "resumed_at_unix": int(time.time())})
     model = _yolo(last)
-    model.train(resume=True)
+    model.train(resume=True, **overrides)
     return _finish_training(model, run, manifest["model_role"], {"resume_count": count})
 
 

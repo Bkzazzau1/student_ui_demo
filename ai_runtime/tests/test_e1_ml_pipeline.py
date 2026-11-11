@@ -218,6 +218,7 @@ class PackageTests(unittest.TestCase):
                     output = root / f"run-{name}"
                     train({**config, "checkpoint": str(root / name)}, package, output)
                     self.assertIs(calls[-1]["pretrained"], expected)
+                    self.assertNotIn("workers", calls[-1])  # framework default unless configured
                     self.assertEqual(load(output / "request.json")["initialization"], initialization)
                     # Simulate the label cache Ultralytics leaves behind; the next run must still pass the gate.
                     (package / "labels/train.cache").write_bytes(b"cache")
@@ -234,9 +235,14 @@ class PackageTests(unittest.TestCase):
                 (run / "fit/weights").mkdir(parents=True)
                 (run / "fit/weights/last.pt").write_bytes(b"partial")
                 (package / "labels/validation.cache").write_bytes(b"cache")
-                result = resume(run)
-                self.assertEqual(calls[-1], {"resume": True})
+                result = resume(run, workers=2)
+                self.assertEqual(calls[-1], {"resume": True, "workers": 2})
                 self.assertEqual(result["resume_count"], 1)
+                self.assertEqual(load(run / "resume-1.json")["overrides"], {"workers": 2})
+                train({**config, "checkpoint": str(root / "init.pt"), "workers": 3}, package, root / "run-workers")
+                self.assertEqual(calls[-1]["workers"], 3)
+                with self.assertRaises(ValueError):
+                    train({**config, "checkpoint": str(root / "init.pt"), "workers": -1}, package, root / "run-bad")
                 self.assertEqual(load(run / "resume-1.json")["removed_framework_caches"], ["labels/validation.cache"])
                 with self.assertRaises(ValueError):  # completed runs are not resumed
                     resume(run)
