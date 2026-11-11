@@ -14,6 +14,7 @@ from ai_runtime.e1_ml_common import load, save
 from ai_runtime.e1_ml_pipeline import main
 from ai_runtime.e1_scenarios import check_scenarios
 from ai_runtime.e1_training_export import class_order_for_role, export_training_package
+from ai_runtime.e1_training_readiness import E1_TAXONOMY_VERSION
 
 
 BOX = {"x": .1, "y": .2, "width": .2, "height": .3}
@@ -31,7 +32,7 @@ def fixtures(role="base"):
         samples.append({"sample_id": f"{split}-negative", "source_group_id": f"{split}-negative-session",
                         "image_path": f"{split}-negative.png", "width": 100, "height": 100,
                         "annotations": [], "negative_tags": ["hand_without_phone"]})
-        manifests.append({"schema_version": "1.0", "taxonomy_version": "1.0",
+        manifests.append({"schema_version": "1.0", "taxonomy_version": E1_TAXONOMY_VERSION,
                           "dataset_id": "synthetic-unit-fixture", "dataset_version": "test-only",
                           "model_role": role, "split": split, "samples": samples})
     predictions = {"model_id": "unit-test", "model_version": "test-only", "model_sha256": "a"*64,

@@ -203,7 +203,7 @@ requires representative **training-split** tensors, distinct from scientific
 confidence calibration. Each variant inherits the source contract, gets a new
 model hash, remains uninstalled and records its source hash. Run `predict-tensors`
 and `evaluate` again with its adjacent metadata against the exact same held-out
-set. Compare every class, particularly earbuds and watches. Quantization is never
+set. Compare every class, particularly earbuds and wrist devices. Quantization is never
 accepted based only on speed. Provider support and allowable accuracy loss remain
 empirical decisions. Repeat parity with variant metadata and explicitly reviewed
 tolerances if the checkpoint reference is applicable.
@@ -250,8 +250,8 @@ must be accounted for by their frame's outcome. All events are checked against
 the original capture record; arrival order may differ from capture order.
 
 Capture candidate alone/second-person entry, exit/reappearance, partial and
-simultaneous people; obvious/small/hidden/brief phone and empty hand; smartwatch
-vs watch, earbud vs earring, calculator/tablet/paper; laptop/monitor/book/TV;
+simultaneous people; obvious/small/hidden/brief phone and empty hand; wrist device
+vs bracelet/wristband, earbud vs earring, calculator/tablet/paper; laptop/monitor/book/TV;
 late frames, moving-phone capture provenance and skipped specialist scenarios.
 Use assertions tied to independently reviewed recorded ground truth. Include
 short-disappearance same-track and second-person distinct-track cases.

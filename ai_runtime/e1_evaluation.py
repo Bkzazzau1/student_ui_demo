@@ -11,7 +11,11 @@ import json
 
 from .e1_ml_common import number, required
 from .e1_training_export import class_order_for_role
-from .e1_training_readiness import validate_dataset_manifest, validate_split_disjointness
+from .e1_training_readiness import (
+    E1_TAXONOMY_VERSION,
+    validate_dataset_manifest,
+    validate_split_disjointness,
+)
 
 
 def fingerprint(value):
@@ -143,7 +147,7 @@ def evaluate(manifests, predictions, operating_confidence):
         for tag in sample.get("negative_tags", []):
             tags[tag].add(sid)
     return {
-        "schema_version": "1.0", "taxonomy_version": "1.0",
+        "schema_version": "1.0", "taxonomy_version": E1_TAXONOMY_VERSION,
         **{k: predictions[k] for k in ("model_id", "model_version", "model_sha256")},
         "model_role": manifest["model_role"], "evaluation_dataset_id": manifest["dataset_id"],
         "evaluation_dataset_version": manifest["dataset_version"], "evaluation_split": split,
