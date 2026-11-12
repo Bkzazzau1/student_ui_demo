@@ -142,6 +142,16 @@ def train(config, package, output):
         raise ValueError("Only numeric optimization/augmentation overrides are allowed")
     for key, value in hyperparameters.items():
         number(value, key, 0, float("inf"))
+    # Ultralytics' optimizer=auto picks the optimizer from the iteration count
+    # (8.4: MuSGD above 10k iterations, AdamW below) and silently ignores lr0 and
+    # momentum, so an explicit optimizer is required whenever those are overridden.
+    optimizer = config.get("optimizer")
+    if optimizer is not None:
+        if optimizer not in {"SGD", "Adam", "AdamW", "MuSGD"}:
+            raise ValueError("optimizer must be one of SGD, Adam, AdamW, MuSGD (or omitted for auto)")
+        resources["optimizer"] = optimizer
+    elif {"lr0", "momentum"} & set(hyperparameters):
+        raise ValueError("lr0/momentum are ignored by optimizer=auto; set an explicit optimizer")
     checkpoint = Path(required(config.get("checkpoint"), "checkpoint")).resolve()
     if not checkpoint.is_file():
         raise ValueError("Local checkpoint/architecture is missing")

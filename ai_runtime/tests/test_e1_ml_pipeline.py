@@ -243,6 +243,15 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(calls[-1]["workers"], 3)
                 with self.assertRaises(ValueError):
                     train({**config, "checkpoint": str(root / "init.pt"), "workers": -1}, package, root / "run-bad")
+                # Explicit optimizer passes through; lr0/momentum without one would be silently ignored.
+                train({**config, "checkpoint": str(root / "init.pt"), "optimizer": "AdamW",
+                       "hyperparameters": {"lr0": 0.000833, "momentum": 0.9}}, package, root / "run-adamw")
+                self.assertEqual((calls[-1]["optimizer"], calls[-1]["lr0"]), ("AdamW", 0.000833))
+                self.assertNotIn("optimizer", calls[-4])  # earlier default runs keep optimizer=auto
+                for bad in ({"optimizer": "Lion"}, {"hyperparameters": {"lr0": 0.01}}):
+                    with self.assertRaises(ValueError):
+                        train({**config, "checkpoint": str(root / "init.pt"), **bad}, package,
+                              root / f"run-bad-{len(calls)}-{sorted(bad)[0]}")
                 self.assertEqual(load(run / "resume-1.json")["removed_framework_caches"], ["labels/validation.cache"])
                 with self.assertRaises(ValueError):  # completed runs are not resumed
                     resume(run)
