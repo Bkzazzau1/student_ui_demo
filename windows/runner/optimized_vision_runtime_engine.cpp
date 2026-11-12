@@ -92,6 +92,30 @@ int ReadInt(const flutter::EncodableMap* map, const char* key, int fallback) {
   return fallback;
 }
 
+double ReadDouble(const flutter::EncodableMap* map, const char* key, double fallback) {
+  const auto* value = FindValue(map, key);
+  if (value == nullptr) return fallback;
+  if (const auto* double_value = std::get_if<double>(value)) return *double_value;
+  if (const auto* int32_value = std::get_if<int32_t>(value)) {
+    return static_cast<double>(*int32_value);
+  }
+  if (const auto* int64_value = std::get_if<int64_t>(value)) {
+    return static_cast<double>(*int64_value);
+  }
+  return fallback;
+}
+
+std::vector<std::string> ReadStringList(const flutter::EncodableMap* map, const char* key) {
+  std::vector<std::string> items;
+  const auto* value = FindValue(map, key);
+  const auto* list = value == nullptr ? nullptr : std::get_if<flutter::EncodableList>(value);
+  if (list == nullptr) return items;
+  for (const auto& item : *list) {
+    if (const auto* text = std::get_if<std::string>(&item)) items.push_back(*text);
+  }
+  return items;
+}
+
 bool FileExists(const std::string& path) {
   std::ifstream file(path, std::ios::binary);
   return file.good();
@@ -146,35 +170,6 @@ std::wstring Utf8ToWide(const std::string& value) {
 #endif
 }
 
-std::string LabelForClass(int64_t class_id) {
-  switch (class_id) {
-    case 0:
-      return "person";
-    case 1:
-      return "phone";
-    case 2:
-      return "screen_glow";
-    case 3:
-      return "mirror_reflection";
-    case 4:
-      return "offscreen_interaction";
-    case 56:
-      return "chair";
-    case 62:
-      return "tv_monitor";
-    case 63:
-      return "laptop";
-    case 64:
-      return "mouse";
-    case 66:
-      return "keyboard";
-    case 67:
-      return "cell_phone";
-    default:
-      return "class_" + std::to_string(class_id);
-  }
-}
-
 double Clamp01(double value) {
   return std::max(0.0, std::min(1.0, value));
 }
@@ -183,9 +178,12 @@ int Clamp255(int value) {
   return std::max(0, std::min(255, value));
 }
 
-double Logistic(double value) {
-  if (value >= 0.0 && value <= 1.0) return value;
-  return 1.0 / (1.0 + std::exp(-value));
+bool IsSupportedPreprocessing(const std::string& value) {
+  return value == "letterbox_rgb01" || value == "stretch_rgb01";
+}
+
+bool IsSupportedLayout(const std::string& value) {
+  return value == "channels_first_yolov8" || value == "rows_yolov8";
 }
 
 uint8_t SafeByte(const ImagePlane& plane, int index) {
@@ -298,101 +296,136 @@ bool IsOffscreenLike(const std::string& label) {
          label.find("hand") != std::string::npos;
 }
 
-void DecodeCandidate(const float* values,
-                     int64_t length,
-                     std::vector<Detection>* detections) {
-  if (values == nullptr || detections == nullptr || length < 6) return;
-
-  int64_t class_id = -1;
-  double confidence = 0.0;
-  if (length == 6) {
-    confidence = Logistic(values[4]);
-    class_id = static_cast<int64_t>(std::llround(values[5]));
-  } else {
-    const bool yolov5_layout = length == 85 || length == 10;
-    const int64_t class_start = yolov5_layout ? 5 : 4;
-    const double objectness = yolov5_layout ? Logistic(values[4]) : 1.0;
-    for (int64_t i = class_start; i < length; ++i) {
-      const double score = Logistic(values[i]) * objectness;
-      if (score > confidence) {
-        confidence = score;
-        class_id = i - class_start;
-      }
-    }
-  }
-
-  if (confidence < 0.20 || class_id < 0) return;
-
-  const double a = values[0];
-  const double b = values[1];
-  const double c = values[2];
-  const double d = values[3];
-  Detection detection;
-  detection.confidence = Clamp01(confidence);
-  detection.class_id = class_id;
-  detection.label = LabelForClass(class_id);
-
-  if (a >= 0.0 && b >= 0.0 && c <= 1.5 && d <= 1.5) {
-    if (c > a && d > b) {
-      detection.x1 = a;
-      detection.y1 = b;
-      detection.x2 = c;
-      detection.y2 = d;
-    } else {
-      detection.x1 = a - c / 2.0;
-      detection.y1 = b - d / 2.0;
-      detection.x2 = a + c / 2.0;
-      detection.y2 = b + d / 2.0;
-    }
-  } else {
-    const double scale = std::max(1.0, std::max(std::abs(a), std::max(std::abs(b), std::max(std::abs(c), std::abs(d)))));
-    detection.x1 = (a - c / 2.0) / scale;
-    detection.y1 = (b - d / 2.0) / scale;
-    detection.x2 = (a + c / 2.0) / scale;
-    detection.y2 = (b + d / 2.0) / scale;
-  }
-
-  detections->push_back(detection);
+double Iou(const Detection& a, const Detection& b) {
+  const double overlap_x = std::max(0.0, std::min(a.x2, b.x2) - std::max(a.x1, b.x1));
+  const double overlap_y = std::max(0.0, std::min(a.y2, b.y2) - std::max(a.y1, b.y1));
+  const double overlap = overlap_x * overlap_y;
+  const double area = (a.x2 - a.x1) * (a.y2 - a.y1) + (b.x2 - b.x1) * (b.y2 - b.y1) - overlap;
+  return area > 0.0 ? overlap / area : 0.0;
 }
 
-std::vector<Detection> ParseDetections(const float* data,
-                                       const std::vector<int64_t>& shape,
-                                       size_t element_count) {
-  std::vector<Detection> detections;
-  if (data == nullptr || element_count < 6) return detections;
+constexpr size_t kMaxDetections = 50;
 
-  if (shape.size() == 2 && shape[1] >= 6) {
-    const int64_t rows = shape[0];
-    const int64_t columns = shape[1];
-    for (int64_t row = 0; row < rows; ++row) {
-      DecodeCandidate(data + row * columns, columns, &detections);
-    }
-  } else if (shape.size() == 3) {
-    const int64_t dim1 = shape[1];
-    const int64_t dim2 = shape[2];
-    if (dim1 >= 6 && dim1 <= 512) {
-      std::vector<float> candidate(static_cast<size_t>(dim1));
-      for (int64_t row = 0; row < dim2; ++row) {
-        for (int64_t col = 0; col < dim1; ++col) {
-          candidate[static_cast<size_t>(col)] = data[col * dim2 + row];
-        }
-        DecodeCandidate(candidate.data(), dim1, &detections);
+// Strict YOLOv8 decode against the manifest contract: shape [1, 4 + C, N]
+// (channels_first_yolov8) or [1, N, 4 + C] (rows_yolov8), class probabilities,
+// pixel cx/cy/w/h in model-input space. Boxes are mapped back to normalized
+// source-frame coordinates, clipped, then class-aware greedy NMS is applied.
+// Returns false when the tensor does not match the manifest; nothing is
+// guessed from a tensor of another shape.
+bool DecodeYoloV8(const float* data,
+                  const std::vector<int64_t>& shape,
+                  size_t element_count,
+                  const std::string& layout,
+                  const std::vector<std::string>& class_names,
+                  double confidence_threshold,
+                  double iou_threshold,
+                  const VisionInputGeometry& geometry,
+                  std::vector<Detection>* detections,
+                  int64_t* num_predictions) {
+  const int64_t num_classes = static_cast<int64_t>(class_names.size());
+  const int64_t attributes = 4 + num_classes;
+  if (data == nullptr || detections == nullptr || num_predictions == nullptr ||
+      num_classes <= 0 || shape.size() != 3 || shape[0] != 1 ||
+      geometry.content_width <= 0 || geometry.content_height <= 0) {
+    return false;
+  }
+  const bool channels_first = layout == "channels_first_yolov8";
+  if (!channels_first && layout != "rows_yolov8") return false;
+  const int64_t predictions = channels_first ? shape[2] : shape[1];
+  const int64_t reported_attributes = channels_first ? shape[1] : shape[2];
+  if (reported_attributes != attributes || predictions <= 0 ||
+      static_cast<size_t>(attributes * predictions) != element_count) {
+    return false;
+  }
+  const auto at = [&](int64_t prediction, int64_t attribute) {
+    return static_cast<double>(channels_first ? data[attribute * predictions + prediction]
+                                              : data[prediction * attributes + attribute]);
+  };
+
+  std::vector<Detection> candidates;
+  for (int64_t prediction = 0; prediction < predictions; ++prediction) {
+    int64_t best_class = -1;
+    double best_score = 0.0;
+    for (int64_t class_index = 0; class_index < num_classes; ++class_index) {
+      const double score = at(prediction, 4 + class_index);
+      if (score > best_score) {
+        best_score = score;
+        best_class = class_index;
       }
-    } else if (dim2 >= 6) {
-      for (int64_t row = 0; row < dim1; ++row) {
-        DecodeCandidate(data + row * dim2, dim2, &detections);
-      }
     }
+    if (best_class < 0 || best_score < confidence_threshold) continue;
+    const double cx = at(prediction, 0);
+    const double cy = at(prediction, 1);
+    const double w = std::abs(at(prediction, 2));
+    const double h = std::abs(at(prediction, 3));
+    Detection detection;
+    detection.x1 = Clamp01((cx - w / 2.0 - geometry.pad_x) / geometry.content_width);
+    detection.y1 = Clamp01((cy - h / 2.0 - geometry.pad_y) / geometry.content_height);
+    detection.x2 = Clamp01((cx + w / 2.0 - geometry.pad_x) / geometry.content_width);
+    detection.y2 = Clamp01((cy + h / 2.0 - geometry.pad_y) / geometry.content_height);
+    if (!(detection.x2 > detection.x1) || !(detection.y2 > detection.y1)) continue;
+    detection.confidence = Clamp01(best_score);
+    detection.class_id = best_class;
+    detection.label = class_names[static_cast<size_t>(best_class)];
+    candidates.push_back(detection);
   }
 
-  std::sort(detections.begin(), detections.end(), [](const Detection& a, const Detection& b) {
+  std::stable_sort(candidates.begin(), candidates.end(), [](const Detection& a, const Detection& b) {
     return a.confidence > b.confidence;
   });
-  if (detections.size() > 20) detections.resize(20);
-  return detections;
+  std::vector<Detection> kept;
+  for (const auto& candidate : candidates) {
+    bool suppressed = false;
+    for (const auto& existing : kept) {
+      if (existing.class_id == candidate.class_id && Iou(existing, candidate) > iou_threshold) {
+        suppressed = true;
+        break;
+      }
+    }
+    if (suppressed) continue;
+    kept.push_back(candidate);
+    if (kept.size() >= kMaxDetections) break;
+  }
+  *detections = std::move(kept);
+  *num_predictions = predictions;
+  return true;
 }
 
 }  // namespace
+
+VisionInputGeometry OptimizedVisionRuntimeEngine::ComputeInputGeometry(
+    const std::string& preprocessing,
+    int source_width,
+    int source_height,
+    int input_width,
+    int input_height) {
+  VisionInputGeometry geometry;
+  geometry.input_width = input_width;
+  geometry.input_height = input_height;
+  geometry.source_width = source_width;
+  geometry.source_height = source_height;
+  if (source_width <= 0 || source_height <= 0 || input_width <= 0 || input_height <= 0) {
+    return geometry;
+  }
+  if (preprocessing == "letterbox_rgb01") {
+    // Same placement as Ultralytics LetterBox(center=True): scale by the
+    // limiting axis, round the content size, split padding floor-left/top.
+    const double ratio = std::min(static_cast<double>(input_width) / source_width,
+                                  static_cast<double>(input_height) / source_height);
+    geometry.content_width = std::max(
+        1, std::min(input_width, static_cast<int>(std::floor(source_width * ratio + 0.5))));
+    geometry.content_height = std::max(
+        1, std::min(input_height, static_cast<int>(std::floor(source_height * ratio + 0.5))));
+    geometry.pad_x = (input_width - geometry.content_width) / 2;
+    geometry.pad_y = (input_height - geometry.content_height) / 2;
+  } else {
+    geometry.content_width = input_width;
+    geometry.content_height = input_height;
+  }
+  geometry.scale_x = static_cast<double>(geometry.content_width) / source_width;
+  geometry.scale_y = static_cast<double>(geometry.content_height) / source_height;
+  return geometry;
+}
 
 OptimizedVisionRuntimeEngine::OptimizedVisionRuntimeEngine() = default;
 OptimizedVisionRuntimeEngine::~OptimizedVisionRuntimeEngine() = default;
@@ -436,6 +469,34 @@ bool OptimizedVisionRuntimeEngine::LoadSession(const flutter::EncodableMap* poli
   try {
     backend_ = ReadString(policy, "backend", "onnxRuntimeDirectML");
     precision_ = ReadString(policy, "precision", "int8");
+
+    // The validated manifest defines the model contract. Refuse to run a
+    // model whose preprocessing, layout or classes are unknown rather than
+    // guessing them (a wrong guess yields plausible-looking false detections).
+    model_family_ = ReadString(policy, "model_family", "yolo");
+    output_layout_ = ReadString(policy, "output_layout", "channels_first_yolov8");
+    input_preprocessing_ = ReadString(policy, "input_preprocessing", "letterbox_rgb01");
+    class_names_ = ReadStringList(policy, "class_names");
+    confidence_threshold_ = ReadDouble(policy, "confidence_threshold", 0.45);
+    iou_threshold_ = ReadDouble(policy, "iou_threshold", 0.45);
+    if (model_family_ != "yolo") {
+      throw std::runtime_error("Optimized vision runtime supports model_family 'yolo' only.");
+    }
+    if (!IsSupportedPreprocessing(input_preprocessing_)) {
+      throw std::runtime_error("Unsupported input_preprocessing in the model manifest: " +
+                               input_preprocessing_);
+    }
+    if (!IsSupportedLayout(output_layout_)) {
+      throw std::runtime_error("Unsupported output_layout in the model manifest: " + output_layout_);
+    }
+    if (class_names_.empty()) {
+      throw std::runtime_error("The model manifest must list class_names.");
+    }
+    if (!(confidence_threshold_ > 0.0 && confidence_threshold_ < 1.0) ||
+        !(iou_threshold_ > 0.0 && iou_threshold_ < 1.0)) {
+      throw std::runtime_error("Model manifest thresholds must be between 0 and 1.");
+    }
+
     model_path_ = ResolveModelPath(policy);
     if (model_path_.empty()) {
       throw std::runtime_error("No optimized vision ONNX model found in Flutter assets.");
@@ -552,7 +613,8 @@ std::string OptimizedVisionRuntimeEngine::ResolveModelPath(const flutter::Encoda
   return "";
 }
 
-std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter::EncodableMap* request) {
+std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter::EncodableMap* request,
+                                                                   VisionInputGeometry* geometry) {
   const int source_width = ReadInt(request, "width", 0);
   const int source_height = ReadInt(request, "height", 0);
   if (source_width <= 0 || source_height <= 0) {
@@ -588,16 +650,31 @@ std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter:
   const int target_width = static_cast<int>(nchw ? input_shape_[3] : input_shape_[2]);
   const int channels = static_cast<int>(nchw ? input_shape_[1] : input_shape_[3]);
   const size_t total = static_cast<size_t>(target_width) * target_height * std::max(1, channels);
-  std::vector<float> tensor(total, 0.0f);
+
+  // Ultralytics YOLO is trained on letterboxed RGB scaled to [0, 1] with grey
+  // (114) padding. Nearest-neighbour sampling inside the content area; the
+  // same algorithm is mirrored by ai_runtime prepare-tensors letterbox_nn_rgb01.
+  const VisionInputGeometry placement = ComputeInputGeometry(
+      input_preprocessing_, source_width, source_height, target_width, target_height);
+  if (placement.content_width <= 0 || placement.content_height <= 0) {
+    throw std::runtime_error("Camera frame cannot be placed in the model input.");
+  }
+  if (geometry != nullptr) *geometry = placement;
+  constexpr float kPadValue = 114.0f / 255.0f;
+  std::vector<float> tensor(total, kPadValue);
 
   for (int y = 0; y < target_height; ++y) {
-    const int src_y = std::min(source_height - 1, y * source_height / target_height);
+    const int content_y = y - placement.pad_y;
+    if (content_y < 0 || content_y >= placement.content_height) continue;
+    const int src_y = std::min(source_height - 1, content_y * source_height / placement.content_height);
     for (int x = 0; x < target_width; ++x) {
-      const int src_x = std::min(source_width - 1, x * source_width / target_width);
+      const int content_x = x - placement.pad_x;
+      if (content_x < 0 || content_x >= placement.content_width) continue;
+      const int src_x = std::min(source_width - 1, content_x * source_width / placement.content_width);
       const RgbPixel pixel = ReadRgbPixel(image_planes, format, src_x, src_y);
       for (int c = 0; c < channels; ++c) {
         const int channel_value = c == 0 ? pixel.r : (c == 1 ? pixel.g : pixel.b);
-        const float value = (channel_value / 255.0f - 0.5f) / 0.5f;
+        const float value = channel_value / 255.0f;
         const size_t index = nchw
                                  ? static_cast<size_t>(c * target_height * target_width + y * target_width + x)
                                  : static_cast<size_t>((y * target_width + x) * channels + c);
@@ -609,7 +686,8 @@ std::vector<float> OptimizedVisionRuntimeEngine::BuildInputTensor(const flutter:
 }
 
 flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(const flutter::EncodableMap* request) {
-  auto tensor = BuildInputTensor(request);
+  VisionInputGeometry geometry;
+  auto tensor = BuildInputTensor(request, &geometry);
   std::vector<int64_t> shape = input_shape_;
   size_t expected = 1;
   for (const auto dim : shape) expected *= static_cast<size_t>(std::max<int64_t>(1, dim));
@@ -622,6 +700,9 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(const flutter::
 
   flutter::EncodableList output_summaries;
   std::vector<Detection> detections;
+  bool decoded = false;
+  int64_t num_predictions = 0;
+  std::vector<float> yolo_output;
   for (size_t i = 0; i < outputs.size(); ++i) {
     flutter::EncodableMap summary;
     summary[StringValue("name")] = StringValue(i < output_names_.size() ? output_names_[i] : "");
@@ -634,8 +715,13 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(const flutter::
       summary[StringValue("element_count")] = flutter::EncodableValue(static_cast<int64_t>(info.GetElementCount()));
       if (info.GetElementType() == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT) {
         const float* data = outputs[i].GetTensorData<float>();
-        auto parsed = ParseDetections(data, output_shape, info.GetElementCount());
-        detections.insert(detections.end(), parsed.begin(), parsed.end());
+        if (!decoded &&
+            DecodeYoloV8(data, output_shape, info.GetElementCount(), output_layout_, class_names_,
+                         confidence_threshold_, iou_threshold_, geometry, &detections,
+                         &num_predictions)) {
+          decoded = true;
+          yolo_output.assign(data, data + info.GetElementCount());
+        }
         const size_t limit = std::min<size_t>(info.GetElementCount(), 16);
         flutter::EncodableList sample;
         for (size_t j = 0; j < limit; ++j) sample.push_back(DoubleValue(data[j]));
@@ -645,10 +731,13 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(const flutter::
     output_summaries.push_back(flutter::EncodableValue(summary));
   }
 
-  std::sort(detections.begin(), detections.end(), [](const Detection& a, const Detection& b) {
-    return a.confidence > b.confidence;
-  });
-  if (detections.size() > 20) detections.resize(20);
+  if (!decoded) {
+    // Fail closed: a model whose output does not match its manifest must not
+    // produce detections, and RunFrame marks the runtime unavailable.
+    throw std::runtime_error(
+        "YOLO output does not match the model manifest (expected [1, " +
+        std::to_string(4 + class_names_.size()) + ", N] for " + output_layout_ + ").");
+  }
 
   flutter::EncodableList objects;
   int64_t person_count = 0;
@@ -676,7 +765,32 @@ flutter::EncodableMap OptimizedVisionRuntimeEngine::RunOnnxFrame(const flutter::
   outputs_map[StringValue("model_path")] = StringValue(model_path_);
   outputs_map[StringValue("raw_outputs")] = flutter::EncodableValue(output_summaries);
   outputs_map[StringValue("input_format")] = StringValue(ReadString(request, "format"));
-  outputs_map[StringValue("input_conversion")] = StringValue("rgb_normalized");
+  outputs_map[StringValue("input_conversion")] = StringValue(input_preprocessing_);
+
+  // Raw detector tensor plus the exact input geometry, so the Dart/Rust decode
+  // path (E1 model events) maps boxes back to the camera frame itself.
+  flutter::EncodableList class_names;
+  for (const auto& name : class_names_) class_names.push_back(StringValue(name));
+  outputs_map[StringValue("model_family")] = StringValue(model_family_);
+  outputs_map[StringValue("requires_rust_decode")] = flutter::EncodableValue(true);
+  outputs_map[StringValue("yolo_output")] = flutter::EncodableValue(yolo_output);
+  outputs_map[StringValue("num_predictions")] = flutter::EncodableValue(num_predictions);
+  outputs_map[StringValue("class_names")] = flutter::EncodableValue(class_names);
+  outputs_map[StringValue("num_classes")] =
+      flutter::EncodableValue(static_cast<int64_t>(class_names_.size()));
+  outputs_map[StringValue("layout")] = StringValue(output_layout_);
+  outputs_map[StringValue("output_layout")] = StringValue(output_layout_);
+  outputs_map[StringValue("confidence_threshold")] = DoubleValue(confidence_threshold_);
+  outputs_map[StringValue("iou_threshold")] = DoubleValue(iou_threshold_);
+  outputs_map[StringValue("image_width")] = flutter::EncodableValue(geometry.source_width);
+  outputs_map[StringValue("image_height")] = flutter::EncodableValue(geometry.source_height);
+  outputs_map[StringValue("input_width")] = flutter::EncodableValue(geometry.input_width);
+  outputs_map[StringValue("input_height")] = flutter::EncodableValue(geometry.input_height);
+  outputs_map[StringValue("input_preprocessing")] = StringValue(input_preprocessing_);
+  outputs_map[StringValue("letterbox_scale_x")] = DoubleValue(geometry.scale_x);
+  outputs_map[StringValue("letterbox_scale_y")] = DoubleValue(geometry.scale_y);
+  outputs_map[StringValue("letterbox_pad_x")] = DoubleValue(static_cast<double>(geometry.pad_x));
+  outputs_map[StringValue("letterbox_pad_y")] = DoubleValue(static_cast<double>(geometry.pad_y));
 
   flutter::EncodableMap response;
   response[StringValue("available")] = flutter::EncodableValue(true);

@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 
 import '../proctoring_demo/native_vision_bridge.dart';
 import '../proctoring_demo/optimized_vision_runtime_bridge.dart';
+import '../proctoring_demo/yolo_input_geometry.dart';
 
 /// Outcome of asking the existing YOLO runtime "is this an identity-capture
 /// scene we can trust?" before any face/identity work runs on the frame.
@@ -197,8 +198,22 @@ class FaceIdentityPersonGate {
         );
     if (numPredictions <= 0 || numClasses <= 0) return null;
 
+    // Map model-input pixel boxes back to the camera frame (letterbox/stretch).
+    final layout = outputs['layout']?.toString() ?? 'rows_yolov8';
+    final geometry = YoloInputGeometry.fromOutputs(outputs);
+    final decodeInput = geometry == null
+        ? tensor
+        : geometry.toNormalizedSourceBoxes(
+            tensor,
+            numPredictions: numPredictions,
+            attributes: layout.trim().toLowerCase() == 'rows_yolov5'
+                ? 5 + numClasses
+                : 4 + numClasses,
+            layout: layout,
+          );
+
     final decoded = _nativeVision.decodeYoloOutput(
-      output: tensor,
+      output: decodeInput,
       numPredictions: numPredictions,
       numClasses: numClasses,
       imageWidth: _int(outputs['image_width']) ?? _int(outputs['width']) ?? 640,
@@ -325,7 +340,10 @@ class FaceIdentityPersonGate {
   /// for each cluster of overlapping same-class detections, discarding the
   /// rest. Mirrors the Rust decoder's algorithm exactly so both decode paths
   /// agree on how many real objects are in a frame.
-  List<_DetectionBox> _nonMaxSuppress(List<_DetectionBox> boxes, double iouThreshold) {
+  List<_DetectionBox> _nonMaxSuppress(
+    List<_DetectionBox> boxes,
+    double iouThreshold,
+  ) {
     final sorted = List<_DetectionBox>.of(boxes)
       ..sort((a, b) => b.confidence.compareTo(a.confidence));
     final kept = <_DetectionBox>[];

@@ -14,7 +14,7 @@ def parser():
     tensors = commands.add_parser("prepare-tensors")
     tensors.add_argument("--manifest", required=True, type=Path)
     tensors.add_argument("--size", required=True, type=int)
-    tensors.add_argument("--preprocessing", required=True, choices=("stretch_nn_rgb01",))
+    tensors.add_argument("--preprocessing", required=True, choices=("stretch_nn_rgb01", "letterbox_nn_rgb01"))
     tensors.add_argument("--output", required=True, type=Path)
     train = commands.add_parser("train")
     train.add_argument("--config", required=True, type=Path)
@@ -78,7 +78,7 @@ def main(argv=None):
         from . import e1_experiments as experiments
         if args.command == "prepare-tensors":
             from .e1_tensor_fixtures import prepare
-            result = prepare(args.manifest, args.size, args.output)
+            result = prepare(args.manifest, args.size, args.output, args.preprocessing)
         elif args.command == "train":
             result = experiments.train(load(args.config), args.package, args.output)
         elif args.command == "export-onnx":

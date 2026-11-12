@@ -18,6 +18,7 @@ class YoloExamReviewManifest {
     required this.inputHeight,
     required this.inputChannels,
     required this.outputLayout,
+    this.inputPreprocessing = defaultInputPreprocessing,
     required this.confidenceThreshold,
     required this.iouThreshold,
     required this.targetFps,
@@ -26,6 +27,14 @@ class YoloExamReviewManifest {
 
   static const String defaultAssetPath =
       'assets/models/yolo_exam_review/manifest.json';
+
+  /// How a camera frame becomes the detector input. Ultralytics YOLO exports
+  /// are trained on aspect-preserving letterboxed RGB scaled to [0, 1].
+  static const String defaultInputPreprocessing = 'letterbox_rgb01';
+  static const Set<String> supportedInputPreprocessing = <String>{
+    'letterbox_rgb01',
+    'stretch_rgb01',
+  };
 
   final String manifestSchemaVersion;
   final String modelId;
@@ -39,6 +48,7 @@ class YoloExamReviewManifest {
   final int inputHeight;
   final int inputChannels;
   final String outputLayout;
+  final String inputPreprocessing;
   final double confidenceThreshold;
   final double iouThreshold;
   final int targetFps;
@@ -60,6 +70,9 @@ class YoloExamReviewManifest {
       inputChannels: _int(json['input_channels'], 3),
       outputLayout:
           json['output_layout']?.toString() ?? 'channels_first_yolov8',
+      inputPreprocessing:
+          json['input_preprocessing']?.toString().trim() ??
+          defaultInputPreprocessing,
       confidenceThreshold: _double(json['confidence_threshold'], 0.45),
       iouThreshold: _double(json['iou_threshold'], 0.45),
       targetFps: _int(json['target_fps'], 1),
@@ -102,6 +115,7 @@ class YoloExamReviewManifest {
       inputWidth > 0 &&
       inputHeight > 0 &&
       inputChannels > 0 &&
+      supportedInputPreprocessing.contains(inputPreprocessing) &&
       classNames.isNotEmpty;
 
   String selectedModelPath(OptimizedVisionRuntimePolicy policy) {
@@ -130,6 +144,7 @@ class YoloExamReviewManifest {
       'max_input_width': inputWidth,
       'max_input_height': inputHeight,
       'output_layout': outputLayout,
+      'input_preprocessing': inputPreprocessing,
       'confidence_threshold': confidenceThreshold,
       'iou_threshold': iouThreshold,
       'target_fps': targetFps,

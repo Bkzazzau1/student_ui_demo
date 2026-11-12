@@ -18,9 +18,10 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.nio.FloatBuffer
+import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToLong
 import kotlin.system.measureNanoTime
 
 class MainActivity : FlutterActivity() {
@@ -178,12 +179,70 @@ private class AndroidOptimizedVisionRuntimeEngine {
     private var backend: String = "not_available"
     private var precision: String = "not_available"
     private var outputLayout: String = "channels_first_yolov8"
+    private var inputPreprocessing: String = "letterbox_rgb01"
     private var confidenceThreshold: Double = 0.45
     private var iouThreshold: Double = 0.45
     private var classNames: List<String> = defaultCocoClassNames()
     private var lastInferenceMs: Double = 0.0
     private var lastError: String =
         "Android ONNX Runtime has not been initialized."
+
+    /** How a camera frame was placed in the model input (input pixels). */
+    data class InputGeometry(
+        val inputWidth: Int,
+        val inputHeight: Int,
+        val sourceWidth: Int,
+        val sourceHeight: Int,
+        val contentWidth: Int,
+        val contentHeight: Int,
+        val scaleX: Double,
+        val scaleY: Double,
+        val padX: Int,
+        val padY: Int,
+    )
+
+    companion object {
+        const val MAX_DETECTIONS = 50
+
+        /**
+         * Letterbox (aspect-preserving, centered, same placement as Ultralytics
+         * LetterBox) or stretch placement. Mirrors the Windows C++ engine and
+         * ai_runtime prepare-tensors letterbox_nn_rgb01.
+         */
+        fun computeInputGeometry(
+            preprocessing: String,
+            sourceWidth: Int,
+            sourceHeight: Int,
+            inputWidth: Int,
+            inputHeight: Int,
+        ): InputGeometry {
+            val contentWidth: Int
+            val contentHeight: Int
+            if (preprocessing == "letterbox_rgb01") {
+                val ratio = min(
+                    inputWidth.toDouble() / sourceWidth,
+                    inputHeight.toDouble() / sourceHeight,
+                )
+                contentWidth = floor(sourceWidth * ratio + 0.5).toInt().coerceIn(1, inputWidth)
+                contentHeight = floor(sourceHeight * ratio + 0.5).toInt().coerceIn(1, inputHeight)
+            } else {
+                contentWidth = inputWidth
+                contentHeight = inputHeight
+            }
+            return InputGeometry(
+                inputWidth = inputWidth,
+                inputHeight = inputHeight,
+                sourceWidth = sourceWidth,
+                sourceHeight = sourceHeight,
+                contentWidth = contentWidth,
+                contentHeight = contentHeight,
+                scaleX = contentWidth.toDouble() / sourceWidth,
+                scaleY = contentHeight.toDouble() / sourceHeight,
+                padX = (inputWidth - contentWidth) / 2,
+                padY = (inputHeight - contentHeight) / 2,
+            )
+        }
+    }
 
     fun initialize(
         policy: Map<*, *>?,
@@ -192,9 +251,22 @@ private class AndroidOptimizedVisionRuntimeEngine {
         backend = policy.stringValue("backend", "onnxRuntimeCpu")
         precision = policy.stringValue("precision", "int8")
         outputLayout = policy.stringValue("output_layout", "channels_first_yolov8")
+        inputPreprocessing = policy.stringValue("input_preprocessing", "letterbox_rgb01")
         confidenceThreshold = policy.doubleValue("confidence_threshold", 0.45)
         iouThreshold = policy.doubleValue("iou_threshold", 0.45)
         classNames = policy.stringListValue("class_names", defaultCocoClassNames())
+        // The validated manifest defines the model contract; refuse unknown
+        // preprocessing or layouts instead of guessing them.
+        if (inputPreprocessing != "letterbox_rgb01" && inputPreprocessing != "stretch_rgb01") {
+            session = null
+            lastError = "Unsupported input_preprocessing in the model manifest: $inputPreprocessing"
+            return false
+        }
+        if (outputLayout != "channels_first_yolov8" && outputLayout != "rows_yolov8") {
+            session = null
+            lastError = "Unsupported output_layout in the model manifest: $outputLayout"
+            return false
+        }
         return try {
             val assetPath = resolveAssetPath(policy)
             val assetKey = FlutterInjector.instance()
@@ -236,14 +308,14 @@ private class AndroidOptimizedVisionRuntimeEngine {
         return try {
             var response: Map<String, Any?>
             val elapsed = measureNanoTime {
-                val input = buildInputTensor(request)
+                val (input, geometry) = buildInputTensor(request)
                 OnnxTensor.createTensor(
                     activeEnv,
                     FloatBuffer.wrap(input),
                     inputShape,
                 ).use { tensor ->
                     activeSession.run(mapOf(inputName to tensor)).use { outputs ->
-                        response = availableResponse(outputs, request)
+                        response = availableResponse(outputs, request, geometry)
                     }
                 }
             }
@@ -302,7 +374,7 @@ private class AndroidOptimizedVisionRuntimeEngine {
         val b: Int,
     )
 
-    private fun buildInputTensor(request: Map<*, *>): FloatArray {
+    private fun buildInputTensor(request: Map<*, *>): Pair<FloatArray, InputGeometry> {
         val sourceWidth = request.intValue("width", 0)
         val sourceHeight = request.intValue("height", 0)
         if (sourceWidth <= 0 || sourceHeight <= 0) {
@@ -325,12 +397,25 @@ private class AndroidOptimizedVisionRuntimeEngine {
         val targetHeight = (if (nchw) inputShape[2] else inputShape[1]).toInt()
         val targetWidth = (if (nchw) inputShape[3] else inputShape[2]).toInt()
         val channels = (if (nchw) inputShape[1] else inputShape[3]).toInt().coerceAtLeast(1)
-        val tensor = FloatArray(targetWidth * targetHeight * channels)
+        // Ultralytics YOLO is trained on letterboxed RGB scaled to [0, 1] with
+        // grey (114) padding; nearest-neighbour sampling inside the content.
+        val geometry = computeInputGeometry(
+            inputPreprocessing,
+            sourceWidth,
+            sourceHeight,
+            targetWidth,
+            targetHeight,
+        )
+        val tensor = FloatArray(targetWidth * targetHeight * channels) { 114.0f / 255.0f }
 
         for (y in 0 until targetHeight) {
-            val srcY = min(sourceHeight - 1, y * sourceHeight / targetHeight)
+            val contentY = y - geometry.padY
+            if (contentY < 0 || contentY >= geometry.contentHeight) continue
+            val srcY = min(sourceHeight - 1, contentY * sourceHeight / geometry.contentHeight)
             for (x in 0 until targetWidth) {
-                val srcX = min(sourceWidth - 1, x * sourceWidth / targetWidth)
+                val contentX = x - geometry.padX
+                if (contentX < 0 || contentX >= geometry.contentWidth) continue
+                val srcX = min(sourceWidth - 1, contentX * sourceWidth / geometry.contentWidth)
                 val pixel = readRgbPixel(
                     planes = planeData,
                     format = format,
@@ -345,7 +430,7 @@ private class AndroidOptimizedVisionRuntimeEngine {
                         2 -> pixel.b
                         else -> pixel.r
                     }
-                    val value = ((channelValue / 255.0f) - 0.5f) / 0.5f
+                    val value = channelValue / 255.0f
                     val index = if (nchw) {
                         channel * targetHeight * targetWidth + y * targetWidth + x
                     } else {
@@ -355,7 +440,7 @@ private class AndroidOptimizedVisionRuntimeEngine {
                 }
             }
         }
-        return tensor
+        return tensor to geometry
     }
 
     private fun readRgbPixel(
@@ -428,29 +513,33 @@ private class AndroidOptimizedVisionRuntimeEngine {
     private fun availableResponse(
         outputs: OrtSession.Result,
         request: Map<*, *>,
+        geometry: InputGeometry,
     ): Map<String, Any?> {
         val summaries = mutableListOf<Map<String, Any?>>()
-        val detections = mutableListOf<Detection>()
+        var detections: List<Detection>? = null
         var rawYoloOutput: Map<String, Any?>? = null
         var index = 0
         for (entry in outputs) {
             val value = entry.value
             summaries.add(summarizeOutput(index, value))
-            detections.addAll(parseDetections(value))
-            if (rawYoloOutput == null) {
-                rawYoloOutput = extractRawYoloOutput(value)
+            if (detections == null) {
+                detections = decodeYoloV8(value, geometry)
+                if (detections != null) rawYoloOutput = extractRawYoloOutput(value)
             }
             index++
         }
-        val sortedDetections = detections.sortedByDescending { it.confidence }.take(20)
-        val objects = sortedDetections.map { it.toMap() }
-        val screenGlow = sortedDetections.any { it.label.isPhoneLike() }
-        val mirrorReflection = sortedDetections.any { it.label.isMirrorLike() }
-        val offscreenInteraction = sortedDetections.any { it.label.isOffscreenLike() }
-        val sourceWidth = request.intValue("width", 0)
-        val sourceHeight = request.intValue("height", 0)
+        // Fail closed: a model whose output does not match its manifest must
+        // not produce detections.
+        val decoded = detections ?: emptyList()
+        val objects = decoded.map { it.toMap() }
+        val personCount = decoded.count { it.label.contains("person") && it.confidence >= 0.40 }
+        val screenGlow = decoded.any { it.label.isPhoneLike() }
+        val mirrorReflection = decoded.any { it.label.isMirrorLike() }
+        val offscreenInteraction = decoded.any { it.label.isOffscreenLike() }
         val outputMap = mutableMapOf<String, Any?>(
             "objects" to objects,
+            "person_count" to personCount,
+            "multiple_people_likely" to (personCount >= 2),
             "screen_glow" to screenGlow,
             "mirror_reflection" to mirrorReflection,
             "offscreen_interaction" to offscreenInteraction,
@@ -466,15 +555,26 @@ private class AndroidOptimizedVisionRuntimeEngine {
             "output_layout" to outputLayout,
             "confidence_threshold" to confidenceThreshold,
             "iou_threshold" to iouThreshold,
-            "image_width" to sourceWidth,
-            "image_height" to sourceHeight,
+            "image_width" to geometry.sourceWidth,
+            "image_height" to geometry.sourceHeight,
+            "input_width" to geometry.inputWidth,
+            "input_height" to geometry.inputHeight,
+            "input_preprocessing" to inputPreprocessing,
+            "letterbox_scale_x" to geometry.scaleX,
+            "letterbox_scale_y" to geometry.scaleY,
+            "letterbox_pad_x" to geometry.padX.toDouble(),
+            "letterbox_pad_y" to geometry.padY.toDouble(),
             "input_format" to request.stringValue("format", ""),
-            "input_conversion" to "rgb_normalized",
+            "input_conversion" to inputPreprocessing,
             "requires_rust_decode" to true,
         )
         rawYoloOutput?.let { outputMap.putAll(it) }
+        if (detections == null) {
+            outputMap["message"] =
+                "YOLO output does not match the model manifest (expected [1, ${4 + classNames.size}, N] for $outputLayout)."
+        }
         return mapOf(
-            "available" to (rawYoloOutput != null),
+            "available" to (detections != null && rawYoloOutput != null),
             "backend" to backend,
             "precision" to precision,
             "inference_ms" to lastInferenceMs,
@@ -524,39 +624,76 @@ private class AndroidOptimizedVisionRuntimeEngine {
         return 0
     }
 
-    private fun parseDetections(value: OnnxValue): List<Detection> {
-        val tensor = value as? OnnxTensor ?: return emptyList()
-        val info = tensor.info as? TensorInfo ?: return emptyList()
-        if (info.type != ai.onnxruntime.OnnxJavaType.FLOAT) return emptyList()
+    /**
+     * Strict YOLOv8 decode against the manifest contract: shape [1, 4 + C, N]
+     * (channels_first_yolov8) or [1, N, 4 + C] (rows_yolov8), class
+     * probabilities, pixel cx/cy/w/h in model-input space. Boxes are mapped to
+     * normalized source-frame coordinates, clipped, and class-aware greedy NMS
+     * is applied. Returns null when the tensor does not match the manifest.
+     */
+    private fun decodeYoloV8(value: OnnxValue, geometry: InputGeometry): List<Detection>? {
+        val tensor = value as? OnnxTensor ?: return null
+        val info = tensor.info as? TensorInfo ?: return null
+        if (info.type != ai.onnxruntime.OnnxJavaType.FLOAT) return null
         val shape = info.shape
+        val numClasses = classNames.size
+        val attributes = 4 + numClasses
+        if (numClasses <= 0 || shape.size != 3 || shape[0] != 1L) return null
+        if (geometry.contentWidth <= 0 || geometry.contentHeight <= 0) return null
+        val channelsFirst = outputLayout == "channels_first_yolov8"
+        if (!channelsFirst && outputLayout != "rows_yolov8") return null
+        val predictions = (if (channelsFirst) shape[2] else shape[1]).toInt()
+        val reportedAttributes = (if (channelsFirst) shape[1] else shape[2]).toInt()
+        if (reportedAttributes != attributes || predictions <= 0) return null
         val data = tensor.floatBuffer
-        val detections = mutableListOf<Detection>()
-        if (shape.size == 2 && shape[1] >= 6) {
-            val rows = shape[0].toInt()
-            val columns = shape[1].toInt()
-            for (row in 0 until rows) {
-                detections.decodeCandidate(FloatArray(columns) { col ->
-                    data.get(row * columns + col)
-                }, classNames)
-            }
-        } else if (shape.size == 3) {
-            val dim1 = shape[1].toInt()
-            val dim2 = shape[2].toInt()
-            if (dim1 in 6..512) {
-                for (row in 0 until dim2) {
-                    detections.decodeCandidate(FloatArray(dim1) { col ->
-                        data.get(col * dim2 + row)
-                    }, classNames)
-                }
-            } else if (dim2 >= 6) {
-                for (row in 0 until dim1) {
-                    detections.decodeCandidate(FloatArray(dim2) { col ->
-                        data.get(row * dim2 + col)
-                    }, classNames)
+        if (data.remaining() != attributes * predictions) return null
+        fun at(prediction: Int, attribute: Int): Double = data.get(
+            if (channelsFirst) attribute * predictions + prediction else prediction * attributes + attribute,
+        ).toDouble()
+
+        val candidates = mutableListOf<Detection>()
+        for (prediction in 0 until predictions) {
+            var bestClass = -1
+            var bestScore = 0.0
+            for (classIndex in 0 until numClasses) {
+                val score = at(prediction, 4 + classIndex)
+                if (score > bestScore) {
+                    bestScore = score
+                    bestClass = classIndex
                 }
             }
+            if (bestClass < 0 || bestScore < confidenceThreshold) continue
+            val cx = at(prediction, 0)
+            val cy = at(prediction, 1)
+            val w = abs(at(prediction, 2))
+            val h = abs(at(prediction, 3))
+            val x1 = ((cx - w / 2.0 - geometry.padX) / geometry.contentWidth).coerceIn(0.0, 1.0)
+            val y1 = ((cy - h / 2.0 - geometry.padY) / geometry.contentHeight).coerceIn(0.0, 1.0)
+            val x2 = ((cx + w / 2.0 - geometry.padX) / geometry.contentWidth).coerceIn(0.0, 1.0)
+            val y2 = ((cy + h / 2.0 - geometry.padY) / geometry.contentHeight).coerceIn(0.0, 1.0)
+            if (!(x2 > x1) || !(y2 > y1)) continue
+            candidates.add(
+                Detection(
+                    x1 = x1,
+                    y1 = y1,
+                    x2 = x2,
+                    y2 = y2,
+                    confidence = bestScore.coerceIn(0.0, 1.0),
+                    classId = bestClass.toLong(),
+                    label = classNames[bestClass],
+                ),
+            )
         }
-        return detections
+        val kept = mutableListOf<Detection>()
+        for (candidate in candidates.sortedByDescending { it.confidence }) {
+            val suppressed = kept.any {
+                it.classId == candidate.classId && it.iou(candidate) > iouThreshold
+            }
+            if (suppressed) continue
+            kept.add(candidate)
+            if (kept.size >= MAX_DETECTIONS) break
+        }
+        return kept
     }
 
     private fun summarizeOutput(index: Int, value: OnnxValue): Map<String, Any?> {
@@ -613,73 +750,19 @@ private data class Detection(
             "y2" to y2.coerceIn(0.0, 1.0),
         ),
     )
+
+    fun iou(other: Detection): Double {
+        val overlapX = max(0.0, min(x2, other.x2) - max(x1, other.x1))
+        val overlapY = max(0.0, min(y2, other.y2) - max(y1, other.y1))
+        val overlap = overlapX * overlapY
+        val area = (x2 - x1) * (y2 - y1) + (other.x2 - other.x1) * (other.y2 - other.y1) - overlap
+        return if (area > 0.0) overlap / area else 0.0
+    }
 }
 
 private fun ByteArray.safeByte(index: Int): Int {
     if (index < 0 || index >= size) return 0
     return this[index].toInt() and 0xff
-}
-
-private fun MutableList<Detection>.decodeCandidate(values: FloatArray, classNames: List<String>) {
-    if (values.size < 6) return
-    var confidence = 0.0
-    var classId = -1L
-    if (values.size == 6) {
-        confidence = values[4].logistic()
-        classId = values[5].roundToLong()
-    } else {
-        val yolov5Layout = values.size == 85 || values.size == 10
-        val classStart = if (yolov5Layout) 5 else 4
-        val objectness = if (yolov5Layout) values[4].logistic() else 1.0
-        for (index in classStart until values.size) {
-            val score = values[index].logistic() * objectness
-            if (score > confidence) {
-                confidence = score
-                classId = (index - classStart).toLong()
-            }
-        }
-    }
-    if (confidence < 0.20 || classId < 0) return
-
-    val a = values[0].toDouble()
-    val b = values[1].toDouble()
-    val c = values[2].toDouble()
-    val d = values[3].toDouble()
-    val box = if (a >= 0.0 && b >= 0.0 && c <= 1.5 && d <= 1.5) {
-        if (c > a && d > b) {
-            doubleArrayOf(a, b, c, d)
-        } else {
-            doubleArrayOf(a - c / 2.0, b - d / 2.0, a + c / 2.0, b + d / 2.0)
-        }
-    } else {
-        val scale = maxOf(1.0, kotlin.math.abs(a), kotlin.math.abs(b), kotlin.math.abs(c), kotlin.math.abs(d))
-        doubleArrayOf((a - c / 2.0) / scale, (b - d / 2.0) / scale, (a + c / 2.0) / scale, (b + d / 2.0) / scale)
-    }
-    add(
-        Detection(
-            x1 = box[0],
-            y1 = box[1],
-            x2 = box[2],
-            y2 = box[3],
-            confidence = confidence.coerceIn(0.0, 1.0),
-            classId = classId,
-            label = classNames.getOrNull(classId.toInt()) ?: classId.labelForClass(),
-        ),
-    )
-}
-
-private fun Float.logistic(): Double {
-    val value = toDouble()
-    if (value in 0.0..1.0) return value
-    return 1.0 / (1.0 + kotlin.math.exp(-value))
-}
-
-private fun Long.labelForClass(): String = when (this) {
-    0L -> "person"
-    63L -> "laptop"
-    67L -> "cell phone"
-    73L -> "book"
-    else -> "class_$this"
 }
 
 private fun String.isPhoneLike(): Boolean {

@@ -5,6 +5,7 @@ from .e1_ml_common import number, save, sha256
 from .e1_evaluation import fingerprint
 from .e1_training_export import class_order_for_role
 from .e1_experiments import decode, session, validate_metadata
+from .e1_tensor_fixtures import to_source_frame
 
 
 def quantize(model, output, precision, fixture=None, metadata=None):
@@ -76,20 +77,30 @@ def predict_tensors(model, fixture, manifest, metadata, score_floor, nms_iou, pr
         inputs, rois = recording["inputs"], recording["rois"]
         ids = recording["sample_ids"].tolist()
         manifest_digest = str(recording["manifest_sha256"].item())
+        preprocessing = str(recording["preprocessing"].item()) if "preprocessing" in recording.files else ""
+        geometries = recording["input_geometry"] if "input_geometry" in recording.files else None
     expected_ids = {s["sample_id"] for s in manifest["samples"]}
     if (manifest_digest != fingerprint(manifest) or len(ids) != len(set(ids))
             or set(ids) != expected_ids or len(inputs) != len(ids) or rois.shape != (len(ids), 4)):
         raise ValueError("Tensor fixture must cover every manifest sample exactly once")
     if inputs.dtype != np.float32 or inputs.shape[1:] != tuple(metadata["input_shape"][1:]) or not np.isfinite(inputs).all():
         raise ValueError("Invalid recorded input tensors")
+    letterbox = preprocessing == "letterbox_nn_rgb01"
+    if letterbox and (geometries is None or geometries.shape != (len(ids), 4)):
+        raise ValueError("Letterbox fixtures must record input_geometry for every sample")
     runtime = session(model, provider)
     predictions = {}
-    for sid, sample, roi in zip(ids, inputs, rois):
+    for index, (sid, sample, roi) in enumerate(zip(ids, inputs, rois)):
         raw = runtime.run(None, {runtime.get_inputs()[0].name: sample[None]})[0]
+        if letterbox:
+            # Boxes are letterboxed-input pixels; map to the source frame first.
+            raw = to_source_frame(raw, geometries[index], metadata["input_width"], metadata["input_height"])
         predictions[sid] = decode(raw, metadata["class_names"], metadata["input_width"],
                                   metadata["input_height"], score_floor, nms_iou, roi)
+    basis = "ORT recorded-tensor inference; class-aware NMS; normalized ROI remap"
+    if letterbox:
+        basis += "; letterbox inverse to source-frame coordinates"
     return {**{k: metadata[k] for k in ("model_id", "model_version", "model_sha256", "class_names")},
             "split": manifest["split"], "manifest_sha256": fingerprint(manifest),
             "fixture_sha256": sha256(fixture), "score_floor": score_floor, "nms_iou": nms_iou,
-            "prediction_basis": "ORT recorded-tensor inference; class-aware NMS; normalized ROI remap",
-            "requested_provider": provider, "samples": predictions}
+            "prediction_basis": basis, "requested_provider": provider, "samples": predictions}
