@@ -63,11 +63,22 @@ is the frozen YOLOv8 `[1, 4+C, N]` tensor; newer end-to-end detector layouts are
 not silently accepted.
 
 `hyperparameters` accepts explicit numeric optimization/augmentation overrides:
-`lr0`, `lrf`, `momentum`, `weight_decay`, `warmup_epochs`, `hsv_h`, `hsv_s`,
-`hsv_v`, `degrees`, `translate`, `scale`, `shear`, `perspective`, `flipud`,
-`fliplr`, `mosaic`, `mixup`. Other training settings use the installed framework's
-recorded defaults. Extra data paths, remote integrations and resume arguments
-cannot be injected through this map.
+`lr0`, `lrf`, `momentum`, `weight_decay`, `warmup_epochs`, `warmup_bias_lr`,
+`hsv_h`, `hsv_s`, `hsv_v`, `degrees`, `translate`, `scale`, `shear`, `perspective`,
+`flipud`, `fliplr`, `mosaic`, `mixup`. Other training settings use the installed
+framework's recorded defaults. Extra data paths, remote integrations and resume
+arguments cannot be injected through this map.
+
+Two optional top-level settings are also recorded with the config:
+
+- `optimizer` (`SGD`, `Adam`, `AdamW` or `MuSGD`). When omitted, Ultralytics 8.4
+  picks one from the iteration count (MuSGD at lr 0.01 above 10,000 iterations,
+  AdamW below) and ignores any `lr0`/`momentum` override, so those overrides are
+  rejected unless an optimizer is set. MuSGD at lr 0.01 diverged when fine-tuning
+  COCO-pretrained YOLO11n. When choosing Adam/AdamW explicitly, also set
+  `warmup_bias_lr: 0.0`, which the framework only does itself in auto mode.
+- `workers`: data-loader worker count. Each Windows worker is a full process, so
+  lower it when the machine runs short of commit memory.
 
 ```powershell
 python -m ai_runtime.e1_ml_pipeline train --config work/base-training.json --package work/base-yolo --output work/base-run-1

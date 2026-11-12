@@ -134,7 +134,7 @@ def train(config, package, output):
     resources = {}
     if config.get("workers") is not None:
         resources["workers"] = integer(config["workers"], "workers", 0)
-    allowed = {"lr0", "lrf", "momentum", "weight_decay", "warmup_epochs", "hsv_h",
+    allowed = {"lr0", "lrf", "momentum", "weight_decay", "warmup_epochs", "warmup_bias_lr", "hsv_h",
                "hsv_s", "hsv_v", "degrees", "translate", "scale", "shear", "perspective",
                "flipud", "fliplr", "mosaic", "mixup"}
     hyperparameters = config.get("hyperparameters", {})

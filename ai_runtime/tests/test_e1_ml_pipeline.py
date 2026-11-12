@@ -245,8 +245,10 @@ class PackageTests(unittest.TestCase):
                     train({**config, "checkpoint": str(root / "init.pt"), "workers": -1}, package, root / "run-bad")
                 # Explicit optimizer passes through; lr0/momentum without one would be silently ignored.
                 train({**config, "checkpoint": str(root / "init.pt"), "optimizer": "AdamW",
-                       "hyperparameters": {"lr0": 0.000833, "momentum": 0.9}}, package, root / "run-adamw")
-                self.assertEqual((calls[-1]["optimizer"], calls[-1]["lr0"]), ("AdamW", 0.000833))
+                       "hyperparameters": {"lr0": 0.000833, "momentum": 0.9, "warmup_bias_lr": 0.0}},
+                      package, root / "run-adamw")
+                self.assertEqual((calls[-1]["optimizer"], calls[-1]["lr0"], calls[-1]["warmup_bias_lr"]),
+                                 ("AdamW", 0.000833, 0.0))
                 self.assertNotIn("optimizer", calls[-4])  # earlier default runs keep optimizer=auto
                 for bad in ({"optimizer": "Lion"}, {"hyperparameters": {"lr0": 0.01}}):
                     with self.assertRaises(ValueError):
