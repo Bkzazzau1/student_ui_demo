@@ -19,8 +19,8 @@ import kotlin.math.sqrt
  *
  * Mirrors the same wire protocol (`initialize`, `health`, `embedAlignedRgb`,
  * `storeProtectedTemplate`, `loadProtectedTemplate`) and the same SFace
- * preprocessing (112x112 RGB -> BGR channel order, (value-127.5)/128.0,
- * NCHW, L2-normalized 128-D output) so `NativeFaceEmbeddingRuntime` on the
+ * preprocessing (112x112 RGB, raw 0..255 values - the model normalizes
+ * internally - NCHW, L2-normalized 128-D output) so `NativeFaceEmbeddingRuntime` on the
  * Dart side needs no per-platform special-casing beyond which platforms are
  * considered supported.
  *
@@ -105,9 +105,10 @@ class AndroidFaceEmbeddingChannel {
                 val r = bytes[pixel * 3].toUByteFloat()
                 val g = bytes[pixel * 3 + 1].toUByteFloat()
                 val b = bytes[pixel * 3 + 2].toUByteFloat()
-                input[pixel] = (b - 127.5f) / 128.0f
-                input[side * side + pixel] = (g - 127.5f) / 128.0f
-                input[2 * side * side + pixel] = (r - 127.5f) / 128.0f
+                // SFace normalizes inside the graph and expects RGB 0..255.
+                input[pixel] = r
+                input[side * side + pixel] = g
+                input[2 * side * side + pixel] = b
             }
             OnnxTensor.createTensor(
                 activeEnv,

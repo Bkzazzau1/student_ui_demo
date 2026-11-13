@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 import '../proctoring_demo/native_face_landmarker_runtime.dart';
+import 'face_alignment.dart';
 import 'face_identity_landmark_matrix.dart';
 import 'face_identity_person_gate.dart';
 import 'face_identity_quality.dart';
@@ -134,9 +135,25 @@ class FaceEmbeddingPipeline {
       return null;
     }
 
-    final leftEye = matrix.leftEye!;
-    final rightEye = matrix.rightEye!;
-    final aligned = _align(decoded, leftEye, rightEye);
+    final five = FaceAlignment.fivePoints(points);
+    final transform = five == null
+        ? null
+        : FaceAlignment.similarityLeastSquares(
+            five,
+            FaceAlignment.arcFaceTemplate,
+          );
+    final aligned = transform == null
+        ? null
+        : FaceAlignment.warpBilinear(
+            rgb,
+            decoded.width,
+            decoded.height,
+            transform,
+          );
+    if (aligned == null) {
+      lastFailureReason = 'The face could not be aligned. Look at the camera.';
+      return null;
+    }
     final sample = await _embedder.embedAlignedRgb(aligned);
     if (sample == null || sample.embedding.length != 128) {
       lastFailureReason = 'The face identity sample was not reliable.';
@@ -172,47 +189,6 @@ class FaceEmbeddingPipeline {
     }
     return result;
   }
-
-  Uint8List _align(
-    img.Image source,
-    math.Point<double> leftEye,
-    math.Point<double> rightEye,
-  ) {
-    const targetLeft = math.Point<double>(38.2946, 51.6963);
-    const targetRight = math.Point<double>(73.5318, 51.5014);
-    final sourceAngle = math.atan2(
-      rightEye.y - leftEye.y,
-      rightEye.x - leftEye.x,
-    );
-    final targetAngle = math.atan2(
-      targetRight.y - targetLeft.y,
-      targetRight.x - targetLeft.x,
-    );
-    final scale =
-        _distance(leftEye, rightEye) / _distance(targetLeft, targetRight);
-    final cosine = math.cos(sourceAngle - targetAngle);
-    final sine = math.sin(sourceAngle - targetAngle);
-    final output = Uint8List(112 * 112 * 3);
-    var offset = 0;
-    for (var y = 0; y < 112; y++) {
-      for (var x = 0; x < 112; x++) {
-        final dx = x - targetLeft.x;
-        final dy = y - targetLeft.y;
-        final sx = leftEye.x + scale * (cosine * dx - sine * dy);
-        final sy = leftEye.y + scale * (sine * dx + cosine * dy);
-        final ix = sx.round().clamp(0, source.width - 1);
-        final iy = sy.round().clamp(0, source.height - 1);
-        final pixel = source.getPixel(ix, iy);
-        output[offset++] = pixel.r.toInt();
-        output[offset++] = pixel.g.toInt();
-        output[offset++] = pixel.b.toInt();
-      }
-    }
-    return output;
-  }
-
-  double _distance(math.Point<double> a, math.Point<double> b) =>
-      math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2));
 
   double _number(Object? value) =>
       value is num ? value.toDouble() : double.tryParse('$value') ?? 0.0;

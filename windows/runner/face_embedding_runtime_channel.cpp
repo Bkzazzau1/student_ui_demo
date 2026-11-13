@@ -187,11 +187,11 @@ class FaceEmbeddingEngine {
     try {
       std::vector<float> input(3 * side * side);
       for (size_t pixel = 0; pixel < side * side; ++pixel) {
-        input[pixel] = (static_cast<float>((*bytes)[pixel * 3 + 2]) - 127.5f) / 128.0f;
-        input[side * side + pixel] =
-            (static_cast<float>((*bytes)[pixel * 3 + 1]) - 127.5f) / 128.0f;
-        input[2 * side * side + pixel] =
-            (static_cast<float>((*bytes)[pixel * 3]) - 127.5f) / 128.0f;
+        // SFace normalizes inside the graph ((x - 127.5) * 0.0078125) and
+        // expects RGB, so the tensor carries raw RGB values 0..255.
+        input[pixel] = static_cast<float>((*bytes)[pixel * 3]);
+        input[side * side + pixel] = static_cast<float>((*bytes)[pixel * 3 + 1]);
+        input[2 * side * side + pixel] = static_cast<float>((*bytes)[pixel * 3 + 2]);
       }
       std::array<int64_t, 4> shape{1, 3, 112, 112};
       auto memory = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);

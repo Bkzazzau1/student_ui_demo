@@ -155,10 +155,18 @@ Test flow:
   presentation-attack model is future work.
 - **Passive in-exam liveness** is limited to frozen-frame detection. The
   pause recheck carries the full liveness challenge.
-- **Alignment** currently uses the two eye points with nearest-neighbour
-  sampling (honestly named in `preprocessingVersion`). Five-point alignment
-  should improve accuracy; changing it changes the preprocessing version, so
-  the school must rebuild templates from the stored photos.
+- **Face pipeline (`sface-5pt-ls-bilinear-rgb255-v2`).** On Windows, YuNet
+  finds the face, the face mesh runs on a crop around it, five points are
+  aligned with a least-squares similarity, and SFace receives raw RGB.
+  Android uses MediaPipe's own face detector. The previous pipeline accepted
+  almost anyone; see `face_pipeline_benchmark.md`. Templates made with
+  earlier preprocessing no longer verify; the school rebuilds them from the
+  stored photos (**Sample school admin → Rebuild approved Face IDs**).
+- **Android native library is out of date.** The committed
+  `android/app/src/main/jniLibs/arm64-v8a/libbrain_core.so` predates the
+  current Rust bindings, so the bridge's content-hash check fails at startup
+  on Android. It must be rebuilt from `native/brain_core` for
+  `aarch64-linux-android` before Android testing.
 - **Sample-only stand-ins:** the invigilator release buttons, and the
   question gate's local check of the pass, are stand-ins for the school
   system.

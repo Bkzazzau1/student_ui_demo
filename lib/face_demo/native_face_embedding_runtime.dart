@@ -27,8 +27,7 @@ class NativeFaceEmbeddingRuntime {
   /// Official templates record this value and are only matched against
   /// probes produced the same way, so it must change whenever alignment or
   /// pixel normalization changes.
-  static const String preprocessingVersion =
-      'sface-two-point-eye-similarity-nearest-bgr-minus-127.5-div-128-v1';
+  static const String preprocessingVersion = 'sface-5pt-ls-bilinear-rgb255-v2';
 
   /// Platforms with a real native SFace + protected-storage implementation.
   /// iOS/macOS scaffolding exists in source but is unverified (no Xcode/Mac

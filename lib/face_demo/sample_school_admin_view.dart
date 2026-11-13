@@ -61,6 +61,23 @@ class _SampleSchoolAdminViewState extends State<SampleSchoolAdminView> {
     });
   }
 
+  Future<void> _rebuildAll() async {
+    final school = _school;
+    if (school == null) return;
+    setState(() {
+      _loading = true;
+      _message = 'Rebuilding approved Face IDs from their stored photos...';
+    });
+    final count = await school.rebuildActiveTemplates();
+    if (!mounted) return;
+    setState(
+      () => _message =
+          'Rebuilt $count approved Face ID${count == 1 ? '' : 's'} for the '
+          'current face model.',
+    );
+    await _refresh();
+  }
+
   Future<void> _openReview(SampleSchoolReviewItem item) async {
     final school = _school;
     if (school == null) return;
@@ -107,6 +124,14 @@ class _SampleSchoolAdminViewState extends State<SampleSchoolAdminView> {
                     'system. Approving rebuilds the Face ID from the photos '
                     'and signs it with the sample school key.',
                     style: TextStyle(color: _ink, height: 1.4),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : _rebuildAll,
+                  icon: const Icon(Icons.model_training_outlined),
+                  label: const Text(
+                    'Rebuild approved Face IDs for this face model',
                   ),
                 ),
                 if (_message != null) ...[

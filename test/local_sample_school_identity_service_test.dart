@@ -234,6 +234,24 @@ void main() {
     expect((await service.approve('sub-1')).approved, isFalse);
   });
 
+  test(
+    'a model upgrade rebuilds approved Face IDs from stored photos',
+    () async {
+      final service = school();
+      await service.submitRegistration(submission('STD/1'));
+      final first = await service.approve('sub-1');
+
+      expect(await service.rebuildActiveTemplates(), 1);
+
+      final status = await service.fetchStatus('STD/1');
+      expect(status.state, OfficialFaceIdState.approved);
+      expect(status.activeTemplateId, isNot(first.templateId));
+      final context = await downloaded(service, 'STD/1');
+      expect(context.status.valid, isTrue, reason: context.status.reason);
+      expect(context.status.templateId, status.activeTemplateId);
+    },
+  );
+
   test('stores uploaded identity evidence', () async {
     final service = school();
     final stored = await service.uploadIdentityEvidence([
