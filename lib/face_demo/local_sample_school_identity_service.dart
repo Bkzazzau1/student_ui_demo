@@ -175,12 +175,12 @@ class LocalSampleSchoolIdentityService implements SchoolIdentityService {
       throw const SchoolIdentityUnavailable('submission id already exists');
     }
     final record = await _studentRecord(submission.studentId);
-    final previousPending = record['pending_submission_id']?.toString();
-    if (previousPending != null && previousPending.isNotEmpty) {
-      await _setReview(
-        previousPending,
-        'withdrawn',
-        'replaced by a newer submission',
+    // A student registers once: a waiting or approved registration closes
+    // registration until the school rejects it or reopens it.
+    if (!OfficialFaceIdStatus.fromJson(record).registrationOpen) {
+      throw const SchoolIdentityUnavailable(
+        'Face ID registration is closed for this student. Contact the exam '
+        'office if your Face ID needs to change.',
       );
     }
     final now = _clock().toUtc();
@@ -191,6 +191,7 @@ class LocalSampleSchoolIdentityService implements SchoolIdentityService {
     });
     record['pending_submission_id'] = submissionId;
     record['pending_submitted_at'] = now.toIso8601String();
+    record.remove('registration_reopened');
     _appendHistory(record, 'submitted', submissionId, now);
     await _writeJson(_studentPath(submission.studentId), record);
     return submissionId;
@@ -433,6 +434,31 @@ class LocalSampleSchoolIdentityService implements SchoolIdentityService {
       message:
           'Approved. Official template built from ${references.length} photos.',
     );
+  }
+
+  /// Staff action: lets a student register again (for example their
+  /// appearance changed). An approved Face ID stays in use until the new
+  /// registration is approved.
+  Future<bool> reopenRegistration(
+    String studentId, {
+    required String reason,
+    String reviewer = sampleReviewer,
+  }) async {
+    final record = await _studentRecord(studentId);
+    final status = OfficialFaceIdStatus.fromJson(record);
+    if (status.hasPendingSubmission || status.registrationOpen) return false;
+    final now = _clock().toUtc();
+    record['registration_reopened'] = true;
+    _appendHistory(
+      record,
+      'registration_reopened',
+      '',
+      now,
+      by: reviewer,
+      reason: reason.trim().isEmpty ? 'reopened by staff' : reason.trim(),
+    );
+    await _writeJson(_studentPath(studentId), record);
+    return true;
   }
 
   Future<bool> reject(

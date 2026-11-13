@@ -85,6 +85,20 @@ void main() {
     });
     expect(status.state, OfficialFaceIdState.approved);
     expect(status.hasPendingSubmission, isTrue);
+    expect(status.registrationOpen, isFalse);
+    expect(
+      OfficialFaceIdStatus.fromJson(<String, Object?>{
+        'student_id': 'STD/1',
+        'active_template_id': 'tpl-1',
+      }).registrationOpen,
+      isFalse,
+    );
+    expect(
+      OfficialFaceIdStatus.fromJson(<String, Object?>{
+        'student_id': 'STD/1',
+      }).registrationOpen,
+      isTrue,
+    );
     expect(
       OfficialFaceIdStatus.fromJson(<String, Object?>{
         'student_id': 'STD/1',
