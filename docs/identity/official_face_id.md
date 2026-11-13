@@ -162,11 +162,10 @@ Test flow:
   almost anyone; see `face_pipeline_benchmark.md`. Templates made with
   earlier preprocessing no longer verify; the school rebuilds them from the
   stored photos (**Sample school admin → Rebuild approved Face IDs**).
-- **Android native library is out of date.** The committed
-  `android/app/src/main/jniLibs/arm64-v8a/libbrain_core.so` predates the
-  current Rust bindings, so the bridge's content-hash check fails at startup
-  on Android. It must be rebuilt from `native/brain_core` for
-  `aarch64-linux-android` before Android testing.
+- **Android native library** is committed prebuilt
+  (`android/app/src/main/jniLibs/arm64-v8a/libbrain_core.so`). Rebuild it after
+  any Rust change, or the app fails at startup; see
+  `docs/native_android_rust_library.md`.
 - **Sample-only stand-ins:** the invigilator release buttons, and the
   question gate's local check of the pass, are stand-ins for the school
   system.
