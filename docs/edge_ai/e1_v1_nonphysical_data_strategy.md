@@ -256,10 +256,14 @@ Use these terms consistently:
 | --- | --- |
 | `silver` | teacher-consensus training annotation |
 | `teacher_consensus_eval` | held-out validation/test annotation created by the same strict teacher methodology; not human ground truth |
+| `open_dataset_human` | human annotation supplied by an open dataset (e.g. COCO 2017) under a fixed exact class mapping; not verified by K-SLAS, not gold |
 | `gold` | explicitly human-verified annotation |
 | `field` | real exam evidence plus invigilator review/provenance for later curation |
 
-V1 can proceed with `silver` + `teacher_consensus_eval`.
+V1 can proceed with `silver` + `teacher_consensus_eval`. For the base detector,
+V1 may also use `open_dataset_human` labels from COCO 2017; see
+`e1_coco_base_source.md`. Those labels keep their own tier and are never
+relabelled as teacher consensus or gold.
 
 Do not call teacher-consensus evaluation "gold accuracy," "human accuracy," or final production calibration.
 

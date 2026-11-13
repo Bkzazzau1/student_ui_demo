@@ -6,10 +6,12 @@ import io
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from ai_runtime.e1_evaluation import evaluate, fingerprint, ingest_calibration
-from ai_runtime.e1_experiments import candidate_manifest, inspect_package
+from ai_runtime.e1_experiments import candidate_manifest, inspect_package, resume, train
 from ai_runtime.e1_ml_common import load, save
 from ai_runtime.e1_ml_pipeline import main
 from ai_runtime.e1_scenarios import check_scenarios
@@ -184,6 +186,85 @@ class PackageTests(unittest.TestCase):
             (package / "images/train/unlisted.png").write_bytes(b"extra")
             with self.assertRaises(ValueError):
                 inspect_package(package)
+
+    def test_train_keeps_checkpoint_weights_and_scratch_for_yaml(self):
+        manifests, _ = fixtures()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for m in manifests:
+                for sample in m["samples"]:
+                    (root / sample["image_path"]).write_bytes(sample["sample_id"].encode())
+                save(root / (m["split"] + ".json"), m)
+            package = root / "package"
+            self.assertTrue(export_training_package([root / (m["split"] + ".json") for m in manifests], package)["ok"])
+            best = root / "best.pt"
+            best.write_bytes(b"weights")
+            calls = []
+
+            class FakeYolo:
+                names = list(class_order_for_role("base"))
+                trainer = SimpleNamespace(best=str(best))
+
+                def train(self, **kwargs):
+                    calls.append(kwargs)
+
+            config = {"model_role": "base", "epochs": 1, "batch": 2, "imgsz": 32, "seed": 0,
+                      "device": "cpu", "experiment_basis": "unit test", "hyperparameters": {}}
+            with patch("ai_runtime.e1_experiments._yolo", return_value=FakeYolo()), \
+                    patch("ai_runtime.e1_experiments.importlib.metadata.version", return_value="test"):
+                for name, expected, initialization in (("init.pt", True, "checkpoint_weights"),
+                                                       ("arch.yaml", False, "architecture_scratch")):
+                    (root / name).write_bytes(b"x")
+                    output = root / f"run-{name}"
+                    train({**config, "checkpoint": str(root / name)}, package, output)
+                    self.assertIs(calls[-1]["pretrained"], expected)
+                    self.assertNotIn("workers", calls[-1])  # framework default unless configured
+                    self.assertEqual(load(output / "request.json")["initialization"], initialization)
+                    # Simulate the label cache Ultralytics leaves behind; the next run must still pass the gate.
+                    (package / "labels/train.cache").write_bytes(b"cache")
+                self.assertEqual(load(root / "run-arch.yaml" / "request.json")["removed_framework_caches"],
+                                 ["labels/train.cache"])
+                (package / "labels/train/unlisted.txt").write_bytes(b"extra")
+                with self.assertRaises(ValueError):  # other unlisted files are still rejected
+                    train({**config, "checkpoint": str(root / "init.pt")}, package, root / "run-extra")
+                (package / "labels/train/unlisted.txt").unlink()
+
+                # Resume: an interrupted run continues from its own last.pt, audited.
+                run = root / "run-init.pt"
+                (run / "training_result.json").unlink()  # simulate interruption before completion
+                (run / "fit/weights").mkdir(parents=True)
+                (run / "fit/weights/last.pt").write_bytes(b"partial")
+                (package / "labels/validation.cache").write_bytes(b"cache")
+                result = resume(run, workers=2)
+                self.assertEqual(calls[-1], {"resume": True, "workers": 2})
+                self.assertEqual(result["resume_count"], 1)
+                self.assertEqual(load(run / "resume-1.json")["overrides"], {"workers": 2})
+                train({**config, "checkpoint": str(root / "init.pt"), "workers": 3}, package, root / "run-workers")
+                self.assertEqual(calls[-1]["workers"], 3)
+                with self.assertRaises(ValueError):
+                    train({**config, "checkpoint": str(root / "init.pt"), "workers": -1}, package, root / "run-bad")
+                # Explicit optimizer passes through; lr0/momentum without one would be silently ignored.
+                train({**config, "checkpoint": str(root / "init.pt"), "optimizer": "AdamW",
+                       "hyperparameters": {"lr0": 0.000833, "momentum": 0.9, "warmup_bias_lr": 0.0}},
+                      package, root / "run-adamw")
+                self.assertEqual((calls[-1]["optimizer"], calls[-1]["lr0"], calls[-1]["warmup_bias_lr"]),
+                                 ("AdamW", 0.000833, 0.0))
+                self.assertNotIn("optimizer", calls[-4])  # earlier default runs keep optimizer=auto
+                for bad in ({"optimizer": "Lion"}, {"hyperparameters": {"lr0": 0.01}}):
+                    with self.assertRaises(ValueError):
+                        train({**config, "checkpoint": str(root / "init.pt"), **bad}, package,
+                              root / f"run-bad-{len(calls)}-{sorted(bad)[0]}")
+                self.assertEqual(load(run / "resume-1.json")["removed_framework_caches"], ["labels/validation.cache"])
+                with self.assertRaises(ValueError):  # completed runs are not resumed
+                    resume(run)
+                (run / "training_result.json").unlink()
+                label = next((package / "labels/train").iterdir())
+                label.write_text(label.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+                with self.assertRaises(ValueError):  # changed package is refused
+                    resume(run)
+                (root / "weights.bin").write_bytes(b"x")
+                with self.assertRaises(ValueError):
+                    train({**config, "checkpoint": str(root / "weights.bin")}, package, root / "run-bin")
 
 
 def scenario_fixture():

@@ -63,11 +63,22 @@ is the frozen YOLOv8 `[1, 4+C, N]` tensor; newer end-to-end detector layouts are
 not silently accepted.
 
 `hyperparameters` accepts explicit numeric optimization/augmentation overrides:
-`lr0`, `lrf`, `momentum`, `weight_decay`, `warmup_epochs`, `hsv_h`, `hsv_s`,
-`hsv_v`, `degrees`, `translate`, `scale`, `shear`, `perspective`, `flipud`,
-`fliplr`, `mosaic`, `mixup`. Other training settings use the installed framework's
-recorded defaults. Extra data paths, remote integrations and resume arguments
-cannot be injected through this map.
+`lr0`, `lrf`, `momentum`, `weight_decay`, `warmup_epochs`, `warmup_bias_lr`,
+`hsv_h`, `hsv_s`, `hsv_v`, `degrees`, `translate`, `scale`, `shear`, `perspective`,
+`flipud`, `fliplr`, `mosaic`, `mixup`. Other training settings use the installed
+framework's recorded defaults. Extra data paths, remote integrations and resume
+arguments cannot be injected through this map.
+
+Two optional top-level settings are also recorded with the config:
+
+- `optimizer` (`SGD`, `Adam`, `AdamW` or `MuSGD`). When omitted, Ultralytics 8.4
+  picks one from the iteration count (MuSGD at lr 0.01 above 10,000 iterations,
+  AdamW below) and ignores any `lr0`/`momentum` override, so those overrides are
+  rejected unless an optimizer is set. MuSGD at lr 0.01 diverged when fine-tuning
+  COCO-pretrained YOLO11n. When choosing Adam/AdamW explicitly, also set
+  `warmup_bias_lr: 0.0`, which the framework only does itself in auto mode.
+- `workers`: data-loader worker count. Each Windows worker is a full process, so
+  lower it when the machine runs short of commit memory.
 
 ```powershell
 python -m ai_runtime.e1_ml_pipeline train --config work/base-training.json --package work/base-yolo --output work/base-run-1
@@ -85,6 +96,22 @@ The generated absolute-path dataset YAML avoids resolving the existing package's
 `path: .` against a framework-global dataset directory. Successful training writes
 `training_result.json` with `trained_not_validated`, checkpoint hash and request
 hash. It never changes model assets or sets `installed: true`.
+
+A `.pt` checkpoint is fine-tuned from its own weights; a `.yaml` architecture
+trains from random initialization. The choice is recorded as `initialization`
+in `request.json`. Label caches that Ultralytics leaves in the package
+(`labels/<split>.cache`) are removed before the package gate and rebuilt.
+
+If a run is interrupted (power loss, sleep, crash), continue it from its own
+`fit/weights/last.pt` instead of starting over:
+
+```powershell
+python -m ai_runtime.e1_ml_pipeline resume --run work/base-run-1
+```
+
+Resume refuses a completed run and refuses a package whose files no longer
+match the original request's input ledger. Each resume is recorded as
+`resume-<n>.json`, and `training_result.json` reports `resume_count`.
 
 ## ONNX export and input preparation
 
