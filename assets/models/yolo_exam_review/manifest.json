@@ -12,6 +12,7 @@
   "input_height": 416,
   "input_channels": 3,
   "output_layout": "channels_first_yolov8",
+  "input_preprocessing": "letterbox_rgb01",
   "confidence_threshold": 0.45,
   "iou_threshold": 0.45,
   "target_fps": 1,

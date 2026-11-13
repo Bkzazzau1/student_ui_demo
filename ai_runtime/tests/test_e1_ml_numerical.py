@@ -1,6 +1,7 @@
 """Synthetic graphs and pixels exercise tools; no E1 model validation evidence."""
 
 import contextlib
+from copy import deepcopy
 import importlib.util
 from pathlib import Path
 import tempfile
@@ -125,6 +126,46 @@ class NumericalTests(unittest.TestCase):
         self.assertEqual(set(result["samples"]), {s["sample_id"] for s in manifest["samples"]})
         self.assertEqual(result["manifest_sha256"], fingerprint(manifest))
         self.assertEqual(len(result["samples"]["validation-0"]), 2)
+
+    def test_letterbox_tensors_match_native_geometry_and_map_back(self):
+        from PIL import Image
+        from ai_runtime.e1_tensor_fixtures import build_tensor, letterbox_geometry
+        np = self.np
+        # Same placement as the C++/Kotlin native runtimes.
+        self.assertEqual(letterbox_geometry(640, 480, 416), (416, 312, 0, 52))
+        self.assertEqual(letterbox_geometry(480, 640, 416), (312, 416, 52, 0))
+        self.assertEqual(letterbox_geometry(1280, 720, 416), (416, 234, 0, 91))
+        self.assertEqual(letterbox_geometry(3, 1, 4), (4, 1, 0, 1))
+        rgb = np.arange(8 * 4 * 3, dtype=np.uint8).reshape(4, 8, 3)
+        tensor, geometry = build_tensor(rgb, 4, "letterbox_nn_rgb01")
+        self.assertEqual(geometry, (4, 2, 0, 1))
+        pad = np.float32(114) / np.float32(255)
+        self.assertTrue((tensor[:, 0] == pad).all() and (tensor[:, 3] == pad).all())
+        expected = rgb[[0, 2]][:, [0, 2, 4, 6]].astype(np.float32) / np.float32(255)
+        self.assertTrue(np.array_equal(tensor[:, 1:3].transpose(1, 2, 0), expected))
+        # The stretch transform is unchanged from the original implementation.
+        stretched, _ = build_tensor(rgb, 4, "stretch_nn_rgb01")
+        original = rgb[(np.arange(4) * 4 // 4)[:, None], (np.arange(4) * 8 // 4)[None, :]]
+        self.assertTrue(np.array_equal(
+            stretched, (original.astype(np.float32) / np.float32(255)).transpose(2, 0, 1)))
+
+        # End to end: the synthetic graph always reports a 1x1 box centred at
+        # (2, 2) in the 4x4 input. A 100x50 frame is letterboxed with one row of
+        # padding above and below, so that box is x 0.375-0.625, y 0.25-0.75.
+        manifest = deepcopy(fixtures()[0][1])
+        for index, sample in enumerate(manifest["samples"]):
+            sample["width"], sample["height"] = 100, 50
+            Image.new("RGB", (100, 50), (index, 40, 200)).save(self.root / sample["image_path"])
+        path = self.root / "letterbox-manifest.json"
+        save(path, manifest)
+        fixture = self.root / "letterbox.npz"
+        self.assertEqual(prepare(path, 4, fixture, "letterbox_nn_rgb01")["preprocessing"],
+                         "letterbox_nn_rgb01")
+        result = predict_tensors(self.model, fixture, manifest, self.metadata, .5, .5, "CPUExecutionProvider")
+        box = result["samples"]["validation-0"][0]["bbox_xywh_normalized"]
+        for key, value in {"x": .375, "y": .25, "width": .25, "height": .5}.items():
+            self.assertAlmostEqual(box[key], value)
+        self.assertIn("letterbox inverse", result["prediction_basis"])
 
     def fake_yolo(self):
         raw = self.raw

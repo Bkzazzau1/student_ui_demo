@@ -174,8 +174,10 @@ class OptimizedVisionRuntimeBridge {
         inferenceMs:
             double.tryParse(response['inference_ms']?.toString() ?? '') ??
             elapsedMs,
-        outputs: Map<String, Object?>.from(
-          response['outputs'] as Map? ?? const <String, Object?>{},
+        outputs: _applyManifestClassLabels(
+          Map<String, Object?>.from(
+            response['outputs'] as Map? ?? const <String, Object?>{},
+          ),
         ),
         sourceFrameId: resolvedSourceFrameId,
         captureTimestampNs: resolvedCaptureTimestampNs,
@@ -242,8 +244,10 @@ class OptimizedVisionRuntimeBridge {
         inferenceMs:
             double.tryParse(response['inference_ms']?.toString() ?? '') ??
             elapsedMs,
-        outputs: Map<String, Object?>.from(
-          response['outputs'] as Map? ?? const <String, Object?>{},
+        outputs: _applyManifestClassLabels(
+          Map<String, Object?>.from(
+            response['outputs'] as Map? ?? const <String, Object?>{},
+          ),
         ),
         sourceFrameId: sourceFrameId,
         captureTimestampNs: captureTimestampNs,
@@ -259,5 +263,52 @@ class OptimizedVisionRuntimeBridge {
     } catch (_) {
       return null;
     }
+  }
+
+  /// The validated manifest owns class semantics. Native layers report a
+  /// class index; a stale or hard-coded native label (for example a COCO
+  /// index 1 reported as "phone" instead of "bicycle") must not redefine it.
+  Map<String, Object?> _applyManifestClassLabels(Map<String, Object?> outputs) {
+    final manifest = _manifest;
+    final rawObjects = outputs['objects'];
+    if (manifest == null || rawObjects is! Iterable) return outputs;
+
+    final normalizedObjects = <Map<String, Object?>>[];
+    for (final raw in rawObjects) {
+      if (raw is! Map) continue;
+      final object = <String, Object?>{};
+      for (final entry in raw.entries) {
+        object[entry.key.toString()] = entry.value;
+      }
+
+      final classId = _readClassId(object['class_id']);
+      if (classId != null &&
+          classId >= 0 &&
+          classId < manifest.classNames.length) {
+        final manifestLabel = manifest.classNames[classId];
+        final nativeLabel = object['label']?.toString();
+        if (nativeLabel != null && nativeLabel != manifestLabel) {
+          object['native_label'] = nativeLabel;
+        }
+        object['label'] = manifestLabel;
+        object['label_source'] = 'manifest_class_names';
+      }
+      normalizedObjects.add(object);
+    }
+
+    return <String, Object?>{
+      ...outputs,
+      'objects': normalizedObjects,
+      'class_names': manifest.classNames,
+      'model_family': manifest.modelFamily,
+      'model_id': manifest.modelId,
+      'model_version': manifest.modelVersion,
+    };
+  }
+
+  int? _readClassId(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '');
   }
 }

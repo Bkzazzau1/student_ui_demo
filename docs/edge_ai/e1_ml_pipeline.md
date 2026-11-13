@@ -90,7 +90,7 @@ hash. It never changes model assets or sets `installed: true`.
 
 ```powershell
 python -m ai_runtime.e1_ml_pipeline export-onnx --checkpoint work/base-run-1/fit/weights/best.pt --role base --size $InputSize --model-id e1-base --version $ExperimentVersion --output work/base.fp32.onnx
-python -m ai_runtime.e1_ml_pipeline prepare-tensors --manifest data/base/validation.json --size $InputSize --preprocessing stretch_nn_rgb01 --output work/base-validation.npz
+python -m ai_runtime.e1_ml_pipeline prepare-tensors --manifest data/base/validation.json --size $InputSize --preprocessing letterbox_nn_rgb01 --output work/base-validation.npz
 ```
 
 Export validates exact checkpoint class order and a static single input/output:
@@ -100,7 +100,14 @@ The adjacent JSON records model ID/version, weights and ONNX hashes, tensor name
 shapes, class order and pending installation. This is an experimental candidate.
 
 `prepare-tensors` decodes local images, checks annotation dimensions, applies
-explicit nearest-neighbor floor-index stretching and RGB/255, and writes NPZ:
+one explicit transform with nearest-neighbor floor-index sampling and RGB/255,
+and writes NPZ:
+
+- `letterbox_nn_rgb01`: aspect-preserving letterbox with grey (114/255) padding.
+  This is what the native runtimes run for manifests declaring
+  `input_preprocessing: letterbox_rgb01` (the default for Ultralytics YOLO), so
+  use it to measure what the app will actually see.
+- `stretch_nn_rgb01`: the whole frame stretched onto the square input.
 
 | Key | Content |
 |---|---|
@@ -110,7 +117,12 @@ explicit nearest-neighbor floor-index stretching and RGB/255, and writes NPZ:
 | `manifest_sha256` | SHA-256 of canonical sorted JSON, from `fingerprint()` |
 | `image_sha256` | original image byte hashes |
 | `split` | train, validation or test |
-| `preprocessing` | `stretch_nn_rgb01` |
+| `preprocessing` | `letterbox_nn_rgb01` or `stretch_nn_rgb01` |
+| `input_geometry` | letterbox only: per-sample `[content_w, content_h, pad_x, pad_y]` in input pixels |
+
+`predict-tensors` maps letterboxed predictions back to source-frame coordinates
+with `input_geometry` before decoding, so boxes are clipped to the real frame,
+not the padded input.
 
 The builder emits full-frame ROIs. For specialist ROI studies, supply recorded
 native crop tensors with their **actual applied** normalized ROIs and original
@@ -118,13 +130,23 @@ sample IDs in the same NPZ contract. One tensor per manifest sample is supported
 multiple crops per frame need an externally recorded aggregate prediction export.
 Do not substitute an empty prediction for an unscheduled crop.
 
-**Native acceptance blocker:** the inspected Windows
-`OptimizedVisionRuntimeEngine::BuildInputTensor` currently performs RGB
-normalization to `[-1,1]`. A YOLO experiment using `[0,1]` inputs does not prove
-compatibility with that path. Other native paths must also be checked separately.
-The Python reference uses explicit pixel coordinates and class-aware NMS; native
-heuristics, top-k limits and tie handling must be compared with the reference.
-This change leaves the frozen runtime untouched and manifests uninstalled.
+**Native preprocessing contract.** The YOLO manifest declares
+`input_preprocessing` (`letterbox_rgb01` or `stretch_rgb01`). The Windows engine
+(`OptimizedVisionRuntimeEngine`) and the Android engine (`MainActivity.kt`) refuse
+any other value, letterbox with the same placement as Ultralytics
+(`ComputeInputGeometry` / `computeInputGeometry` / `letterbox_geometry`), sample
+nearest-neighbor, scale RGB to `[0,1]`, decode YOLOv8 strictly against the
+manifest's class list with class-aware NMS, and report the raw tensor plus
+`input_width/height`, `image_width/height` and `letterbox_scale_*`/`letterbox_pad_*`.
+Dart (`YoloInputGeometry`) maps raw boxes back to the camera frame before the
+Rust decoder runs. Earlier native builds normalized to `[-1,1]`, stretched the
+frame and reported model-input pixel boxes as frame pixels.
+
+Parity was checked by driving the real Windows engine on COCO val2017 frames
+of ten different sizes: with single-threaded ORT the raw output is bit-identical
+to the Python `letterbox_nn_rgb01` reference, and decoded detections agree to
+better than 1e-9. Camera colour conversion (YUV/BGRA) and Android still need
+on-device recordings.
 
 ## Prediction and held-out metrics
 

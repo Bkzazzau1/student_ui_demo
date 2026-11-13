@@ -3,6 +3,7 @@ import 'model_event_v1.dart';
 import 'native_vision_bridge.dart';
 import 'object_review_event_mapper.dart';
 import 'optimized_vision_runtime_bridge.dart';
+import 'yolo_input_geometry.dart';
 
 class OptimizedVisionObjectEventAdapter {
   const OptimizedVisionObjectEventAdapter({
@@ -164,8 +165,23 @@ class OptimizedVisionObjectEventAdapter {
         );
     if (numPredictions <= 0 || numClasses <= 0) return null;
 
+    // Raw boxes are model-input pixels; map them to the camera frame before
+    // decoding so E1 geometry is in the frame the event claims to describe.
+    final layout = outputs['layout']?.toString() ?? 'rows_yolov8';
+    final geometry = YoloInputGeometry.fromOutputs(outputs);
+    final decodeInput = geometry == null
+        ? output
+        : geometry.toNormalizedSourceBoxes(
+            output,
+            numPredictions: numPredictions,
+            attributes: layout.trim().toLowerCase() == 'rows_yolov5'
+                ? 5 + numClasses
+                : 4 + numClasses,
+            layout: layout,
+          );
+
     return nativeVision.decodeYoloOutput(
-      output: output,
+      output: decodeInput,
       numPredictions: numPredictions,
       numClasses: numClasses,
       imageWidth:
@@ -177,7 +193,7 @@ class OptimizedVisionObjectEventAdapter {
       confidenceThreshold:
           _readDouble(outputs['confidence_threshold']) ?? minimumConfidence,
       iouThreshold: _readDouble(outputs['iou_threshold']) ?? 0.45,
-      layout: outputs['layout']?.toString() ?? 'rows_yolov8',
+      layout: layout,
       classNames: classNames,
     );
   }
