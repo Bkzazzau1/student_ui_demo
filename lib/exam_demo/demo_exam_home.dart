@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/student_logout_view.dart';
-import '../face_demo/demo_face_id_view.dart';
+import '../face_demo/official_face_id_view.dart';
 import 'assignment_submission_view.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_result_view.dart';
@@ -234,25 +234,9 @@ class _DemoExamHomeState extends State<DemoExamHome> {
   }
 
   Future<void> _openIdentity(BuildContext context) async {
-    final approved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (_) => const DemoFaceIdView()),
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const OfficialFaceIdView()),
     );
-    if (approved != true || !context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.verified_rounded, color: Colors.white),
-              SizedBox(width: 10),
-              Expanded(child: Text('Face ID verified successfully.')),
-            ],
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Color(0xFF166534),
-        ),
-      );
   }
 
   Widget _buildSelectedContent({

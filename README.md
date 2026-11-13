@@ -33,17 +33,17 @@ python -m unittest discover -s ai_runtime/tests -v
 
 1. Open the app.
 2. Select the proctored examination.
-3. Complete Face ID enrolment.
+3. Register Face ID once; the school approves it (see `docs/identity/official_face_id.md`).
 4. Run the 360 room scan.
 5. Complete audio review.
 6. Complete system review.
-7. Start the exam after review approval.
-8. Keep camera monitoring active during the exam.
+7. Confirm identity against the official Face ID; questions open only after it passes.
+8. Keep camera monitoring active during the exam, including unannounced identity checks.
 9. Submit and show the result summary.
 
 ## Required startup checks for proctored exams
 
-- Face ID must be active.
+- The student must have a school-approved official Face ID and pass the 1:1 identity check on this device.
 - All required 360 room views must be captured.
 - Microphone permission must be confirmed.
 - Desktop system environment must be confirmed.

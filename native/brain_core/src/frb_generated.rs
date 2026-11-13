@@ -26,7 +26,7 @@
 // Section: imports
 
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
-use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
 
 // Section: boilerplate
@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2005967763;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1916176688;
 
 // Section: executor
 
@@ -1024,54 +1024,6 @@ fn wire__crate__api__gaze_calibration__build_gaze_calibration_profile_v2_impl(
         },
     )
 }
-fn wire__crate__api__face_verification__build_portable_face_template_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "build_portable_face_template",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_student_id = <String>::sse_decode(&mut deserializer);
-            let api_enrollment_id = <String>::sse_decode(&mut deserializer);
-            let api_model_id = <String>::sse_decode(&mut deserializer);
-            let api_model_sha256 = <String>::sse_decode(&mut deserializer);
-            let api_preprocessing_version = <String>::sse_decode(&mut deserializer);
-            let api_embeddings = <Vec<Vec<f32>>>::sse_decode(&mut deserializer);
-            let api_quality_score = <f32>::sse_decode(&mut deserializer);
-            let api_created_at_ms = <i64>::sse_decode(&mut deserializer);
-            let api_expires_at_ms = <i64>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, String>((move || {
-                let output_ok = crate::api::face_verification::build_portable_face_template(
-                    api_student_id,
-                    api_enrollment_id,
-                    api_model_id,
-                    api_model_sha256,
-                    api_preprocessing_version,
-                    api_embeddings,
-                    api_quality_score,
-                    api_created_at_ms,
-                    api_expires_at_ms,
-                )?;
-                Ok(output_ok)
-            })())
-        },
-    )
-}
 fn wire__crate__api__hand_landmark_runtime__clear_hand_landmark_model_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1573,6 +1525,46 @@ fn wire__crate__api__model_event_memory__ingest_model_event_v1_json_impl(
         },
     )
 }
+fn wire__crate__api__official_face_id__issue_sample_school_official_template_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "issue_sample_school_official_template",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_request =
+                <crate::api::official_face_id::OfficialTemplateIssueRequest>::sse_decode(
+                    &mut deserializer,
+                );
+            let api_signing_seed_hex = <String>::sse_decode(&mut deserializer);
+            let api_key_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok =
+                    crate::api::official_face_id::issue_sample_school_official_template(
+                        api_request,
+                        api_signing_seed_hex,
+                        api_key_id,
+                    )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__hand_landmark_runtime__load_hand_landmark_model_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1673,6 +1665,60 @@ fn wire__crate__api__proctoring__load_vision_model_impl(
                     api_manifest_json,
                     api_model_bytes,
                 ))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__official_face_id__match_official_face_template_1_to_1_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "match_official_face_template_1_to_1",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_envelope_json = <String>::sse_decode(&mut deserializer);
+            let api_trusted_keys_json = <String>::sse_decode(&mut deserializer);
+            let api_expected_student_id = <String>::sse_decode(&mut deserializer);
+            let api_expected_model_id = <String>::sse_decode(&mut deserializer);
+            let api_expected_model_sha256 = <String>::sse_decode(&mut deserializer);
+            let api_expected_preprocessing_version = <String>::sse_decode(&mut deserializer);
+            let api_probe_embedding = <Vec<f32>>::sse_decode(&mut deserializer);
+            let api_signal_quality = <f32>::sse_decode(&mut deserializer);
+            let api_min_signal_quality = <f32>::sse_decode(&mut deserializer);
+            let api_match_threshold = <f32>::sse_decode(&mut deserializer);
+            let api_now_ms = <i64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::official_face_id::match_official_face_template_1_to_1(
+                        api_envelope_json,
+                        api_trusted_keys_json,
+                        api_expected_student_id,
+                        api_expected_model_id,
+                        api_expected_model_sha256,
+                        api_expected_preprocessing_version,
+                        api_probe_embedding,
+                        api_signal_quality,
+                        api_min_signal_quality,
+                        api_match_threshold,
+                        api_now_ms,
+                    ),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -2208,6 +2254,38 @@ fn wire__crate__api__system_security__run_system_security_review_impl(
         },
     )
 }
+fn wire__crate__api__official_face_id__sample_school_public_key_hex_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "sample_school_public_key_hex",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_signing_seed_hex = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::official_face_id::sample_school_public_key_hex(
+                    api_signing_seed_hex,
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__evidence_vault__save_evidence_bytes_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -2303,48 +2381,6 @@ fn wire__crate__api__proctoring__update_rotation_progress_impl(
         },
     )
 }
-fn wire__crate__api__face_verification__validate_portable_face_template_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "validate_portable_face_template",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_template_json = <String>::sse_decode(&mut deserializer);
-            let api_expected_student_id = <String>::sse_decode(&mut deserializer);
-            let api_expected_model_id = <String>::sse_decode(&mut deserializer);
-            let api_expected_model_sha256 = <String>::sse_decode(&mut deserializer);
-            let api_now_ms = <i64>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok(
-                    crate::api::face_verification::validate_portable_face_template(
-                        api_template_json,
-                        api_expected_student_id,
-                        api_expected_model_id,
-                        api_expected_model_sha256,
-                        api_now_ms,
-                    ),
-                )?;
-                Ok(output_ok)
-            })())
-        },
-    )
-}
 fn wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -2382,14 +2418,14 @@ fn wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
         },
     )
 }
-fn wire__crate__api__face_verification__verify_face_embedding_1_to_1_impl(
+fn wire__crate__api__official_face_id__verify_official_face_template_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
     data_len_: i32,
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "verify_face_embedding_1_to_1",
+            debug_name: "verify_official_face_template",
             port: None,
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
         },
@@ -2403,19 +2439,23 @@ fn wire__crate__api__face_verification__verify_face_embedding_1_to_1_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_template_json = <String>::sse_decode(&mut deserializer);
-            let api_probe_embedding = <Vec<f32>>::sse_decode(&mut deserializer);
-            let api_signal_quality = <f32>::sse_decode(&mut deserializer);
-            let api_match_threshold = <f32>::sse_decode(&mut deserializer);
+            let api_envelope_json = <String>::sse_decode(&mut deserializer);
+            let api_trusted_keys_json = <String>::sse_decode(&mut deserializer);
+            let api_expected_student_id = <String>::sse_decode(&mut deserializer);
+            let api_expected_model_id = <String>::sse_decode(&mut deserializer);
+            let api_expected_model_sha256 = <String>::sse_decode(&mut deserializer);
+            let api_expected_preprocessing_version = <String>::sse_decode(&mut deserializer);
             let api_now_ms = <i64>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
                 let output_ok = Result::<_, ()>::Ok(
-                    crate::api::face_verification::verify_face_embedding_1_to_1(
-                        api_template_json,
-                        api_probe_embedding,
-                        api_signal_quality,
-                        api_match_threshold,
+                    crate::api::official_face_id::verify_official_face_template(
+                        api_envelope_json,
+                        api_trusted_keys_json,
+                        api_expected_student_id,
+                        api_expected_model_id,
+                        api_expected_model_sha256,
+                        api_expected_preprocessing_version,
                         api_now_ms,
                     ),
                 )?;
@@ -2726,54 +2766,6 @@ impl SseDecode for crate::api::proctoring::FaceAnalysisDecision {
             updated_last_multi_face_strike_at_ms: var_updatedLastMultiFaceStrikeAtMs,
             updated_last_gaze_warning_at_ms: var_updatedLastGazeWarningAtMs,
             updated_gaze_away_started_at_ms: var_updatedGazeAwayStartedAtMs,
-        };
-    }
-}
-
-impl SseDecode for crate::api::face_verification::FaceTemplateStatus {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_valid = <bool>::sse_decode(deserializer);
-        let mut var_studentId = <String>::sse_decode(deserializer);
-        let mut var_enrollmentId = <String>::sse_decode(deserializer);
-        let mut var_modelId = <String>::sse_decode(deserializer);
-        let mut var_modelSha256 = <String>::sse_decode(deserializer);
-        let mut var_embeddingDimension = <i32>::sse_decode(deserializer);
-        let mut var_sampleCount = <i32>::sse_decode(deserializer);
-        let mut var_qualityScore = <f32>::sse_decode(deserializer);
-        let mut var_templateSha256 = <String>::sse_decode(deserializer);
-        let mut var_reason = <String>::sse_decode(deserializer);
-        return crate::api::face_verification::FaceTemplateStatus {
-            valid: var_valid,
-            student_id: var_studentId,
-            enrollment_id: var_enrollmentId,
-            model_id: var_modelId,
-            model_sha256: var_modelSha256,
-            embedding_dimension: var_embeddingDimension,
-            sample_count: var_sampleCount,
-            quality_score: var_qualityScore,
-            template_sha256: var_templateSha256,
-            reason: var_reason,
-        };
-    }
-}
-
-impl SseDecode for crate::api::face_verification::FaceVerificationResult {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_state = <String>::sse_decode(deserializer);
-        let mut var_similarity = <f32>::sse_decode(deserializer);
-        let mut var_threshold = <f32>::sse_decode(deserializer);
-        let mut var_signalQuality = <f32>::sse_decode(deserializer);
-        let mut var_reliable = <bool>::sse_decode(deserializer);
-        let mut var_reason = <String>::sse_decode(deserializer);
-        return crate::api::face_verification::FaceVerificationResult {
-            state: var_state,
-            similarity: var_similarity,
-            threshold: var_threshold,
-            signal_quality: var_signalQuality,
-            reliable: var_reliable,
-            reason: var_reason,
         };
     }
 }
@@ -3715,6 +3707,110 @@ impl SseDecode for crate::api::native_vision::NativeVisionFrameQuality {
     }
 }
 
+impl SseDecode for crate::api::official_face_id::OfficialFaceMatchResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_state = <String>::sse_decode(deserializer);
+        let mut var_similarity = <f32>::sse_decode(deserializer);
+        let mut var_centroidSimilarity = <f32>::sse_decode(deserializer);
+        let mut var_threshold = <f32>::sse_decode(deserializer);
+        let mut var_signalQuality = <f32>::sse_decode(deserializer);
+        let mut var_reliable = <bool>::sse_decode(deserializer);
+        let mut var_templateId = <String>::sse_decode(deserializer);
+        let mut var_envelopeSha256 = <String>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        return crate::api::official_face_id::OfficialFaceMatchResult {
+            state: var_state,
+            similarity: var_similarity,
+            centroid_similarity: var_centroidSimilarity,
+            threshold: var_threshold,
+            signal_quality: var_signalQuality,
+            reliable: var_reliable,
+            template_id: var_templateId,
+            envelope_sha256: var_envelopeSha256,
+            reason: var_reason,
+        };
+    }
+}
+
+impl SseDecode for crate::api::official_face_id::OfficialFaceTemplateStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_valid = <bool>::sse_decode(deserializer);
+        let mut var_reason = <String>::sse_decode(deserializer);
+        let mut var_templateId = <String>::sse_decode(deserializer);
+        let mut var_institutionId = <String>::sse_decode(deserializer);
+        let mut var_studentId = <String>::sse_decode(deserializer);
+        let mut var_submissionId = <String>::sse_decode(deserializer);
+        let mut var_keyId = <String>::sse_decode(deserializer);
+        let mut var_keyEnvironment = <String>::sse_decode(deserializer);
+        let mut var_modelId = <String>::sse_decode(deserializer);
+        let mut var_preprocessingVersion = <String>::sse_decode(deserializer);
+        let mut var_buildSource = <String>::sse_decode(deserializer);
+        let mut var_referenceCount = <i32>::sse_decode(deserializer);
+        let mut var_embeddingDimension = <i32>::sse_decode(deserializer);
+        let mut var_approvedAtMs = <i64>::sse_decode(deserializer);
+        let mut var_expiresAtMs = <i64>::sse_decode(deserializer);
+        let mut var_envelopeSha256 = <String>::sse_decode(deserializer);
+        return crate::api::official_face_id::OfficialFaceTemplateStatus {
+            valid: var_valid,
+            reason: var_reason,
+            template_id: var_templateId,
+            institution_id: var_institutionId,
+            student_id: var_studentId,
+            submission_id: var_submissionId,
+            key_id: var_keyId,
+            key_environment: var_keyEnvironment,
+            model_id: var_modelId,
+            preprocessing_version: var_preprocessingVersion,
+            build_source: var_buildSource,
+            reference_count: var_referenceCount,
+            embedding_dimension: var_embeddingDimension,
+            approved_at_ms: var_approvedAtMs,
+            expires_at_ms: var_expiresAtMs,
+            envelope_sha256: var_envelopeSha256,
+        };
+    }
+}
+
+impl SseDecode for crate::api::official_face_id::OfficialTemplateIssueRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_templateId = <String>::sse_decode(deserializer);
+        let mut var_institutionId = <String>::sse_decode(deserializer);
+        let mut var_studentId = <String>::sse_decode(deserializer);
+        let mut var_submissionId = <String>::sse_decode(deserializer);
+        let mut var_modelId = <String>::sse_decode(deserializer);
+        let mut var_modelSha256 = <String>::sse_decode(deserializer);
+        let mut var_preprocessingVersion = <String>::sse_decode(deserializer);
+        let mut var_references = <Vec<Vec<f32>>>::sse_decode(deserializer);
+        let mut var_referenceLabels = <Vec<String>>::sse_decode(deserializer);
+        let mut var_qualityScore = <f32>::sse_decode(deserializer);
+        let mut var_buildSource = <String>::sse_decode(deserializer);
+        let mut var_approvedBy = <String>::sse_decode(deserializer);
+        let mut var_approvedAtMs = <i64>::sse_decode(deserializer);
+        let mut var_issuedAtMs = <i64>::sse_decode(deserializer);
+        let mut var_expiresAtMs = <i64>::sse_decode(deserializer);
+        return crate::api::official_face_id::OfficialTemplateIssueRequest {
+            template_id: var_templateId,
+            institution_id: var_institutionId,
+            student_id: var_studentId,
+            submission_id: var_submissionId,
+            model_id: var_modelId,
+            model_sha256: var_modelSha256,
+            preprocessing_version: var_preprocessingVersion,
+            references: var_references,
+            reference_labels: var_referenceLabels,
+            quality_score: var_qualityScore,
+            build_source: var_buildSource,
+            approved_by: var_approvedBy,
+            approved_at_ms: var_approvedAtMs,
+            issued_at_ms: var_issuedAtMs,
+            expires_at_ms: var_expiresAtMs,
+        };
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3876,31 +3972,31 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        30 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
+        29 => wire__crate__api__lockdown__collect_lockdown_display_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
+        30 => wire__crate__api__lockdown__collect_lockdown_process_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__system_security__collect_system_security_report_impl(
+        31 => wire__crate__api__system_security__collect_system_security_report_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        55 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
+        56 => wire__crate__api__lockdown__run_secure_lockdown_review_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        56 => wire__crate__api__system_security__run_system_security_review_impl(
+        57 => wire__crate__api__system_security__run_system_security_review_impl(
             port,
             ptr,
             rust_vec_len,
@@ -4014,55 +4110,55 @@ fn pde_ffi_dispatcher_sync_impl(
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__face_verification__build_portable_face_template_impl(
+        25 => wire__crate__api__hand_landmark_runtime__clear_hand_landmark_model_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__api__hand_landmark_runtime__clear_hand_landmark_model_impl(
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        27 => {
+        26 => {
             wire__crate__api__hand_vision__clear_hand_vision_model_impl(ptr, rust_vec_len, data_len)
         }
-        28 => wire__crate__api__model_event_memory__clear_model_event_memory_v1_impl(
+        27 => wire__crate__api__model_event_memory__clear_model_event_memory_v1_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__hand_landmark_runtime__current_hand_landmark_model_status_impl(
+        28 => wire__crate__api__proctoring__clear_vision_model_impl(ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__hand_landmark_runtime__current_hand_landmark_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__hand_vision__current_hand_vision_model_status_impl(
+        33 => wire__crate__api__hand_vision__current_hand_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__proctoring__current_vision_model_status_impl(
+        34 => wire__crate__api__proctoring__current_vision_model_status_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
+        35 => wire__crate__api__native_vision__decode_yolo_output_impl(ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__eye_intelligence__describe_eye_zone_for_student_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        38 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
+        37 => wire__crate__api__proctoring__estimate_lighting_from_luma_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        39 => {
+        38 => {
             wire__crate__api__evidence_vault__evidence_sha256_hex_impl(ptr, rust_vec_len, data_len)
         }
-        40 => wire__crate__api__model_event_memory__ingest_model_event_v1_json_impl(
+        39 => wire__crate__api__model_event_memory__ingest_model_event_v1_json_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        40 => wire__crate__api__official_face_id__issue_sample_school_official_template_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -4076,72 +4172,77 @@ fn pde_ffi_dispatcher_sync_impl(
             wire__crate__api__hand_vision__load_hand_vision_model_impl(ptr, rust_vec_len, data_len)
         }
         43 => wire__crate__api__proctoring__load_vision_model_impl(ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__model_event_memory__model_event_memory_status_v1_impl(
+        44 => wire__crate__api__official_face_id__match_official_face_template_1_to_1_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
+        45 => wire__crate__api__model_event_memory__model_event_memory_status_v1_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        46 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_v2_impl(
+        46 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => {
+        47 => wire__crate__api__gaze_calibration__predict_calibrated_gaze_zone_v2_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        48 => {
             wire__crate__api__proctoring__process_acoustic_sample_impl(ptr, rust_vec_len, data_len)
         }
-        48 => {
+        49 => {
             wire__crate__api__evidence_vault__read_evidence_bundle_impl(ptr, rust_vec_len, data_len)
         }
-        49 => wire__crate__api__model_event_memory__read_model_events_active_at_v1_json_impl(
+        50 => wire__crate__api__model_event_memory__read_model_events_active_at_v1_json_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        50 => wire__crate__api__model_event_memory__read_model_events_between_v1_json_impl(
+        51 => wire__crate__api__model_event_memory__read_model_events_between_v1_json_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        51 => {
+        52 => {
             wire__crate__api__hand_vision__review_hand_detections_impl(ptr, rust_vec_len, data_len)
         }
-        52 => wire__crate__api__hand_landmark_runtime__review_hand_landmark_output_impl(
+        53 => wire__crate__api__hand_landmark_runtime__review_hand_landmark_output_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        53 => wire__crate__api__hand_vision__review_hand_model_output_impl(
+        54 => wire__crate__api__hand_vision__review_hand_model_output_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        54 => wire__crate__api__native_vision__review_object_detections_impl(
+        55 => wire__crate__api__native_vision__review_object_detections_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        57 => {
+        58 => wire__crate__api__official_face_id__sample_school_public_key_hex_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        59 => {
             wire__crate__api__evidence_vault__save_evidence_bytes_impl(ptr, rust_vec_len, data_len)
         }
-        58 => {
+        60 => {
             wire__crate__api__proctoring__update_rotation_progress_impl(ptr, rust_vec_len, data_len)
         }
-        59 => wire__crate__api__face_verification__validate_portable_face_template_impl(
+        61 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        60 => wire__crate__api__attempt_recovery__verify_attempt_snapshot_impl(
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        61 => wire__crate__api__face_verification__verify_face_embedding_1_to_1_impl(
+        62 => wire__crate__api__official_face_id__verify_official_face_template_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -4489,60 +4590,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::proctoring::FaceAnalysisDecis
     for crate::api::proctoring::FaceAnalysisDecision
 {
     fn into_into_dart(self) -> crate::api::proctoring::FaceAnalysisDecision {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::face_verification::FaceTemplateStatus {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.valid.into_into_dart().into_dart(),
-            self.student_id.into_into_dart().into_dart(),
-            self.enrollment_id.into_into_dart().into_dart(),
-            self.model_id.into_into_dart().into_dart(),
-            self.model_sha256.into_into_dart().into_dart(),
-            self.embedding_dimension.into_into_dart().into_dart(),
-            self.sample_count.into_into_dart().into_dart(),
-            self.quality_score.into_into_dart().into_dart(),
-            self.template_sha256.into_into_dart().into_dart(),
-            self.reason.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::face_verification::FaceTemplateStatus
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::face_verification::FaceTemplateStatus>
-    for crate::api::face_verification::FaceTemplateStatus
-{
-    fn into_into_dart(self) -> crate::api::face_verification::FaceTemplateStatus {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::face_verification::FaceVerificationResult {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.state.into_into_dart().into_dart(),
-            self.similarity.into_into_dart().into_dart(),
-            self.threshold.into_into_dart().into_dart(),
-            self.signal_quality.into_into_dart().into_dart(),
-            self.reliable.into_into_dart().into_dart(),
-            self.reason.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::face_verification::FaceVerificationResult
-{
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::face_verification::FaceVerificationResult>
-    for crate::api::face_verification::FaceVerificationResult
-{
-    fn into_into_dart(self) -> crate::api::face_verification::FaceVerificationResult {
         self
     }
 }
@@ -5419,6 +5466,103 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::native_vision::NativeVisionFr
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::official_face_id::OfficialFaceMatchResult {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.state.into_into_dart().into_dart(),
+            self.similarity.into_into_dart().into_dart(),
+            self.centroid_similarity.into_into_dart().into_dart(),
+            self.threshold.into_into_dart().into_dart(),
+            self.signal_quality.into_into_dart().into_dart(),
+            self.reliable.into_into_dart().into_dart(),
+            self.template_id.into_into_dart().into_dart(),
+            self.envelope_sha256.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::official_face_id::OfficialFaceMatchResult
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::official_face_id::OfficialFaceMatchResult>
+    for crate::api::official_face_id::OfficialFaceMatchResult
+{
+    fn into_into_dart(self) -> crate::api::official_face_id::OfficialFaceMatchResult {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::official_face_id::OfficialFaceTemplateStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.valid.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+            self.template_id.into_into_dart().into_dart(),
+            self.institution_id.into_into_dart().into_dart(),
+            self.student_id.into_into_dart().into_dart(),
+            self.submission_id.into_into_dart().into_dart(),
+            self.key_id.into_into_dart().into_dart(),
+            self.key_environment.into_into_dart().into_dart(),
+            self.model_id.into_into_dart().into_dart(),
+            self.preprocessing_version.into_into_dart().into_dart(),
+            self.build_source.into_into_dart().into_dart(),
+            self.reference_count.into_into_dart().into_dart(),
+            self.embedding_dimension.into_into_dart().into_dart(),
+            self.approved_at_ms.into_into_dart().into_dart(),
+            self.expires_at_ms.into_into_dart().into_dart(),
+            self.envelope_sha256.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::official_face_id::OfficialFaceTemplateStatus
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::official_face_id::OfficialFaceTemplateStatus>
+    for crate::api::official_face_id::OfficialFaceTemplateStatus
+{
+    fn into_into_dart(self) -> crate::api::official_face_id::OfficialFaceTemplateStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::official_face_id::OfficialTemplateIssueRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.template_id.into_into_dart().into_dart(),
+            self.institution_id.into_into_dart().into_dart(),
+            self.student_id.into_into_dart().into_dart(),
+            self.submission_id.into_into_dart().into_dart(),
+            self.model_id.into_into_dart().into_dart(),
+            self.model_sha256.into_into_dart().into_dart(),
+            self.preprocessing_version.into_into_dart().into_dart(),
+            self.references.into_into_dart().into_dart(),
+            self.reference_labels.into_into_dart().into_dart(),
+            self.quality_score.into_into_dart().into_dart(),
+            self.build_source.into_into_dart().into_dart(),
+            self.approved_by.into_into_dart().into_dart(),
+            self.approved_at_ms.into_into_dart().into_dart(),
+            self.issued_at_ms.into_into_dart().into_dart(),
+            self.expires_at_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::official_face_id::OfficialTemplateIssueRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::official_face_id::OfficialTemplateIssueRequest>
+    for crate::api::official_face_id::OfficialTemplateIssueRequest
+{
+    fn into_into_dart(self) -> crate::api::official_face_id::OfficialTemplateIssueRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::proctoring::RotationAnalysisDecision {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -5677,34 +5821,6 @@ impl SseEncode for crate::api::proctoring::FaceAnalysisDecision {
         <i64>::sse_encode(self.updated_last_multi_face_strike_at_ms, serializer);
         <i64>::sse_encode(self.updated_last_gaze_warning_at_ms, serializer);
         <Option<i64>>::sse_encode(self.updated_gaze_away_started_at_ms, serializer);
-    }
-}
-
-impl SseEncode for crate::api::face_verification::FaceTemplateStatus {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <bool>::sse_encode(self.valid, serializer);
-        <String>::sse_encode(self.student_id, serializer);
-        <String>::sse_encode(self.enrollment_id, serializer);
-        <String>::sse_encode(self.model_id, serializer);
-        <String>::sse_encode(self.model_sha256, serializer);
-        <i32>::sse_encode(self.embedding_dimension, serializer);
-        <i32>::sse_encode(self.sample_count, serializer);
-        <f32>::sse_encode(self.quality_score, serializer);
-        <String>::sse_encode(self.template_sha256, serializer);
-        <String>::sse_encode(self.reason, serializer);
-    }
-}
-
-impl SseEncode for crate::api::face_verification::FaceVerificationResult {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.state, serializer);
-        <f32>::sse_encode(self.similarity, serializer);
-        <f32>::sse_encode(self.threshold, serializer);
-        <f32>::sse_encode(self.signal_quality, serializer);
-        <bool>::sse_encode(self.reliable, serializer);
-        <String>::sse_encode(self.reason, serializer);
     }
 }
 
@@ -6292,6 +6408,64 @@ impl SseEncode for crate::api::native_vision::NativeVisionFrameQuality {
     }
 }
 
+impl SseEncode for crate::api::official_face_id::OfficialFaceMatchResult {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.state, serializer);
+        <f32>::sse_encode(self.similarity, serializer);
+        <f32>::sse_encode(self.centroid_similarity, serializer);
+        <f32>::sse_encode(self.threshold, serializer);
+        <f32>::sse_encode(self.signal_quality, serializer);
+        <bool>::sse_encode(self.reliable, serializer);
+        <String>::sse_encode(self.template_id, serializer);
+        <String>::sse_encode(self.envelope_sha256, serializer);
+        <String>::sse_encode(self.reason, serializer);
+    }
+}
+
+impl SseEncode for crate::api::official_face_id::OfficialFaceTemplateStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.valid, serializer);
+        <String>::sse_encode(self.reason, serializer);
+        <String>::sse_encode(self.template_id, serializer);
+        <String>::sse_encode(self.institution_id, serializer);
+        <String>::sse_encode(self.student_id, serializer);
+        <String>::sse_encode(self.submission_id, serializer);
+        <String>::sse_encode(self.key_id, serializer);
+        <String>::sse_encode(self.key_environment, serializer);
+        <String>::sse_encode(self.model_id, serializer);
+        <String>::sse_encode(self.preprocessing_version, serializer);
+        <String>::sse_encode(self.build_source, serializer);
+        <i32>::sse_encode(self.reference_count, serializer);
+        <i32>::sse_encode(self.embedding_dimension, serializer);
+        <i64>::sse_encode(self.approved_at_ms, serializer);
+        <i64>::sse_encode(self.expires_at_ms, serializer);
+        <String>::sse_encode(self.envelope_sha256, serializer);
+    }
+}
+
+impl SseEncode for crate::api::official_face_id::OfficialTemplateIssueRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.template_id, serializer);
+        <String>::sse_encode(self.institution_id, serializer);
+        <String>::sse_encode(self.student_id, serializer);
+        <String>::sse_encode(self.submission_id, serializer);
+        <String>::sse_encode(self.model_id, serializer);
+        <String>::sse_encode(self.model_sha256, serializer);
+        <String>::sse_encode(self.preprocessing_version, serializer);
+        <Vec<Vec<f32>>>::sse_encode(self.references, serializer);
+        <Vec<String>>::sse_encode(self.reference_labels, serializer);
+        <f32>::sse_encode(self.quality_score, serializer);
+        <String>::sse_encode(self.build_source, serializer);
+        <String>::sse_encode(self.approved_by, serializer);
+        <i64>::sse_encode(self.approved_at_ms, serializer);
+        <i64>::sse_encode(self.issued_at_ms, serializer);
+        <i64>::sse_encode(self.expires_at_ms, serializer);
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -6424,7 +6598,7 @@ mod io {
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
-    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate
@@ -6448,7 +6622,7 @@ mod web {
     };
     use flutter_rust_bridge::for_generated::wasm_bindgen;
     use flutter_rust_bridge::for_generated::wasm_bindgen::prelude::*;
-    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate

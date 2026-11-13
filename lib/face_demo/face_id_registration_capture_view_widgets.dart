@@ -1,6 +1,6 @@
 // ignore_for_file: unused_element
 
-part of 'demo_face_id_view.dart';
+part of 'face_id_registration_capture_view.dart';
 
 const Color _identityBrand = Color(0xFF0F4C81);
 const Color _identityDark = Color(0xFF0B1220);
@@ -18,7 +18,7 @@ class _Header extends StatelessWidget {
     required this.compact,
   });
 
-  final DemoFaceIdSnapshot snapshot;
+  final FaceIdCaptureProgress snapshot;
   final double progress;
   final bool compact;
 
@@ -43,7 +43,9 @@ class _Header extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    snapshot.isComplete ? 'Identity ready' : 'Face enrollment',
+                    snapshot.isComplete
+                        ? 'Photos ready'
+                        : 'Face ID registration',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -53,7 +55,7 @@ class _Header extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     snapshot.isComplete
-                        ? 'Protected on this device'
+                        ? 'Ready to send to your school'
                         : '${snapshot.capturedSamples}/${snapshot.requiredSamples} captured · Follow the camera guide',
                     style: const TextStyle(
                       color: Color(0xFFE2E8F0),
@@ -136,15 +138,15 @@ class _Header extends StatelessWidget {
                           ),
                           _HeaderTag(
                             icon: Icons.verified_outlined,
-                            text: 'Identity setup',
+                            text: 'Face ID registration',
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Text(
                         snapshot.isComplete
-                            ? 'Identity setup active'
-                            : 'Set up your identity',
+                            ? 'Photos captured'
+                            : 'Register your Face ID',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(
                               color: Colors.white,
@@ -155,7 +157,7 @@ class _Header extends StatelessWidget {
                       const SizedBox(height: 7),
                       Text(
                         snapshot.isComplete
-                            ? 'Your identity setup is protected and ready for exam checks.'
+                            ? 'Your photos are ready to send to your school for approval.'
                             : 'Keep your face inside the guide. The app will capture each step automatically.',
                         style: const TextStyle(
                           color: Color(0xFFE2E8F0),
@@ -228,7 +230,7 @@ class _HeaderTag extends StatelessWidget {
 class _HeaderProgress extends StatelessWidget {
   const _HeaderProgress({required this.snapshot, required this.progress});
 
-  final DemoFaceIdSnapshot snapshot;
+  final FaceIdCaptureProgress snapshot;
   final double progress;
 
   @override
@@ -281,7 +283,7 @@ class _HeaderProgress extends StatelessWidget {
           const SizedBox(height: 9),
           Text(
             snapshot.isComplete
-                ? 'Identity confirmed'
+                ? 'All photos captured'
                 : 'Follow the guide on screen',
             style: const TextStyle(
               color: Color(0xFFCBD5E1),
@@ -401,7 +403,7 @@ class _CameraPreviewPanel extends StatelessWidget {
                     Flexible(
                       child: Text(
                         complete
-                            ? 'Identity setup active'
+                            ? 'Photos captured'
                             : '${guide.title}: ${guide.instruction}',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
@@ -644,10 +646,9 @@ class _StatusPanel extends StatelessWidget {
     required this.guides,
     required this.statusMessage,
     required this.compact,
-    this.onRetryVerification,
   });
 
-  final DemoFaceIdSnapshot snapshot;
+  final FaceIdCaptureProgress snapshot;
   final double progress;
   final List<_IdentityGuide> guides;
   final String? statusMessage;
@@ -658,7 +659,6 @@ class _StatusPanel extends StatelessWidget {
   /// try again immediately from right where the failure message is shown,
   /// instead of having to find the "Test Face ID" button elsewhere on the
   /// page.
-  final VoidCallback? onRetryVerification;
 
   @override
   Widget build(BuildContext context) {
@@ -714,10 +714,10 @@ class _StatusPanel extends StatelessWidget {
                 'Images',
                 '${snapshot.capturedSamples}/${snapshot.requiredSamples}',
               ),
-              _StatusPill('Protected', snapshot.locked ? 'Yes' : 'Pending'),
+              _StatusPill('Sent', snapshot.locked ? 'Yes' : 'Not yet'),
               _StatusPill(
                 'Status',
-                snapshot.isComplete ? 'Active' : 'In progress',
+                snapshot.isComplete ? 'Captured' : 'In progress',
               ),
               if (snapshot.lastQualityScore != null)
                 _StatusPill(
@@ -757,14 +757,6 @@ class _StatusPanel extends StatelessWidget {
                 ],
               ),
             ),
-            if (onRetryVerification != null) ...[
-              const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: onRetryVerification,
-                icon: const Icon(Icons.replay_rounded),
-                label: const Text('Retry identity check'),
-              ),
-            ],
           ],
           const SizedBox(height: 16),
           ...guides.asMap().entries.map((entry) {
@@ -927,7 +919,7 @@ class _ActionBar extends StatelessWidget {
     required this.onBack,
   });
 
-  final DemoFaceIdSnapshot snapshot;
+  final FaceIdCaptureProgress snapshot;
   final _IdentityGuide guide;
   final bool capturing;
   final bool submitting;
@@ -1002,7 +994,7 @@ class _MobileCaptureBar extends StatelessWidget {
     required this.onReset,
   });
 
-  final DemoFaceIdSnapshot snapshot;
+  final FaceIdCaptureProgress snapshot;
   final _IdentityGuide guide;
   final bool capturing;
   final bool submitting;

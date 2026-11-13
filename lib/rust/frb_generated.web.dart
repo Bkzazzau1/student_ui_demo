@@ -13,7 +13,6 @@ import 'api/audio_intelligence.dart';
 import 'api/evidence_vault.dart';
 import 'api/exam_behavior.dart';
 import 'api/eye_intelligence.dart';
-import 'api/face_verification.dart';
 import 'api/gaze_calibration.dart';
 import 'api/hand_air_board.dart';
 import 'api/hand_gesture.dart';
@@ -23,6 +22,7 @@ import 'api/liveness_challenge.dart';
 import 'api/lockdown.dart';
 import 'api/model_event_memory.dart';
 import 'api/native_vision.dart';
+import 'api/official_face_id.dart';
 import 'api/proctoring.dart';
 import 'api/system_security.dart';
 import 'dart:async';
@@ -119,6 +119,10 @@ abstract class BrainCoreApiApiImplPlatform
   dco_decode_box_autoadd_native_audio_intelligence_result(dynamic raw);
 
   @protected
+  OfficialTemplateIssueRequest
+  dco_decode_box_autoadd_official_template_issue_request(dynamic raw);
+
+  @protected
   BigInt dco_decode_box_autoadd_u_64(dynamic raw);
 
   @protected
@@ -144,12 +148,6 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   FaceAnalysisDecision dco_decode_face_analysis_decision(dynamic raw);
-
-  @protected
-  FaceTemplateStatus dco_decode_face_template_status(dynamic raw);
-
-  @protected
-  FaceVerificationResult dco_decode_face_verification_result(dynamic raw);
 
   @protected
   GazeCalibrationProfile dco_decode_gaze_calibration_profile(dynamic raw);
@@ -318,6 +316,19 @@ abstract class BrainCoreApiApiImplPlatform
   NativeVisionFrameQuality dco_decode_native_vision_frame_quality(dynamic raw);
 
   @protected
+  OfficialFaceMatchResult dco_decode_official_face_match_result(dynamic raw);
+
+  @protected
+  OfficialFaceTemplateStatus dco_decode_official_face_template_status(
+    dynamic raw,
+  );
+
+  @protected
+  OfficialTemplateIssueRequest dco_decode_official_template_issue_request(
+    dynamic raw,
+  );
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -459,6 +470,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  OfficialTemplateIssueRequest
+  sse_decode_box_autoadd_official_template_issue_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
 
   @protected
@@ -492,16 +509,6 @@ abstract class BrainCoreApiApiImplPlatform
 
   @protected
   FaceAnalysisDecision sse_decode_face_analysis_decision(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  FaceTemplateStatus sse_decode_face_template_status(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  FaceVerificationResult sse_decode_face_verification_result(
     SseDeserializer deserializer,
   );
 
@@ -722,6 +729,21 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  OfficialFaceMatchResult sse_decode_official_face_match_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OfficialFaceTemplateStatus sse_decode_official_face_template_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OfficialTemplateIssueRequest sse_decode_official_template_issue_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -895,6 +917,12 @@ abstract class BrainCoreApiApiImplPlatform
   );
 
   @protected
+  void sse_encode_box_autoadd_official_template_issue_request(
+    OfficialTemplateIssueRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
 
   @protected
@@ -936,18 +964,6 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_face_analysis_decision(
     FaceAnalysisDecision self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_face_template_status(
-    FaceTemplateStatus self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_face_verification_result(
-    FaceVerificationResult self,
     SseSerializer serializer,
   );
 
@@ -1224,6 +1240,24 @@ abstract class BrainCoreApiApiImplPlatform
   @protected
   void sse_encode_native_vision_frame_quality(
     NativeVisionFrameQuality self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_official_face_match_result(
+    OfficialFaceMatchResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_official_face_template_status(
+    OfficialFaceTemplateStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_official_template_issue_request(
+    OfficialTemplateIssueRequest self,
     SseSerializer serializer,
   );
 
