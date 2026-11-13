@@ -96,48 +96,60 @@ def yunet_input(rgb: np.ndarray) -> tuple[np.ndarray, float]:
 def yunet_decode(outputs: dict[str, np.ndarray], scale: float) -> list[FaceBox]:
     """Decodes YuNet 2023mar outputs (as OpenCV's FaceDetectorYN does) and
     applies non-maximum suppression. Coordinates are in source pixels."""
-    candidates: list[FaceBox] = []
+    scores, boxes, keypoints = [], [], []
     for stride in YUNET_STRIDES:
-        cls = np.clip(outputs[f"cls_{stride}"].reshape(-1), 0, 1)
-        obj = np.clip(outputs[f"obj_{stride}"].reshape(-1), 0, 1)
-        bbox = outputs[f"bbox_{stride}"].reshape(-1, 4)
-        kps = outputs[f"kps_{stride}"].reshape(-1, 10)
-        cols = YUNET_SIDE // stride
+        cls = np.clip(outputs[f"cls_{stride}"].reshape(-1).astype(np.float64), 0, 1)
+        obj = np.clip(outputs[f"obj_{stride}"].reshape(-1).astype(np.float64), 0, 1)
+        bbox = outputs[f"bbox_{stride}"].reshape(-1, 4).astype(np.float64)
+        kps = outputs[f"kps_{stride}"].reshape(-1, 10).astype(np.float64)
         score = np.sqrt(cls * obj)
-        for index in np.nonzero(score >= YUNET_SCORE_THRESHOLD)[0]:
-            row, col = divmod(int(index), cols)
-            cx = (col + bbox[index, 0]) * stride
-            cy = (row + bbox[index, 1]) * stride
-            w = float(np.exp(bbox[index, 2])) * stride
-            h = float(np.exp(bbox[index, 3])) * stride
-            points = np.empty((5, 2), dtype=np.float64)
-            points[:, 0] = (kps[index, 0::2] + col) * stride / scale
-            points[:, 1] = (kps[index, 1::2] + row) * stride / scale
-            candidates.append(
-                FaceBox(
-                    x=float((cx - w / 2) / scale),
-                    y=float((cy - h / 2) / scale),
-                    width=w / scale,
-                    height=h / scale,
-                    score=float(score[index]),
-                    keypoints=points,
-                )
-            )
-    candidates.sort(key=lambda face: face.score, reverse=True)
+        index = np.nonzero(score >= YUNET_SCORE_THRESHOLD)[0]
+        if index.size == 0:
+            continue
+        cols = YUNET_SIDE // stride
+        row, col = np.divmod(index, cols)
+        cx = (col + bbox[index, 0]) * stride
+        cy = (row + bbox[index, 1]) * stride
+        w = np.exp(bbox[index, 2]) * stride
+        h = np.exp(bbox[index, 3]) * stride
+        boxes.append(np.stack([cx - w / 2, cy - h / 2, w, h], axis=1) / scale)
+        points = np.empty((index.size, 5, 2), dtype=np.float64)
+        points[:, :, 0] = (kps[index][:, 0::2] + col[:, None]) * stride / scale
+        points[:, :, 1] = (kps[index][:, 1::2] + row[:, None]) * stride / scale
+        keypoints.append(points)
+        scores.append(score[index])
+    if not scores:
+        return []
+    score = np.concatenate(scores)
+    box = np.concatenate(boxes)
+    points = np.concatenate(keypoints)
+    # Greedy NMS in score order (stable, like the native std::stable_sort).
+    order = np.argsort(-score, kind="stable")
+    x0, y0 = box[:, 0], box[:, 1]
+    x1, y1 = x0 + box[:, 2], y0 + box[:, 3]
+    area = box[:, 2] * box[:, 3]
+    suppressed = np.zeros(score.size, dtype=bool)
     kept: list[FaceBox] = []
-    for face in candidates:
-        if all(_iou(face, other) <= YUNET_NMS_IOU for other in kept):
-            kept.append(face)
+    for i in order:
+        if suppressed[i]:
+            continue
+        kept.append(
+            FaceBox(
+                x=float(box[i, 0]),
+                y=float(box[i, 1]),
+                width=float(box[i, 2]),
+                height=float(box[i, 3]),
+                score=float(score[i]),
+                keypoints=points[i],
+            )
+        )
+        inter = np.clip(np.minimum(x1, x1[i]) - np.maximum(x0, x0[i]), 0, None) * np.clip(
+            np.minimum(y1, y1[i]) - np.maximum(y0, y0[i]), 0, None
+        )
+        union = area + area[i] - inter
+        iou = np.divide(inter, union, out=np.zeros_like(inter), where=union > 0)
+        suppressed |= iou > YUNET_NMS_IOU
     return kept
-
-
-def _iou(a: FaceBox, b: FaceBox) -> float:
-    x0, y0 = max(a.x, b.x), max(a.y, b.y)
-    x1 = min(a.x + a.width, b.x + b.width)
-    y1 = min(a.y + a.height, b.y + b.height)
-    inter = max(0.0, x1 - x0) * max(0.0, y1 - y0)
-    union = a.area + b.area - inter
-    return inter / union if union > 0 else 0.0
 
 
 def face_crop_window(face: FaceBox, scale: float = CROP_SCALE) -> tuple[int, int, int]:
