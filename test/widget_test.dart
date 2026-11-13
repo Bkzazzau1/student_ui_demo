@@ -76,9 +76,16 @@ void main() {
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
-    final assessment = DemoExamService.assessmentsForDate(
-      DateTime.now(),
-    ).firstWhere((item) => item.isGradedAssessment);
+    // The sample timetable changes by weekday; use the next day that has a
+    // graded assessment so the test does not depend on today's date.
+    final today = DateTime.now();
+    final assessment =
+        List<DateTime>.generate(
+              14,
+              (offset) => today.add(Duration(days: offset)),
+            )
+            .expand(DemoExamService.assessmentsForDate)
+            .firstWhere((item) => item.isGradedAssessment);
 
     await tester.pumpWidget(
       MaterialApp(home: SecureExamSetupView(assessment: assessment)),

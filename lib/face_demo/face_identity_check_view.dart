@@ -1,73 +1,121 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import 'demo_face_id_service.dart';
+import '../auth/student_session.dart';
 import 'face_embedding_pipeline.dart';
 import 'face_identity_liveness_gate.dart';
 import 'face_identity_verification_service.dart';
-import 'face_live_capture_engine.dart';
-import 'native_face_embedding_runtime.dart';
+import 'identity_evidence.dart';
+import 'official_identity_session.dart';
 import 'windows_speech_prompt_service.dart';
-import '../rust/api/face_verification.dart';
 
-/// The 1:1 identity check a student must pass immediately before writing an
-/// exam attempt.
+/// What the identity check screen returns to its caller.
+class FaceIdentityCheckResult {
+  const FaceIdentityCheckResult._({
+    required this.passed,
+    required this.exhausted,
+    this.evidenceRecordId = '',
+    this.templateId = '',
+    this.problem = OfficialIdentityProblem.none,
+  });
+
+  const FaceIdentityCheckResult.passed({
+    required String evidenceRecordId,
+    required String templateId,
+  }) : this._(
+         passed: true,
+         exhausted: false,
+         evidenceRecordId: evidenceRecordId,
+         templateId: templateId,
+       );
+
+  /// Every allowed attempt was used without a pass. The student must contact
+  /// the invigilator; this is never a misconduct decision by itself.
+  const FaceIdentityCheckResult.exhausted({required String evidenceRecordId})
+    : this._(
+        passed: false,
+        exhausted: true,
+        evidenceRecordId: evidenceRecordId,
+      );
+
+  const FaceIdentityCheckResult.notReady(OfficialIdentityProblem problem)
+    : this._(passed: false, exhausted: false, problem: problem);
+
+  const FaceIdentityCheckResult.cancelled()
+    : this._(passed: false, exhausted: false);
+
+  final bool passed;
+  final bool exhausted;
+  final String evidenceRecordId;
+  final String templateId;
+
+  /// Why the check could not start (no approved Face ID, school offline...).
+  final OfficialIdentityProblem problem;
+}
+
+/// The 1:1 identity check a student must pass before an exam opens, and
+/// again whenever an in-exam check pauses the exam.
 ///
-/// This is deliberately a separate screen from [DemoFaceIdView] (the
-/// enrollment wizard). Enrollment happens once; this check happens every
-/// time the student is about to write an exam. It never captures new
-/// enrollment samples, never writes to [DemoFaceIdService], and never
-/// searches across students — it loads exactly one locked template (the one
-/// already approved for this student on this device) and asks only whether
-/// the person in front of the camera right now matches it.
+/// It compares the person in front of the camera with exactly one template:
+/// the signed-in student's official, school-approved Face ID. The liveness
+/// challenge and the identity match use the same camera frames.
 class FaceIdentityCheckView extends StatefulWidget {
   const FaceIdentityCheckView({
     super.key,
     required this.examId,
     required this.attemptId,
+    this.kind = IdentityCheckKind.preExam,
+    this.studentId,
     this.allowCancel = true,
-    this.maxFailedAttempts,
+    this.maxFailedAttempts = 3,
   });
 
   final String examId;
   final String attemptId;
+  final IdentityCheckKind kind;
+
+  /// Defaults to the signed-in student.
+  final String? studentId;
   final bool allowCancel;
-  final int? maxFailedAttempts;
+  final int maxFailedAttempts;
 
   @override
   State<FaceIdentityCheckView> createState() => _FaceIdentityCheckViewState();
 }
 
-enum _CheckStage { loadingTemplate, noApprovedIdentity, ready, running, passed }
+enum _CheckStage {
+  loadingTemplate,
+  notReady,
+  ready,
+  running,
+  passed,
+  exhausted,
+}
 
 class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
   final FaceEmbeddingPipeline _pipeline = FaceEmbeddingPipeline();
   final FaceIdentityLivenessGate _livenessGate = FaceIdentityLivenessGate();
   final FaceIdentityVerificationService _verificationService =
       const FaceIdentityVerificationService();
-  final FaceLiveCaptureEngine _liveCaptureEngine = FaceLiveCaptureEngine();
   final WindowsSpeechPromptService _speech = WindowsSpeechPromptService();
-  final String _studentId = DemoFaceIdService.studentId;
 
-  // Consecutive live-stream frames that must all pass the quality gate
-  // before a verification sample is actually captured. Mirrors the same
-  // cycle enrollment's `FaceLiveCaptureEngine` uses: a photo is only taken
-  // once the camera has settled on a genuinely good frame, instead of
-  // snapping on a fixed timer and hoping the frame was usable. Feeding the
-  // matcher steadier, better-aligned samples narrows the embedding noise
-  // that a marginal capture could otherwise let a false match slip through.
-  static const int _liveCaptureStabilityFrames = 3;
-  static const int _maxCaptureRetries = 8;
-  int _liveConsecutiveGoodFrames = 0;
+  static const int _samplesWanted = 3;
+  static const int _maxBoundFrames = 6;
+  static const int _maxFreshStills = 2;
+  static const Duration _freshStillWindow = Duration(seconds: 4);
 
+  late final String _studentId = widget.studentId ?? StudentSession.studentId;
   CameraController? _controller;
-  String? _templateJson;
+  OfficialFaceTemplateContext? _template;
+  OfficialIdentityProblem _problem = OfficialIdentityProblem.none;
   _CheckStage _stage = _CheckStage.loadingTemplate;
-  String _message = 'Loading your approved identity...';
+  String _message = 'Loading your official Face ID...';
   FaceIdentityCheckOutcome? _lastOutcome;
+  String _lastEvidenceId = '';
   bool _leaving = false;
   int _failedAttempts = 0;
 
@@ -79,46 +127,46 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
 
   @override
   void dispose() {
-    unawaited(_liveCaptureEngine.stop());
     _controller?.dispose();
     unawaited(_speech.dispose());
     super.dispose();
   }
 
   Future<void> _loadTemplate() async {
-    final stored = await NativeFaceEmbeddingRuntime().loadProtectedTemplate(
-      studentId: _studentId,
-    );
-    if (!mounted) return;
-    if (stored == null || stored.isEmpty) {
-      setState(() {
-        _stage = _CheckStage.noApprovedIdentity;
-        _message =
-            'No approved identity was found on this device. Complete '
-            'identity setup before this exam.';
-      });
-      return;
+    setState(() {
+      _stage = _CheckStage.loadingTemplate;
+      _message = 'Loading your official Face ID...';
+    });
+    final session = OfficialIdentitySession.instance;
+    OfficialFaceTemplateContext? context;
+    var message = '';
+    var problem = OfficialIdentityProblem.none;
+    if (widget.kind != IdentityCheckKind.preExam) {
+      // Rechecks during an exam use the template verified at exam start, so
+      // a network drop cannot block a paused student from resuming.
+      context =
+          session.activeFor(_studentId) ??
+          await session.restoreCached(_studentId);
     }
-    final status = validatePortableFaceTemplate(
-      templateJson: stored,
-      expectedStudentId: _studentId,
-      expectedModelId: NativeFaceEmbeddingRuntime.modelId,
-      expectedModelSha256: NativeFaceEmbeddingRuntime.modelSha256,
-      nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
-    );
-    if (!status.valid) {
+    if (context == null) {
+      final loaded = await session.loadForExam(_studentId);
+      context = loaded.context;
+      message = loaded.message;
+      problem = loaded.problem;
+    }
+    if (!mounted) return;
+    if (context == null) {
       setState(() {
-        _stage = _CheckStage.noApprovedIdentity;
-        _message =
-            'The approved identity on this device is not valid (${status.reason}). '
-            'Complete identity setup again before this exam.';
+        _stage = _CheckStage.notReady;
+        _problem = problem;
+        _message = message;
       });
       return;
     }
     setState(() {
-      _templateJson = stored;
+      _template = context;
       _stage = _CheckStage.ready;
-      _message = 'Look at the camera to confirm your identity.';
+      _message = 'Look at the camera, then start the identity check.';
     });
     await _openCamera();
   }
@@ -131,7 +179,7 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
         if (!mounted) return;
         setState(
           () => _message =
-              'No camera was found. Identity check requires a camera.',
+              'No camera was found. The identity check needs a camera.',
         );
         return;
       }
@@ -145,31 +193,35 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
         enableAudio: false,
       );
       await controller.initialize();
-      if (!mounted) return;
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
       setState(() => _controller = controller);
     } catch (error) {
       if (!mounted) return;
-      setState(() => _message = 'Camera could not open: $error');
+      setState(() => _message = 'The camera could not open: $error');
     }
   }
 
   Future<void> _runCheck() async {
     final controller = _controller;
-    final templateJson = _templateJson;
+    final template = _template;
     if (_stage == _CheckStage.running ||
-        templateJson == null ||
+        template == null ||
         controller == null ||
         !controller.value.isInitialized) {
       return;
     }
     setState(() {
       _stage = _CheckStage.running;
-      _message = 'Get ready to confirm liveness...';
+      _message = 'Get ready...';
       _lastOutcome = null;
     });
     try {
-      final liveness = await _livenessGate.runBurst(
+      final burst = await _livenessGate.runBoundBurst(
         controller: controller,
+        keepFrames: _maxBoundFrames,
         onChallengeStarted: (session) {
           if (!mounted) return;
           setState(() => _message = session.instruction);
@@ -177,171 +229,251 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
         },
       );
       if (!mounted) return;
-      if (liveness.state != 'live_challenge_passed') {
-        setState(() {
-          _stage = _CheckStage.ready;
-          _message = 'Liveness could not be confirmed: ${liveness.reason}';
-        });
-        _failedAttempts++;
-        final limit = widget.maxFailedAttempts;
-        if (limit != null && _failedAttempts >= limit) {
-          await Future<void>.delayed(const Duration(seconds: 2));
-          await _finish(approved: false);
-        }
+      final burstEndedAt = DateTime.now();
+      final reviewPhoto = burst.frames.isEmpty
+          ? null
+          : burst.frames.first.encodedImage;
+
+      if (!burst.passed) {
+        final outcome = FaceIdentityCheckOutcome.livenessFailed(
+          burst.result.reason,
+        );
+        await _finishAttempt(
+          outcome,
+          burst: burst,
+          samplesAttempted: 0,
+          boundFrames: 0,
+          reviewPhoto: reviewPhoto,
+        );
         return;
       }
+
       final aiAvailable = await _pipeline.initialize();
-      setState(
-        () => _message =
-            'Look straight at the camera. Capturing secure identity samples...',
-      );
-      final independentOutcomes = <FaceIdentityCheckOutcome>[];
-      for (var index = 0; index < 3; index++) {
-        if (!mounted) return;
-        setState(() => _message = 'Hold still • sample ${index + 1} of 3');
-        final sample = aiAvailable
-            ? await _captureQualitySample(controller)
-            : null;
-        independentOutcomes.add(
-          _verificationService.evaluateSample(
-            aiAvailable: aiAvailable,
-            sample: sample,
-            pipelineFailureReason: _pipeline.lastFailureReason,
-            templateJson: templateJson,
-            liveness: liveness,
+      if (!mounted) return;
+      setState(() => _message = 'Hold still. Checking your identity...');
+      final outcomes = <FaceIdentityCheckOutcome>[];
+      var boundReliable = 0;
+      var boundMatched = 0;
+      var attempted = 0;
+      for (final frame in burst.frames) {
+        if (_reliableCount(outcomes) >= _samplesWanted) break;
+        attempted++;
+        final outcome = await _evaluate(
+          frame.encodedImage,
+          aiAvailable,
+          template,
+        );
+        outcomes.add(outcome);
+        if (_isReliable(outcome)) boundReliable++;
+        if (outcome.verified) boundMatched++;
+        if (outcome.state == FaceIdentityCheckState.aiUnavailable) break;
+      }
+      // Fresh stills are only a top-up for bound frames that were too
+      // blurred to use, taken straight after the challenge. A pass still
+      // needs at least one matching frame from inside the challenge itself.
+      var fresh = 0;
+      while (aiAvailable &&
+          boundReliable > 0 &&
+          _reliableCount(outcomes) < _samplesWanted &&
+          fresh < _maxFreshStills &&
+          DateTime.now().difference(burstEndedAt) < _freshStillWindow) {
+        fresh++;
+        attempted++;
+        final XFile file;
+        try {
+          file = await controller.takePicture();
+        } catch (_) {
+          break;
+        }
+        outcomes.add(
+          await _evaluate(
+            await File(file.path).readAsBytes(),
+            aiAvailable,
+            template,
           ),
         );
       }
-      final outcome = _verificationService.evaluateConsensus(
-        outcomes: independentOutcomes,
-      );
-      if (!mounted) return;
-      setState(() {
-        _lastOutcome = outcome;
-        _message = switch (outcome.state) {
-          FaceIdentityCheckState.verified =>
-            'Identity confirmed. Similarity ${(outcome.similarity * 100).toStringAsFixed(1)}%.',
-          FaceIdentityCheckState.mismatch =>
-            'This sample did not match the approved identity. It is not a '
-                'misconduct decision; try again with better framing.',
-          FaceIdentityCheckState.uncertain =>
-            'The result was uncertain: ${outcome.reason}',
-          FaceIdentityCheckState.aiUnavailable =>
-            'Face identity AI is unavailable on this device. The check cannot run.',
-          FaceIdentityCheckState.qualityRetry => outcome.reason,
-          FaceIdentityCheckState.livenessFailed =>
-            'Liveness could not be confirmed: ${outcome.reason}',
-        };
-        _stage = outcome.verified ? _CheckStage.passed : _CheckStage.ready;
-      });
-      if (outcome.verified) {
-        await _speech.speak('Identity confirmed successfully.');
-        await Future<void>.delayed(const Duration(seconds: 2));
-        await _finish(approved: true);
-      } else if (outcome.state == FaceIdentityCheckState.mismatch ||
-          outcome.state == FaceIdentityCheckState.livenessFailed) {
-        _failedAttempts++;
-        final limit = widget.maxFailedAttempts;
-        if (limit != null && _failedAttempts >= limit) {
-          await Future<void>.delayed(const Duration(seconds: 2));
-          await _finish(approved: false);
-        }
+      var outcome = aiAvailable
+          ? _verificationService.evaluateConsensus(outcomes: outcomes)
+          : FaceIdentityCheckOutcome.aiUnavailable(
+              'Face identity AI is unavailable on this device.',
+            );
+      if (outcome.verified && boundMatched == 0) {
+        outcome = FaceIdentityCheckOutcome.qualityRetry(
+          'Keep your face in view during the whole check and try again.',
+        );
       }
+      await _finishAttempt(
+        outcome,
+        burst: burst,
+        samplesAttempted: attempted,
+        boundFrames: boundReliable,
+        reviewPhoto: reviewPhoto,
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _stage = _CheckStage.ready;
-        _message = 'Identity check could not run: $error';
+        _message = 'The identity check could not run: $error';
       });
     }
   }
 
-  /// Captures one verification sample using the same live-frame cycle
-  /// enrollment relies on: wait for the camera stream to settle on several
-  /// consecutive good-quality frames, then take the photo. Falls back to a
-  /// short retry loop (discarding rejected captures instead of spending one
-  /// of the three independent samples on them) on platforms where live
-  /// streaming isn't supported, e.g. `camera_windows`.
-  Future<FaceEmbeddingPipelineResult?> _captureQualitySample(
-    CameraController controller,
+  Future<FaceIdentityCheckOutcome> _evaluate(
+    Uint8List encoded,
+    bool aiAvailable,
+    OfficialFaceTemplateContext template,
   ) async {
-    await _waitForLiveQualityFrame(controller);
-    for (var attempt = 0; attempt < _maxCaptureRetries; attempt++) {
-      if (!mounted || !controller.value.isInitialized) return null;
-      final XFile file;
-      try {
-        file = await controller.takePicture();
-      } catch (_) {
-        return null;
-      }
-      final sample = await _pipeline.processEncodedImage(
-        await File(file.path).readAsBytes(),
+    final sample = aiAvailable
+        ? await _pipeline.processEncodedImage(encoded)
+        : null;
+    return _verificationService.evaluateSample(
+      aiAvailable: aiAvailable,
+      sample: sample,
+      pipelineFailureReason: _pipeline.lastFailureReason,
+      template: template,
+    );
+  }
+
+  static bool _isReliable(FaceIdentityCheckOutcome outcome) =>
+      outcome.state == FaceIdentityCheckState.verified ||
+      outcome.state == FaceIdentityCheckState.mismatch;
+
+  static int _reliableCount(List<FaceIdentityCheckOutcome> outcomes) =>
+      outcomes.where(_isReliable).length;
+
+  Future<void> _finishAttempt(
+    FaceIdentityCheckOutcome outcome, {
+    required BoundLivenessBurst burst,
+    required int samplesAttempted,
+    required int boundFrames,
+    required Uint8List? reviewPhoto,
+  }) async {
+    final evidenceId = await _recordEvidence(
+      outcome,
+      burst: burst,
+      samplesAttempted: samplesAttempted,
+      boundFrames: boundFrames,
+      reviewPhoto: reviewPhoto,
+    );
+    if (!mounted) return;
+    if (outcome.countsAsFailure) _failedAttempts++;
+    final exhausted =
+        !outcome.verified && _failedAttempts >= widget.maxFailedAttempts;
+    final remaining = widget.maxFailedAttempts - _failedAttempts;
+    final triesLeft = '($remaining ${remaining == 1 ? 'try' : 'tries'} left)';
+    setState(() {
+      _lastOutcome = outcome;
+      _lastEvidenceId = evidenceId;
+      _stage = outcome.verified
+          ? _CheckStage.passed
+          : exhausted
+          ? _CheckStage.exhausted
+          : _CheckStage.ready;
+      _message = switch (outcome.state) {
+        FaceIdentityCheckState.verified => 'Identity confirmed.',
+        _ when exhausted =>
+          'Your identity could not be confirmed. Please contact your '
+              'invigilator. Your attempts have been recorded for review.',
+        FaceIdentityCheckState.mismatch =>
+          'Your face did not match your official Face ID. Make sure your '
+              'face is well lit and fully visible, then try again $triesLeft.',
+        FaceIdentityCheckState.livenessFailed =>
+          'The live check was not completed: ${outcome.reason} Try again '
+              '$triesLeft.',
+        FaceIdentityCheckState.aiUnavailable =>
+          'Face identity AI is unavailable on this device. Please contact '
+              'your invigilator.',
+        FaceIdentityCheckState.qualityRetry ||
+        FaceIdentityCheckState.uncertain =>
+          '${outcome.reason} This try was not counted.',
+      };
+    });
+    if (outcome.verified) {
+      await _speech.speak('Identity confirmed.');
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      await _finish(
+        FaceIdentityCheckResult.passed(
+          evidenceRecordId: evidenceId,
+          templateId: _template?.templateId ?? '',
+        ),
       );
-      if (sample != null) return sample;
-      if (attempt == _maxCaptureRetries - 1) return null;
-      if (!mounted) return null;
-      setState(() {
-        _message = _pipeline.lastFailureReason.isEmpty
-            ? 'Hold still and look directly at the camera.'
-            : _pipeline.lastFailureReason;
-      });
-      await Future<void>.delayed(const Duration(milliseconds: 300));
     }
-    return null;
   }
 
-  /// Streams the live camera preview and waits until several consecutive
-  /// frames pass the same quality gate enrollment uses, before returning so
-  /// the caller can take the still photo. Returns without waiting long on
-  /// platforms/builds where streaming isn't available (the still-capture
-  /// retry loop in [_captureQualitySample] is the fallback quality gate
-  /// there).
-  Future<void> _waitForLiveQualityFrame(CameraController controller) async {
-    _liveConsecutiveGoodFrames = 0;
-    final completer = Completer<bool>();
-    final started = await _liveCaptureEngine.start(
-      controller: controller,
-      onFrame: (landmarks, grade) {
-        if (completer.isCompleted) return;
-        if (!grade.accepted) {
-          _liveConsecutiveGoodFrames = 0;
-          if (mounted) {
-            setState(() {
-              _message = grade.failureReasons.isNotEmpty
-                  ? grade.failureReasons.first
-                  : 'Center your face in the frame and hold still.';
-            });
-          }
-          return;
-        }
-        _liveConsecutiveGoodFrames++;
-        if (_liveConsecutiveGoodFrames >= _liveCaptureStabilityFrames) {
-          completer.complete(true);
-        }
-      },
-    );
-    if (!started) return;
-    await completer.future.timeout(
-      const Duration(seconds: 6),
-      onTimeout: () => false,
-    );
-    await _liveCaptureEngine.stop();
+  Future<String> _recordEvidence(
+    FaceIdentityCheckOutcome outcome, {
+    required BoundLivenessBurst burst,
+    required int samplesAttempted,
+    required int boundFrames,
+    required Uint8List? reviewPhoto,
+  }) async {
+    try {
+      final outbox = await SchoolIdentityServices.instance.outbox();
+      final record = await outbox.record(
+        IdentityEvidenceDraft(
+          kind: widget.kind,
+          studentId: _studentId,
+          examId: widget.examId,
+          attemptId: widget.attemptId,
+          outcome: outcome,
+          samplesAttempted: samplesAttempted,
+          template: _template,
+          liveness: burst.result,
+          boundIdentityFrames: boundFrames,
+          reviewPhotoJpeg: reviewPhoto,
+          policy: <String, Object?>{
+            'match_threshold': _verificationService.matchThreshold,
+            'min_signal_quality': _verificationService.minSignalQuality,
+            'max_failed_attempts': widget.maxFailedAttempts,
+            'failed_attempts_before': _failedAttempts,
+          },
+        ),
+      );
+      unawaited(_flushEvidence(outbox));
+      return record['record_id']?.toString() ?? '';
+    } catch (_) {
+      // Evidence storage problems must not decide the identity result.
+      return '';
+    }
   }
 
-  Future<void> _finish({required bool approved}) async {
+  Future<void> _flushEvidence(IdentityEvidenceOutbox outbox) async {
+    try {
+      await outbox.flush(await SchoolIdentityServices.instance.school());
+    } catch (_) {
+      // Queued records upload on a later check.
+    }
+  }
+
+  Future<void> _finish(FaceIdentityCheckResult result) async {
     if (_leaving || !mounted) return;
     _leaving = true;
-    await _controller?.dispose();
-    _controller = null;
+    final controller = _controller;
+    setState(() => _controller = null);
+    await controller?.dispose();
     if (!mounted) return;
-    Navigator.of(context).pop(approved);
+    Navigator.of(context).pop(result);
   }
+
+  String get _notReadyButtonLabel => switch (_problem) {
+    OfficialIdentityProblem.notSubmitted ||
+    OfficialIdentityProblem.rejected => 'Go back and register Face ID',
+    OfficialIdentityProblem.schoolUnavailable => 'Try again',
+    _ => 'Go back',
+  };
 
   @override
   Widget build(BuildContext context) {
     final ready = _controller?.value.isInitialized ?? false;
+    final canLeave = widget.allowCancel && _stage != _CheckStage.running;
     return PopScope(
-      canPop: widget.allowCancel,
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && canLeave) {
+          _finish(const FaceIdentityCheckResult.cancelled());
+        }
+      },
       child: Scaffold(
         backgroundColor: const Color(0xFF07111F),
         appBar: AppBar(
@@ -351,87 +483,81 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
           leading: widget.allowCancel
               ? IconButton(
                   icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => _finish(approved: false),
+                  onPressed: canLeave
+                      ? () => _finish(const FaceIdentityCheckResult.cancelled())
+                      : null,
                 )
               : null,
         ),
         body: SafeArea(
           child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: Container(
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0B1220),
-                          borderRadius: BorderRadius.circular(20),
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 4 / 3,
+                        child: Container(
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0B1220),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: ready
+                              ? CameraPreview(_controller!)
+                              : Center(
+                                  child: Icon(
+                                    _stage == _CheckStage.notReady
+                                        ? Icons.person_off_outlined
+                                        : Icons.face_retouching_natural,
+                                    color: Colors.white54,
+                                    size: 48,
+                                  ),
+                                ),
                         ),
-                        child: ready
-                            ? CameraPreview(_controller!)
-                            : Center(
-                                child: Icon(
-                                  _stage == _CheckStage.noApprovedIdentity
-                                      ? Icons.person_off_outlined
-                                      : Icons.face_retouching_natural,
-                                  color: Colors.white54,
-                                  size: 48,
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _message,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                height: 1.4,
+                              ),
+                            ),
+                            if (_stage == _CheckStage.ready &&
+                                _lastOutcome == null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'You have ${widget.maxFailedAttempts} tries. '
+                                'Your result is saved on this device and '
+                                'sent to your school as evidence.',
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  height: 1.4,
                                 ),
                               ),
+                            ],
+                            const SizedBox(height: 16),
+                            _primaryAction(ready),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _message,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              height: 1.4,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          if (_stage == _CheckStage.noApprovedIdentity)
-                            FilledButton.icon(
-                              onPressed: () => _finish(approved: false),
-                              icon: const Icon(Icons.arrow_back),
-                              label: const Text('Go back and set up identity'),
-                            )
-                          else
-                            FilledButton.icon(
-                              onPressed: ready && _stage != _CheckStage.running
-                                  ? _runCheck
-                                  : null,
-                              icon: Icon(
-                                _stage == _CheckStage.running
-                                    ? Icons.hourglass_top
-                                    : Icons.verified_user_outlined,
-                              ),
-                              label: Text(
-                                _stage == _CheckStage.running
-                                    ? 'Checking...'
-                                    : _lastOutcome == null
-                                    ? 'Start identity check'
-                                    : 'Try again',
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -439,5 +565,53 @@ class _FaceIdentityCheckViewState extends State<FaceIdentityCheckView> {
         ),
       ),
     );
+  }
+
+  Widget _primaryAction(bool cameraReady) {
+    switch (_stage) {
+      case _CheckStage.notReady:
+        return FilledButton.icon(
+          onPressed: _problem == OfficialIdentityProblem.schoolUnavailable
+              ? _loadTemplate
+              : () => _finish(FaceIdentityCheckResult.notReady(_problem)),
+          icon: Icon(
+            _problem == OfficialIdentityProblem.schoolUnavailable
+                ? Icons.refresh
+                : Icons.arrow_back,
+          ),
+          label: Text(_notReadyButtonLabel),
+        );
+      case _CheckStage.exhausted:
+        return FilledButton.icon(
+          onPressed: () => _finish(
+            FaceIdentityCheckResult.exhausted(
+              evidenceRecordId: _lastEvidenceId,
+            ),
+          ),
+          icon: const Icon(Icons.support_agent),
+          label: const Text('Close'),
+        );
+      case _CheckStage.loadingTemplate:
+      case _CheckStage.ready:
+      case _CheckStage.running:
+      case _CheckStage.passed:
+        return FilledButton.icon(
+          onPressed: cameraReady && _stage == _CheckStage.ready
+              ? _runCheck
+              : null,
+          icon: Icon(
+            _stage == _CheckStage.running
+                ? Icons.hourglass_top
+                : Icons.verified_user_outlined,
+          ),
+          label: Text(
+            _stage == _CheckStage.running
+                ? 'Checking...'
+                : _lastOutcome == null
+                ? 'Start identity check'
+                : 'Try again',
+          ),
+        );
+    }
   }
 }

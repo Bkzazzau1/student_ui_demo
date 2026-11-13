@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../exam_demo/demo_exam_home.dart';
+import 'student_session.dart';
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
@@ -20,7 +21,7 @@ class StudentLoginView extends StatefulWidget {
 }
 
 class _StudentLoginViewState extends State<StudentLoginView> {
-  static const String demoStudentId = 'KSLAS/STD/2026/001';
+  static const String demoStudentId = StudentSession.sampleStudentId;
   static const String demoPassword =
       'demo'
       '123';
@@ -44,6 +45,7 @@ class _StudentLoginViewState extends State<StudentLoginView> {
     setState(() => _signingIn = true);
     await Future<void>.delayed(const Duration(milliseconds: 450));
     if (!mounted) return;
+    StudentSession.signIn(_studentIdController.text);
     setState(() => _signingIn = false);
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const DemoExamHome()),

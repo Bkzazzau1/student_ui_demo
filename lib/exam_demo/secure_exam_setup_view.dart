@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../face_demo/demo_face_id_service.dart';
-import '../face_demo/demo_face_id_view.dart';
+import '../auth/student_session.dart';
 import '../face_demo/face_identity_check_view.dart';
+import '../face_demo/official_face_id_models.dart';
+import '../face_demo/official_face_id_view.dart';
+import '../face_demo/official_identity_session.dart';
 import '../proctoring_demo/audio_system_review_view.dart';
 import '../proctoring_demo/audio_calibration_profile.dart';
 import '../proctoring_demo/edge_ai_runtime_preflight_service.dart';
@@ -16,6 +19,8 @@ import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 import 'exam_start_approval_service.dart';
 import 'exam_lockdown_service.dart';
+import 'exam_question_gate.dart';
+import 'identity_attempt_lock.dart';
 
 const Color _brand = Color(0xFF0F4C81);
 const Color _brandDark = Color(0xFF0B1220);
@@ -45,14 +50,19 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     defaultValue: false,
   );
 
-  final DemoFaceIdService _faceIdService = DemoFaceIdService();
+  final String _studentId = StudentSession.studentId;
+  final IdentityAttemptLock _identityLock = IdentityAttemptLock();
+  final ExamQuestionGate _questionGate = const ExamQuestionGate();
   final AudioCalibrationProfileStore _audioProfileStore =
       AudioCalibrationProfileStore();
   final EdgeAiRuntimePreflightService _aiPreflight =
       EdgeAiRuntimePreflightService();
   final ExamLockdownService _lockdown = const ExamLockdownService();
   late final ExamStartApprovalService _approvalService;
-  late DemoFaceIdSnapshot _faceId;
+  OfficialFaceIdStatus? _officialStatus;
+  String _officialStatusMessage = 'Checking your official Face ID...';
+  IdentityPass? _identityPass;
+  bool _identityLocked = false;
   late String _attemptId;
   bool _roomApproved = false;
   bool _audioApproved = false;
@@ -78,7 +88,11 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
   @override
   void initState() {
     super.initState();
-    _faceId = _faceIdService.load();
+    _identityLocked = _identityLock.isLocked(
+      studentId: _studentId,
+      examId: widget.assessment.id,
+    );
+    if (widget.assessment.graded) unawaited(_loadOfficialStatus());
     _attemptId = 'attempt-${DateTime.now().millisecondsSinceEpoch}';
     _approvalService = ExamStartApprovalService(baseUrl: _baseUrl);
     if (_needsChecks) unawaited(_runAiPreflight());
@@ -91,18 +105,16 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     super.dispose();
   }
 
-  // Enrollment (`_faceId.isComplete`) only proves a Face ID was set up at
-  // some point; it is not evidence the person at this device right now is
-  // that student. `_identityChecked` is the fresh, per-attempt 1:1
-  // comparison and is reset whenever enrollment changes underneath it, so
-  // it can never be satisfied by a stale check against a since-replaced
-  // identity.
-  bool _identityChecked = false;
+  // An approved official Face ID only proves the school accepted the
+  // student's registration photos; it is not evidence the person at this
+  // device right now is that student. `_identityPass` is the fresh,
+  // per-attempt 1:1 check, and the questions are only released with it.
+  bool get _identityChecked => _identityPass != null;
+  bool get _officialApproved => _officialStatus?.hasApprovedFaceId == true;
 
   bool get _needsChecks =>
       widget.assessment.isStrictExam && widget.assessment.remoteProctored;
-  bool get _faceOk =>
-      !widget.assessment.graded || (_faceId.isComplete && _identityChecked);
+  bool get _faceOk => !widget.assessment.graded || _identityChecked;
   bool get _runtimeOk => !_needsChecks || _aiRuntimeResult?.ready == true;
   bool get _roomOk => !_needsChecks || (_roomApproved && _manifestPath != null);
   bool get _audioOk => !_needsChecks || _audioApproved;
@@ -389,20 +401,34 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
         _SetupStepData(
           number: ++number,
           title: 'Identity check — final step',
-          subtitle: !_faceId.isComplete
-              ? 'Set up Face ID before the assessment can begin.'
+          subtitle: _identityLocked
+              ? 'Your identity could not be confirmed. Please contact your invigilator.'
+              : !_officialApproved
+              ? _officialStatusMessage
               : _identityChecked
               ? 'Identity confirmed. Opening the assessment securely...'
-              : 'After confirmation, the assessment opens immediately and cannot be left before submission.',
+              : 'Your face is compared with your official Face ID. The questions open right after it passes.',
           status: _faceOk ? _StepStatus.complete : _StepStatus.pending,
           icon: Icons.verified_user_outlined,
-          actionLabel: !_faceId.isComplete
-              ? 'Set up identity'
+          actionLabel: _identityLocked
+              ? 'Contact invigilator'
+              : _officialStatus == null
+              ? 'Check again'
+              : !_officialApproved
+              ? (_officialStatus!.state == OfficialFaceIdState.pendingApproval
+                    ? 'View Face ID status'
+                    : 'Register Face ID')
               : _identityChecked
               ? 'Opening...'
               : 'Confirm identity and start',
-          onPressed: _readinessConfirmed
-              ? (_faceId.isComplete ? _openIdentityCheck : _openFaceId)
+          onPressed: _identityLocked
+              ? (_sampleInvigilatorEnabled ? _sampleReleaseIdentityLock : null)
+              : _officialStatus == null
+              ? _loadOfficialStatus
+              : !_officialApproved
+              ? _openFaceIdRegistration
+              : _readinessConfirmed
+              ? _openIdentityCheck
               : null,
         ),
       );
@@ -470,56 +496,108 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     });
   }
 
-  /// Opens enrollment. This is only reachable while the student has no
-  /// completed enrollment yet; once enrolled, the "Identity check" step
-  /// routes to [_openIdentityCheck] instead, never back here, so a student
-  /// cannot re-enroll to replace an approved identity from the exam setup
-  /// screen.
-  Future<void> _openFaceId() async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => DemoFaceIdView(
-          onComplete: () => setState(() {
-            _faceId = _faceIdService.load();
-            _identityChecked = false;
-            _clearApproval(
-              'Identity setup changed. Please confirm your identity again.',
-            );
-          }),
-        ),
-      ),
+  Future<void> _loadOfficialStatus() async {
+    setState(() {
+      _officialStatus = null;
+      _officialStatusMessage = 'Checking your official Face ID...';
+    });
+    try {
+      final school = await SchoolIdentityServices.instance.school();
+      final status = await school.fetchStatus(_studentId);
+      if (!mounted) return;
+      setState(() {
+        _officialStatus = status;
+        _officialStatusMessage = switch (status.state) {
+          OfficialFaceIdState.approved => 'Official Face ID approved.',
+          OfficialFaceIdState.pendingApproval =>
+            'Your Face ID is waiting for school approval. You can start once it is approved.',
+          OfficialFaceIdState.rejected =>
+            'Your Face ID was not approved: ${status.lastRejectionReason}. Please register again.',
+          OfficialFaceIdState.notSubmitted =>
+            'Register your Face ID. The school must approve it before you can write exams.',
+        };
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _officialStatus = null;
+        _officialStatusMessage =
+            'Could not reach the school to check your Face ID. Check your connection.';
+      });
+    }
+  }
+
+  /// Opens Face ID registration / status. Registering never changes the
+  /// approved Face ID by itself: a new submission waits for school approval.
+  Future<void> _openFaceIdRegistration() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const OfficialFaceIdView()),
+    );
+    if (!mounted) return;
+    setState(() => _identityPass = null);
+    await _loadOfficialStatus();
+  }
+
+  bool get _sampleInvigilatorEnabled =>
+      kDebugMode || IdentityTrustPolicy.allowSampleSchool;
+
+  /// Testing-only stand-in for the invigilator allowing new tries.
+  Future<void> _sampleReleaseIdentityLock() async {
+    await _identityLock.release(
+      studentId: _studentId,
+      examId: widget.assessment.id,
     );
     if (!mounted) return;
     setState(() {
-      _faceId = _faceIdService.load();
-      _identityChecked = false;
-      _clearApproval(
-        'Identity setup completed. Please confirm your identity before this attempt.',
-      );
+      _identityLocked = false;
+      _approvalMessage = 'Sample invigilator allowed new identity tries.';
     });
   }
 
   /// Runs the fresh, per-attempt 1:1 identity check against the student's
-  /// already-approved template. This never enrolls, never resets, and never
+  /// official Face ID. This never registers, never resets, and never
   /// searches across students — see [FaceIdentityCheckView].
   Future<void> _openIdentityCheck() async {
-    final approved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
+    final result = await Navigator.of(context).push<FaceIdentityCheckResult>(
+      MaterialPageRoute<FaceIdentityCheckResult>(
         builder: (_) => FaceIdentityCheckView(
           examId: widget.assessment.id,
           attemptId: _attemptId,
+          studentId: _studentId,
         ),
       ),
     );
+    if (!mounted || result == null) return;
+    if (result.exhausted) {
+      await _identityLock.lock(
+        studentId: _studentId,
+        examId: widget.assessment.id,
+        evidenceRecordId: result.evidenceRecordId,
+      );
+    }
     if (!mounted) return;
-    final confirmed = approved == true;
     setState(() {
-      _identityChecked = confirmed;
-      _approvalMessage = confirmed
+      _identityLocked = result.exhausted || _identityLocked;
+      _identityPass = result.passed
+          ? IdentityPass(
+              studentId: _studentId,
+              examId: widget.assessment.id,
+              attemptId: _attemptId,
+              evidenceRecordId: result.evidenceRecordId,
+              templateId: result.templateId,
+              verifiedAt: DateTime.now(),
+            )
+          : null;
+      _approvalMessage = result.passed
           ? 'Identity confirmed. Opening the assessment securely...'
+          : result.exhausted
+          ? 'Your identity could not be confirmed. Please contact your invigilator.'
           : 'Identity was not confirmed. Please try again.';
     });
-    if (confirmed) await _finalizeIdentityAndStart();
+    if (result.problem != OfficialIdentityProblem.none) {
+      await _loadOfficialStatus();
+    }
+    if (result.passed) await _finalizeIdentityAndStart();
   }
 
   Future<void> _finalizeIdentityAndStart() async {
@@ -573,7 +651,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     final profile = await Navigator.of(context).push<GazeCalibrationProfileV2>(
       MaterialPageRoute<GazeCalibrationProfileV2>(
         builder: (_) => GazeCalibrationView(
-          studentId: _faceId.studentId,
+          studentId: _studentId,
           examId: widget.assessment.id,
           attemptId: _attemptId,
         ),
@@ -602,7 +680,7 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     final audioProfile = result.audioReady && audioReview != null
         ? await _audioProfileStore.createAndSave(
             result: audioReview,
-            studentId: _faceId.studentId,
+            studentId: _studentId,
             examId: widget.assessment.id,
             attemptId: _attemptId,
           )
@@ -633,13 +711,14 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
     });
     try {
       final result = await _approvalService.requestStartApproval(
-        studentId: _faceId.studentId,
+        studentId: _studentId,
         examId: widget.assessment.id,
         attemptId: _attemptId,
         manifestPath: _manifestPath,
         faceIdReady: _faceOk,
-        faceIdLocked: _faceId.locked,
-        faceEnrollmentId: _faceId.enrollmentId,
+        faceIdLocked: _officialApproved,
+        faceEnrollmentId:
+            _identityPass?.templateId ?? _officialStatus?.activeTemplateId,
         roomScanReady: _roomOk,
         audioReady: _audioOk,
         systemReady: _systemOk,
@@ -744,12 +823,38 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
       }
     }
     if (!mounted) return;
+    final List<DemoQuestion> questions;
+    try {
+      questions = await _questionGate.download(
+        assessment: widget.assessment,
+        studentId: _studentId,
+        attemptId: _attemptId,
+        pass: _identityPass,
+      );
+    } on ExamQuestionsLocked catch (locked) {
+      if (!mounted) return;
+      setState(() {
+        _identityPass = null;
+        _approvalMessage = locked.message;
+      });
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _approvalMessage =
+            'The questions could not be downloaded. Check your connection and try again.',
+      );
+      return;
+    }
+    if (!mounted) return;
     Navigator.of(context).pushReplacement<DemoExamResult, DemoExamResult>(
       MaterialPageRoute<DemoExamResult>(
         builder: (_) => DemoExamAttemptView(
           assessment: widget.assessment,
           proctoringManifestPath: _manifestPath,
           attemptId: _attemptId,
+          questions: questions,
+          studentId: _studentId,
           examStartToken:
               _startToken ??
               (_allowExamOverride ? 'dev_override_$_attemptId' : ''),

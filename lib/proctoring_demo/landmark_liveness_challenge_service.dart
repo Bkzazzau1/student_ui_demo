@@ -41,6 +41,10 @@ class LivenessChallengeSession {
 
   int get observationCount => _observations.length;
 
+  /// The most recent usable observation, if any.
+  LivenessObservation? get lastObservation =>
+      _observations.isEmpty ? null : _observations.last;
+
   LivenessChallengeResult? addLandmarkPayload(
     Map<String, Object?> payload, {
     required int timestampMs,

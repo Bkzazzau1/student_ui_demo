@@ -3,9 +3,13 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../auth/student_session.dart';
 
 import '../face_demo/face_identity_check_view.dart';
+import '../face_demo/identity_evidence.dart';
+import '../face_demo/official_identity_session.dart';
 import '../proctoring_demo/companion_cam_panel.dart';
 import '../proctoring_demo/live_exam_monitor.dart';
 import '../proctoring_demo/live_proctoring_event_service.dart';
@@ -17,7 +21,6 @@ import 'assessment_device_gate.dart';
 import 'assessment_monitoring_profile.dart';
 import 'demo_exam_models.dart';
 import 'demo_exam_result_view.dart';
-import 'demo_exam_service.dart';
 import 'exam_lockdown_service.dart';
 
 const Color _brand = Color(0xFF0F4C81);
@@ -38,8 +41,9 @@ class DemoExamAttemptView extends StatefulWidget {
     required this.proctoringManifestPath,
     required this.agentDecision,
     required this.attemptId,
+    required this.questions,
     this.examStartToken = '',
-    this.studentId = 'KASU/STU/2026/001',
+    this.studentId,
   });
 
   final DemoAssessment assessment;
@@ -47,7 +51,12 @@ class DemoExamAttemptView extends StatefulWidget {
   final String agentDecision;
   final String attemptId;
   final String examStartToken;
-  final String studentId;
+
+  /// Questions released by the exam question gate after identity passed.
+  final List<DemoQuestion> questions;
+
+  /// Defaults to the signed-in student.
+  final String? studentId;
 
   @override
   State<DemoExamAttemptView> createState() => _DemoExamAttemptViewState();
@@ -80,6 +89,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   final Map<String, String> _answers = <String, String>{};
   final ExamLockdownService _lockdown = const ExamLockdownService();
 
+  late final String _studentId = widget.studentId ?? StudentSession.studentId;
   late final DateTime _startedAt;
   late final List<DemoQuestion> _questions;
   late final AssessmentMonitoringProfile _monitoringProfile;
@@ -91,6 +101,11 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   bool _submitting = false;
   bool _airBoardOpen = false;
   bool _identityRecheckActive = false;
+
+  /// Set when every recheck try failed. The exam stays paused and waits for
+  /// the invigilator; it is never submitted automatically for this.
+  bool _awaitingInvigilator = false;
+  bool _identityCheckRouteOpen = false;
   int _monitorEpoch = 0;
   String _pauseMessage = '';
 
@@ -99,7 +114,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _startedAt = DateTime.now();
-    _questions = DemoExamService.questionsFor(widget.assessment);
+    _questions = List<DemoQuestion>.unmodifiable(widget.questions);
     _monitoringProfile = AssessmentMonitoringProfile.forAssessment(
       widget.assessment,
     );
@@ -283,7 +298,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
               ],
               const SizedBox(height: 14),
               _paused
-                  ? _PausedQuestionLockCard(message: _pauseMessage)
+                  ? _pausedCard()
                   : _QuestionWorkArea(
                       question: question,
                       value: _answers[question.id] ?? '',
@@ -360,7 +375,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
           ),
         const SizedBox(height: 12),
         _paused
-            ? _PausedQuestionLockCard(message: _pauseMessage)
+            ? _pausedCard()
             : _QuestionCard(
                 question: question,
                 value: _answers[question.id] ?? '',
@@ -401,7 +416,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
         const SizedBox(height: 12),
         LiveExamMonitor(
           key: ValueKey<String>('identity-monitor-$_monitorEpoch'),
-          studentId: widget.studentId,
+          studentId: _studentId,
           examId: widget.assessment.id,
           attemptId: widget.attemptId,
           onCriticalEvent: _handleCriticalMonitoringEvent,
@@ -418,7 +433,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       panels.addAll([
         const SizedBox(height: 12),
         LiveSystemSecurityMonitor(
-          studentId: widget.studentId,
+          studentId: _studentId,
           examId: widget.assessment.id,
           attemptId: widget.attemptId,
           onCriticalEvent: _handleCriticalMonitoringEvent,
@@ -432,7 +447,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       panels.addAll([
         const SizedBox(height: 12),
         ReviewClipSampler(
-          studentId: widget.studentId,
+          studentId: _studentId,
           examId: widget.assessment.id,
           attemptId: widget.attemptId,
           examDurationSeconds: widget.assessment.durationMinutes * 60,
@@ -446,7 +461,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
       panels.addAll([
         const SizedBox(height: 12),
         CompanionCamPanel(
-          studentId: widget.studentId,
+          studentId: _studentId,
           examId: widget.assessment.id,
           attemptId: widget.attemptId,
           onCompanionLost: _handleCriticalMonitoringEvent,
@@ -519,7 +534,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
 
     await _events.send(
       LiveProctoringEvent(
-        studentId: widget.studentId,
+        studentId: _studentId,
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
         eventType: eventType,
@@ -600,40 +615,93 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   }
 
   Future<void> _beginExplicitIdentityRecheck() async {
-    if (!mounted || _identityRecheckActive || _submitting) return;
+    if (!mounted || _identityCheckRouteOpen || _submitting) return;
+    _identityCheckRouteOpen = true;
     setState(() {
       _paused = true;
       _identityRecheckActive = true;
+      _awaitingInvigilator = false;
       _pauseMessage =
-          'We need to confirm your identity. Your answers are saved and your timer is paused.';
+          'We need to confirm your identity. Your answers are saved and your '
+          'timer is paused.';
     });
 
     // Removing the silent monitor releases its exclusive camera lease before
     // the visible liveness challenge opens.
     await Future<void>.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
-    final approved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => FaceIdentityCheckView(
-          examId: widget.assessment.id,
-          attemptId: widget.attemptId,
-          allowCancel: false,
-          maxFailedAttempts: 2,
-        ),
-      ),
-    );
+    final result = await Navigator.of(context)
+        .push<FaceIdentityCheckResult>(
+          MaterialPageRoute<FaceIdentityCheckResult>(
+            builder: (_) => FaceIdentityCheckView(
+              examId: widget.assessment.id,
+              attemptId: widget.attemptId,
+              studentId: _studentId,
+              kind: IdentityCheckKind.pauseRecheck,
+              allowCancel: false,
+            ),
+          ),
+        )
+        .whenComplete(() => _identityCheckRouteOpen = false);
     if (!mounted) return;
-    if (approved == true) {
-      setState(() {
-        _paused = false;
-        _identityRecheckActive = false;
-        _pauseMessage = '';
-        _monitorEpoch++;
-      });
-      _startTimer();
+    if (result?.passed == true) {
+      _resumeAfterIdentity();
       return;
     }
-    await _submit(autoSubmitted: true, force: true);
+    // Not a misconduct decision: the evidence goes to the school and a
+    // person decides. The exam stays paused with answers saved.
+    setState(() {
+      _awaitingInvigilator = true;
+      _pauseMessage =
+          'Your identity could not be confirmed. Your exam is paused and your '
+          'answers are saved. Please contact your invigilator.';
+    });
+    unawaited(
+      _sendRuntimeSessionEvent(
+        eventType: 'identity_recheck_failed_awaiting_invigilator',
+        severity: 'high',
+        message: 'Identity recheck failed. Waiting for the invigilator.',
+        metadata: <String, Object?>{
+          'evidence_record_id': result?.evidenceRecordId ?? '',
+        },
+      ),
+    );
+  }
+
+  void _resumeAfterIdentity() {
+    setState(() {
+      _paused = false;
+      _identityRecheckActive = false;
+      _awaitingInvigilator = false;
+      _pauseMessage = '';
+      _monitorEpoch++;
+    });
+    _startTimer();
+  }
+
+  /// Testing-only stand-in for the invigilator releasing a paused exam from
+  /// the school system. Hidden in release builds unless the sample school is
+  /// explicitly enabled.
+  bool get _showSampleInvigilatorRelease =>
+      _awaitingInvigilator &&
+      (kDebugMode || IdentityTrustPolicy.allowSampleSchool);
+
+  Widget _pausedCard() {
+    final actions = <Widget>[
+      if (_awaitingInvigilator)
+        FilledButton.icon(
+          onPressed: _beginExplicitIdentityRecheck,
+          icon: const Icon(Icons.verified_user_outlined),
+          label: const Text('Try identity check again'),
+        ),
+      if (_showSampleInvigilatorRelease)
+        OutlinedButton.icon(
+          onPressed: _resumeAfterIdentity,
+          icon: const Icon(Icons.admin_panel_settings_outlined),
+          label: const Text('Sample invigilator: resume exam (testing only)'),
+        ),
+    ];
+    return _PausedQuestionLockCard(message: _pauseMessage, actions: actions);
   }
 
   Future<void> _submit({
@@ -709,7 +777,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   }) {
     return _events.send(
       LiveProctoringEvent(
-        studentId: widget.studentId,
+        studentId: _studentId,
         examId: widget.assessment.id,
         attemptId: widget.attemptId,
         eventType: autoSubmitted
@@ -1912,9 +1980,13 @@ class _QuestionListLockedCard extends StatelessWidget {
 }
 
 class _PausedQuestionLockCard extends StatelessWidget {
-  const _PausedQuestionLockCard({required this.message});
+  const _PausedQuestionLockCard({
+    required this.message,
+    this.actions = const <Widget>[],
+  });
 
   final String message;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -1948,6 +2020,10 @@ class _PausedQuestionLockCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(spacing: 12, runSpacing: 12, children: actions),
+          ],
         ],
       ),
     );

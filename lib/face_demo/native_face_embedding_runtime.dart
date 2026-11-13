@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 
 class FaceEmbeddingSample {
   const FaceEmbeddingSample({
@@ -23,8 +22,13 @@ class NativeFaceEmbeddingRuntime {
       'assets/models/face_embedding_sface/face_recognition_sface_2021dec.onnx';
   static const String modelSha256 =
       '0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79';
+
+  /// Describes exactly how a face is turned into the 112x112 model input.
+  /// Official templates record this value and are only matched against
+  /// probes produced the same way, so it must change whenever alignment or
+  /// pixel normalization changes.
   static const String preprocessingVersion =
-      'sface-five-point-similarity-bgr-minus-127.5-div-128-v1';
+      'sface-two-point-eye-similarity-nearest-bgr-minus-127.5-div-128-v1';
 
   /// Platforms with a real native SFace + protected-storage implementation.
   /// iOS/macOS scaffolding exists in source but is unverified (no Xcode/Mac
@@ -32,7 +36,8 @@ class NativeFaceEmbeddingRuntime {
   /// yet: enabling it before it is verified would risk a native channel
   /// call throwing instead of failing safely, exactly the "AI unavailable"
   /// path this runtime otherwise handles cleanly.
-  static bool get _supportedPlatform => Platform.isWindows || Platform.isAndroid;
+  static bool get _supportedPlatform =>
+      Platform.isWindows || Platform.isAndroid;
 
   Future<bool> initialize() async {
     if (!_supportedPlatform) return false;
@@ -82,71 +87,34 @@ class NativeFaceEmbeddingRuntime {
     );
   }
 
-  Future<bool> storeProtectedTemplate({
-    required String studentId,
-    required String templateJson,
+  /// Encrypts [value] to [path] with the platform's protected storage
+  /// (Windows DPAPI, Android Keystore AES-GCM). [entropy] binds the value to
+  /// its purpose and location; the same entropy is needed to read it back.
+  Future<bool> storeProtectedString({
+    required String path,
+    required String value,
+    required String entropy,
   }) async {
-    if (!_supportedPlatform || templateJson.isEmpty) return false;
-    final directory = await _identityDirectory();
-    if (directory == null) return false;
-    await directory.create(recursive: true);
-    final identityKey = sha256.convert(studentId.codeUnits).toString();
-    final path = '${directory.path}${Platform.pathSeparator}$identityKey.dpapi';
-    return await _channel
-            .invokeMethod<bool>('storeProtectedTemplate', <String, Object?>{
-              'path': path,
-              'template_json': templateJson,
-              'entropy': '$modelId:$modelSha256:$studentId',
-            }) ??
+    if (!_supportedPlatform || value.isEmpty || entropy.isEmpty) return false;
+    return await _channel.invokeMethod<bool>(
+          'storeProtectedTemplate',
+          <String, Object?>{
+            'path': path,
+            'template_json': value,
+            'entropy': entropy,
+          },
+        ) ??
         false;
   }
 
-  Future<String?> loadProtectedTemplate({required String studentId}) async {
-    if (!_supportedPlatform) return null;
-    final directory = await _identityDirectory();
-    if (directory == null) return null;
-    final identityKey = sha256.convert(studentId.codeUnits).toString();
-    final path = '${directory.path}${Platform.pathSeparator}$identityKey.dpapi';
+  Future<String?> loadProtectedString({
+    required String path,
+    required String entropy,
+  }) async {
+    if (!_supportedPlatform || entropy.isEmpty) return null;
     return _channel.invokeMethod<String>(
       'loadProtectedTemplate',
-      <String, Object?>{
-        'path': path,
-        'entropy': '$modelId:$modelSha256:$studentId',
-      },
+      <String, Object?>{'path': path, 'entropy': entropy},
     );
-  }
-
-  Future<bool> clearProtectedTemplate({required String studentId}) async {
-    if (!_supportedPlatform) return false;
-    final directory = await _identityDirectory();
-    if (directory == null) return false;
-    final identityKey = sha256.convert(studentId.codeUnits).toString();
-    final file = File(
-      '${directory.path}${Platform.pathSeparator}$identityKey.dpapi',
-    );
-    if (!await file.exists()) return true;
-    await file.delete();
-    return !await file.exists();
-  }
-
-  /// Resolves the per-platform private directory the protected template
-  /// lives in. Windows keeps its existing `%LOCALAPPDATA%\KSLAS\identity`
-  /// path unchanged; Android uses the app's private, sandboxed support
-  /// directory (nothing else on the device can read this without root).
-  Future<Directory?> _identityDirectory() async {
-    if (Platform.isWindows) {
-      final root = Platform.environment['LOCALAPPDATA'];
-      if (root == null || root.isEmpty) return null;
-      return Directory(
-        '$root${Platform.pathSeparator}KSLAS${Platform.pathSeparator}identity',
-      );
-    }
-    if (Platform.isAndroid) {
-      final support = await getApplicationSupportDirectory();
-      return Directory(
-        '${support.path}${Platform.pathSeparator}identity',
-      );
-    }
-    return null;
   }
 }

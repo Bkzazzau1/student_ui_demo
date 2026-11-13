@@ -1,0 +1,81 @@
+name: Official Face ID
+
+on:
+  pull_request:
+    paths:
+      - 'lib/auth/**'
+      - 'lib/face_demo/**'
+      - 'lib/exam_demo/**'
+      - 'lib/proctoring_demo/live_exam_monitor.dart'
+      - 'lib/proctoring_demo/camera_image_codec.dart'
+      - 'lib/proctoring_demo/landmark_liveness_challenge_service.dart'
+      - 'lib/rust/**'
+      - 'native/brain_core/src/api/official_face_id.rs'
+      - 'native/brain_core/tests/official_face_id_tests.rs'
+      - 'native/brain_core/Cargo.toml'
+      - 'test/support/official_face_id_fixtures.dart'
+      - 'test/*identity*_test.dart'
+      - 'test/exam_question_gate_test.dart'
+      - 'test/local_sample_school_identity_service_test.dart'
+      - '.github/workflows/identity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  identity-tests:
+    name: Official Face ID tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run official template Rust tests
+        run: cargo test --manifest-path native/brain_core/Cargo.toml --test official_face_id_tests
+
+      # The Dart tests call the signing/verification code through Flutter
+      # Rust Bridge, which loads native/brain_core/target/release.
+      - name: Build brain_core for Dart tests
+        run: cargo build --release --manifest-path native/brain_core/Cargo.toml
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze identity code
+        run: >-
+          flutter analyze
+          lib/auth
+          lib/face_demo
+          lib/exam_demo
+          lib/proctoring_demo/live_exam_monitor.dart
+          lib/proctoring_demo/camera_image_codec.dart
+          test/support
+          test/face_identity_verification_service_test.dart
+          test/local_sample_school_identity_service_test.dart
+          test/identity_evidence_outbox_test.dart
+          test/in_exam_identity_checker_test.dart
+          test/continuous_identity_policy_test.dart
+          test/exam_question_gate_test.dart
+
+      - name: Run identity tests
+        run: >-
+          flutter test
+          test/face_identity_verification_service_test.dart
+          test/local_sample_school_identity_service_test.dart
+          test/identity_evidence_outbox_test.dart
+          test/in_exam_identity_checker_test.dart
+          test/continuous_identity_policy_test.dart
+          test/exam_question_gate_test.dart
+          test/face_identity_quality_test.dart
+          test/face_identity_landmark_matrix_test.dart
+          test/face_identity_person_gate_test.dart
+          test/widget_test.dart
