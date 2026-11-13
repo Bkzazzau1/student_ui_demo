@@ -50,9 +50,11 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      # Infos are not fatal: newer stable Flutter reports the whole app's
+      # material.dart import as deprecated. Warnings and errors still fail.
       - name: Analyze identity code
         run: >-
-          flutter analyze
+          flutter analyze --no-fatal-infos
           lib/auth
           lib/face_demo
           lib/exam_demo
