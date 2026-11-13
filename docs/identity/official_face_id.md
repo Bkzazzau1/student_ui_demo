@@ -55,7 +55,7 @@ face result; a person decides.
 
 | Rule | Value | Where |
 |---|---|---|
-| Match threshold | 0.55 (not yet calibrated) | `FaceIdentityVerificationService` |
+| Match threshold | 0.40, provisional (LFW benchmark) until the volunteer study | `FaceIdentityVerificationService` |
 | Minimum sample quality | 0.65 | same |
 | Samples per pre-exam try | up to 3 reliable, a majority of at least 2 must agree | `FaceIdentityCheckView` |
 | A pass needs | at least 1 matching frame from inside the liveness challenge | same |
@@ -146,8 +146,9 @@ Test flow:
 
 ## Known limits and next steps
 
-- **Thresholds are not calibrated.** 0.55 and 0.65 are conservative guesses.
-  They must be set from a volunteer study with genuine and impostor pairs, on
+- **Thresholds are provisional.** 0.40 comes from a public benchmark
+  (`face_pipeline_benchmark.md`), and 0.65 minimum quality is a guess. Both
+  must be set by the volunteer study (`volunteer_calibration_protocol.md`) on
   the target laptops and tablets.
 - **Liveness is challenge/motion based.** It stops printed photos and
   "liveness then photo" swaps. A screen replay of a pre-recorded video of the
