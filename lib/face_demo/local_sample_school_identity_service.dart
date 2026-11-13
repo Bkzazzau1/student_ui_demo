@@ -274,6 +274,86 @@ class LocalSampleSchoolIdentityService implements SchoolIdentityService {
       );
     }
     final submission = OfficialFaceIdSubmission.fromJson(json);
+    final built = await _buildAndStoreTemplate(
+      submission,
+      reviewer: reviewer,
+      checkDeviceAgreement: true,
+    );
+    if (!built.approved) return built;
+    final templateId = built.templateId!;
+    final now = _clock().toUtc();
+
+    final record = await _studentRecord(submission.studentId);
+    final previous = record['active_submission_id']?.toString() ?? '';
+    if (previous.isNotEmpty && previous != submissionId) {
+      await _setReview(previous, 'superseded', 'replaced by $submissionId');
+    }
+    record['active_template_id'] = templateId;
+    record['active_submission_id'] = submissionId;
+    record['active_approved_at'] = now.toIso8601String();
+    if (record['pending_submission_id'] == submissionId) {
+      record.remove('pending_submission_id');
+      record.remove('pending_submitted_at');
+    }
+    record.remove('last_rejection_reason');
+    record.remove('last_rejected_at');
+    _appendHistory(record, 'approved', submissionId, now, by: reviewer);
+    await _writeJson(_studentPath(submission.studentId), record);
+    await _setReview(submissionId, 'approved', '', reviewer: reviewer);
+    return built;
+  }
+
+  /// Model-upgrade path: rebuilds every active template from its stored,
+  /// already-approved photos with the face model and preprocessing this
+  /// build uses. Students do not register again. Returns how many templates
+  /// were rebuilt.
+  Future<int> rebuildActiveTemplates({
+    String reviewer = 'sample-school-model-upgrade',
+  }) async {
+    var rebuilt = 0;
+    for (final path in await _store.list('students')) {
+      final record = await _readJson(path);
+      final submissionId = record?['active_submission_id']?.toString() ?? '';
+      if (record == null || submissionId.isEmpty) continue;
+      final json = await _readJson(_submissionPath(submissionId));
+      if (json == null) continue;
+      final submission = OfficialFaceIdSubmission.fromJson(json);
+      final built = await _buildAndStoreTemplate(
+        submission,
+        reviewer: reviewer,
+        // The device embeddings were made with the previous model or
+        // preprocessing, so they cannot be compared; the photos were
+        // approved by staff when they were submitted.
+        checkDeviceAgreement: false,
+      );
+      if (!built.approved) continue;
+      final now = _clock().toUtc();
+      record['active_template_id'] = built.templateId;
+      _appendHistory(
+        record,
+        'rebuilt_for_model',
+        submissionId,
+        now,
+        by: reviewer,
+      );
+      await _writeJson(path, record);
+      rebuilt++;
+    }
+    return rebuilt;
+  }
+
+  /// Rebuilds references from the photos with the current pipeline, signs
+  /// the template, and stores it as the student's active template.
+  Future<SampleSchoolApprovalResult> _buildAndStoreTemplate(
+    OfficialFaceIdSubmission submission, {
+    required String reviewer,
+    required bool checkDeviceAgreement,
+  }) async {
+    final sameModel =
+        submission.modelId == OfficialFaceIdModel.modelId &&
+        submission.modelSha256 == OfficialFaceIdModel.modelSha256 &&
+        submission.preprocessingVersion ==
+            OfficialFaceIdModel.preprocessingVersion;
     final references = <List<double>>[];
     final labels = <String>[];
     var qualityTotal = 0.0;
@@ -282,7 +362,9 @@ class LocalSampleSchoolIdentityService implements SchoolIdentityService {
       if (!rebuilt.usable || rebuilt.quality < minimumReferenceQuality) {
         continue;
       }
-      if (photo.deviceEmbedding.isNotEmpty &&
+      if (checkDeviceAgreement &&
+          sameModel &&
+          photo.deviceEmbedding.isNotEmpty &&
           _cosine(photo.deviceEmbedding, rebuilt.embedding) <
               deviceAgreementThreshold) {
         return SampleSchoolApprovalResult._(
@@ -317,9 +399,9 @@ class LocalSampleSchoolIdentityService implements SchoolIdentityService {
         institutionId: institutionId,
         studentId: submission.studentId,
         submissionId: submission.submissionId,
-        modelId: submission.modelId,
-        modelSha256: submission.modelSha256,
-        preprocessingVersion: submission.preprocessingVersion,
+        modelId: OfficialFaceIdModel.modelId,
+        modelSha256: OfficialFaceIdModel.modelSha256,
+        preprocessingVersion: OfficialFaceIdModel.preprocessingVersion,
         references: references
             .map((reference) => Float32List.fromList(reference))
             .toList(growable: false),
@@ -344,24 +426,6 @@ class LocalSampleSchoolIdentityService implements SchoolIdentityService {
         message: 'The approved template could not be stored securely.',
       );
     }
-
-    final record = await _studentRecord(submission.studentId);
-    final previous = record['active_submission_id']?.toString() ?? '';
-    if (previous.isNotEmpty && previous != submissionId) {
-      await _setReview(previous, 'superseded', 'replaced by $submissionId');
-    }
-    record['active_template_id'] = templateId;
-    record['active_submission_id'] = submissionId;
-    record['active_approved_at'] = now.toIso8601String();
-    if (record['pending_submission_id'] == submissionId) {
-      record.remove('pending_submission_id');
-      record.remove('pending_submitted_at');
-    }
-    record.remove('last_rejection_reason');
-    record.remove('last_rejected_at');
-    _appendHistory(record, 'approved', submissionId, now, by: reviewer);
-    await _writeJson(_studentPath(submission.studentId), record);
-    await _setReview(submissionId, 'approved', '', reviewer: reviewer);
     return SampleSchoolApprovalResult._(
       approved: true,
       templateId: templateId,

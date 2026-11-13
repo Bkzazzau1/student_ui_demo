@@ -33,6 +33,7 @@ flutter:
     - assets/models/
     - assets/models/face_landmarker/
     - assets/models/face_landmarker_windows/
+    - assets/models/face_detection_yunet/
     - assets/models/face_embedding_sface/
     - assets/models/optimized_vision_runtime/
     - assets/models/yolo_exam_review/

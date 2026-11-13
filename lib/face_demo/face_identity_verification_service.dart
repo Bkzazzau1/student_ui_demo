@@ -136,15 +136,18 @@ class OfficialFaceTemplateContext {
 /// it", nothing more.
 class FaceIdentityVerificationService {
   const FaceIdentityVerificationService({
-    this.matchThreshold = 0.55,
+    this.matchThreshold = 0.40,
     this.minSignalQuality = 0.65,
   });
 
-  /// The public SFace benchmark threshold (0.363) is intentionally not used
-  /// as an exam-security operating point. This higher threshold prioritizes
-  /// rejecting impostors; multi-sample consensus limits the resulting
-  /// inconvenience to the real student. It is NOT yet calibrated on real
-  /// students; see docs/identity/official_face_id.md.
+  /// PROVISIONAL until the volunteer study
+  /// (docs/identity/volunteer_calibration_protocol.md) sets it from real
+  /// students on the real devices. On 6,000 LFW pairs, including simulated
+  /// laptop-webcam framing, the single-photo threshold for one false accept
+  /// in 1,000 was at most 0.365; 0.40 accepted none of 9,000 different-person
+  /// pairs and rejected 2-2.5% of same-person pairs, before the two-best-
+  /// references score and the two-of-three consensus reduce that further.
+  /// See docs/identity/face_pipeline_benchmark.md.
   final double matchThreshold;
   final double minSignalQuality;
 

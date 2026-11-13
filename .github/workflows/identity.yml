@@ -13,6 +13,10 @@ on:
       - 'native/brain_core/src/api/official_face_id.rs'
       - 'native/brain_core/tests/official_face_id_tests.rs'
       - 'native/brain_core/Cargo.toml'
+      - 'lib/proctoring_demo/native_face_landmarker_runtime.dart'
+      - 'ai_runtime/face_identity_reference.py'
+      - 'ai_runtime/tests/fixtures/face_alignment_golden.json'
+      - 'test/face_alignment_test.dart'
       - 'test/support/official_face_id_fixtures.dart'
       - 'test/*identity*_test.dart'
       - 'test/exam_question_gate_test.dart'
@@ -67,6 +71,7 @@ jobs:
           test/in_exam_identity_checker_test.dart
           test/continuous_identity_policy_test.dart
           test/exam_question_gate_test.dart
+          test/face_alignment_test.dart
 
       - name: Run identity tests
         run: >-
@@ -77,6 +82,7 @@ jobs:
           test/in_exam_identity_checker_test.dart
           test/continuous_identity_policy_test.dart
           test/exam_question_gate_test.dart
+          test/face_alignment_test.dart
           test/face_identity_quality_test.dart
           test/face_identity_landmark_matrix_test.dart
           test/face_identity_person_gate_test.dart

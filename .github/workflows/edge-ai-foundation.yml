@@ -54,6 +54,12 @@ jobs:
       - name: Exercise synthetic ONNX graphs and tensor tooling
         run: python -m unittest ai_runtime.tests.test_e1_ml_numerical -v
 
+      - name: Check the face identity reference pipeline and calibration maths
+        run: >-
+          python -m unittest -v
+          ai_runtime.tests.test_face_identity_reference
+          ai_runtime.tests.test_face_identity_calibration
+
   rust-format:
     name: Rust formatting
     runs-on: ubuntu-latest

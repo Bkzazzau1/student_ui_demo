@@ -25,6 +25,8 @@ class NativeFaceLandmarkerRuntime {
       (Platform.isWindows
           ? 'assets/models/face_landmarker_windows/face_landmarks.onnx'
           : 'assets/models/face_landmarker/face_landmarker.task');
+  static const String detectorAssetPath =
+      'assets/models/face_detection_yunet/face_detection_yunet_2023mar.onnx';
   bool _ready = false;
   bool _failed = false;
   String? _runtimeModelPath;
@@ -50,10 +52,19 @@ class NativeFaceLandmarkerRuntime {
         modelBytes.buffer.asUint8List(),
         flush: true,
       );
-      final ok = await _channel.invokeMethod<bool>(
-        'initialize',
-        <String, Object?>{'model_path': modelFile.path},
-      );
+      final args = <String, Object?>{'model_path': modelFile.path};
+      if (Platform.isWindows) {
+        // The Windows face mesh needs a face-centred crop; YuNet finds the
+        // face first (MediaPipe Tasks does this itself on Android).
+        final detectorBytes = await rootBundle.load(detectorAssetPath);
+        final detectorFile = File('${modelDir.path}/face_detector_yunet.onnx');
+        await detectorFile.writeAsBytes(
+          detectorBytes.buffer.asUint8List(),
+          flush: true,
+        );
+        args['detector_model_path'] = detectorFile.path;
+      }
+      final ok = await _channel.invokeMethod<bool>('initialize', args);
       _ready = ok == true;
       _failed = !_ready;
       _runtimeModelPath = modelFile.path;

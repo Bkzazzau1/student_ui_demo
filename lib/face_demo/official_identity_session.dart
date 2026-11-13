@@ -202,12 +202,18 @@ class OfficialIdentitySession {
         trustedKeysJson: keys,
       );
       if (!verified.valid) {
+        final outdated =
+            verified.reason.contains('face model') ||
+            verified.reason.contains('face alignment');
         return OfficialIdentityLoadResult(
           problem: OfficialIdentityProblem.templateInvalid,
           status: status,
-          message:
-              'Your official Face ID could not be checked on this device '
-              '(${verified.reason}). Please contact the exam office.',
+          message: outdated
+              ? 'Your Face ID was made for an older version of the face AI. '
+                    'The school needs to update it from your approved photos; '
+                    'please contact the exam office.'
+              : 'Your official Face ID could not be checked on this device '
+                    '(${verified.reason}). Please contact the exam office.',
         );
       }
       final context = OfficialFaceTemplateContext(

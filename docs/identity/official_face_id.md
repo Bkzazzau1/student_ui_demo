@@ -55,7 +55,7 @@ face result; a person decides.
 
 | Rule | Value | Where |
 |---|---|---|
-| Match threshold | 0.55 (not yet calibrated) | `FaceIdentityVerificationService` |
+| Match threshold | 0.40, provisional (LFW benchmark) until the volunteer study | `FaceIdentityVerificationService` |
 | Minimum sample quality | 0.65 | same |
 | Samples per pre-exam try | up to 3 reliable, a majority of at least 2 must agree | `FaceIdentityCheckView` |
 | A pass needs | at least 1 matching frame from inside the liveness challenge | same |
@@ -146,8 +146,9 @@ Test flow:
 
 ## Known limits and next steps
 
-- **Thresholds are not calibrated.** 0.55 and 0.65 are conservative guesses.
-  They must be set from a volunteer study with genuine and impostor pairs, on
+- **Thresholds are provisional.** 0.40 comes from a public benchmark
+  (`face_pipeline_benchmark.md`), and 0.65 minimum quality is a guess. Both
+  must be set by the volunteer study (`volunteer_calibration_protocol.md`) on
   the target laptops and tablets.
 - **Liveness is challenge/motion based.** It stops printed photos and
   "liveness then photo" swaps. A screen replay of a pre-recorded video of the
@@ -155,10 +156,17 @@ Test flow:
   presentation-attack model is future work.
 - **Passive in-exam liveness** is limited to frozen-frame detection. The
   pause recheck carries the full liveness challenge.
-- **Alignment** currently uses the two eye points with nearest-neighbour
-  sampling (honestly named in `preprocessingVersion`). Five-point alignment
-  should improve accuracy; changing it changes the preprocessing version, so
-  the school must rebuild templates from the stored photos.
+- **Face pipeline (`sface-5pt-ls-bilinear-rgb255-v2`).** On Windows, YuNet
+  finds the face, the face mesh runs on a crop around it, five points are
+  aligned with a least-squares similarity, and SFace receives raw RGB.
+  Android uses MediaPipe's own face detector. The previous pipeline accepted
+  almost anyone; see `face_pipeline_benchmark.md`. Templates made with
+  earlier preprocessing no longer verify; the school rebuilds them from the
+  stored photos (**Sample school admin → Rebuild approved Face IDs**).
+- **Android native library** is committed prebuilt
+  (`android/app/src/main/jniLibs/arm64-v8a/libbrain_core.so`). Rebuild it after
+  any Rust change, or the app fails at startup; see
+  `docs/native_android_rust_library.md`.
 - **Sample-only stand-ins:** the invigilator release buttons, and the
   question gate's local check of the pass, are stand-ins for the school
   system.

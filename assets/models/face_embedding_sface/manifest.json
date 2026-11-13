@@ -5,7 +5,7 @@
   "source": "OpenCV Zoo face_recognition_sface_2021dec.onnx",
   "license": "Apache-2.0",
   "input": "aligned RGB face, 112x112",
-  "preprocessing_version": "sface-bgr-minus-127.5-div-128-v1",
+  "preprocessing_version": "sface-5pt-ls-bilinear-rgb255-v2",
   "embedding_dimension": 128,
   "production_enforcement": false
 }
