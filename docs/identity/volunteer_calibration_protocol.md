@@ -23,7 +23,8 @@ sets the number the app enforces.
   - skin tones, women and men, ages;
   - glasses, headscarves and hijabs, beards and make-up.
   - Siblings or look-alikes are especially useful, if they agree to take part.
-- **Everyone signs a consent form first.** It says that:
+- **Everyone signs the consent form first** (`volunteer_study_consent.md`,
+  approved by the data protection officer). It says that:
   - the photos are used only for this study;
   - they are stored encrypted and never shared;
   - they are deleted within 30 days of the final report.
@@ -33,45 +34,78 @@ sets the number the app enforces.
 Use the device types students really have:
 
 - at least two typical student laptops (built-in webcams, including a
-  low-end one), and
-- at least one Android tablet.
+  low-end one),
+- at least one Android tablet, and
+- at least one iPad.
 
 Take the exam photos with the app's own camera settings (front camera, medium
 resolution, about 640×480), not a phone's best camera.
 
-## What to capture per volunteer
+## Capturing with the app
 
-1. **Registration.** Take the seven guided poses in good, even light: front,
-   left, right, down, up, smile, mouth open. Use the app's Face ID
-   registration flow (or follow the same instructions with the study laptop).
-2. **Exam photos, on every study device:**
-   - **Session A** (normal room light): 3 photos, looking at the screen as
-     when writing.
-   - **Session B** (harder light: dim room, or a window behind): 3 photos.
-   - **Session C** (glasses or headscarf changed, if applicable): 3 photos.
-   - At least one session on a different day from registration.
-3. **Spoofing check.** This is separate and not used for the threshold. Try
-   the pre-exam check with:
-   - a printed photo,
-   - a photo on a phone screen, and
-   - a video of the volunteer played on a phone.
+Take every photo with the app's **Volunteer study** screen (sample school
+admin > *Volunteer study (Face ID threshold)*), on each study device. It uses
+the same camera settings and face pipeline as the real checks, keeps the
+photos encrypted on the device, and exports them in the layout below. Only
+study codes are entered, never names.
 
-   Record whether the liveness step stopped each one.
+1. **Approval and consent.** Get the data protection officer's (and ethics
+   committee's) approval of `volunteer_study_consent.md`. Each volunteer signs
+   the paper form; staff write the study code (`v001`, ...) on it.
+2. **Label the device** once, for example `laptop-dell-3520`,
+   `tablet-samsung-a8` or `ipad-10`.
+3. **Add the volunteer:** enter the study code and confirm the signed form
+   (and the optional spoofing test, if agreed).
+4. **Registration**, once per volunteer, on one device, in good, even light:
+   the same guided 7-pose screen students use.
+5. **Exam photos, on every study device.** Each session takes 3 photos
+   automatically while the volunteer looks at the screen as when writing:
+   - **Session A:** normal room light.
+   - **Session B:** harder light (dim room, or a window or lamp behind).
+   - **Session C:** on a different day from registration; change glasses or
+     headscarf (on or off) if the volunteer wears them.
+
+   A photo the app would reject for quality (no face, blur, framing) is not
+   kept, as in a real check, but it is counted in the capture log.
+6. **Spoofing check** (only with the optional consent; not used for the
+   threshold). Try the pre-exam check with a printed photo, a photo on a phone
+   screen and a video of the volunteer on a phone. Record whether the liveness
+   step stopped each one.
+
+**Withdrawal:** open the volunteer and choose *Delete this volunteer* on every
+study device, and delete their folders from any exports.
+
+## Exporting and merging
+
+On each device, choose **Export study photos**. The app writes plain JPEGs and
+a `capture_log_<device>.json` (codes, consent versions, dates and how many
+photos were not usable; no names) to:
+
+- **Windows:** `Documents\KSLAS study exports\`
+- **Android:** `Android/data/<app id>/files/study_exports/` (reach it over USB)
+- **iPad:** the app's Documents folder (Files app > On My iPad > the app's
+  folder)
+
+Copy each export's contents into one `study/` folder on the analysis computer.
+Paths from different devices never collide. Move the files only on encrypted
+drives, and delete the copies once the report is made.
 
 ## Folder layout
 
 ```
 study/
   v001/
-    registration/  front.jpg left.jpg ... (the 7 poses)
+    registration/  front_face.jpg left_angle.jpg ... (the 7 poses)
     probes/
-      laptop-dell-3520/  a1.jpg a2.jpg a3.jpg b1.jpg ...
+      laptop-dell-3520/  a1.jpg a2.jpg a3.jpg b1.jpg ... c3.jpg
       tablet-samsung-a8/ a1.jpg ...
   v002/
     ...
+  capture_log_laptop-dell-3520.json
 ```
 
-Use study codes (`v001`), never names, for folders.
+The tool groups each device's photos in threes, in name order, to simulate the
+pre-exam "two of three" check, so keep the app's names.
 
 ## Running the tool
 

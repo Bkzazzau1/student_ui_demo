@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'local_sample_school_identity_service.dart';
 import 'official_face_id_models.dart';
 import 'official_identity_session.dart';
+import 'volunteer_study_view.dart';
 
 const Color _ink = Color(0xFF0F172A);
 const Color _muted = Color(0xFF64748B);
@@ -189,6 +190,16 @@ class _SampleSchoolAdminViewState extends State<SampleSchoolAdminView> {
                   label: const Text(
                     'Rebuild approved Face IDs for this face model',
                   ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const VolunteerStudyView(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.groups_2_outlined),
+                  label: const Text('Volunteer study (Face ID threshold)'),
                 ),
                 if (_message != null) ...[
                   const SizedBox(height: 12),

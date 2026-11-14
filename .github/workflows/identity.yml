@@ -21,6 +21,8 @@ on:
       - 'test/*identity*_test.dart'
       - 'test/exam_question_gate_test.dart'
       - 'test/local_sample_school_identity_service_test.dart'
+      - 'test/volunteer_study_test.dart'
+      - 'docs/identity/volunteer_study_consent.md'
       - '.github/workflows/identity.yml'
 
 permissions:
@@ -72,6 +74,7 @@ jobs:
           test/continuous_identity_policy_test.dart
           test/exam_question_gate_test.dart
           test/face_alignment_test.dart
+          test/volunteer_study_test.dart
 
       - name: Run identity tests
         run: >-
@@ -83,6 +86,7 @@ jobs:
           test/continuous_identity_policy_test.dart
           test/exam_question_gate_test.dart
           test/face_alignment_test.dart
+          test/volunteer_study_test.dart
           test/face_identity_quality_test.dart
           test/face_identity_landmark_matrix_test.dart
           test/face_identity_person_gate_test.dart
