@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'dart:typed_data';
 
+import 'camera_frame_orientation.dart';
 import 'gaze_head_pose_estimator.dart';
 import 'native_face_landmarker_runtime.dart';
 
@@ -16,13 +17,23 @@ class LandmarkGazeRuntimeSelector {
   bool get modelRuntimeReady => _ready;
   bool get fallbackActive => !_ready;
 
-  Future<GazeHeadPoseResult?> analyse(CameraImage image) async {
+  /// [orientation] turns the frame upright and unmirrored before landmarks
+  /// are found: Android frames come in sensor orientation (the face was
+  /// sideways), iOS front frames are mirrored.
+  Future<GazeHeadPoseResult?> analyse(
+    CameraImage image, {
+    CameraFrameOrientation orientation = CameraFrameOrientation.upright,
+  }) async {
     if (!_checked) {
       _checked = true;
       _ready = await _runtime.initialize();
     }
     if (_ready) {
-      final result = await _runtime.analyse(image);
+      final result = await _runtime.analyse(
+        image,
+        rotationDegrees: orientation.rotationDegrees,
+        mirrorHorizontally: orientation.mirrorHorizontally,
+      );
       if (result != null) return result;
     }
     return _fallback.analyse(image);

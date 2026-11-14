@@ -855,7 +855,10 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       final liveness = _continuousLiveness.analyse(image);
       if (liveness != null) _handleLivenessResult(liveness);
 
-      final gaze = await _gazeEstimator.analyse(image);
+      final gaze = await _gazeEstimator.analyse(
+        image,
+        orientation: CameraFrameOrientation.of(_camera?.description),
+      );
       if (gaze == null) return;
       _handleLandmarkGaze(gaze);
     } finally {
@@ -885,7 +888,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       height: decoded.height,
     );
     if (payload != null) {
-      _handleActiveLivenessChallenge(payload);
+      _handleActiveLivenessChallenge(
+        payload,
+        imageWidth: decoded.width,
+        imageHeight: decoded.height,
+      );
     }
     return _gazeEstimator.analyseRgb(
       rgbBytes: rgb,
@@ -894,11 +901,17 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     );
   }
 
-  void _handleActiveLivenessChallenge(Map<String, Object?> payload) {
+  void _handleActiveLivenessChallenge(
+    Map<String, Object?> payload, {
+    required int imageWidth,
+    required int imageHeight,
+  }) {
     if (_livenessChallengeReported) return;
     final result = _activeLivenessChallenge.addLandmarkPayload(
       payload,
       timestampMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+      imageWidth: imageWidth,
+      imageHeight: imageHeight,
     );
     if (result == null || !mounted) return;
     setState(() {

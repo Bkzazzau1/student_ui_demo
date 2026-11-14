@@ -142,6 +142,9 @@ pub fn review_object_detections(
     object_review(filtered, "object review complete")
 }
 
+/// Nose position between the eyes and the mouth on a frontal face.
+const FRONTAL_NOSE_RATIO: f32 = 0.61;
+
 #[frb(sync)]
 pub fn analyze_head_pose_geometry(
     left_eye_x: f32,
@@ -172,23 +175,36 @@ pub fn analyze_head_pose_geometry(
     let eye_mid_y = (left_eye_y + right_eye_y) / 2.0;
     let eye_dx = right_eye_x - left_eye_x;
     let eye_dy = right_eye_y - left_eye_y;
-    let roll_score = (eye_dy.atan2(eye_dx).abs() / 0.55).clamp(0.0, 1.0);
-
-    let yaw_score = ((nose_x - eye_mid_x).abs() / (face_width * 0.18)).clamp(0.0, 1.0);
+    // Signed scores (left/right and up/down are different places), so
+    // calibration can tell zones apart.
+    // Roll: + = the image-right eye lower.
+    let roll_score = (eye_dy.atan2(eye_dx) / 0.55).clamp(-1.0, 1.0);
+    // Yaw: + = nose toward image-right. 0.47 is about 20 degrees, 0.72
+    // about 30 degrees (measured on real faces rotated in 3D).
+    let yaw_score = ((nose_x - eye_mid_x) / (face_width * 0.18)).clamp(-1.0, 1.0);
+    // Pitch from where the nose sits between the eyes and the mouth. Real
+    // frontal faces measure about 0.61 (the old centre, 0.42, called
+    // frontal faces "looking away"). + = looking down: 0.68 is about 20
+    // degrees down, 0.90 about 25; -0.76 is about 20 degrees up.
     let mouth_eye_distance = (mouth_y - eye_mid_y).abs();
     let nose_eye_distance = (nose_y - eye_mid_y).abs();
     let vertical_ratio = if mouth_eye_distance <= 0.001 {
-        1.0
+        FRONTAL_NOSE_RATIO
     } else {
         nose_eye_distance / mouth_eye_distance
     };
-    let pitch_score = ((vertical_ratio - 0.42).abs() / 0.25).clamp(0.0, 1.0);
+    let pitch_score = ((vertical_ratio - FRONTAL_NOSE_RATIO) / 0.25).clamp(-1.0, 1.0);
 
-    let combined = yaw_score.max(pitch_score).max(roll_score);
-    let looking_away = combined >= 0.72;
-    let attention_level = if combined >= 0.9 {
+    // Reading the bottom of a laptop screen means looking down 15-25
+    // degrees, so looking down is allowed further than up or sideways.
+    let away = (yaw_score.abs() / 0.72)
+        .max(roll_score.abs() / 0.72)
+        .max(pitch_score.max(0.0) / 0.95)
+        .max((-pitch_score).max(0.0) / 0.72);
+    let looking_away = away >= 1.0;
+    let attention_level = if away >= 1.25 {
         "urgent_review_required"
-    } else if combined >= 0.72 {
+    } else if looking_away {
         "high_attention_required"
     } else {
         "normal"

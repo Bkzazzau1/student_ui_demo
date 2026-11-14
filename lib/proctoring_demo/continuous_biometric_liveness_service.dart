@@ -43,7 +43,6 @@ class ContinuousLivenessResult {
 
 class ContinuousBiometricLivenessService {
   int _frameCounter = 0;
-  String? _lastFingerprint;
   List<int>? _lastGrid;
   int _repeatStreak = 0;
   int _flatTextureStreak = 0;
@@ -65,6 +64,11 @@ class ContinuousBiometricLivenessService {
 
     const gridW = 12;
     const gridH = 8;
+    // BGRA (iOS) has 4 bytes per pixel; its green byte stands in for
+    // brightness. YUV planes have 1 byte of luma per pixel.
+    final bgra = image.format.group == ImageFormatGroup.bgra8888;
+    final pixelStride = bgra ? 4 : 1;
+    final channel = bgra ? 1 : 0;
     final grid = <int>[];
     var sum = 0.0;
     var sumSquares = 0.0;
@@ -81,7 +85,7 @@ class ContinuousBiometricLivenessService {
             .floor()
             .clamp(0, width - 1)
             .toInt();
-        final idx = y * rowStride + x;
+        final idx = y * rowStride + x * pixelStride + channel;
         if (idx < 0 || idx >= bytes.length) continue;
         final value = bytes[idx];
         grid.add(value);
@@ -94,8 +98,8 @@ class ContinuousBiometricLivenessService {
         final downY = math
             .min(height - 1, y + math.max(1, height ~/ 48))
             .toInt();
-        final rightIdx = y * rowStride + rightX;
-        final downIdx = downY * rowStride + x;
+        final rightIdx = y * rowStride + rightX * pixelStride + channel;
+        final downIdx = downY * rowStride + x * pixelStride + channel;
         if (rightIdx >= 0 && rightIdx < bytes.length) {
           edges += (value - bytes[rightIdx]).abs();
         }
@@ -115,12 +119,15 @@ class ContinuousBiometricLivenessService {
       1.0,
     );
     final fingerprint = _fingerprintGrid(grid);
-    final repeated = fingerprint == _lastFingerprint;
-    if (repeated) {
-      _repeatStreak++;
-    } else {
-      _repeatStreak = math.max(0, _repeatStreak - 1);
-    }
+    // Frozen means bit-identical: every sampled pixel unchanged. A live
+    // camera has sensor noise in at least some of the 96 samples even when
+    // the student sits perfectly still; a frozen or injected feed does not.
+    final previous = _lastGrid;
+    final identical =
+        previous != null &&
+        previous.length == grid.length &&
+        _gridDistance(previous, grid) == 0;
+    _repeatStreak = identical ? _repeatStreak + 1 : 0;
 
     final motion = _lastGrid == null ? 0.0 : _gridDistance(_lastGrid!, grid);
     _motionHistory.add(motion);
@@ -139,12 +146,15 @@ class ContinuousBiometricLivenessService {
       _flatTextureStreak = math.max(0, _flatTextureStreak - 1);
     }
 
+    // Very little change is normal for a student sitting still with a
+    // denoised camera: a weak signal on its own, never "frozen".
     final lowMotionTooLong =
         _motionHistory.length >= 8 && motionAverage < 0.008;
-    final repeatedFrame = _repeatStreak >= 3 || lowMotionTooLong;
+    final repeatedFrame = _repeatStreak >= 3;
     final replayOrFreezeLikely = repeatedFrame || _flatTextureStreak >= 4;
     var risk = 0.0;
     if (repeatedFrame) risk += 0.45;
+    if (lowMotionTooLong) risk += 0.10;
     if (_flatTextureStreak >= 4) risk += 0.35;
     if (edgeEnergy < 0.02 && variance < 0.004) risk += 0.15;
     if (mean < 0.07 || mean > 0.92) risk += 0.10;
@@ -155,7 +165,6 @@ class ContinuousBiometricLivenessService {
               : 'possible_photo_or_flat_screen_face'
         : 'continuous_liveness_present';
 
-    _lastFingerprint = fingerprint;
     _lastGrid = grid;
 
     return ContinuousLivenessResult(

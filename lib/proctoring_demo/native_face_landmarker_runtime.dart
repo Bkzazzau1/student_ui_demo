@@ -78,7 +78,11 @@ class NativeFaceLandmarkerRuntime {
     }
   }
 
-  Future<GazeHeadPoseResult?> analyse(CameraImage image) async {
+  Future<GazeHeadPoseResult?> analyse(
+    CameraImage image, {
+    int rotationDegrees = 0,
+    bool mirrorHorizontally = false,
+  }) async {
     if (!_ready && !await initialize()) return null;
     try {
       final planes = image.planes
@@ -97,11 +101,19 @@ class NativeFaceLandmarkerRuntime {
             'width': image.width,
             'height': image.height,
             'format': image.format.group.name,
+            'rotation_degrees': rotationDegrees,
+            'mirror_horizontal': mirrorHorizontally,
             'planes': planes,
             'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
           });
       if (result == null) return null;
-      return _parseResult(result, image.width, image.height);
+      // Landmarks are normalized to the upright frame.
+      final quarterTurn = (rotationDegrees ~/ 90).isOdd;
+      return _parseResult(
+        result,
+        quarterTurn ? image.height : image.width,
+        quarterTurn ? image.width : image.height,
+      );
     } on MissingPluginException {
       _failed = true;
       _ready = false;

@@ -250,12 +250,15 @@ pub fn predict_calibrated_gaze_zone_v2(
             reason: "calibration or live gaze signal is not reliable enough".into(),
         };
     }
+    // Spread floors: a calibration of a few seconds underestimates how much
+    // a still student's eyes and head move, and tiny floors turned normal
+    // jitter into "deviation".
     let mut nearest: Option<(&GazeCalibrationZoneV2, f32)> = None;
     for zone in &profile.zones {
-        let eye_dx = (eye_x - zone.eye_x) / zone.eye_x_stddev.max(0.025);
-        let eye_dy = (eye_y - zone.eye_y) / zone.eye_y_stddev.max(0.025);
-        let yaw = (head_yaw - zone.yaw) / profile.yaw_stddev.max(0.04);
-        let pitch = (head_pitch - zone.pitch) / profile.pitch_stddev.max(0.04);
+        let eye_dx = (eye_x - zone.eye_x) / zone.eye_x_stddev.max(0.04);
+        let eye_dy = (eye_y - zone.eye_y) / zone.eye_y_stddev.max(0.04);
+        let yaw = (head_yaw - zone.yaw) / profile.yaw_stddev.max(0.06);
+        let pitch = (head_pitch - zone.pitch) / profile.pitch_stddev.max(0.06);
         let distance =
             (eye_dx * eye_dx + eye_dy * eye_dy + yaw * yaw * 0.35 + pitch * pitch * 0.35).sqrt();
         if nearest.is_none_or(|(_, best)| distance < best) {
@@ -263,15 +266,11 @@ pub fn predict_calibrated_gaze_zone_v2(
         }
     }
     let (zone, nearest_distance) = nearest.expect("usable profiles contain zones");
-    let center_dx = (eye_x - profile.center_eye_x) / profile.horizontal_stddev.max(0.025);
-    let center_dy = (eye_y - profile.center_eye_y) / profile.vertical_stddev.max(0.025);
-    let center_yaw = (head_yaw - profile.yaw_bias) / profile.yaw_stddev.max(0.04);
-    let center_pitch = (head_pitch - profile.pitch_bias) / profile.pitch_stddev.max(0.04);
-    let deviation_score = center_dx
-        .abs()
-        .max(center_dy.abs())
-        .max(center_yaw.abs() * 0.7)
-        .max(center_pitch.abs() * 0.7);
+    // Deviation is the distance to the nearest calibrated zone. Measuring it
+    // from the centre of the camera and answer-area samples flagged the
+    // student for reading the question area, a zone they calibrated, which
+    // hard-pauses strict exams once sustained.
+    let deviation_score = nearest_distance;
     let recognized = nearest_distance <= 5.0;
     let actionable = signal_confidence >= 0.72 && profile.quality_score >= 0.68;
     GazeZonePredictionV2 {
