@@ -37,10 +37,7 @@ class ObjectReviewEventMapper {
 
     final decisions = <ObjectReviewEventDecision>[];
 
-    final phoneLike = _matchingCanonical(
-      resolutions,
-      const <String>{'phone'},
-    );
+    final phoneLike = _matchingCanonical(resolutions, const <String>{'phone'});
     if (phoneLike.isNotEmpty) {
       decisions.add(
         _decision(
@@ -54,16 +51,31 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final screens = _matchingCanonical(
-      resolutions,
-      const <String>{
-        'laptop',
-        'television',
-        'monitor',
-        'tablet',
-        'screen_signal',
-      },
-    );
+    // The COCO baseline often labels a phone held in the hand as `remote`
+    // (one phone filling 18% of a frame was seen only as `remote`). A TV
+    // remote is also common at home, so this is a review note that never
+    // pauses an exam on its own.
+    final handheld = _matchingCanonical(resolutions, const <String>{'remote'});
+    if (handheld.isNotEmpty) {
+      decisions.add(
+        _decision(
+          eventType: 'yolo_handheld_device_detected',
+          severity: 'info',
+          message: 'Handheld device noticed in camera view.',
+          matches: handheld,
+          source: source,
+          target: target,
+        ),
+      );
+    }
+
+    final screens = _matchingCanonical(resolutions, const <String>{
+      'laptop',
+      'television',
+      'monitor',
+      'tablet',
+      'screen_signal',
+    });
     if (screens.isNotEmpty) {
       decisions.add(
         _decision(
@@ -77,10 +89,10 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final referenceMaterial = _matchingCanonical(
-      resolutions,
-      const <String>{'book', 'paper_note'},
-    );
+    final referenceMaterial = _matchingCanonical(resolutions, const <String>{
+      'book',
+      'paper_note',
+    });
     if (referenceMaterial.isNotEmpty) {
       decisions.add(
         _decision(
@@ -94,10 +106,9 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final calculator = _matchingCanonical(
-      resolutions,
-      const <String>{'calculator'},
-    );
+    final calculator = _matchingCanonical(resolutions, const <String>{
+      'calculator',
+    });
     if (calculator.isNotEmpty) {
       decisions.add(
         _decision(
@@ -111,10 +122,9 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final wristDevice = _matchingCanonical(
-      resolutions,
-      const <String>{'wrist_device'},
-    );
+    final wristDevice = _matchingCanonical(resolutions, const <String>{
+      'wrist_device',
+    });
     if (wristDevice.isNotEmpty) {
       decisions.add(
         _decision(
@@ -128,10 +138,7 @@ class ObjectReviewEventMapper {
       );
     }
 
-    final earbud = _matchingCanonical(
-      resolutions,
-      const <String>{'earbud'},
-    );
+    final earbud = _matchingCanonical(resolutions, const <String>{'earbud'});
     if (earbud.isNotEmpty) {
       decisions.add(
         _decision(

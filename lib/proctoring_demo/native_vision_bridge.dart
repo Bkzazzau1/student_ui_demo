@@ -305,6 +305,12 @@ class GeneratedNativeVisionBridge implements NativeVisionBridge {
 
   static bool _ensureStarted() {
     if (_nativeReady) return true;
+    // The app initializes the runtime at startup; use it from the first frame
+    // instead of dropping frames until this bridge's own check completes.
+    if (BrainCoreRuntime.isReady) {
+      _nativeReady = true;
+      return true;
+    }
     if (_nativeFailed) return false;
     _nativeInit ??= _ensureNativeReady().then((ready) {
       _nativeReady = ready;

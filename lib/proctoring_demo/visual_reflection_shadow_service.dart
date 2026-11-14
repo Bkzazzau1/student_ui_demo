@@ -56,7 +56,13 @@ class VisualReflectionShadowService {
   final List<double> _shadowHistory = <double>[];
   final List<double> _lowerMotionHistory = <double>[];
 
-  VisualReflectionShadowResult? analyse(CameraImage image) {
+  /// [rotationDegrees] is the clockwise rotation that makes the frame upright
+  /// (Android frames come in sensor orientation), so "lower frame" means the
+  /// desk area in front of the student on every device.
+  VisualReflectionShadowResult? analyse(
+    CameraImage image, {
+    int rotationDegrees = 0,
+  }) {
     _frameCounter++;
     if (_frameCounter % 6 != 0) return null;
     if (image.planes.isEmpty || image.width <= 0 || image.height <= 0) {
@@ -85,17 +91,26 @@ class VisualReflectionShadowService {
     var localContrastTotal = 0.0;
     var localContrastCount = 0;
 
+    // The grid is laid out on the upright scene; each cell is read from the
+    // raw frame. BGRA (iOS) has 4 bytes per pixel; its green byte stands in
+    // for brightness. YUV planes have 1 byte of luma per pixel.
+    final rotation = ((rotationDegrees % 360) + 360) % 360;
+    final bgra = image.format.group == ImageFormatGroup.bgra8888;
+    final pixelStride = bgra ? 4 : 1;
+    final channelOffset = bgra ? 1 : 0;
     for (var gy = 0; gy < gridH; gy++) {
-      final y = ((gy + 0.5) * height / gridH)
-          .floor()
-          .clamp(0, height - 1)
-          .toInt();
+      final uy = (gy + 0.5) / gridH;
       for (var gx = 0; gx < gridW; gx++) {
-        final x = ((gx + 0.5) * width / gridW)
-            .floor()
-            .clamp(0, width - 1)
-            .toInt();
-        final idx = y * rowStride + x;
+        final ux = (gx + 0.5) / gridW;
+        final (rx, ry) = switch (rotation) {
+          90 => (uy, 1 - ux),
+          180 => (1 - ux, 1 - uy),
+          270 => (1 - uy, ux),
+          _ => (ux, uy),
+        };
+        final x = (rx * width).floor().clamp(0, width - 1).toInt();
+        final y = (ry * height).floor().clamp(0, height - 1).toInt();
+        final idx = y * rowStride + x * pixelStride + channelOffset;
         if (idx < 0 || idx >= bytes.length) continue;
         final value = bytes[idx] / 255.0;
         grid.add(value);

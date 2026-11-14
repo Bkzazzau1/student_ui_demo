@@ -101,8 +101,14 @@ final class KslasOptimizedVisionRuntime {
     guard let session else { return notAvailable(lastError) }
     let started = Date()
     do {
-      guard let frame = KslasRgbImage.fromCameraPlanes(request) else {
+      guard var frame = KslasRgbImage.fromCameraPlanes(request) else {
         throw KslasError("Camera frame is invalid")
+      }
+      // iOS stream frames are already upright (rotation 0); honour the
+      // request like Android so boxes are always in the upright frame.
+      let rotation = KslasArgs.int(request, "rotation_degrees", 0)
+      if rotation % 360 != 0 {
+        frame = frame.rotatedClockwise(rotation)
       }
       let geometry = InputGeometry(
         preprocessing: inputPreprocessing, sourceWidth: frame.width, sourceHeight: frame.height,
@@ -407,16 +413,30 @@ final class KslasOptimizedVisionRuntime {
 
   private static func unit(_ value: Double) -> Double { min(1.0, max(0.0, value)) }
 
+  // Exact labels, not substrings: "handbag" is not a hand and "wine glass"
+  // is not a mirror.
+  private static let phoneLikeLabels: Set<String> = [
+    "cell phone", "phone", "mobile phone", "smartphone", "remote",
+  ]
+  private static let mirrorLikeLabels: Set<String> = ["mirror", "reflection"]
+  private static let offscreenLikeLabels: Set<String> = [
+    "hand", "offscreen interaction", "offscreen_interaction",
+  ]
+
+  private static func normalized(_ label: String) -> String {
+    label.trimmingCharacters(in: .whitespaces).lowercased()
+  }
+
   private static func isPhoneLike(_ label: String) -> Bool {
-    label.contains("phone") || label.contains("mobile") || label.contains("remote") || label.contains("screen")
+    phoneLikeLabels.contains(normalized(label))
   }
 
   private static func isMirrorLike(_ label: String) -> Bool {
-    label.contains("mirror") || label.contains("glass") || label.contains("reflection")
+    mirrorLikeLabels.contains(normalized(label))
   }
 
   private static func isOffscreenLike(_ label: String) -> Bool {
-    label.contains("offscreen") || label.contains("interaction") || label.contains("hand")
+    offscreenLikeLabels.contains(normalized(label))
   }
 
   static let cocoClassNames: [String] = [

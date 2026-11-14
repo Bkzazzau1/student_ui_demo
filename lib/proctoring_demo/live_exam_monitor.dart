@@ -32,9 +32,11 @@ import 'live_proctoring_event_service.dart';
 import 'microphone_stream_recording_service.dart';
 import 'native_edge_ai_action_authorizer.dart';
 import 'native_model_event_memory_sink.dart';
+import 'object_event_persistence_gate.dart';
 import 'object_review_event_mapper.dart';
 import 'optimized_vision_object_event_adapter.dart';
 import 'optimized_vision_runtime_bridge.dart';
+import 'person_count_policy.dart';
 import 'proctoring_risk_policy.dart';
 import 'python_edge_ai_service.dart';
 import 'snapshot_gaze_fallback_service.dart';
@@ -149,6 +151,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   Timer? _microphoneRecoveryTimer;
 
   final LiveEventCooldownGate _eventCooldown = LiveEventCooldownGate();
+
+  /// Object events need the object in at least 2 of the last 3 analysed
+  /// frames, then wait the assessment profile's object cooldown.
+  final ObjectEventPersistenceGate _objectPersistence =
+      ObjectEventPersistenceGate();
+  late final LiveEventCooldownGate _objectEventCooldown;
   final List<String> _eventsSent = <String>[];
   late final LiveMonitoringProfile _monitoringProfile;
 
@@ -201,6 +209,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _monitoringProfile = LiveMonitoringProfile.forAssessmentType(
       widget.assessmentType,
       reviewAudience: widget.reviewAudience,
+    );
+    _objectEventCooldown = LiveEventCooldownGate(
+      cooldown: _monitoringProfile.objectFrameCooldown,
     );
     _calibratedGaze = CalibratedGazeService(attemptId: widget.attemptId)
       ..load();
@@ -574,13 +585,20 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         // violation or pause an exam.
         _gazeRiskStreak = math.max(0, _gazeRiskStreak - 1);
 
-        if (result.ready && result.multiplePeopleLikely) {
-          _multiplePeopleRiskStreak++;
-        } else {
-          _multiplePeopleRiskStreak = math.max(
-            0,
-            _multiplePeopleRiskStreak - 1,
-          );
+        // The luminance heuristic stands in for person counting only when
+        // YOLO is not running. When it is, _runSnapshotYolo counts people on
+        // this same snapshot; adjusting the streak here as well cancelled
+        // every YOLO increment, so a real second person never escalated.
+        final heuristicPeopleCheck = !_yoloRuntimeReady;
+        if (heuristicPeopleCheck) {
+          if (result.ready && result.multiplePeopleLikely) {
+            _multiplePeopleRiskStreak++;
+          } else {
+            _multiplePeopleRiskStreak = math.max(
+              0,
+              _multiplePeopleRiskStreak - 1,
+            );
+          }
         }
 
         if (mounted) {
@@ -598,7 +616,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           });
         }
 
-        if (_multiplePeopleRiskStreak == _secondPersonWarningStreak) {
+        if (heuristicPeopleCheck &&
+            _multiplePeopleRiskStreak == _secondPersonWarningStreak) {
           unawaited(
             _raiseEvent(
               eventType: 'camera_view_needs_review',
@@ -609,7 +628,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           );
         }
 
-        if (_multiplePeopleRiskStreak >= _secondPersonPauseStreak) {
+        if (heuristicPeopleCheck &&
+            _multiplePeopleRiskStreak >= _secondPersonPauseStreak) {
           _multiplePeopleRiskStreak = 0;
           unawaited(
             _raiseEvent(
@@ -838,11 +858,19 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     try {
       _handleFrameQuality(image);
 
-      final visual = _visualIntegrity.analyse(image);
+      // Android delivers frames in sensor orientation. Object detection and
+      // the hand/reflection check must see the scene upright: on rotated
+      // frames YOLO missed most phones and second people.
+      final orientation = CameraFrameOrientation.of(_camera?.description);
+      final visual = _visualIntegrity.analyse(
+        image,
+        rotationDegrees: orientation.rotationDegrees,
+      );
       if (visual != null) _handleVisualIntegrityResult(visual);
 
       final optimized = await _optimizedVision.runFrame(
         image: image,
+        rotationDegrees: orientation.rotationDegrees,
         tasks: const <String>[
           'person_detector',
           'object_reflection_shadow_detector',
@@ -1030,7 +1058,14 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         .toList();
     final objectEvents = _objectEventAdapter.mapResult(result);
     final objectSummary = _objectDetectionSummary(objects, objectEvents);
+    final sustained = _objectPersistence.observe(
+      objectEvents.map((decision) => decision.eventType),
+    );
     for (final decision in objectEvents) {
+      // One frame is not evidence: the object must persist, then each event
+      // type waits the profile's object cooldown before it repeats.
+      if (!sustained.contains(decision.eventType)) continue;
+      if (!_objectEventCooldown.shouldAccept(decision.eventType)) continue;
       unawaited(
         _raiseEvent(
           eventType: decision.eventType,
@@ -1038,30 +1073,24 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           message: decision.message,
           metadata: <String, Object?>{
             ...decision.metadata,
+            'object_persistence': <String, Object?>{
+              'hits': _objectPersistence.hits(decision.eventType),
+              'window': _objectPersistence.window,
+            },
             'optimized_vision': result.toJson(),
           },
         ),
       );
     }
 
-    final confidentPersonObjects = objects.where((object) {
-      final label =
-          '${object['label'] ?? object['class'] ?? object['name'] ?? ''}'
-              .toLowerCase();
-      final confidence = double.tryParse('${object['confidence'] ?? 0}') ?? 0.0;
-      return (label.contains('person') ||
-              label.contains('human') ||
-              label.contains('face')) &&
-          confidence >= 0.66;
-    }).toList();
+    final personCount = PersonCountPolicy.count(PersonBox.fromObjects(objects));
     final nativePersonCount =
         int.tryParse('${result.outputs['person_count'] ?? ''}') ?? 0;
     final nativeMultiplePeople =
         result.outputs['multiple_people_likely'] == true;
     final nativeOnlyMultiple =
         objects.isEmpty && nativeMultiplePeople && nativePersonCount >= 2;
-    final multiplePeople =
-        confidentPersonObjects.length >= 2 || nativeOnlyMultiple;
+    final multiplePeople = personCount >= 2 || nativeOnlyMultiple;
     if (multiplePeople) {
       _multiplePeopleRiskStreak++;
     } else {
