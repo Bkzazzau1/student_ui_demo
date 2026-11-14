@@ -5,7 +5,7 @@
 /// [version] whenever the text changes; the accepted version is stored with
 /// every registration.
 abstract final class OfficialFaceIdConsent {
-  static const String version = 'kslas-face-id-consent-v1-draft-2026-11';
+  static const String version = 'kslas-face-id-consent-v2-draft-2026-11';
 
   static const String title = 'Your Face ID and your privacy';
 
@@ -45,9 +45,10 @@ abstract final class OfficialFaceIdConsent {
     ConsentSection(
       heading: 'How long we keep it',
       body:
-          'Your approved Face ID is kept while you are a student and replaced '
-          'whenever you register a new one. The school will tell you how long '
-          'registration photos are kept after you leave.',
+          'You register your Face ID once. It is kept while you are a '
+          'student and replaced only if the school asks you to register '
+          'again. The school will tell you how long registration photos are '
+          'kept after you leave.',
     ),
     ConsentSection(
       heading: 'Your choices',

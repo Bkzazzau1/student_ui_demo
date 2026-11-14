@@ -6,6 +6,7 @@ import 'package:students_ui_demo/face_demo/local_sample_school_identity_service.
 import 'package:students_ui_demo/face_demo/native_face_embedding_runtime.dart';
 import 'package:students_ui_demo/face_demo/official_face_id_models.dart';
 import 'package:students_ui_demo/face_demo/protected_local_store.dart';
+import 'package:students_ui_demo/face_demo/school_identity_service.dart';
 import 'package:students_ui_demo/rust/brain_core_runtime.dart';
 
 import 'support/official_face_id_fixtures.dart';
@@ -201,37 +202,59 @@ void main() {
     );
   });
 
-  test(
-    'an approved Face ID stays active until its replacement is approved',
-    () async {
-      final service = school();
-      await service.submitRegistration(submission('STD/1'));
-      final first = await service.approve('sub-1');
-
-      await service.submitRegistration(
-        submission('STD/1', id: 'sub-2', faceIndex: 3),
-      );
-      final waiting = await service.fetchStatus('STD/1');
-      expect(waiting.state, OfficialFaceIdState.approved);
-      expect(waiting.hasPendingSubmission, isTrue);
-      expect(waiting.activeTemplateId, first.templateId);
-
-      final second = await service.approve('sub-2');
-      expect(second.approved, isTrue);
-      final replaced = await service.fetchStatus('STD/1');
-      expect(replaced.activeTemplateId, second.templateId);
-      expect(replaced.hasPendingSubmission, isFalse);
-    },
-  );
-
-  test('a newer registration replaces one still waiting for review', () async {
+  test('a student registers only once', () async {
     final service = school();
     await service.submitRegistration(submission('STD/1'));
-    await service.submitRegistration(submission('STD/1', id: 'sub-2'));
+    expect(
+      (await service.fetchStatus('STD/1')).registrationOpen,
+      isFalse,
+      reason: 'a waiting registration closes registration',
+    );
+    await expectLater(
+      service.submitRegistration(submission('STD/1', id: 'sub-2')),
+      throwsA(isA<SchoolIdentityUnavailable>()),
+    );
 
-    final pending = await service.pendingReviews();
-    expect(pending.map((item) => item.submissionId), ['sub-2']);
-    expect((await service.approve('sub-1')).approved, isFalse);
+    await service.approve('sub-1');
+    expect((await service.fetchStatus('STD/1')).registrationOpen, isFalse);
+    await expectLater(
+      service.submitRegistration(submission('STD/1', id: 'sub-3')),
+      throwsA(isA<SchoolIdentityUnavailable>()),
+    );
+    expect(await service.pendingReviews(), isEmpty);
+  });
+
+  test('only the school can reopen registration; the approved Face ID stays '
+      'active until the new one is approved', () async {
+    final service = school();
+    await service.submitRegistration(submission('STD/1'));
+    final first = await service.approve('sub-1');
+
+    expect(
+      await service.reopenRegistration('STD/1', reason: 'new glasses'),
+      isTrue,
+    );
+    expect((await service.fetchStatus('STD/1')).registrationOpen, isTrue);
+
+    await service.submitRegistration(
+      submission('STD/1', id: 'sub-2', faceIndex: 3),
+    );
+    final waiting = await service.fetchStatus('STD/1');
+    expect(waiting.state, OfficialFaceIdState.approved);
+    expect(waiting.activeTemplateId, first.templateId);
+    expect(waiting.registrationOpen, isFalse, reason: 'reopened once only');
+
+    final second = await service.approve('sub-2');
+    final replaced = await service.fetchStatus('STD/1');
+    expect(replaced.activeTemplateId, second.templateId);
+    expect(replaced.registrationOpen, isFalse);
+  });
+
+  test('registration cannot be reopened while one is waiting', () async {
+    final service = school();
+    await service.submitRegistration(submission('STD/1'));
+    expect(await service.reopenRegistration('STD/1', reason: 'x'), isFalse);
+    expect(await service.reopenRegistration('STD/9', reason: 'x'), isFalse);
   });
 
   test(
