@@ -69,6 +69,9 @@ class GeneratedNativeAudioIntelligenceBridge
     required int sampleRate,
     String? previousFingerprint,
   }) {
+    // The app initializes the runtime at startup; use it from the first
+    // chunk instead of sending early chunks to the Dart fallback.
+    if (!_nativeReady && BrainCoreRuntime.isReady) _nativeReady = true;
     if (!_nativeReady) {
       if (!_nativeFailed) {
         _nativeInit ??= _ensureNativeReady().then((ready) {

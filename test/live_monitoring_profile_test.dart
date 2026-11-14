@@ -13,10 +13,12 @@ void main() {
         profile.shouldPauseForEventType('camera_reconnect_timeout'),
         isTrue,
       );
+      // Sound-classifier events go to review; a lost microphone pauses.
       expect(
         profile.shouldPauseForEventType('audio_voice_isolation_alert'),
-        isTrue,
+        isFalse,
       );
+      expect(profile.shouldPauseForEventType('microphone_unavailable'), isTrue);
       expect(profile.shouldPauseForEventType('yolo_phone_detected'), isTrue);
       expect(
         profile.shouldPauseForEventType('gaze_head_pose_deviation'),

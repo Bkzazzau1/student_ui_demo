@@ -16,8 +16,13 @@ class MicrophoneStreamRecordingService {
   int _sampleRate = 44100;
   int _maxBufferBytes = 44100 * 2 * 15;
   bool _running = false;
+  Object? _lastError;
 
+  /// False once the stream ends or fails, so callers can recover the
+  /// microphone instead of waiting on a stream that will never deliver.
   bool get isRunning => _running;
+
+  Object? get lastError => _lastError;
   int get sampleRate => _sampleRate;
   int get bufferedBytes =>
       _chunks.fold<int>(0, (sum, item) => sum + item.length);
@@ -47,18 +52,35 @@ class MicrophoneStreamRecordingService {
       ),
     );
 
+    _lastError = null;
     _subscription = stream.listen(
       (chunk) {
         if (chunk.isEmpty) return;
         _appendChunk(chunk);
         onPcmChunk(chunk);
       },
-      onError: (_) {
-        // Best effort stream; the caller reports the final readiness result.
+      onError: (Object error) {
+        _lastError = error;
+        _running = false;
       },
+      onDone: () => _running = false,
       cancelOnError: false,
     );
     _running = true;
+  }
+
+  /// Stops the microphone without writing any audio to disk.
+  Future<void> stop() async {
+    await _subscription?.cancel();
+    _subscription = null;
+    _running = false;
+    try {
+      if (await _recorder.isRecording()) {
+        await _recorder.stop();
+      }
+    } catch (_) {
+      // Best effort shutdown.
+    }
   }
 
   Uint8List? snapshotPcmBytes({int? maxSeconds}) {
@@ -120,8 +142,12 @@ class MicrophoneStreamRecordingService {
     return saveBufferedWavFile(filePrefix: filePrefix);
   }
 
+  /// Stops and releases the microphone. The buffered audio is discarded,
+  /// never written to disk: unencrypted student audio must not be left in
+  /// the temp folder.
   Future<void> dispose() async {
-    await stopAndSaveWav(filePrefix: 'discarded_microphone_clip');
+    await stop();
+    _chunks.clear();
     await _recorder.dispose();
   }
 
