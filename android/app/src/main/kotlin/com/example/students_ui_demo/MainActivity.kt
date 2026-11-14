@@ -375,18 +375,26 @@ private class AndroidOptimizedVisionRuntimeEngine {
     )
 
     private fun buildInputTensor(request: Map<*, *>): Pair<FloatArray, InputGeometry> {
-        val sourceWidth = request.intValue("width", 0)
-        val sourceHeight = request.intValue("height", 0)
-        if (sourceWidth <= 0 || sourceHeight <= 0) {
+        val rawWidth = request.intValue("width", 0)
+        val rawHeight = request.intValue("height", 0)
+        if (rawWidth <= 0 || rawHeight <= 0) {
             throw IllegalArgumentException("Camera frame dimensions are invalid")
         }
+        // Camera frames arrive in sensor orientation; rotation_degrees is the
+        // clockwise turn that makes the scene upright. The model samples the
+        // upright scene (on sideways frames it missed most phones and second
+        // people), and geometry and boxes are reported in the upright frame.
+        val rotation = ((request.intValue("rotation_degrees", 0) % 360) + 360) % 360
+        val quarterTurn = rotation == 90 || rotation == 270
+        val sourceWidth = if (quarterTurn) rawHeight else rawWidth
+        val sourceHeight = if (quarterTurn) rawWidth else rawHeight
         val planes = request["planes"] as? List<*> ?: throw IllegalArgumentException("Missing planes")
         val planeData = planes.mapNotNull { item ->
             val plane = item as? Map<*, *> ?: return@mapNotNull null
             val bytes = plane["bytes"] as? ByteArray ?: return@mapNotNull null
             PlaneData(
                 bytes = bytes,
-                rowStride = plane.intValue("bytes_per_row", sourceWidth).coerceAtLeast(1),
+                rowStride = plane.intValue("bytes_per_row", rawWidth).coerceAtLeast(1),
                 pixelStride = plane.intValue("bytes_per_pixel", 1).coerceAtLeast(1),
             )
         }
@@ -416,12 +424,25 @@ private class AndroidOptimizedVisionRuntimeEngine {
                 val contentX = x - geometry.padX
                 if (contentX < 0 || contentX >= geometry.contentWidth) continue
                 val srcX = min(sourceWidth - 1, contentX * sourceWidth / geometry.contentWidth)
+                // (srcX, srcY) is in the upright scene; read the raw pixel.
+                val rawX = when (rotation) {
+                    90 -> srcY
+                    180 -> rawWidth - 1 - srcX
+                    270 -> rawWidth - 1 - srcY
+                    else -> srcX
+                }
+                val rawY = when (rotation) {
+                    90 -> rawHeight - 1 - srcX
+                    180 -> rawHeight - 1 - srcY
+                    270 -> srcX
+                    else -> srcY
+                }
                 val pixel = readRgbPixel(
                     planes = planeData,
                     format = format,
-                    sourceX = srcX,
-                    sourceY = srcY,
-                    sourceWidth = sourceWidth,
+                    sourceX = rawX,
+                    sourceY = rawY,
+                    sourceWidth = rawWidth,
                 )
                 for (channel in 0 until channels) {
                     val channelValue = when (channel) {
@@ -595,7 +616,6 @@ private class AndroidOptimizedVisionRuntimeEngine {
         if (predictionCount <= 0) return null
         return mapOf(
             "yolo_output" to output,
-            "raw_yolo_output" to output,
             "num_predictions" to predictionCount,
             "num_classes" to classNames.size,
             "class_names" to classNames,
@@ -765,17 +785,15 @@ private fun ByteArray.safeByte(index: Int): Int {
     return this[index].toInt() and 0xff
 }
 
-private fun String.isPhoneLike(): Boolean {
-    return contains("phone") || contains("mobile") || contains("remote") || contains("screen")
-}
+private val phoneLikeLabels = setOf("cell phone", "phone", "mobile phone", "smartphone", "remote")
+private val mirrorLikeLabels = setOf("mirror", "reflection")
+private val offscreenLikeLabels = setOf("hand", "offscreen interaction", "offscreen_interaction")
 
-private fun String.isMirrorLike(): Boolean {
-    return contains("mirror") || contains("glass") || contains("reflection")
-}
+private fun String.isPhoneLike(): Boolean = trim().lowercase() in phoneLikeLabels
 
-private fun String.isOffscreenLike(): Boolean {
-    return contains("offscreen") || contains("interaction") || contains("hand")
-}
+private fun String.isMirrorLike(): Boolean = trim().lowercase() in mirrorLikeLabels
+
+private fun String.isOffscreenLike(): Boolean = trim().lowercase() in offscreenLikeLabels
 
 private fun Map<*, *>?.stringValue(key: String, fallback: String): String {
     return this?.get(key)?.toString() ?: fallback

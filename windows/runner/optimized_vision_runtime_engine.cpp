@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
+#include <initializer_list>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -275,25 +277,42 @@ bool IsPersonLike(const std::string& label) {
          label.find("face") != std::string::npos;
 }
 
+// Exact labels, not substrings: "handbag" is not a hand, "wine glass" is not
+// a mirror, and a laptop is not a phone. Same sets as Android and iOS.
+std::string NormalizedLabel(const std::string& label) {
+  std::string normalized;
+  normalized.reserve(label.size());
+  for (const char c : label) {
+    normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+  }
+  const auto first = normalized.find_first_not_of(' ');
+  if (first == std::string::npos) {
+    return std::string();
+  }
+  const auto last = normalized.find_last_not_of(' ');
+  return normalized.substr(first, last - first + 1);
+}
+
+bool LabelIn(const std::string& label, std::initializer_list<const char*> labels) {
+  const std::string normalized = NormalizedLabel(label);
+  for (const char* candidate : labels) {
+    if (normalized == candidate) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool IsPhoneLike(const std::string& label) {
-  return label.find("phone") != std::string::npos ||
-         label.find("mobile") != std::string::npos ||
-         label.find("remote") != std::string::npos ||
-         label.find("screen") != std::string::npos ||
-         label.find("laptop") != std::string::npos ||
-         label.find("tv_monitor") != std::string::npos;
+  return LabelIn(label, {"cell phone", "phone", "mobile phone", "smartphone", "remote"});
 }
 
 bool IsMirrorLike(const std::string& label) {
-  return label.find("mirror") != std::string::npos ||
-         label.find("glass") != std::string::npos ||
-         label.find("reflection") != std::string::npos;
+  return LabelIn(label, {"mirror", "reflection"});
 }
 
 bool IsOffscreenLike(const std::string& label) {
-  return label.find("offscreen") != std::string::npos ||
-         label.find("interaction") != std::string::npos ||
-         label.find("hand") != std::string::npos;
+  return LabelIn(label, {"hand", "offscreen interaction", "offscreen_interaction"});
 }
 
 double Iou(const Detection& a, const Detection& b) {

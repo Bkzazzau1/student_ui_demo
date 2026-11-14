@@ -114,6 +114,9 @@ class ProctoringRiskPolicy {
         return 15;
       case 'yolo_phone_detected':
         return 30;
+      // Review note only: often a TV remote, sometimes a phone in the hand.
+      case 'yolo_handheld_device_detected':
+        return 10;
       case 'yolo_book_or_paper_detected':
         return 25;
       case 'yolo_calculator_detected':

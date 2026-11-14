@@ -119,9 +119,14 @@ class OptimizedVisionRuntimeBridge {
     }
   }
 
+  /// Runs the detector on a streamed camera frame. [rotationDegrees] is the
+  /// clockwise rotation that makes the frame upright (see
+  /// `CameraFrameOrientation`); the native engine samples the frame upright
+  /// and reports boxes and image size in the upright frame.
   Future<OptimizedVisionRuntimeResult?> runFrame({
     required CameraImage image,
     required List<String> tasks,
+    int rotationDegrees = 0,
     int? sourceFrameId,
     int? captureTimestampNs,
   }) async {
@@ -145,6 +150,7 @@ class OptimizedVisionRuntimeBridge {
           'tasks': tasks,
           'width': image.width,
           'height': image.height,
+          'rotation_degrees': ((rotationDegrees % 360) + 360) % 360,
           'format': image.format.group.name,
           'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
           'source_frame_id': resolvedSourceFrameId,
@@ -167,6 +173,8 @@ class OptimizedVisionRuntimeBridge {
       final elapsedMs =
           DateTime.now().difference(started).inMicroseconds / 1000.0;
       final available = response['available'] == true;
+      // Upright size: a quarter turn swaps the camera frame's sides.
+      final quarterTurn = ((rotationDegrees % 360) + 360) % 180 == 90;
       return OptimizedVisionRuntimeResult(
         available: available,
         backend: response['backend']?.toString() ?? _policy.backend.name,
@@ -184,8 +192,8 @@ class OptimizedVisionRuntimeBridge {
         inferenceTimestampNs: inferenceTimestampNs,
         modelId: _manifest?.modelId,
         modelVersion: _manifest?.modelVersion,
-        imageWidth: image.width,
-        imageHeight: image.height,
+        imageWidth: quarterTurn ? image.height : image.width,
+        imageHeight: quarterTurn ? image.width : image.height,
       );
     } on MissingPluginException {
       _available = false;
