@@ -21,6 +21,11 @@ Everything runs on the device; only check results are sent to the school.
 The Swift code is in `ios/Runner/Kslas*.swift`. Minimum version: iPadOS 15.1
 (ONNX Runtime needs it), which covers the iPad 5th generation and newer.
 
+The app's Documents folder is visible in the Files app (`UIFileSharingEnabled`)
+so staff can copy volunteer-study exports off the iPad. Nothing else is written
+there: Face IDs, photos and evidence stay in the app's private, encrypted
+storage.
+
 ### Camera frames
 
 The iOS camera plugin delivers stream frames already upright, and mirrors
