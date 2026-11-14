@@ -1,0 +1,61 @@
+name: Android
+
+# Compiles the Android app (Kotlin native runtimes included) on every change
+# to the app or its Android code. Nothing else in CI compiles the Kotlin.
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/android.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build the Android app
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Pinned to the Flutter the project builds with locally. Newer stable
+      # Flutter needs Gradle 9.3.1+; the project is on Gradle 8.14, and that
+      # upgrade (with the Android Gradle plugin) is done separately.
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.2
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      # The Rust core for Android is the prebuilt jniLibs .so in the repo.
+      - name: Build debug APK
+        run: flutter build apk --debug

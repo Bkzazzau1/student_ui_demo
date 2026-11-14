@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 
 import '../proctoring_demo/native_vision_bridge.dart';
 import '../proctoring_demo/optimized_vision_runtime_bridge.dart';
+import '../proctoring_demo/person_count_policy.dart';
 import '../proctoring_demo/yolo_input_geometry.dart';
 
 /// Outcome of asking the existing YOLO runtime "is this an identity-capture
@@ -51,16 +52,17 @@ class FaceIdentityPersonGateResult {
 /// raw YOLO tensor decode via the Rust NMS decoder, and finally fall back to
 /// the native aggregate counters when neither decoded form is present.
 class FaceIdentityPersonGate {
+  /// People are counted with [PersonCountPolicy], the same rule live
+  /// proctoring uses, so a scene is never "one person" here and "two people"
+  /// in the exam monitor.
   FaceIdentityPersonGate({
     OptimizedVisionRuntimeBridge? bridge,
     NativeVisionBridge nativeVision = const GeneratedNativeVisionBridge(),
-    this.minimumConfidence = 0.5,
   }) : _bridge = bridge ?? OptimizedVisionRuntimeBridge(),
        _nativeVision = nativeVision;
 
   final OptimizedVisionRuntimeBridge _bridge;
   final NativeVisionBridge _nativeVision;
-  final double minimumConfidence;
 
   Future<FaceIdentityPersonGateResult> analyzeRgb({
     required Uint8List rgbBytes,
@@ -81,10 +83,12 @@ class FaceIdentityPersonGate {
   /// live capture engine's periodic "multiple people" sweep, so it doesn't
   /// need a JPEG round-trip either.
   Future<FaceIdentityPersonGateResult> analyzeCameraImage(
-    CameraImage image,
-  ) async {
+    CameraImage image, {
+    int rotationDegrees = 0,
+  }) async {
     final result = await _bridge.runFrame(
       image: image,
+      rotationDegrees: rotationDegrees,
       tasks: const <String>['yolo_exam_review', 'object_review'],
     );
     return evaluate(result);
@@ -102,9 +106,9 @@ class FaceIdentityPersonGate {
       );
     }
 
-    final decodedPersons = _confidentPersonConfidences(result.outputs);
-    if (decodedPersons != null) {
-      return _fromConfidences(decodedPersons);
+    final people = _personBoxes(result.outputs);
+    if (people != null) {
+      return _fromPeople(people);
     }
 
     final nativeCount =
@@ -135,12 +139,12 @@ class FaceIdentityPersonGate {
     );
   }
 
-  /// Returns confidences for detections already labeled `person`, decoding
-  /// the raw YOLO tensor via the Rust NMS decoder when the native layer
-  /// returned a tensor instead of pre-decoded detections. Returns null when
-  /// neither decoded form is present, so the caller can fall back to the
-  /// native aggregate counters.
-  List<double>? _confidentPersonConfidences(Map<String, Object?> outputs) {
+  /// Person boxes (normalized to the frame) from detections already labeled
+  /// `person`, decoding the raw YOLO tensor via the Rust NMS decoder when the
+  /// native layer returned a tensor instead of pre-decoded detections.
+  /// Returns null when neither decoded form is present, so the caller can
+  /// fall back to the native aggregate counters.
+  List<PersonBox>? _personBoxes(Map<String, Object?> outputs) {
     final rawObjects = outputs['objects'];
     if (rawObjects is Iterable) {
       // The native Windows engine decodes its own ONNX output directly and
@@ -171,12 +175,16 @@ class FaceIdentityPersonGate {
         );
       }
       return _nonMaxSuppress(boxes, 0.45)
-          .where(
-            (box) =>
-                box.label.toLowerCase() == 'person' &&
-                box.confidence >= minimumConfidence,
+          .where((box) => box.label.toLowerCase() == 'person')
+          .map(
+            (box) => PersonBox(
+              confidence: box.confidence,
+              x1: box.x1,
+              y1: box.y1,
+              x2: box.x2,
+              y2: box.y2,
+            ),
           )
-          .map((box) => box.confidence)
           .toList(growable: false);
     }
 
@@ -219,24 +227,41 @@ class FaceIdentityPersonGate {
       imageWidth: _int(outputs['image_width']) ?? _int(outputs['width']) ?? 640,
       imageHeight:
           _int(outputs['image_height']) ?? _int(outputs['height']) ?? 480,
-      confidenceThreshold: minimumConfidence,
+      confidenceThreshold: PersonCountPolicy.presenceConfidence,
       iouThreshold: _double(outputs['iou_threshold']) ?? 0.45,
       layout: outputs['layout']?.toString() ?? 'rows_yolov8',
       classNames: classNames,
     );
     if (decoded == null) return null;
     return decoded.detections
-        .where(
-          (detection) =>
-              detection.label.toLowerCase() == 'person' &&
-              detection.confidence >= minimumConfidence,
+        .where((detection) => detection.label.toLowerCase() == 'person')
+        .map(
+          (detection) => PersonBox(
+            confidence: detection.confidence,
+            x1: detection.xMin,
+            y1: detection.yMin,
+            x2: detection.xMax,
+            y2: detection.yMax,
+          ),
         )
-        .map((detection) => detection.confidence)
         .toList(growable: false);
   }
 
-  FaceIdentityPersonGateResult _fromConfidences(List<double> confidences) {
-    if (confidences.isEmpty) {
+  FaceIdentityPersonGateResult _fromPeople(List<PersonBox> people) {
+    final count = PersonCountPolicy.count(people);
+    final best = people.fold<double>(
+      0,
+      (best, person) => person.confidence > best ? person.confidence : best,
+    );
+    if (count >= 2) {
+      return FaceIdentityPersonGateResult(
+        state: FaceIdentityPersonGateState.multiplePeopleDetected,
+        personCount: count,
+        personConfidence: best,
+        reason: 'More than one person is visible in the capture scene.',
+      );
+    }
+    if (!PersonCountPolicy.anyonePresent(people)) {
       return const FaceIdentityPersonGateResult(
         state: FaceIdentityPersonGateState.noPersonDetected,
         personCount: 0,
@@ -244,18 +269,10 @@ class FaceIdentityPersonGate {
         reason: 'No person was detected in the capture scene.',
       );
     }
-    if (confidences.length >= 2) {
-      return FaceIdentityPersonGateResult(
-        state: FaceIdentityPersonGateState.multiplePeopleDetected,
-        personCount: confidences.length,
-        personConfidence: confidences.reduce((a, b) => a > b ? a : b),
-        reason: 'More than one person is visible in the capture scene.',
-      );
-    }
     return FaceIdentityPersonGateResult(
       state: FaceIdentityPersonGateState.accepted,
       personCount: 1,
-      personConfidence: confidences.first,
+      personConfidence: best,
       reason: 'Exactly one person is present in the capture scene.',
     );
   }

@@ -166,7 +166,10 @@ class FaceLiveCaptureEngine {
 
       _frameCounter++;
       if (_frameCounter % personGateFrameInterval == 0) {
-        _lastPersonGate = await _personGate.analyzeCameraImage(image);
+        _lastPersonGate = await _personGate.analyzeCameraImage(
+          image,
+          rotationDegrees: orientation.rotationDegrees,
+        );
       }
 
       final grade = _qualityGrader.grade(
