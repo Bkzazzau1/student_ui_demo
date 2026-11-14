@@ -20,7 +20,7 @@ face result; a person decides.
 
 | Step | Where | Notes |
 |---|---|---|
-| Registration photos | Student device | Consent, then 7 guided poses. Front first, the other 6 in a random order per session. Each pose must still match the first front photo. |
+| Registration photos | Student device | **Once per student.** Consent, then 7 guided poses (front first, the other 6 in a random order per session). Each pose must still match the first front photo. A student can register again only after a rejection, or if school staff reopen registration (for example their appearance changed). |
 | Approval | School system | Staff review the photos and approve or reject them. On approval the school **rebuilds** the template from the approved photos and signs it. |
 | Template download | Exam device | Downloaded for the signed-in student only, verified on the device, and kept encrypted for in-exam rechecks. |
 | Pre-exam check | Exam device | Random liveness challenge. Identity is matched on the **same frames** that proved liveness. 3 tries, then "contact your invigilator". |
@@ -100,8 +100,8 @@ The app talks to the school only through `SchoolIdentityService`
 
 | Call | Purpose |
 |---|---|
-| `fetchStatus(studentId)` | Active template id and approval time, pending submission, last rejection reason. |
-| `submitRegistration(submission)` | Accepts photos, device embeddings, consent version, capture device and pose order (`kslas.official_face_id_submission.v1`). |
+| `fetchStatus(studentId)` | Active template id and approval time, pending submission, last rejection reason, and `registration_reopened` when staff allowed a new registration. |
+| `submitRegistration(submission)` | Accepts photos, device embeddings, consent version, capture device and pose order (`kslas.official_face_id_submission.v1`). It must **refuse** the submission unless registration is open: never registered, last one rejected, or reopened by staff. |
 | `downloadOfficialTemplate(studentId)` | The signed envelope for the signed-in student only. Must require that student's own authentication. |
 | `uploadIdentityEvidence(records)` | Stores sealed records and returns the ids it accepted. |
 | (questions) | Release exam questions only for a valid identity pass whose evidence record it has received. |
@@ -123,7 +123,8 @@ Until the university system is connected,
   `KSLAS/sample_school`;
 - it uses a per-install sample signing key;
 - **Face ID → Sample school admin (testing only)** approves or rejects
-  registrations and shows the evidence it received.
+  registrations, reopens registration for a student, and shows the evidence
+  it received.
 
 Release builds do not trust the sample school unless they are built with
 `--dart-define=KSLAS_ALLOW_SAMPLE_SCHOOL=true`. **A production release must
