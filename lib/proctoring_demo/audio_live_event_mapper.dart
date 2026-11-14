@@ -16,6 +16,8 @@ class AudioLiveEventMapper {
   const AudioLiveEventMapper();
 
   AudioLiveEventDecision? map(AudioIsolationResult result) {
+    // Only the native classifier decides about voices and sounds.
+    if (!result.nativeClassifier) return null;
     final label = _normalize(result.label);
     if (_nearVoiceLabels.contains(label) || result.nearVoiceLikely) {
       return const AudioLiveEventDecision(

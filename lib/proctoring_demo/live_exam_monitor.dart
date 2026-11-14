@@ -13,6 +13,7 @@ import 'audio_event_evidence_policy.dart';
 import 'audio_calibration_profile.dart';
 import 'audio_fingerprint_isolation_service.dart';
 import 'audio_live_event_mapper.dart';
+import 'audio_voice_window.dart';
 import 'camera_evidence_capture_service.dart';
 import 'camera_frame_orientation.dart';
 import 'camera_image_codec.dart';
@@ -74,7 +75,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   static const int _secondPersonPauseStreak = 7;
   static const int _gazeReviewStreak = 5;
   static const int _gazePauseStreak = 8;
-  static const int _farVoiceWarningStreak = 3;
   static const int _deviceRecoverySeconds = 30;
   static const int _deviceRetryEverySeconds = 5;
   static const int _lowLightWarningStreak = 3;
@@ -189,8 +189,9 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
   int _lowLightStreak = 0;
   int _secondsLive = 0;
   int _gazeRiskStreak = 0;
-  int _voiceRiskStreak = 0;
-  int _farVoiceRiskStreak = 0;
+  final AudioVoiceWindow _audioVoiceWindow = AudioVoiceWindow();
+  DateTime? _lastAudioChunkAt;
+  bool _audioFallbackReported = false;
   int _spoofRiskStreak = 0;
   bool _livenessChallengeReported = false;
   int _visualRiskStreak = 0;
@@ -1211,6 +1212,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
         );
         return;
       }
+      _lastAudioChunkAt = null;
       await _microphone.start(
         sampleRate: 44100,
         maxBufferSeconds: 20,
@@ -1230,7 +1232,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     }
   }
 
+  /// The microphone is "running" but has delivered nothing for 5 seconds.
+  bool _microphoneStalled() {
+    final last = _lastAudioChunkAt;
+    if (last == null) return false;
+    return DateTime.now().difference(last) > const Duration(seconds: 5);
+  }
+
   void _handleAudioChunk(Uint8List chunk) {
+    _lastAudioChunkAt = DateTime.now();
     final result = _audioIsolation.analysePcm16(chunk);
     if (result == null) return;
     final audioDecision = _audioEventMapper.map(result);
@@ -1239,39 +1249,51 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       _lastAudioAiObservationMs = nowMs;
       unawaited(_observeAudioTemporal(result));
     }
+    if (!result.nativeClassifier && !_audioFallbackReported) {
+      _audioFallbackReported = true;
+      unawaited(
+        _raiseEvent(
+          eventType: 'audio_classifier_unavailable',
+          severity: 'warning',
+          message:
+              'The sound classifier is unavailable; room sound is recorded '
+              'but not classified.',
+        ),
+      );
+    }
 
     final nearVoiceDetected =
         audioDecision?.eventType == 'audio_voice_isolation_alert';
     final backgroundVoiceDetected =
         audioDecision?.eventType == 'background_voice_environment_warning';
 
-    if (nearVoiceDetected) {
-      _voiceRiskStreak++;
-      _farVoiceRiskStreak = math.max(0, _farVoiceRiskStreak - 1);
-    } else if (backgroundVoiceDetected) {
-      _farVoiceRiskStreak++;
-      _voiceRiskStreak = math.max(0, _voiceRiskStreak - 1);
-    } else {
-      _voiceRiskStreak = math.max(0, _voiceRiskStreak - 1);
-      _farVoiceRiskStreak = math.max(0, _farVoiceRiskStreak - 1);
-    }
+    // Time-based, so the decision does not depend on how big the
+    // platform's audio buffers are (40-100 ms): a cough or one word is not
+    // enough, sustained voice is.
+    final chunkMs = (chunk.length / 2) * 1000 / _microphone.sampleRate;
+    final voice = _audioVoiceWindow.add(
+      atMs: nowMs,
+      durationMs: chunkMs,
+      nearVoice: nearVoiceDetected,
+      backgroundVoice: backgroundVoiceDetected,
+    );
 
     if (mounted) {
       setState(() {
-        _audioStatus = audioDecision?.eventType == 'audio_voice_isolation_alert'
-            ? 'Voice close to exam area ($_voiceRiskStreak/3)'
-            : audioDecision?.eventType == 'background_voice_environment_warning'
-            ? 'Voice may be outside or far away. Improve environment ($_farVoiceRiskStreak/$_farVoiceWarningStreak)'
+        _audioStatus = nearVoiceDetected
+            ? 'Voice close to exam area'
+            : backgroundVoiceDetected
+            ? 'Voice may be outside or far away. Improve environment'
             : audioDecision?.eventType == 'audio_environment_noise_warning'
             ? 'Environment sound noticed'
-            : _audioEventMapper.isAllowedAmbient(result)
+            : result.nativeClassifier
             ? 'Sound check active'
-            : 'Sound check active';
+            : 'Sound check active (basic mode)';
       });
     }
 
-    if (_voiceRiskStreak >= 3) {
-      _voiceRiskStreak = 0;
+    if (voice.nearVoiceSustained) {
+      _audioVoiceWindow.reset();
       unawaited(
         _raiseEvent(
           eventType: 'audio_voice_isolation_alert',
@@ -1280,14 +1302,15 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           metadata: result.toJson(),
         ),
       );
-    } else if (_farVoiceRiskStreak == _farVoiceWarningStreak) {
+    } else if (voice.backgroundVoiceSustained) {
+      _audioVoiceWindow.reset();
       unawaited(
         _raiseEvent(
           eventType: 'background_voice_environment_warning',
           severity: 'warning',
           message:
               'Voice may be coming from outside or far away. Please improve your environment.',
-          metadata: result.toJson(),
+          metadata: <String, Object?>{...result.toJson(), ...voice.toJson()},
         ),
       );
     } else if (audioDecision?.eventType == 'audio_environment_noise_warning') {
@@ -1299,7 +1322,8 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
           metadata: result.toJson(),
         ),
       );
-    } else if (result.repeatedFingerprint &&
+    } else if (result.nativeClassifier &&
+        result.repeatedFingerprint &&
         !_audioEventMapper.isAllowedAmbient(result) &&
         !backgroundVoiceDetected) {
       unawaited(
@@ -1377,9 +1401,16 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
             _audioStatus = 'Sound check active';
           });
         }
-      } else if (!_microphone.isRunning) {
+      } else if (!_microphone.isRunning || _microphoneStalled()) {
         _beginMicrophoneRecovery(
           'Room sound check is reconnecting. Please keep your exam area quiet.',
+          metadata: <String, Object?>{
+            'reason': _microphone.isRunning
+                ? 'no_audio_for_5_seconds'
+                : 'microphone_stream_stopped',
+            if (_microphone.lastError != null)
+              'error': _microphone.lastError.toString(),
+          },
         );
       }
       if (!platformOk) {
@@ -1552,7 +1583,6 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       'multiple_people_detected',
       'object_reflection_shadow_risk',
       'continuous_liveness_spoof_risk',
-      'audio_voice_isolation_alert',
     };
     return hardPauseEvents.contains(eventType);
   }

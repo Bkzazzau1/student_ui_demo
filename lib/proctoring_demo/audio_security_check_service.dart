@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import '../rust/api/proctoring.dart' as native_proctoring;
 import '../rust/brain_core_runtime.dart';
+import 'audio_fingerprint_isolation_service.dart';
 import 'microphone_stream_recording_service.dart';
 
 class AudioSecurityCheckResult {
@@ -166,7 +167,12 @@ class AudioSecurityCheckService {
     final peakSamples = <double>[];
     final zcrSamples = <double>[];
     final slopeSamples = <double>[];
-    final chunkSpeechSignals = <bool>[];
+    // Voice is decided per chunk by the same sound classifier the live
+    // exam monitor uses (which treats fans and hum as allowed ambient), not
+    // by loudness. Loudness-only scoring blocked ordinary quiet rooms.
+    final classifier = AudioFingerprintIsolationService();
+    var classifiedMs = 0.0;
+    var voiceMs = 0.0;
     final nativeSpeechSignals = <bool>[];
     final nativeNoiseSignals = <double>[];
     var nativeSpeechStreak = 0;
@@ -187,8 +193,11 @@ class AudioSecurityCheckService {
             zcrSamples.add(features.zeroCrossingRate);
           }
           if (features.slopeEnergy >= 0) slopeSamples.add(features.slopeEnergy);
-          if (features.rms >= 0 && features.peak >= 0) {
-            chunkSpeechSignals.add(_speechLikeChunk(features));
+          final classified = classifier.analysePcm16(chunk);
+          if (classified != null && classified.nativeClassifier) {
+            final chunkMs = (chunk.length / 2) * 1000 / 44100;
+            classifiedMs += chunkMs;
+            if (classified.nearVoiceLikely) voiceMs += chunkMs;
           }
           if (nativeReady) {
             try {
@@ -244,9 +253,9 @@ class AudioSecurityCheckService {
         message: 'Microphone check could not be completed: $e',
       );
     } finally {
-      clipPath = await _microphone.stopAndSaveWav(
-        filePrefix: 'pre_exam_audio_baseline_15s',
-      );
+      // The room sample is analysed in memory; raw audio is not written to
+      // the temp folder.
+      await _microphone.stop();
     }
 
     final average = _average(samples);
@@ -264,27 +273,16 @@ class AudioSecurityCheckService {
     final inputLevelOk =
         rawPeak >= _minimumLiveInputPeakRms || peak >= _minimumLiveInputPeakRms;
     final rmsVariation = _variation(samples);
-    final nativeVoiceConfidence = _nativeVoiceConfidence(nativeSpeechSignals);
-    final chunkVoiceConfidence = _chunkSpeechConfidence(chunkSpeechSignals);
     final nativeActivitySignal = nativeNoiseSignals.isEmpty
         ? 0.0
         : nativeNoiseSignals.reduce(math.max).clamp(0.0, 1.0);
-    final acousticVoiceConfidence = _acousticVoiceConfidence(
-      averageRms: average,
-      peakRms: rawPeak,
-      noiseFloorRms: noiseFloor,
-      zcr: zcr,
-      slope: slope,
-      variation: rmsVariation,
-      chunkSpeechConfidence: chunkVoiceConfidence,
-      nativeSpeechConfidence: nativeVoiceConfidence,
-      nativeActivitySignal: nativeActivitySignal,
-    );
-    final voiceConfidence = math.max(
-      _voiceConfidence(samples),
-      math.max(nativeVoiceConfidence, acousticVoiceConfidence),
-    );
-    final humanVoiceDetected = voiceConfidence >= 0.45;
+    // Share of the classified sample that was voice. At least 10% (1.5 s of
+    // a 15 s check) counts as someone speaking. Without the classifier (Dart
+    // fallback) the check cannot tell, so it does not block on voice.
+    final voiceConfidence = classifiedMs <= 0
+        ? 0.0
+        : (voiceMs / classifiedMs).clamp(0.0, 1.0);
+    final humanVoiceDetected = classifiedMs > 0 && voiceConfidence >= 0.10;
     final phoneRingDetected = _phoneRingLikely(
       peakRms: rawPeak,
       zcr: zcr,
@@ -506,69 +504,6 @@ class AudioSecurityCheckService {
   double _average(List<double> values) {
     if (values.isEmpty) return 0;
     return values.fold<double>(0, (sum, value) => sum + value) / values.length;
-  }
-
-  double _voiceConfidence(List<double> samples) {
-    if (samples.length < 4) return 0;
-    final active = samples.where((value) => value >= 0.018).length;
-    final speechLevel = samples.where((value) => value >= 0.008).length;
-    final varied = _variation(samples) >= 0.0007;
-    final ratio = (active + (speechLevel * 0.45)) / samples.length;
-    return (ratio * (varied ? 1.35 : 0.75)).clamp(0.0, 1.0);
-  }
-
-  double _nativeVoiceConfidence(List<bool> speechSignals) {
-    if (speechSignals.isEmpty) return 0;
-    final speechCount = speechSignals.where((value) => value).length;
-    return (speechCount / speechSignals.length).clamp(0.0, 1.0);
-  }
-
-  double _chunkSpeechConfidence(List<bool> speechSignals) {
-    if (speechSignals.isEmpty) return 0;
-    final speechCount = speechSignals.where((value) => value).length;
-    return (speechCount / speechSignals.length).clamp(0.0, 1.0);
-  }
-
-  bool _speechLikeChunk(_AudioChunkFeatures features) {
-    final speechZcr =
-        features.zeroCrossingRate >= 0.018 && features.zeroCrossingRate <= 0.26;
-    final speechTexture = features.slopeEnergy >= 0.0025;
-    final speechBurst = features.peak >= 0.018 && features.rms >= 0.0012;
-    final strongBurst =
-        features.peak >= 0.035 && features.slopeEnergy >= 0.0014;
-    return speechZcr && speechTexture && (speechBurst || strongBurst);
-  }
-
-  double _acousticVoiceConfidence({
-    required double averageRms,
-    required double peakRms,
-    required double noiseFloorRms,
-    required double zcr,
-    required double slope,
-    required double variation,
-    required double chunkSpeechConfidence,
-    required double nativeSpeechConfidence,
-    required double nativeActivitySignal,
-  }) {
-    var score = 0.0;
-    final peakToAverage = peakRms / math.max(averageRms, 0.0008);
-    final peakToFloor = peakRms / math.max(noiseFloorRms, 0.0008);
-    final speechZcr = zcr >= 0.018 && zcr <= 0.26;
-    final speechTexture = slope >= 0.0025;
-
-    if (peakRms >= 0.018) score += 0.16;
-    if (peakRms >= 0.032) score += 0.10;
-    if (averageRms >= 0.0012) score += 0.08;
-    if (peakToAverage >= 5.0) score += 0.14;
-    if (peakToFloor >= 6.0) score += 0.14;
-    if (speechZcr) score += 0.14;
-    if (speechTexture) score += 0.14;
-    if (variation >= 0.0007) score += 0.08;
-    if (chunkSpeechConfidence >= 0.18) score += 0.18;
-    if (nativeSpeechConfidence >= 0.18) score += 0.18;
-    if (nativeActivitySignal >= 0.50 && speechZcr) score += 0.10;
-
-    return score.clamp(0.0, 1.0);
   }
 
   double _variation(List<double> samples) {

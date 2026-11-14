@@ -18,6 +18,7 @@ class AudioIsolationResult {
     required this.nearVoiceLikely,
     required this.possibleFarVoiceLikely,
     required this.allowedAmbientLikely,
+    this.nativeClassifier = false,
   });
 
   final double rms;
@@ -33,6 +34,11 @@ class AudioIsolationResult {
   final bool possibleFarVoiceLikely;
   final bool allowedAmbientLikely;
 
+  /// True when the Rust classifier produced this result. The Dart fallback
+  /// is far more aggressive (a quiet room reads as background voice), so its
+  /// results never raise voice events.
+  final bool nativeClassifier;
+
   Map<String, Object?> toJson() => <String, Object?>{
     'rms': rms,
     'peak': peak,
@@ -46,6 +52,7 @@ class AudioIsolationResult {
     'near_voice_likely': nearVoiceLikely,
     'possible_far_voice_likely': possibleFarVoiceLikely,
     'allowed_ambient_likely': allowedAmbientLikely,
+    'classifier': nativeClassifier ? 'native' : 'dart_fallback',
   };
 }
 
@@ -253,31 +260,22 @@ class AudioFingerprintIsolationService {
       nearVoiceLikely: false,
       possibleFarVoiceLikely: false,
       allowedAmbientLikely: true,
+      nativeClassifier: result.nativeClassifier,
     );
   }
 
   AudioIsolationResult _fromNative(NativeAudioIntelligenceSnapshot native) {
-    final softenedNearVoice =
-        native.voiceConfidence >= 0.48 &&
-        (native.rms >= 0.012 || native.peak >= 0.065);
-    final softenedFarVoice =
-        !softenedNearVoice &&
-        native.voiceConfidence >= 0.35 &&
-        (native.rms >= 0.006 || native.peak >= 0.035);
-    final nearVoiceLikely = native.nearVoiceLikely || softenedNearVoice;
+    // The classifier's own decision and label. Promoting chunks to "voice"
+    // from voice confidence and loudness alone turned typing, ringtones,
+    // tones and steady noise into "near voice".
+    final nearVoiceLikely = native.nearVoiceLikely;
     final possibleFarVoiceLikely =
-        !nearVoiceLikely && (native.possibleFarVoiceLikely || softenedFarVoice);
+        !nearVoiceLikely && native.possibleFarVoiceLikely;
     final allowedAmbientLikely =
         !nearVoiceLikely &&
         !possibleFarVoiceLikely &&
         native.allowedAmbientLikely;
-    final label = nearVoiceLikely
-        ? 'near_voice_noticed'
-        : possibleFarVoiceLikely
-        ? 'possible_far_or_background_voice'
-        : allowedAmbientLikely
-        ? 'steady_allowed_ambient_noise'
-        : native.label;
+    final label = native.label;
 
     return AudioIsolationResult(
       rms: native.rms,
@@ -292,6 +290,7 @@ class AudioFingerprintIsolationService {
       nearVoiceLikely: nearVoiceLikely,
       possibleFarVoiceLikely: possibleFarVoiceLikely,
       allowedAmbientLikely: allowedAmbientLikely,
+      nativeClassifier: true,
     );
   }
 

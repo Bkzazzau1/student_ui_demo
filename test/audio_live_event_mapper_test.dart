@@ -75,5 +75,7 @@ AudioIsolationResult _result({
     nearVoiceLikely: nearVoiceLikely,
     possibleFarVoiceLikely: possibleFarVoiceLikely,
     allowedAmbientLikely: allowedAmbientLikely,
+    // These describe what the Rust classifier reports.
+    nativeClassifier: true,
   );
 }
