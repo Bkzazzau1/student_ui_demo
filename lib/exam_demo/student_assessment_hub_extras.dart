@@ -161,8 +161,7 @@ class StudentAssessmentHubExtrasPanel extends StatelessWidget {
                 width: itemWidth,
                 child: _HubExtraSection(
                   title: 'Assignments',
-                  subtitle:
-                      'Mobile allowed. Submit work from phone, tablet, iPad, or desktop.',
+                  subtitle: 'Mobile allowed. Submit work from phone, tablet, iPad, or desktop.',
                   icon: Icons.upload_file_outlined,
                   count: assignments.length,
                   children: [
@@ -179,8 +178,7 @@ class StudentAssessmentHubExtrasPanel extends StatelessWidget {
                 width: itemWidth,
                 child: _HubExtraSection(
                   title: 'Feedback',
-                  subtitle:
-                      'Lecturer feedback and released assessment comments.',
+                  subtitle: 'Lecturer feedback and released assessment comments.',
                   icon: Icons.rate_review_outlined,
                   count: feedbackItems.length,
                   children: [
@@ -244,8 +242,7 @@ class _HubExtraSection extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.2,
                           ),
@@ -263,9 +260,10 @@ class _HubExtraSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          ...children.expand(
-            (child) => <Widget>[child, const SizedBox(height: 12)],
-          ),
+          ...children.expand((child) => <Widget>[
+                child,
+                const SizedBox(height: 12),
+              ]),
         ],
       ),
     );
@@ -412,10 +410,7 @@ class _ExtraItemCard extends StatelessWidget {
                   body,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF475569),
-                    height: 1.35,
-                  ),
+                  style: const TextStyle(color: Color(0xFF475569), height: 1.35),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -457,10 +452,7 @@ class _ExtraCountPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Text(
-        '$count',
-        style: const TextStyle(fontWeight: FontWeight.w900),
-      ),
+      child: Text('$count', style: const TextStyle(fontWeight: FontWeight.w900)),
     );
   }
 }

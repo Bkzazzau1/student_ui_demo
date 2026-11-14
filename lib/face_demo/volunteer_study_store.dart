@@ -548,9 +548,8 @@ class VolunteerStudyStore {
       }
     }
     await folder.create(recursive: true);
-    await File(
-      _join(folder.path, <String>['capture_log_$deviceLabel.json']),
-    ).writeAsString(const JsonEncoder.withIndent('  ').convert(log));
+    await File(_join(folder.path, <String>['capture_log_$deviceLabel.json']))
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(log));
     return VolunteerStudyExport(
       folder: folder,
       volunteers: codes.length,

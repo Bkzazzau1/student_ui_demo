@@ -77,8 +77,6 @@ class E1SpecialistFrameInput {
     'height': height,
     'source_frame_id': sourceFrameId,
     'capture_timestamp_ns': captureTimestampNs,
-    'planes': planes
-        .map((plane) => plane.toPlatformMap())
-        .toList(growable: false),
+    'planes': planes.map((plane) => plane.toPlatformMap()).toList(growable: false),
   };
 }

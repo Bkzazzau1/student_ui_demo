@@ -151,7 +151,8 @@ class _AirBoardLiveHandViewState extends State<AirBoardLiveHandView> {
   Future<void> _onFrame(CameraImage image) async {
     if (!_modelLoaded || _processing) return;
     final now = DateTime.now();
-    if (_lastInference != null && now.difference(_lastInference!) < _interval) {
+    if (_lastInference != null &&
+        now.difference(_lastInference!) < _interval) {
       return;
     }
     _lastInference = now;
@@ -294,12 +295,15 @@ class _AirBoardLiveHandViewState extends State<AirBoardLiveHandView> {
   }
 
   void _writeRgb(Uint8List target, int offset, int y, int u, int v) {
-    target[offset] = (y + 1.402 * v).round().clamp(0, 255).toInt();
-    target[offset + 1] = (y - 0.344136 * u - 0.714136 * v)
-        .round()
-        .clamp(0, 255)
-        .toInt();
-    target[offset + 2] = (y + 1.772 * u).round().clamp(0, 255).toInt();
+    target[offset] =
+        (y + 1.402 * v).round().clamp(0, 255).toInt();
+    target[offset + 1] =
+        (y - 0.344136 * u - 0.714136 * v)
+            .round()
+            .clamp(0, 255)
+            .toInt();
+    target[offset + 2] =
+        (y + 1.772 * u).round().clamp(0, 255).toInt();
   }
 
   void _startStroke(Offset offset) {
@@ -363,10 +367,7 @@ class _AirBoardLiveHandViewState extends State<AirBoardLiveHandView> {
 
   rust_air.AirBoardActivitySummary _analyzeBoard() {
     final now = DateTime.now();
-    final all = <_Stroke>[
-      ..._strokes,
-      if (_activeStroke != null) _activeStroke!,
-    ];
+    final all = <_Stroke>[..._strokes, if (_activeStroke != null) _activeStroke!];
     return rust_air.analyzeAirBoardContext(
       context: rust_air.AirBoardContext(
         isOpen: true,
@@ -416,17 +417,17 @@ class _AirBoardLiveHandViewState extends State<AirBoardLiveHandView> {
   }
 
   rust_hand.HandRegionSignal _emptyHand() => rust_hand.HandRegionSignal(
-    handVisible: false,
-    handCount: 0,
-    primaryHandX: 0,
-    primaryHandY: 0,
-    handConfidence: 0,
-    nearKeyboard: false,
-    nearMouseOrStylusArea: false,
-    nearFace: false,
-    belowDeskLine: false,
-    timestampMs: DateTime.now().millisecondsSinceEpoch,
-  );
+        handVisible: false,
+        handCount: 0,
+        primaryHandX: 0,
+        primaryHandY: 0,
+        handConfidence: 0,
+        nearKeyboard: false,
+        nearMouseOrStylusArea: false,
+        nearFace: false,
+        belowDeskLine: false,
+        timestampMs: DateTime.now().millisecondsSinceEpoch,
+      );
 
   Future<void> _disposeCamera(CameraController camera) async {
     try {
@@ -544,44 +545,46 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(colors: [_ink, Color(0xFF113A63), _brand]),
-      borderRadius: BorderRadius.circular(22),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Local camera-assisted rough work',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 22,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_ink, Color(0xFF113A63), _brand],
           ),
+          borderRadius: BorderRadius.circular(22),
         ),
-        const SizedBox(height: 8),
-        Text(
-          decision.studentMessage,
-          style: const TextStyle(
-            color: Color(0xFFE2E8F0),
-            height: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Tag(modelStatus),
-            _Tag(cameraStatus),
-            _Tag(_friendly(decision.attentionLevel)),
+            const Text(
+              'Local camera-assisted rough work',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 22,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              decision.studentMessage,
+              style: const TextStyle(
+                color: Color(0xFFE2E8F0),
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _Tag(modelStatus),
+                _Tag(cameraStatus),
+                _Tag(_friendly(decision.attentionLevel)),
+              ],
+            ),
           ],
         ),
-      ],
-    ),
-  );
+      );
 }
 
 class _CameraPanel extends StatelessWidget {
@@ -605,60 +608,60 @@ class _CameraPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Camera hand monitor',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
-        ),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: AspectRatio(
-            aspectRatio: 4 / 3,
-            child: ColoredBox(
-              color: _ink,
-              child: camera == null
-                  ? Center(
-                      child: Icon(
-                        opening
-                            ? Icons.hourglass_top_rounded
-                            : Icons.videocam_off_outlined,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    )
-                  : CameraPreview(camera!),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Camera hand monitor',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _RowMetric('Stream', streaming ? 'Active' : 'Not active'),
-        _RowMetric('Inference', processing ? 'Processing' : 'Ready'),
-        _RowMetric('Hands', '${signal?.handCount ?? 0}'),
-        _RowMetric(
-          'Confidence',
-          '${((signal?.handConfidence ?? 0) * 100).round()}%',
-        ),
-        _RowMetric(
-          'Work-area match',
-          decision.handMatchesAirBoard ? 'Matched' : 'Not confirmed',
-        ),
-        if (resultReason != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            resultReason!,
-            style: const TextStyle(
-              color: _muted,
-              height: 1.35,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: ColoredBox(
+                  color: _ink,
+                  child: camera == null
+                      ? Center(
+                          child: Icon(
+                            opening
+                                ? Icons.hourglass_top_rounded
+                                : Icons.videocam_off_outlined,
+                            color: Colors.white,
+                            size: 36,
+                          ),
+                        )
+                      : CameraPreview(camera!),
+                ),
+              ),
             ),
-          ),
-        ],
-      ],
-    ),
-  );
+            const SizedBox(height: 12),
+            _RowMetric('Stream', streaming ? 'Active' : 'Not active'),
+            _RowMetric('Inference', processing ? 'Processing' : 'Ready'),
+            _RowMetric('Hands', '${signal?.handCount ?? 0}'),
+            _RowMetric(
+              'Confidence',
+              '${((signal?.handConfidence ?? 0) * 100).round()}%',
+            ),
+            _RowMetric(
+              'Work-area match',
+              decision.handMatchesAirBoard ? 'Matched' : 'Not confirmed',
+            ),
+            if (resultReason != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                resultReason!,
+                style: const TextStyle(
+                  color: _muted,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
 }
 
 class _Board extends StatelessWidget {
@@ -682,61 +685,64 @@ class _Board extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Card(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Digital rough work',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+            Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Digital rough work',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                        ),
+                      ),
+                      Text(
+                        'Use mouse, touchscreen, or stylus.',
+                        style: TextStyle(
+                          color: _muted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    'Use mouse, touchscreen, or stylus.',
-                    style: TextStyle(
-                      color: _muted,
-                      fontWeight: FontWeight.w600,
-                    ),
+                ),
+                IconButton(
+                  tooltip: 'Undo',
+                  onPressed: onUndo,
+                  icon: const Icon(Icons.undo_rounded),
+                ),
+                IconButton(
+                  tooltip: 'Clear',
+                  onPressed: onClear,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AspectRatio(
+                aspectRatio: 16 / 10,
+                child: Listener(
+                  onPointerDown: (event) => onStart(event.localPosition),
+                  onPointerMove: (event) => onMove(event.localPosition),
+                  onPointerUp: (_) => onEnd(),
+                  onPointerCancel: (_) => onEnd(),
+                  child: CustomPaint(
+                    painter: _Painter(strokes: strokes, active: active),
+                    child: const SizedBox.expand(),
                   ),
-                ],
+                ),
               ),
-            ),
-            IconButton(
-              tooltip: 'Undo',
-              onPressed: onUndo,
-              icon: const Icon(Icons.undo_rounded),
-            ),
-            IconButton(
-              tooltip: 'Clear',
-              onPressed: onClear,
-              icon: const Icon(Icons.delete_outline_rounded),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: AspectRatio(
-            aspectRatio: 16 / 10,
-            child: Listener(
-              onPointerDown: (event) => onStart(event.localPosition),
-              onPointerMove: (event) => onMove(event.localPosition),
-              onPointerUp: (_) => onEnd(),
-              onPointerCancel: (_) => onEnd(),
-              child: CustomPaint(
-                painter: _Painter(strokes: strokes, active: active),
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class _Evidence extends StatelessWidget {
@@ -752,19 +758,28 @@ class _Evidence extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Card(
-    child: Wrap(
-      spacing: 24,
-      runSpacing: 12,
-      children: [
-        _RowMetric('Board strokes', '${board.strokeCount}'),
-        _RowMetric('Board points', '${board.totalPoints}'),
-        _RowMetric('Writing now', board.currentlyWriting ? 'Yes' : 'No'),
-        _RowMetric('Hand detections', '${handResult?.detections.length ?? 0}'),
-        _RowMetric('Hand state', decision.behaviourLabel.replaceAll('_', ' ')),
-        _RowMetric('Review', decision.reviewRequired ? 'Required' : 'Normal'),
-      ],
-    ),
-  );
+        child: Wrap(
+          spacing: 24,
+          runSpacing: 12,
+          children: [
+            _RowMetric('Board strokes', '${board.strokeCount}'),
+            _RowMetric('Board points', '${board.totalPoints}'),
+            _RowMetric('Writing now', board.currentlyWriting ? 'Yes' : 'No'),
+            _RowMetric(
+              'Hand detections',
+              '${handResult?.detections.length ?? 0}',
+            ),
+            _RowMetric(
+              'Hand state',
+              decision.behaviourLabel.replaceAll('_', ' '),
+            ),
+            _RowMetric(
+              'Review',
+              decision.reviewRequired ? 'Required' : 'Normal',
+            ),
+          ],
+        ),
+      );
 }
 
 class _Card extends StatelessWidget {
@@ -774,21 +789,21 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: _line),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x080F172A),
-          blurRadius: 18,
-          offset: Offset(0, 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _line),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x080F172A),
+              blurRadius: 18,
+              offset: Offset(0, 10),
+            ),
+          ],
         ),
-      ],
-    ),
-    child: child,
-  );
+        child: child,
+      );
 }
 
 class _Tag extends StatelessWidget {
@@ -797,23 +812,23 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(maxWidth: 420),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-    ),
-    child: Text(
-      text,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-        fontWeight: FontWeight.w800,
-      ),
-    ),
-  );
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        ),
+        child: Text(
+          text,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      );
 }
 
 class _RowMetric extends StatelessWidget {
@@ -823,24 +838,30 @@ class _RowMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 7),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '$label: ',
-          style: const TextStyle(color: _muted, fontWeight: FontWeight.w700),
+        padding: const EdgeInsets.only(bottom: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$label: ',
+              style: const TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Flexible(
+              child: Text(
+                value,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _ink,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
         ),
-        Flexible(
-          child: Text(
-            value,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: _ink, fontWeight: FontWeight.w900),
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class _Painter extends CustomPainter {
@@ -883,7 +904,12 @@ class _Painter extends CustomPainter {
         (previous.dx + current.dx) / 2,
         (previous.dy + current.dy) / 2,
       );
-      path.quadraticBezierTo(previous.dx, previous.dy, middle.dx, middle.dy);
+      path.quadraticBezierTo(
+        previous.dx,
+        previous.dy,
+        middle.dx,
+        middle.dy,
+      );
     }
     canvas.drawPath(path, paint);
   }

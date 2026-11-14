@@ -53,7 +53,12 @@ class _GazeCalibrationViewState extends State<GazeCalibrationView> {
       0.20,
       0.40,
     ),
-    _Target('answer_area', 'Turn your head toward the answer area', 0.50, 0.68),
+    _Target(
+      'answer_area',
+      'Turn your head toward the answer area',
+      0.50,
+      0.68,
+    ),
     _Target(
       'air_board',
       'Turn your head down toward the rough-work area',

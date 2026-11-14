@@ -53,9 +53,9 @@ class _StudentExamFeedbackViewState extends State<StudentExamFeedbackView> {
     if (_message.text.trim().isEmpty) return;
     FocusScope.of(context).unfocus();
     setState(() => _submitted = true);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Feedback saved. Thank you.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Feedback saved. Thank you.')),
+    );
   }
 
   @override
@@ -110,11 +110,9 @@ class _StudentExamFeedbackViewState extends State<StudentExamFeedbackView> {
                             topics: _topics,
                             feelings: _feelings,
                             onTopicChanged: (value) {
-                              if (value != null)
-                                setState(() => _selectedTopic = value);
+                              if (value != null) setState(() => _selectedTopic = value);
                             },
-                            onFeelingChanged: (value) =>
-                                setState(() => _selectedFeeling = value),
+                            onFeelingChanged: (value) => setState(() => _selectedFeeling = value),
                             onMessageChanged: () => setState(() {}),
                             onSubmit: _submit,
                           );
@@ -126,11 +124,7 @@ class _StudentExamFeedbackViewState extends State<StudentExamFeedbackView> {
 
                           if (!wide) {
                             return Column(
-                              children: [
-                                form,
-                                const SizedBox(height: 16),
-                                side,
-                              ],
+                              children: [form, const SizedBox(height: 16), side],
                             );
                           }
                           return Row(
@@ -194,11 +188,7 @@ class _FeedbackHero extends StatelessWidget {
                   runSpacing: 10,
                   children: [
                     _GlassTag(text: assessment.course.code),
-                    _GlassTag(
-                      text: assessment.graded
-                          ? 'Graded activity'
-                          : 'Learning activity',
-                    ),
+                    _GlassTag(text: assessment.graded ? 'Graded activity' : 'Learning activity'),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -213,10 +203,10 @@ class _FeedbackHero extends StatelessWidget {
                 Text(
                   assessment.title,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -241,11 +231,7 @@ class _FeedbackHero extends StatelessWidget {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.rate_review_outlined,
-                    color: Colors.white,
-                    size: 30,
-                  ),
+                  Icon(Icons.rate_review_outlined, color: Colors.white, size: 30),
                   SizedBox(height: 12),
                   Text(
                     'Your feedback helps the school improve assessment quality.',
@@ -342,9 +328,9 @@ class _FeedbackFormCard extends StatelessWidget {
                 child: Text(
                   'Write your feedback',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: _brandDark,
-                    fontWeight: FontWeight.w900,
-                  ),
+                        color: _brandDark,
+                        fontWeight: FontWeight.w900,
+                      ),
                 ),
               ),
             ],
@@ -379,9 +365,9 @@ class _FeedbackFormCard extends StatelessWidget {
           Text(
             'How was the experience?',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: _brandDark,
-              fontWeight: FontWeight.w900,
-            ),
+                  color: _brandDark,
+                  fontWeight: FontWeight.w900,
+                ),
           ),
           const SizedBox(height: 10),
           Wrap(
@@ -415,12 +401,8 @@ class _FeedbackFormCard extends StatelessWidget {
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: submitted || !canSubmit
-                  ? const LinearGradient(
-                      colors: [Color(0xFFE2E8F0), Color(0xFFCBD5E1)],
-                    )
-                  : const LinearGradient(
-                      colors: [_brand, Color(0xFF1D4ED8), _success],
-                    ),
+                  ? const LinearGradient(colors: [Color(0xFFE2E8F0), Color(0xFFCBD5E1)])
+                  : const LinearGradient(colors: [_brand, Color(0xFF1D4ED8), _success]),
               borderRadius: BorderRadius.circular(14),
               boxShadow: submitted || !canSubmit
                   ? const []
@@ -443,21 +425,15 @@ class _FeedbackFormCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        submitted
-                            ? Icons.check_circle_outline
-                            : Icons.send_outlined,
-                        color: submitted || canSubmit
-                            ? Colors.white
-                            : const Color(0xFF64748B),
+                        submitted ? Icons.check_circle_outline : Icons.send_outlined,
+                        color: submitted || canSubmit ? Colors.white : const Color(0xFF64748B),
                         size: 20,
                       ),
                       const SizedBox(width: 9),
                       Text(
                         submitted ? 'Feedback saved' : 'Send feedback',
                         style: TextStyle(
-                          color: submitted || canSubmit
-                              ? Colors.white
-                              : const Color(0xFF64748B),
+                          color: submitted || canSubmit ? Colors.white : const Color(0xFF64748B),
                           fontWeight: FontWeight.w900,
                           fontSize: 15,
                         ),
@@ -612,9 +588,9 @@ class _FeedbackSidePanel extends StatelessWidget {
               Text(
                 submitted ? 'Feedback received' : 'Before you send',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                ),
+                      color: _brandDark,
+                      fontWeight: FontWeight.w900,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -681,19 +657,13 @@ class _SummaryLine extends StatelessWidget {
             width: 86,
             child: Text(
               label,
-              style: const TextStyle(
-                color: _muted,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: _brandDark,
-                fontWeight: FontWeight.w900,
-              ),
+              style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900),
             ),
           ),
         ],
@@ -718,10 +688,7 @@ class _GlassTag extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w900,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
       ),
     );
   }

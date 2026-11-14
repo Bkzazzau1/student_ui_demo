@@ -464,9 +464,9 @@ class _AddVolunteerDialogState extends State<_AddVolunteerDialog> {
         ),
         FilledButton(
           onPressed: _consent && _normalized != null
-              ? () => Navigator.of(
-                  context,
-                ).pop(_NewVolunteer(_normalized!, _spoofTest))
+              ? () =>
+                    Navigator.of(context)
+                        .pop(_NewVolunteer(_normalized!, _spoofTest))
               : null,
           child: const Text('Add'),
         ),

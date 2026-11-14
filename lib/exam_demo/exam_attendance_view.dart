@@ -84,15 +84,9 @@ class ExamAttendanceView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final submitted = _records
-        .where((record) => record.status == ExamScheduleStatus.submitted)
-        .length;
-    final closed = _records
-        .where((record) => record.status == ExamScheduleStatus.closed)
-        .length;
-    final toBeWritten = _records
-        .where((record) => record.status == ExamScheduleStatus.toBeWritten)
-        .length;
+    final submitted = _records.where((record) => record.status == ExamScheduleStatus.submitted).length;
+    final closed = _records.where((record) => record.status == ExamScheduleStatus.closed).length;
+    final toBeWritten = _records.where((record) => record.status == ExamScheduleStatus.toBeWritten).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -196,11 +190,7 @@ class _ScheduleHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x1F0F172A),
-            blurRadius: 24,
-            offset: Offset(0, 14),
-          ),
+          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
         ],
       ),
       child: Container(
@@ -222,24 +212,18 @@ class _ScheduleHero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _GlassTag(
-                      icon: Icons.event_note_outlined,
-                      text: 'Schedule',
-                    ),
-                    _GlassTag(
-                      icon: Icons.history_rounded,
-                      text: 'Exam history',
-                    ),
+                    _GlassTag(icon: Icons.event_note_outlined, text: 'Schedule'),
+                    _GlassTag(icon: Icons.history_rounded, text: 'Exam history'),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text(
                   'Exam and Assessment Schedule',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.4,
-                  ),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
@@ -305,19 +289,11 @@ class _HeroStatus extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.event_available_outlined,
-            color: Color(0xFF93C5FD),
-            size: 28,
-          ),
+          const Icon(Icons.event_available_outlined, color: Color(0xFF93C5FD), size: 28),
           const SizedBox(height: 10),
           Text(
             '$total records',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 4),
           Text(
@@ -350,9 +326,7 @@ class _ScheduleSummaryStrip extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 760;
-        final width = compact
-            ? constraints.maxWidth
-            : (constraints.maxWidth - 24) / 3;
+        final width = compact ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -413,11 +387,7 @@ class _SummaryTile extends StatelessWidget {
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x060F172A),
-            blurRadius: 14,
-            offset: Offset(0, 8),
-          ),
+          BoxShadow(color: Color(0x060F172A), blurRadius: 14, offset: Offset(0, 8)),
         ],
       ),
       child: Row(
@@ -438,19 +408,9 @@ class _SummaryTile extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: _brandDark,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: const TextStyle(color: _brandDark, fontSize: 22, fontWeight: FontWeight.w900),
                 ),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: _muted,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                Text(label, style: const TextStyle(color: _muted, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
@@ -474,11 +434,7 @@ class _ScheduleRecordsPanel extends StatelessWidget {
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x080F172A),
-            blurRadius: 18,
-            offset: Offset(0, 10),
-          ),
+          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -503,9 +459,9 @@ class _ScheduleRecordsPanel extends StatelessWidget {
                   child: Text(
                     'Expected and taken activities',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: _brandDark,
-                      fontWeight: FontWeight.w900,
-                    ),
+                          color: _brandDark,
+                          fontWeight: FontWeight.w900,
+                        ),
                   ),
                 ),
                 _SmallCount(count: records.length),
@@ -537,10 +493,7 @@ class _SmallCount extends StatelessWidget {
         border: Border.all(color: const Color(0xFFBFDBFE)),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        '$count',
-        style: const TextStyle(color: _brand, fontWeight: FontWeight.w900),
-      ),
+      child: Text('$count', style: const TextStyle(color: _brand, fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -583,36 +536,24 @@ class _ScheduleRecordRow extends StatelessWidget {
                       runSpacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(
-                          record.course.code,
-                          style: const TextStyle(
-                            color: _brand,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        _StatusPill(
-                          label: _statusLabel(record.status),
-                          color: color,
-                        ),
+                        Text(record.course.code, style: const TextStyle(color: _brand, fontWeight: FontWeight.w900)),
+                        _StatusPill(label: _statusLabel(record.status), color: color),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
                       record.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: _brandDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                            color: _brandDark,
+                            fontWeight: FontWeight.w900,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       record.course.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _muted,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: const TextStyle(color: _muted, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -621,18 +562,11 @@ class _ScheduleRecordRow extends StatelessWidget {
           );
           final dateTime = _DateTimeBox(record: record, color: color);
           if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [main, const SizedBox(height: 12), dateTime],
-            );
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [main, const SizedBox(height: 12), dateTime]);
           }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: main),
-              const SizedBox(width: 16),
-              SizedBox(width: 360, child: dateTime),
-            ],
+            children: [Expanded(child: main), const SizedBox(width: 16), SizedBox(width: 360, child: dateTime)],
           );
         },
       ),
@@ -656,10 +590,7 @@ class _DateTimeBox extends StatelessWidget {
         _InfoPill(label: record.type, color: _brand),
         _InfoPill(label: record.dateLabel, color: _muted),
         _InfoPill(label: 'Start: ${record.startTimeLabel}', color: color),
-        _InfoPill(
-          label: 'Submitted: ${record.submittedTimeLabel}',
-          color: color,
-        ),
+        _InfoPill(label: 'Submitted: ${record.submittedTimeLabel}', color: color),
       ],
     );
   }
@@ -685,13 +616,7 @@ class _GlassTag extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.white, size: 16),
           const SizedBox(width: 7),
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -713,14 +638,7 @@ class _StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w900,
-          fontSize: 12,
-        ),
-      ),
+      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
     );
   }
 }
@@ -740,14 +658,7 @@ class _InfoPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w900,
-          fontSize: 12,
-        ),
-      ),
+      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 12)),
     );
   }
 }
