@@ -132,6 +132,7 @@ class OfficialFaceIdStatus {
     this.pendingSubmittedAt,
     this.lastRejectionReason,
     this.lastRejectedAt,
+    this.reopenedBySchool = false,
   });
 
   factory OfficialFaceIdStatus.fromJson(Map<String, Object?> json) {
@@ -153,6 +154,7 @@ class OfficialFaceIdStatus {
       pendingSubmittedAt: date('pending_submitted_at'),
       lastRejectionReason: text('last_rejection_reason'),
       lastRejectedAt: date('last_rejected_at'),
+      reopenedBySchool: json['registration_reopened'] == true,
     );
   }
 
@@ -164,8 +166,22 @@ class OfficialFaceIdStatus {
   final String? lastRejectionReason;
   final DateTime? lastRejectedAt;
 
+  /// The school allowed this student to register again (for example their
+  /// appearance changed). Only the school can set this.
+  final bool reopenedBySchool;
+
   bool get hasApprovedFaceId => activeTemplateId != null;
   bool get hasPendingSubmission => pendingSubmissionId != null;
+
+  /// A student registers once. They may submit only when they have never
+  /// registered, when the school rejected their photos, or when the school
+  /// reopened registration for them. While a registration is waiting or
+  /// approved they cannot register again.
+  bool get registrationOpen {
+    if (reopenedBySchool) return !hasPendingSubmission;
+    return state == OfficialFaceIdState.notSubmitted ||
+        state == OfficialFaceIdState.rejected;
+  }
 
   /// An approved Face ID stays active while a replacement waits for review,
   /// so the overall state is "approved" whenever one is active.
@@ -184,5 +200,6 @@ class OfficialFaceIdStatus {
     'pending_submitted_at': pendingSubmittedAt?.toUtc().toIso8601String(),
     'last_rejection_reason': lastRejectionReason,
     'last_rejected_at': lastRejectedAt?.toUtc().toIso8601String(),
+    'registration_reopened': reopenedBySchool,
   };
 }

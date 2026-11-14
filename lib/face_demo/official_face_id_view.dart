@@ -204,39 +204,47 @@ class _OfficialFaceIdViewState extends State<OfficialFaceIdView> {
   List<Widget> _actions() {
     final status = _status;
     if (_loading || status == null) return const <Widget>[];
+    if (!status.registrationOpen) {
+      // Students register once. Only the exam office can reopen it.
+      if (status.state == OfficialFaceIdState.pendingApproval ||
+          status.hasPendingSubmission) {
+        return const <Widget>[];
+      }
+      return const <Widget>[
+        Text(
+          'If your appearance has changed, contact the exam office. Only the '
+          'school can let you register your Face ID again.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _muted, height: 1.4),
+        ),
+      ];
+    }
     final busy = _submitting;
     final label = switch (status.state) {
-      OfficialFaceIdState.notSubmitted => 'Register Face ID',
       OfficialFaceIdState.rejected => 'Register Face ID again',
-      OfficialFaceIdState.pendingApproval => 'Replace my waiting registration',
-      OfficialFaceIdState.approved =>
-        status.hasPendingSubmission
-            ? 'Replace my waiting registration'
-            : 'Register a new Face ID',
+      OfficialFaceIdState.approved => 'Register my new Face ID',
+      _ => 'Register Face ID',
     };
-    final primary =
-        status.state == OfficialFaceIdState.notSubmitted ||
-        status.state == OfficialFaceIdState.rejected;
-    final icon = busy
-        ? const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        : const Icon(Icons.face_retouching_natural);
-    final text = Text(busy ? 'Sending to your school...' : label);
     return <Widget>[
-      primary
-          ? FilledButton.icon(
-              onPressed: busy ? null : _register,
-              icon: icon,
-              label: text,
-            )
-          : OutlinedButton.icon(
-              onPressed: busy ? null : _register,
-              icon: icon,
-              label: text,
-            ),
+      FilledButton.icon(
+        onPressed: busy ? null : _register,
+        icon: busy
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.face_retouching_natural),
+        label: Text(busy ? 'Sending to your school...' : label),
+      ),
+      if (status.state == OfficialFaceIdState.notSubmitted) ...[
+        const SizedBox(height: 8),
+        const Text(
+          'You register your Face ID only once, so take the photos carefully.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _muted, height: 1.4),
+        ),
+      ],
     ];
   }
 
@@ -293,6 +301,10 @@ class _OfficialFaceIdViewState extends State<OfficialFaceIdView> {
             ? 'Approved ${_date(status.activeApprovedAt)}. A new registration '
                   'sent ${_date(status.pendingSubmittedAt)} is waiting for '
                   'approval; your current Face ID stays in use until then.'
+            : status.registrationOpen
+            ? 'Approved ${_date(status.activeApprovedAt)}. The exam office '
+                  'has allowed you to register a new Face ID; your current '
+                  'one stays in use until the new one is approved.'
             : 'Approved ${_date(status.activeApprovedAt)}. You can sign in on '
                   'any approved laptop or tablet and your exams will check '
                   'your face against it.',

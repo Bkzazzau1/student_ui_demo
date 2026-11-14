@@ -25,9 +25,11 @@ abstract class SchoolIdentityService {
 
   Future<OfficialFaceIdStatus> fetchStatus(String studentId);
 
-  /// Sends a registration for staff review and returns the submission id. A
-  /// newer submission replaces an older one that is still waiting for
-  /// review; an approved Face ID stays active until a replacement is approved.
+  /// Sends a registration for staff review and returns the submission id.
+  /// Students register once: the school must refuse a submission while one
+  /// is waiting or approved, unless staff reopened registration for that
+  /// student (see `OfficialFaceIdStatus.registrationOpen`). After a reopen,
+  /// the approved Face ID stays active until the new one is approved.
   Future<String> submitRegistration(OfficialFaceIdSubmission submission);
 
   /// The signed official template (envelope JSON) for an approved student,

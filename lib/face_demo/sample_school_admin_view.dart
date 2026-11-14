@@ -78,6 +78,56 @@ class _SampleSchoolAdminViewState extends State<SampleSchoolAdminView> {
     await _refresh();
   }
 
+  Future<void> _reopenRegistration() async {
+    final school = _school;
+    if (school == null) return;
+    final studentController = TextEditingController();
+    final reasonController = TextEditingController(
+      text: 'Appearance changed; new photos needed.',
+    );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Allow a student to register again'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: studentController,
+              decoration: const InputDecoration(labelText: 'Student ID'),
+            ),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(labelText: 'Reason (recorded)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+    final studentId = studentController.text.trim();
+    final reason = reasonController.text;
+    studentController.dispose();
+    reasonController.dispose();
+    if (confirmed != true || studentId.isEmpty || !mounted) return;
+    final reopened = await school.reopenRegistration(studentId, reason: reason);
+    if (!mounted) return;
+    setState(
+      () => _message = reopened
+          ? '$studentId can now register a new Face ID.'
+          : '$studentId already can register, or has a registration waiting.',
+    );
+  }
+
   Future<void> _openReview(SampleSchoolReviewItem item) async {
     final school = _school;
     if (school == null) return;
@@ -127,6 +177,12 @@ class _SampleSchoolAdminViewState extends State<SampleSchoolAdminView> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : _reopenRegistration,
+                  icon: const Icon(Icons.lock_open_outlined),
+                  label: const Text('Allow a student to register again'),
+                ),
+                const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: _loading ? null : _rebuildAll,
                   icon: const Icon(Icons.model_training_outlined),
