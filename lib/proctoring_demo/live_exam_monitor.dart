@@ -14,6 +14,7 @@ import 'audio_calibration_profile.dart';
 import 'audio_fingerprint_isolation_service.dart';
 import 'audio_live_event_mapper.dart';
 import 'camera_evidence_capture_service.dart';
+import 'camera_frame_orientation.dart';
 import 'camera_image_codec.dart';
 import 'camera_event_evidence_policy.dart';
 import 'camera_runtime_coordinator.dart';
@@ -704,11 +705,12 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
     _framesPublished = frame.sequence;
 
     if (_identityChecker.wantsFrame) {
-      final orientation = _camera?.description.sensorOrientation ?? 0;
+      final orientation = CameraFrameOrientation.of(_camera?.description);
       _identityChecker.offerFrame(
         () => CameraImageCodec.toUprightJpeg(
           image,
-          sensorOrientation: orientation,
+          sensorOrientation: orientation.rotationDegrees,
+          mirrorHorizontally: orientation.mirrorHorizontally,
         ),
       );
     }
@@ -1302,7 +1304,11 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
       if (!mounted) return;
       final cameraStillReady = _camera?.value.isInitialized ?? false;
       final platformOk =
-          Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+          Platform.isWindows ||
+          Platform.isLinux ||
+          Platform.isMacOS ||
+          Platform.isAndroid ||
+          Platform.isIOS;
       setState(() {
         _secondsLive += 5;
         _cameraReady = cameraStillReady;

@@ -1,0 +1,75 @@
+# Codemagic builds the signed iPad app on its Macs and sends it to TestFlight,
+# so K-SLAS can be installed on iPads without owning a Mac.
+#
+# One-time setup (see docs/ios_ipad.md):
+# 1. In App Store Connect, create an API key (Users and Access > Integrations
+#    > App Store Connect API, role "App Manager") and register the app's
+#    bundle ID under Certificates, Identifiers & Profiles.
+# 2. In Codemagic, add this repository and create the environment variable
+#    group "app_store_connect" with:
+#      APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_IDENTIFIER,
+#      APP_STORE_CONNECT_PRIVATE_KEY (contents of the .p8 file), and
+#      CERTIFICATE_PRIVATE_KEY (an RSA private key; Codemagic's docs show how
+#      to create one with `ssh-keygen -t rsa -b 2048 -m PEM`).
+# 3. Set BUNDLE_ID below to the registered bundle ID.
+# 4. In App Store Connect, create the app with that bundle ID.
+
+workflows:
+  ipad-testflight:
+    name: iPad app to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      groups:
+        - app_store_connect
+      vars:
+        # CHANGE ME: the bundle ID registered in your Apple Developer account.
+        BUNDLE_ID: "com.example.studentsUiDemo"
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'ios-v*'
+    scripts:
+      - name: Install Rust
+        script: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          fi
+          echo "PATH=$HOME/.cargo/bin:$PATH" >> "$CM_ENV"
+      - name: Build the Rust core for iOS
+        script: BRAIN_CORE_DEVICE_ONLY=1 bash scripts/ios/build_brain_core.sh
+      - name: Set the bundle ID
+        script: |
+          sed -i '' "s/com\.example\.studentsUiDemo/$BUNDLE_ID/g" ios/Runner.xcodeproj/project.pbxproj
+          grep -m1 "PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;" ios/Runner.xcodeproj/project.pbxproj
+      - name: Code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Flutter packages
+        script: flutter pub get
+      - name: Unit tests
+        script: >-
+          flutter test
+          test/camera_frame_orientation_test.dart
+          test/exam_lockdown_service_test.dart
+      - name: Build the iPad app
+        script: |
+          flutter build ipa --release \
+            --build-number=$((BUILD_NUMBER + 100)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true

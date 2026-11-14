@@ -3,13 +3,19 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:image/image.dart' as img;
 
-/// Converts a streamed camera frame (Android YUV420 / iOS BGRA) into an
-/// upright JPEG the face pipeline can read, so identity checks can run on
-/// the very frames a liveness or monitoring stream already captured.
+/// Converts a streamed camera frame (Android YUV420 / iOS BGRA or bi-planar
+/// YUV) into an upright JPEG the face pipeline can read, so identity checks
+/// can run on the very frames a liveness or monitoring stream already
+/// captured.
+///
+/// [sensorOrientation] is the clockwise rotation that makes the frame
+/// upright and [mirrorHorizontally] undoes a mirrored frame (applied first);
+/// see `CameraFrameOrientation`.
 abstract final class CameraImageCodec {
   static Uint8List? toUprightJpeg(
     CameraImage image, {
     required int sensorOrientation,
+    bool mirrorHorizontally = false,
     int quality = 82,
   }) {
     if (image.width <= 0 || image.height <= 0 || image.planes.isEmpty) {
@@ -17,6 +23,31 @@ abstract final class CameraImageCodec {
     }
     final output = img.Image(width: image.width, height: image.height);
     if (image.format.group == ImageFormatGroup.yuv420 &&
+        image.planes.length == 2) {
+      // iOS kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange: luma, then
+      // interleaved Cb/Cr at half resolution, BT.601 video range.
+      final yPlane = image.planes[0];
+      final uvPlane = image.planes[1];
+      for (var y = 0; y < image.height; y++) {
+        for (var x = 0; x < image.width; x++) {
+          final yi = y * yPlane.bytesPerRow + x;
+          final uvi = (y ~/ 2) * uvPlane.bytesPerRow + (x ~/ 2) * 2;
+          if (yi >= yPlane.bytes.length || uvi + 1 >= uvPlane.bytes.length) {
+            continue;
+          }
+          final yy = 1.164383 * (yPlane.bytes[yi] - 16.0);
+          final uu = uvPlane.bytes[uvi] - 128.0;
+          final vv = uvPlane.bytes[uvi + 1] - 128.0;
+          output.setPixelRgb(
+            x,
+            y,
+            (yy + 1.596027 * vv).round().clamp(0, 255),
+            (yy - 0.391762 * uu - 0.812968 * vv).round().clamp(0, 255),
+            (yy + 2.017232 * uu).round().clamp(0, 255),
+          );
+        }
+      }
+    } else if (image.format.group == ImageFormatGroup.yuv420 &&
         image.planes.length >= 3) {
       final yPlane = image.planes[0];
       final uPlane = image.planes[1];
@@ -64,6 +95,7 @@ abstract final class CameraImageCodec {
     } else {
       return null;
     }
+    if (mirrorHorizontally) img.flipHorizontal(output);
     final orientation = sensorOrientation;
     final upright = orientation == 0
         ? output

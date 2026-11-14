@@ -72,12 +72,20 @@ class EdgeAiRuntimePreflightService {
       components.add(await _checkEmbedding());
       components.add(await _checkYolo());
       components.add(await _checkPython());
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      // Tablets run the same face, identity and object models natively. The
+      // Python temporal reviewer is a desktop process and is not used there.
+      components.add(await _checkLandmarker());
+      components.add(await _checkEmbedding());
+      components.add(await _checkYolo());
     } else {
       components.add(
         const EdgeAiComponentStatus(
-          name: 'Windows edge runtime',
+          name: 'Edge AI runtime',
           ready: false,
-          detail: 'Strict supervised exams currently require Windows.',
+          detail:
+              'Strict supervised exams run on Windows laptops, Android tablets '
+              'and iPads.',
         ),
       );
     }
@@ -144,7 +152,7 @@ class EdgeAiRuntimePreflightService {
       name: 'Face and iris landmarks',
       ready: ready,
       detail: ready
-          ? '478-point ONNX runtime loaded.'
+          ? '478-point face landmark runtime loaded.'
           : 'Landmark runtime failed to initialize.',
     );
   }

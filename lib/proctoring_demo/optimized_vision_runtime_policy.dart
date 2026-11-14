@@ -85,9 +85,11 @@ class OptimizedVisionRuntimePolicy {
       );
     }
     if (Platform.isIOS) {
+      // Same CPU model as Android tablets, so detections match across
+      // tablets (the iOS runtime does not use Core ML).
       return const OptimizedVisionRuntimePolicy(
-        backend: VisionRuntimeBackend.onnxRuntimeCoreML,
-        precision: VisionModelPrecision.fp16,
+        backend: VisionRuntimeBackend.onnxRuntimeCpu,
+        precision: VisionModelPrecision.int8,
         targetUtilization: 0.15,
         maxInputWidth: 416,
         maxInputHeight: 416,

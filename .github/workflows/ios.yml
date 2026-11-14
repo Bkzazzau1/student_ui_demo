@@ -1,0 +1,139 @@
+name: iPad (iOS)
+
+# Builds the iOS app on a GitHub macOS runner and runs the native runtime
+# parity test on an iPad simulator. This is how the Swift code is compiled and
+# checked without a Mac. Signed builds for real iPads come from Codemagic
+# (codemagic.yaml).
+
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'lib/**'
+      - 'native/brain_core/**'
+      - 'integration_test/**'
+      - 'scripts/ios/**'
+      - 'assets/models/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/ios.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'lib/**'
+      - 'native/brain_core/**'
+      - 'integration_test/**'
+      - 'scripts/ios/**'
+      - 'assets/models/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ipad:
+    name: iPad build and native parity
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # App Store uploads need a current SDK; build with the newest stable
+      # Xcode the runner has, like Codemagic's `xcode: latest`.
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/brain_core/target
+          key: ios-rust-${{ hashFiles('native/brain_core/Cargo.lock', 'native/brain_core/Cargo.toml') }}
+          restore-keys: ios-rust-
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          flutter --version
+          rustc --version
+
+      - name: Build the Rust core for iOS
+        run: bash scripts/ios/build_brain_core.sh
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Build for iPad (device, unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Check the app bundle
+        run: |
+          APP=build/ios/iphoneos/Runner.app
+          test -f "$APP/Frameworks/brain_core.framework/brain_core"
+          /usr/libexec/PlistBuddy -c 'Print :NSCameraUsageDescription' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist"
+          otool -L "$APP/Runner" | grep -q brain_core || echo "brain_core is loaded at run time by Flutter Rust Bridge"
+          du -sh "$APP"
+
+      # The simulator's iOS must be one the selected Xcode supports;
+      # otherwise xcodebuild falls back to a generic simulator build.
+      - name: Boot an iPad simulator
+        id: simulator
+        run: |
+          SDK=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          echo "iOS simulator SDK $SDK"
+          UDID=$(xcrun simctl list devices available -j | SDK="$SDK" python3 -c '
+          import json, os, re, sys
+          sdk = tuple(int(part) for part in os.environ["SDK"].split(".")[:2])
+          best = None
+          for runtime, devices in json.load(sys.stdin)["devices"].items():
+              match = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              if not match:
+                  continue
+              version = (int(match.group(1)), int(match.group(2)))
+              if version > sdk:
+                  continue
+              for device in devices:
+                  if "iPad" in device["name"] and device.get("isAvailable", True):
+                      if best is None or version > best[0]:
+                          best = (version, device["udid"], device["name"])
+          if best is None:
+              sys.exit("no iPad simulator available")
+          print(best[1])
+          print(f"Using {best[2]} on iOS {best[0][0]}.{best[0][1]}", file=sys.stderr)
+          ')
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Native runtime parity on the iPad simulator
+        run: >-
+          flutter test integration_test/native_runtime_parity_test.dart
+          -d ${{ steps.simulator.outputs.udid }}
+          -r expanded

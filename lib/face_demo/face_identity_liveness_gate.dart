@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
+import '../proctoring_demo/camera_frame_orientation.dart';
 import '../proctoring_demo/camera_image_codec.dart';
 import '../proctoring_demo/landmark_liveness_challenge_service.dart';
 import '../proctoring_demo/native_face_landmarker_runtime.dart';
@@ -192,6 +193,7 @@ class FaceIdentityLivenessGate {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) return null;
     if (controller.value.isStreamingImages) return null;
 
+    final orientation = CameraFrameOrientation.of(controller.description);
     final completed = Completer<LivenessChallengeResult>();
     var processing = false;
     var started = false;
@@ -205,7 +207,8 @@ class FaceIdentityLivenessGate {
           try {
             final payload = await _landmarker.analyseCameraImageRaw(
               image,
-              rotationDegrees: controller.description.sensorOrientation,
+              rotationDegrees: orientation.rotationDegrees,
+              mirrorHorizontally: orientation.mirrorHorizontally,
             );
             if (payload == null || completed.isCompleted) return;
             final before = session.observationCount;
@@ -221,7 +224,8 @@ class FaceIdentityLivenessGate {
               frames.offer(
                 () => CameraImageCodec.toUprightJpeg(
                   image,
-                  sensorOrientation: controller.description.sensorOrientation,
+                  sensorOrientation: orientation.rotationDegrees,
+                  mirrorHorizontally: orientation.mirrorHorizontally,
                 ),
                 timestampMs: timestampMs,
                 yaw: observation.headYaw,

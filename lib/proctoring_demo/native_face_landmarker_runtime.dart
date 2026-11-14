@@ -116,9 +116,13 @@ class NativeFaceLandmarkerRuntime {
   /// parsing it into a [GazeHeadPoseResult] — the shape identity-capture
   /// callers need to build a `FaceLandmarkMatrix`, matching what
   /// [analyseRgbRaw] returns for the still-photo path.
+  ///
+  /// [rotationDegrees] (clockwise) and [mirrorHorizontally] make the frame
+  /// upright and unmirrored before detection; see `CameraFrameOrientation`.
   Future<Map<String, Object?>?> analyseCameraImageRaw(
     CameraImage image, {
     int rotationDegrees = 0,
+    bool mirrorHorizontally = false,
   }) async {
     if (!_ready && !await initialize()) return null;
     try {
@@ -139,6 +143,7 @@ class NativeFaceLandmarkerRuntime {
             'height': image.height,
             'format': image.format.group.name,
             'rotation_degrees': rotationDegrees,
+            'mirror_horizontal': mirrorHorizontally,
             'planes': planes,
             'timestamp_ms': DateTime.now().millisecondsSinceEpoch,
           });
