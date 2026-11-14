@@ -1,0 +1,62 @@
+name: App
+
+# The whole app on every change: analyze all Dart code and run every Flutter
+# test. The other workflows run focused slices; this one catches a change in
+# one area breaking another.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Analyze and test the whole app
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/brain_core/target
+          key: app-rust-${{ runner.os }}-${{ hashFiles('native/brain_core/Cargo.lock', 'native/brain_core/Cargo.toml') }}
+          restore-keys: app-rust-${{ runner.os }}-
+
+      # Dart tests call the Rust core through Flutter Rust Bridge, which loads
+      # native/brain_core/target/release.
+      - name: Build the Rust core
+        run: cargo build --release --manifest-path native/brain_core/Cargo.toml
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      # Infos are not fatal: newer stable Flutter reports the app's
+      # material.dart import as deprecated. Warnings and errors fail.
+      - name: Analyze the whole app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run every Flutter test
+        run: flutter test -r expanded
