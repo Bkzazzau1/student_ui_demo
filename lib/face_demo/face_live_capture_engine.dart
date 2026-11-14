@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 
+import '../proctoring_demo/camera_frame_orientation.dart';
 import '../proctoring_demo/native_face_landmarker_runtime.dart';
 import 'face_identity_landmark_matrix.dart';
 import 'face_identity_person_gate.dart';
@@ -131,10 +132,11 @@ class FaceLiveCaptureEngine {
     int session,
   ) async {
     try {
-      final rotationDegrees = _controller?.description.sensorOrientation ?? 0;
+      final orientation = CameraFrameOrientation.of(_controller?.description);
       final payload = await _landmarker.analyseCameraImageRaw(
         image,
-        rotationDegrees: rotationDegrees,
+        rotationDegrees: orientation.rotationDegrees,
+        mirrorHorizontally: orientation.mirrorHorizontally,
       );
       if (session != _session) return;
       // The native side rotates the bitmap by `rotationDegrees` before
@@ -145,7 +147,7 @@ class FaceLiveCaptureEngine {
       // silently skews every geometry check (coverage, centering, aspect
       // ratio), which is what made the quality gate reject a
       // correctly-framed face as "move closer and center".
-      final rotatedQuarterTurn = (rotationDegrees ~/ 90).isOdd;
+      final rotatedQuarterTurn = orientation.swapsWidthAndHeight;
       final analysisWidth = rotatedQuarterTurn ? image.height : image.width;
       final analysisHeight = rotatedQuarterTurn ? image.width : image.height;
       final confidence = _number(payload?['confidence']);
@@ -156,7 +158,11 @@ class FaceLiveCaptureEngine {
       );
       final matrix = payload == null
           ? FaceLandmarkMatrix.empty()
-          : FaceLandmarkMatrix.fromPoints(points, analysisWidth, analysisHeight);
+          : FaceLandmarkMatrix.fromPoints(
+              points,
+              analysisWidth,
+              analysisHeight,
+            );
 
       _frameCounter++;
       if (_frameCounter % personGateFrameInterval == 0) {

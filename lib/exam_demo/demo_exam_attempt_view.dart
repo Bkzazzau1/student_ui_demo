@@ -109,6 +109,14 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   int _monitorEpoch = 0;
   String _pauseMessage = '';
 
+  /// iPad: Guided Access or screen-capture changes during a graded exam.
+  StreamSubscription<ExamLockdownEvent>? _lockdownEvents;
+
+  /// Why an iPad lockdown change paused the exam (`guided_access` or
+  /// `screen_capture`), or null.
+  String? _lockdownPauseReason;
+  bool _pausedBeforeLockdown = false;
+
   @override
   void initState() {
     super.initState();
@@ -120,6 +128,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     );
     _remainingSeconds = widget.assessment.durationMinutes * 60;
     _startTimer();
+    if (widget.assessment.graded && _lockdown.isIOS) {
+      _lockdownEvents = _lockdown.events.listen(_handleLockdownEvent);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_monitoringProfile.showsLiveMonitor) {
         unawaited(
@@ -136,6 +147,7 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_lockdownEvents?.cancel());
     _timer?.cancel();
     _events.dispose();
     super.dispose();
@@ -143,6 +155,9 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _lockdownEvents != null) {
+      unawaited(_recheckIpadLockdown());
+    }
     if (!_monitoringProfile.showsLiveMonitor) return;
 
     if (state == AppLifecycleState.inactive) {
@@ -604,6 +619,106 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
     });
   }
 
+  static const String _guidedAccessPauseMessage =
+      'Guided Access was turned off. Your answers are saved and your timer is '
+      'paused. Triple-click the top button and tap Start to continue.';
+  static const String _screenCapturePauseMessage =
+      'Screen recording or screen mirroring is on. Your answers are saved and '
+      'your timer is paused. Stop it to continue.';
+
+  void _handleLockdownEvent(ExamLockdownEvent event) {
+    if (!mounted || _submitting) return;
+    if (event.screenshotTaken) {
+      unawaited(
+        _sendRuntimeSessionEvent(
+          eventType: 'exam_screenshot_taken',
+          severity: 'high',
+          message: 'A screenshot was taken during the exam.',
+        ),
+      );
+      return;
+    }
+    if (event.guidedAccessEnded) {
+      _pauseForLockdown('guided_access');
+      unawaited(
+        _sendRuntimeSessionEvent(
+          eventType: 'exam_guided_access_ended',
+          severity: 'high',
+          message: 'Guided Access was turned off during the exam.',
+        ),
+      );
+      return;
+    }
+    if (event.screenCaptureStarted) {
+      _pauseForLockdown('screen_capture');
+      unawaited(
+        _sendRuntimeSessionEvent(
+          eventType: 'exam_screen_capture_started',
+          severity: 'high',
+          message: 'Screen recording or mirroring started during the exam.',
+        ),
+      );
+      return;
+    }
+    if (event.guidedAccessStarted || event.screenCaptureStopped) {
+      _applyIpadLockdown(event.readiness);
+    }
+  }
+
+  /// Catches changes missed while the app was inactive.
+  Future<void> _recheckIpadLockdown() async {
+    try {
+      final readiness = await _lockdown.status();
+      if (!mounted || _submitting) return;
+      _applyIpadLockdown(readiness);
+    } catch (_) {
+      // The next lockdown event or resume checks again.
+    }
+  }
+
+  void _applyIpadLockdown(ExamDeviceReadiness readiness) {
+    if (!readiness.lockTaskActive) {
+      _pauseForLockdown('guided_access');
+      return;
+    }
+    if (readiness.screenCaptureActive) {
+      _pauseForLockdown('screen_capture');
+      return;
+    }
+    if (_lockdownPauseReason == null) return;
+    setState(() {
+      _lockdownPauseReason = null;
+      // An identity recheck or the invigilator keeps the exam paused.
+      if (!_pausedBeforeLockdown &&
+          !_identityRecheckActive &&
+          !_awaitingInvigilator) {
+        _paused = false;
+        _pauseMessage = '';
+      }
+    });
+    unawaited(
+      _sendRuntimeSessionEvent(
+        eventType: 'exam_lockdown_restored',
+        severity: 'info',
+        message: 'Guided Access is on again and the screen is not captured.',
+      ),
+    );
+  }
+
+  void _pauseForLockdown(String reason) {
+    if (!mounted) return;
+    setState(() {
+      if (_lockdownPauseReason == null) _pausedBeforeLockdown = _paused;
+      _lockdownPauseReason = reason;
+      _paused = true;
+      if (!_pausedBeforeLockdown) {
+        _pauseMessage = reason == 'guided_access'
+            ? _guidedAccessPauseMessage
+            : _screenCapturePauseMessage;
+      }
+    });
+  }
+
   void _handleCriticalMonitoringEvent(String message) {
     if (!_monitoringProfile.pauseOnCriticalMonitoringEvent) return;
     if (_monitoringWarnOnly) return;
@@ -669,11 +784,19 @@ class _DemoExamAttemptViewState extends State<DemoExamAttemptView>
   }
 
   void _resumeAfterIdentity() {
+    final lockdownReason = _lockdownPauseReason;
     setState(() {
-      _paused = false;
+      // An iPad lockdown problem (Guided Access off, screen captured) keeps
+      // the exam paused until it is fixed.
+      _paused = lockdownReason != null;
       _identityRecheckActive = false;
       _awaitingInvigilator = false;
-      _pauseMessage = '';
+      _pausedBeforeLockdown = false;
+      _pauseMessage = switch (lockdownReason) {
+        null => '',
+        'guided_access' => _guidedAccessPauseMessage,
+        _ => _screenCapturePauseMessage,
+      };
       _monitorEpoch++;
     });
     _startTimer();

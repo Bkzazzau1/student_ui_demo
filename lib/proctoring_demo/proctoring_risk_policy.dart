@@ -71,7 +71,12 @@ class ProctoringRiskPolicy {
       case 'system_device_check_failed':
         return 50;
       case 'secure_exam_mode_check_failed':
+      // iPad: Guided Access turned off, or the screen recorded or mirrored.
+      case 'exam_guided_access_ended':
+      case 'exam_screen_capture_started':
         return 55;
+      case 'exam_screenshot_taken':
+        return 35;
       case 'gaze_head_pose_monitor_unavailable':
       case 'continuous_liveness_monitor_unavailable':
       case 'object_reflection_shadow_monitor_unavailable':
@@ -137,6 +142,8 @@ class ProctoringRiskPolicy {
       'system_monitoring_unavailable',
       'system_device_check_failed',
       'secure_exam_mode_check_failed',
+      'exam_guided_access_ended',
+      'exam_screen_capture_started',
       'yolo_phone_detected',
       'yolo_extra_screen_detected',
     };

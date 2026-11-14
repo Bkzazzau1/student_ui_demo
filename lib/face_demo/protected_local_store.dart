@@ -8,7 +8,8 @@ import 'native_face_embedding_runtime.dart';
 /// photos, signed templates, and identity evidence.
 ///
 /// Paths are relative to a private root. Each value is bound to its path and
-/// purpose (DPAPI entropy on Windows, AES-GCM associated data on Android), so
+/// purpose (DPAPI entropy on Windows, AES-GCM associated data on Android and
+/// iOS), so
 /// a file copied to another student's path does not decrypt.
 abstract class ProtectedLocalStore {
   Future<bool> write(
@@ -33,7 +34,9 @@ abstract final class KslasPrivateDirectory {
       if (root == null || root.isEmpty) return null;
       return Directory(_join(_join(root, 'KSLAS'), child));
     }
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid || Platform.isIOS) {
+      // App-private. On iOS the native store also excludes these files from
+      // backup, and their key never leaves this device.
       final support = await getApplicationSupportDirectory();
       return Directory(_join(support.path, child));
     }
@@ -45,7 +48,7 @@ abstract final class KslasPrivateDirectory {
 }
 
 /// [ProtectedLocalStore] backed by the native face runtime's protected
-/// storage (Windows DPAPI / Android Keystore AES-GCM).
+/// storage (Windows DPAPI / Android Keystore AES-GCM / iOS Keychain AES-GCM).
 class NativeProtectedLocalStore implements ProtectedLocalStore {
   NativeProtectedLocalStore(this.root, {NativeFaceEmbeddingRuntime? runtime})
     : _runtime = runtime ?? NativeFaceEmbeddingRuntime();

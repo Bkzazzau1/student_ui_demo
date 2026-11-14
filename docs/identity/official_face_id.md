@@ -140,9 +140,9 @@ Test flow:
 
 - Exams run only on laptops and tablets; phones can take quizzes and graded
   assessments (`AssessmentDeviceAccessPolicy`).
-- The face runtime is implemented for Windows and Android.
-- iPad is allowed by the device policy, but the iOS face runtime is not
-  built yet, so identity checks report "AI unavailable" there.
+- The face runtime is implemented for Windows, Android and iPad. On iPad it
+  uses the same landmark model and ONNX Runtime version as Android, and
+  Guided Access for lockdown (`docs/ios_ipad.md`).
 
 ## Known limits and next steps
 

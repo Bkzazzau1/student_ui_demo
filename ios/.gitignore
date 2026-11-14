@@ -32,3 +32,6 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Rust core for iOS, built by scripts/ios/build_brain_core.sh.
+BrainCore/brain_core.xcframework/

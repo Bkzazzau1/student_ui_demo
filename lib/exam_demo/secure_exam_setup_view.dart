@@ -19,6 +19,7 @@ import 'demo_exam_models.dart';
 import 'demo_exam_service.dart';
 import 'exam_start_approval_service.dart';
 import 'exam_lockdown_service.dart';
+import 'guided_access_prompt.dart';
 import 'exam_question_gate.dart';
 import 'identity_attempt_lock.dart';
 
@@ -781,7 +782,19 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
             secure = await _lockdown.prepare();
           }
         }
-        if (!secure.ready || (_lockdown.isAndroid && !secure.lockTaskActive)) {
+        // iPad: the student turns Guided Access on (a school-managed iPad
+        // already did it in enter()).
+        if (_lockdown.isIOS && secure.ready && !secure.lockTaskActive) {
+          if (!mounted) return;
+          final started = await GuidedAccessPrompt.show(
+            context,
+            lockdown: _lockdown,
+          );
+          if (!started) return;
+          secure = await _lockdown.prepare();
+        }
+        if (!secure.ready ||
+            (_lockdown.requiresLockTask && !secure.lockTaskActive)) {
           if (!mounted) return;
           await showDialog<void>(
             context: context,
@@ -790,6 +803,8 @@ class _SecureExamSetupViewState extends State<SecureExamSetupView> {
               content: Text(
                 !secure.ready
                     ? secure.message
+                    : _lockdown.isIOS
+                    ? 'Turn on Guided Access (triple-click the top button, then tap Start) to keep this iPad on the exam.'
                     : 'Allow Android screen pinning to prevent leaving the assessment before submission.',
               ),
               actions: [

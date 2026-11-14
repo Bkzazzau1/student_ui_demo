@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../proctoring_demo/camera_frame_orientation.dart';
 import 'face_embedding_pipeline.dart';
 import 'face_identity_landmark_matrix.dart';
 import 'face_identity_quality.dart';
@@ -278,7 +279,7 @@ class _FaceIdRegistrationCaptureViewState
         // Five analyzed frames per second remains responsive for enrollment
         // and matches FaceLiveCaptureEngine's 200 ms sampling interval.
         fps: Platform.isWindows ? null : 5,
-        imageFormatGroup: Platform.isWindows ? null : ImageFormatGroup.yuv420,
+        imageFormatGroup: CameraFrameOrientation.preferredStreamFormat(),
       );
       await _controller?.dispose();
       await controller.initialize();

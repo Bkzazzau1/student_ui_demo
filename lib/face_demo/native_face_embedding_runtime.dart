@@ -29,14 +29,11 @@ class NativeFaceEmbeddingRuntime {
   /// pixel normalization changes.
   static const String preprocessingVersion = 'sface-5pt-ls-bilinear-rgb255-v2';
 
-  /// Platforms with a real native SFace + protected-storage implementation.
-  /// iOS/macOS scaffolding exists in source but is unverified (no Xcode/Mac
-  /// available to build or test it), so it is deliberately not enabled here
-  /// yet: enabling it before it is verified would risk a native channel
-  /// call throwing instead of failing safely, exactly the "AI unavailable"
-  /// path this runtime otherwise handles cleanly.
+  /// Platforms with a native SFace + protected-storage implementation:
+  /// Windows (C++), Android (Kotlin) and iOS/iPadOS (Swift, checked on the
+  /// iOS simulator in CI by `integration_test/native_runtime_parity_test.dart`).
   static bool get _supportedPlatform =>
-      Platform.isWindows || Platform.isAndroid;
+      Platform.isWindows || Platform.isAndroid || Platform.isIOS;
 
   Future<bool> initialize() async {
     if (!_supportedPlatform) return false;
@@ -87,7 +84,8 @@ class NativeFaceEmbeddingRuntime {
   }
 
   /// Encrypts [value] to [path] with the platform's protected storage
-  /// (Windows DPAPI, Android Keystore AES-GCM). [entropy] binds the value to
+  /// (Windows DPAPI, Android Keystore AES-GCM, iOS Keychain-held AES-GCM key).
+  /// [entropy] binds the value to
   /// its purpose and location; the same entropy is needed to read it back.
   Future<bool> storeProtectedString({
     required String path,
