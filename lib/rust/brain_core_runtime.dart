@@ -7,8 +7,15 @@ import 'frb_generated.dart';
 /// second time.
 abstract final class BrainCoreRuntime {
   static Future<void>? _initialization;
+  static bool _ready = false;
+
+  /// True once the runtime has finished initializing, for callers that must
+  /// decide synchronously (per camera frame) whether Rust is usable.
+  static bool get isReady => _ready;
 
   static Future<void> ensureInitialized() {
-    return _initialization ??= BrainCoreApi.init();
+    return _initialization ??= BrainCoreApi.init().then((_) {
+      _ready = true;
+    });
   }
 }

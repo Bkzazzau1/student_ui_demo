@@ -138,7 +138,6 @@ class ProctoringRiskPolicy {
       'object_reflection_shadow_risk',
       'continuous_liveness_spoof_risk',
       'sustained_gaze_head_pose_deviation',
-      'audio_voice_isolation_alert',
       'system_monitoring_unavailable',
       'system_device_check_failed',
       'secure_exam_mode_check_failed',

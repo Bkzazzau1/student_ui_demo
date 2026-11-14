@@ -115,11 +115,12 @@ class LiveMonitoringProfile {
       case 'camera_view_needs_review':
       case 'multiple_people_detected':
         return cameraIssuePausesAttempt;
+      // A lost microphone pauses (strict exams). Voice, background-voice and
+      // repeated-audio events come from a sound classifier that cannot tell
+      // a cough, typing or the student reading aloud from a second person
+      // reliably enough to stop an exam: they go to review with evidence.
       case 'microphone_unavailable':
       case 'microphone_reconnect_timeout':
-      case 'audio_voice_isolation_alert':
-      case 'background_voice_environment_warning':
-      case 'audio_repeated_fingerprint_detected':
         return audioIssuePausesAttempt;
       case 'yolo_phone_detected':
       case 'yolo_extra_screen_detected':
