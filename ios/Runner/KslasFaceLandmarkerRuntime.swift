@@ -28,7 +28,9 @@ final class KslasFaceLandmarkerRuntime {
     case "analyseRgb":
       worker.run(result) { self.analyseRgb(args) }
     case "status":
-      worker.run(result) { ["ready": self.landmarker != nil, "last_error": self.lastError] }
+      worker.run(result) {
+        ["ready": self.landmarker != nil, "last_error": self.lastError] as [String: Any]
+      }
     default:
       result(FlutterMethodNotImplemented)
     }
