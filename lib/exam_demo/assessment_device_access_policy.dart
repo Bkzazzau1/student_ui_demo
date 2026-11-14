@@ -6,13 +6,7 @@ enum AssessmentAccessKind {
   assignment,
 }
 
-enum AssessmentDeviceClass {
-  desktop,
-  tablet,
-  ipad,
-  mobilePhone,
-  unknown,
-}
+enum AssessmentDeviceClass { desktop, tablet, ipad, mobilePhone, unknown }
 
 class AssessmentDeviceAccessDecision {
   const AssessmentDeviceAccessDecision({
@@ -28,11 +22,11 @@ class AssessmentDeviceAccessDecision {
   final bool requiresDesktopMode;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'allowed': allowed,
-        'title': title,
-        'message': message,
-        'requires_desktop_mode': requiresDesktopMode,
-      };
+    'allowed': allowed,
+    'title': title,
+    'message': message,
+    'requires_desktop_mode': requiresDesktopMode,
+  };
 }
 
 class AssessmentDeviceAccessPolicy {
@@ -43,7 +37,8 @@ class AssessmentDeviceAccessPolicy {
     required AssessmentDeviceClass deviceClass,
   }) {
     final isExam = assessmentKind == AssessmentAccessKind.exam;
-    final examAllowed = deviceClass == AssessmentDeviceClass.desktop ||
+    final examAllowed =
+        deviceClass == AssessmentDeviceClass.desktop ||
         deviceClass == AssessmentDeviceClass.tablet ||
         deviceClass == AssessmentDeviceClass.ipad;
 

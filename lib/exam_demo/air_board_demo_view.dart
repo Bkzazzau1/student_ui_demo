@@ -36,7 +36,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
 
   final DateTime _openedAt = DateTime.now();
   final List<_AirBoardPage> _pages = <_AirBoardPage>[_AirBoardPage(index: 0)];
-  final CameraRuntimeCoordinator _cameraRuntime = CameraRuntimeCoordinator.instance;
+  final CameraRuntimeCoordinator _cameraRuntime =
+      CameraRuntimeCoordinator.instance;
 
   int _activePageIndex = 0;
   int _strokeCounter = 0;
@@ -55,9 +56,9 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
 
   _AirBoardPage get _activePage => _pages[_activePageIndex];
   List<_AirBoardStroke> get _allStrokes => [
-        for (final page in _pages) ...page.strokes,
-        if (_activeStroke != null) _activeStroke!,
-      ];
+    for (final page in _pages) ...page.strokes,
+    if (_activeStroke != null) _activeStroke!,
+  ];
 
   @override
   void initState() {
@@ -106,7 +107,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       if (cameras.isEmpty) {
         if (!mounted) return;
         setState(() {
-          _cameraStatus = 'No camera was found. Connect or enable your webcam, then reopen the board.';
+          _cameraStatus =
+              'No camera was found. Connect or enable your webcam, then reopen the board.';
           _refreshRustSummary();
         });
         return;
@@ -156,7 +158,9 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
         id: 'stroke-${++_strokeCounter}',
         tool: _tool,
         pageIndex: _activePageIndex,
-        points: <_AirBoardPoint>[_AirBoardPoint(position: position, timestamp: now)],
+        points: <_AirBoardPoint>[
+          _AirBoardPoint(position: position, timestamp: now),
+        ],
         startedAt: now,
         endedAt: now,
       );
@@ -252,7 +256,9 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
 
   rust_hand.HandRegionSignal _buildHandSignal(DateTime now) {
     final cameraReady = _camera != null && _camera!.value.isInitialized;
-    final monitoringCameraAlreadyActive = _cameraStatus.contains('already active');
+    final monitoringCameraAlreadyActive = _cameraStatus.contains(
+      'already active',
+    );
     final writingNow = _rustSummary.currentlyWriting || _activeStroke != null;
     final hasRoughWork = _rustSummary.totalPoints > 0;
 
@@ -264,8 +270,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       handConfidence: cameraReady
           ? 0.70
           : monitoringCameraAlreadyActive
-              ? 0.55
-              : 0.20,
+          ? 0.55
+          : 0.20,
       nearKeyboard: !writingNow && hasRoughWork,
       nearMouseOrStylusArea: writingNow,
       nearFace: false,
@@ -294,18 +300,26 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
   rust_hand.HandAirBoardDecision _analyzeHandAirBoardWithDart(
     rust_hand.HandAirBoardContext context,
   ) {
-    final handReliable = context.hand.handVisible && context.hand.handConfidence >= 0.45;
-    final handInExpectedWorkArea = context.hand.nearKeyboard || context.hand.nearMouseOrStylusArea;
+    final handReliable =
+        context.hand.handVisible && context.hand.handConfidence >= 0.45;
+    final handInExpectedWorkArea =
+        context.hand.nearKeyboard || context.hand.nearMouseOrStylusArea;
     final airBoardWriting = context.airBoard.currentlyWriting;
 
-    if (airBoardWriting && handReliable && handInExpectedWorkArea && !context.hand.nearFace && !context.hand.belowDeskLine) {
+    if (airBoardWriting &&
+        handReliable &&
+        handInExpectedWorkArea &&
+        !context.hand.nearFace &&
+        !context.hand.belowDeskLine) {
       return const rust_hand.HandAirBoardDecision(
         behaviourLabel: 'hand_matches_rough_work',
         attentionLevel: 'normal',
         handMatchesAirBoard: true,
         reviewRequired: false,
-        studentMessage: 'Your rough-work board is active. Please continue solving inside the exam screen.',
-        reviewerSummary: 'Camera hand signal matches active rough-work activity on the Air Board.',
+        studentMessage:
+            'Your rough-work board is active. Please continue solving inside the exam screen.',
+        reviewerSummary:
+            'Camera hand signal matches active rough-work activity on the Air Board.',
       );
     }
 
@@ -315,8 +329,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
         attentionLevel: 'medium_attention_required',
         handMatchesAirBoard: false,
         reviewRequired: true,
-        studentMessage: 'Please keep your hands and writing area clearly visible while using the rough-work board.',
-        reviewerSummary: 'Air Board writing was active, but the camera hand signal was not reliable enough.',
+        studentMessage:
+            'Please keep your hands and writing area clearly visible while using the rough-work board.',
+        reviewerSummary:
+            'Air Board writing was active, but the camera hand signal was not reliable enough.',
       );
     }
 
@@ -326,8 +342,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
         attentionLevel: 'high_attention_required',
         handMatchesAirBoard: false,
         reviewRequired: true,
-        studentMessage: 'Please keep your hands visible and continue inside the exam screen.',
-        reviewerSummary: 'Air Board writing was active while the hand appeared below the desk line. Human review is recommended.',
+        studentMessage:
+            'Please keep your hands visible and continue inside the exam screen.',
+        reviewerSummary:
+            'Air Board writing was active while the hand appeared below the desk line. Human review is recommended.',
       );
     }
 
@@ -337,8 +355,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
         attentionLevel: 'normal',
         handMatchesAirBoard: true,
         reviewRequired: false,
-        studentMessage: 'Your rough-work board is ready. You may continue solving inside the exam screen.',
-        reviewerSummary: 'Hand activity is within the expected keyboard, mouse, stylus, or writing area.',
+        studentMessage:
+            'Your rough-work board is ready. You may continue solving inside the exam screen.',
+        reviewerSummary:
+            'Hand activity is within the expected keyboard, mouse, stylus, or writing area.',
       );
     }
 
@@ -348,12 +368,14 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       handMatchesAirBoard: false,
       reviewRequired: false,
       studentMessage: 'Please continue your exam carefully.',
-      reviewerSummary: 'No hand and Air Board concern was detected from the available signals.',
+      reviewerSummary:
+          'No hand and Air Board concern was detected from the available signals.',
     );
   }
 
   String _buildManifest(rust_air.AirBoardActivitySummary summary) {
-    final handPart = ':hand=${_handDecision.behaviourLabel}:hand_attention=${_handDecision.attentionLevel}';
+    final handPart =
+        ':hand=${_handDecision.behaviourLabel}:hand_attention=${_handDecision.attentionLevel}';
     if (_useNativeAirBoard) {
       try {
         return rust_air.buildAirBoardEvidenceManifest(
@@ -384,7 +406,8 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
     final idleDurationMs = context.lastActivityAtMs > 0
         ? (context.nowMs - context.lastActivityAtMs).clamp(0, 1 << 62).toInt()
         : activeDurationMs;
-    final currentlyWriting = context.isOpen && idleDurationMs <= 4000 && totalPoints > 0;
+    final currentlyWriting =
+        context.isOpen && idleDurationMs <= 4000 && totalPoints > 0;
 
     late final String attentionLevel;
     late final String reason;
@@ -410,7 +433,9 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
       currentlyWriting: currentlyWriting,
       strokeCount: strokeCount,
       pageCount: context.pageCount < 0 ? 0 : context.pageCount,
-      activePageIndex: context.activePageIndex < 0 ? 0 : context.activePageIndex,
+      activePageIndex: context.activePageIndex < 0
+          ? 0
+          : context.activePageIndex,
       totalPoints: totalPoints,
       activeDurationMs: activeDurationMs,
       idleDurationMs: idleDurationMs,
@@ -448,7 +473,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Rough-work board', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Rough-work board',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -474,7 +502,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _AirBoardIntroCard(summary: _rustSummary, handDecision: _handDecision),
+                    _AirBoardIntroCard(
+                      summary: _rustSummary,
+                      handDecision: _handDecision,
+                    ),
                     const SizedBox(height: 14),
                     _AirBoardCameraPanel(
                       controller: _camera,
@@ -490,8 +521,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                           _AirBoardToolbar(
                             tool: _tool,
                             background: _background,
-                            onToolChanged: (tool) => setState(() => _tool = tool),
-                            onBackgroundChanged: (background) => setState(() => _background = background),
+                            onToolChanged: (tool) =>
+                                setState(() => _tool = tool),
+                            onBackgroundChanged: (background) =>
+                                setState(() => _background = background),
                             onUndo: _undo,
                             onClear: _clearPage,
                           ),
@@ -532,8 +565,10 @@ class _AirBoardDemoViewState extends State<AirBoardDemoView> {
                                 _AirBoardToolbar(
                                   tool: _tool,
                                   background: _background,
-                                  onToolChanged: (tool) => setState(() => _tool = tool),
-                                  onBackgroundChanged: (background) => setState(() => _background = background),
+                                  onToolChanged: (tool) =>
+                                      setState(() => _tool = tool),
+                                  onBackgroundChanged: (background) =>
+                                      setState(() => _background = background),
                                   onUndo: _undo,
                                   onClear: _clearPage,
                                 ),
@@ -597,7 +632,13 @@ class _AirBoardIntroCard extends StatelessWidget {
           colors: [_brandDark, Color(0xFF113A63), _brand],
         ),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [BoxShadow(color: Color(0x160F172A), blurRadius: 22, offset: Offset(0, 12))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x160F172A),
+            blurRadius: 22,
+            offset: Offset(0, 12),
+          ),
+        ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -608,21 +649,29 @@ class _AirBoardIntroCard extends StatelessWidget {
               const Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [_WhiteTag('Exam area'), _WhiteTag('Camera hand check'), _WhiteTag('Rust brain_core')],
+                children: [
+                  _WhiteTag('Exam area'),
+                  _WhiteTag('Camera hand check'),
+                  _WhiteTag('Rust brain_core'),
+                ],
               ),
               const SizedBox(height: 12),
               Text(
                 'Solve naturally inside the exam screen',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.3,
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Your writing strokes and camera hand signal are converted into Rust context so the AI engine can understand whether hand activity matches rough work.',
-                style: TextStyle(color: Color(0xFFE2E8F0), height: 1.45, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Color(0xFFE2E8F0),
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           );
@@ -641,14 +690,32 @@ class _AirBoardIntroCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 _HeaderStat(label: 'Strokes', value: '${summary.strokeCount}'),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Air Board', value: _friendlyLevel(summary.attentionLevel)),
+                _HeaderStat(
+                  label: 'Air Board',
+                  value: _friendlyLevel(summary.attentionLevel),
+                ),
                 const SizedBox(height: 8),
-                _HeaderStat(label: 'Hand match', value: handDecision.handMatchesAirBoard ? 'Matched' : 'Watching'),
+                _HeaderStat(
+                  label: 'Hand match',
+                  value: handDecision.handMatchesAirBoard
+                      ? 'Matched'
+                      : 'Watching',
+                ),
               ],
             ),
           );
-          if (!wide) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, const SizedBox(height: 14), stats]);
-          return Row(children: [Expanded(child: title), const SizedBox(width: 16), stats]);
+          if (!wide)
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [title, const SizedBox(height: 14), stats],
+            );
+          return Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 16),
+              stats,
+            ],
+          );
         },
       ),
     );
@@ -694,7 +761,9 @@ class _AirBoardCameraPanel extends StatelessWidget {
                       ),
                     )
                   : Icon(
-                      opening ? Icons.hourglass_top_rounded : Icons.videocam_off_outlined,
+                      opening
+                          ? Icons.hourglass_top_rounded
+                          : Icons.videocam_off_outlined,
                       color: Colors.white,
                       size: 30,
                     ),
@@ -705,21 +774,49 @@ class _AirBoardCameraPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _PanelTitle(icon: Icons.photo_camera_front_outlined, title: 'Camera hand monitor'),
+                const _PanelTitle(
+                  icon: Icons.photo_camera_front_outlined,
+                  title: 'Camera hand monitor',
+                ),
                 const SizedBox(height: 8),
-                Text(status, style: const TextStyle(color: _muted, fontWeight: FontWeight.w700, height: 1.4)),
+                Text(
+                  status,
+                  style: const TextStyle(
+                    color: _muted,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                _EvidenceLine(label: 'Hand signal', value: handSignal.handVisible ? 'Visible' : 'Not clear'),
-                _EvidenceLine(label: 'Hand confidence', value: '${(handSignal.handConfidence * 100).round()}%'),
-                _EvidenceLine(label: 'Hand/Air Board', value: _friendlyLevel(handDecision.attentionLevel)),
+                _EvidenceLine(
+                  label: 'Hand signal',
+                  value: handSignal.handVisible ? 'Visible' : 'Not clear',
+                ),
+                _EvidenceLine(
+                  label: 'Hand confidence',
+                  value: '${(handSignal.handConfidence * 100).round()}%',
+                ),
+                _EvidenceLine(
+                  label: 'Hand/Air Board',
+                  value: _friendlyLevel(handDecision.attentionLevel),
+                ),
                 Text(
                   handDecision.studentMessage,
-                  style: const TextStyle(color: _brandDark, height: 1.4, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    color: _brandDark,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
                   'Note: this currently uses the camera availability and board activity as the hand signal source. Real hand landmark detection will replace this placeholder.',
-                  style: TextStyle(color: _muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: _muted,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -759,28 +856,68 @@ class _AirBoardToolbar extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _ToolChip(label: 'Pen', icon: Icons.edit_outlined, selected: tool == _AirBoardTool.pen, onTap: () => onToolChanged(_AirBoardTool.pen)),
-              _ToolChip(label: 'Eraser', icon: Icons.cleaning_services_outlined, selected: tool == _AirBoardTool.eraser, onTap: () => onToolChanged(_AirBoardTool.eraser)),
+              _ToolChip(
+                label: 'Pen',
+                icon: Icons.edit_outlined,
+                selected: tool == _AirBoardTool.pen,
+                onTap: () => onToolChanged(_AirBoardTool.pen),
+              ),
+              _ToolChip(
+                label: 'Eraser',
+                icon: Icons.cleaning_services_outlined,
+                selected: tool == _AirBoardTool.eraser,
+                onTap: () => onToolChanged(_AirBoardTool.eraser),
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Paper style', style: TextStyle(color: _muted, fontWeight: FontWeight.w800)),
+          const Text(
+            'Paper style',
+            style: TextStyle(color: _muted, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _ToolChip(label: 'Grid', icon: Icons.grid_4x4_outlined, selected: background == _BoardBackground.grid, onTap: () => onBackgroundChanged(_BoardBackground.grid)),
-              _ToolChip(label: 'Lined', icon: Icons.horizontal_rule_rounded, selected: background == _BoardBackground.lined, onTap: () => onBackgroundChanged(_BoardBackground.lined)),
-              _ToolChip(label: 'Plain', icon: Icons.crop_square_rounded, selected: background == _BoardBackground.plain, onTap: () => onBackgroundChanged(_BoardBackground.plain)),
+              _ToolChip(
+                label: 'Grid',
+                icon: Icons.grid_4x4_outlined,
+                selected: background == _BoardBackground.grid,
+                onTap: () => onBackgroundChanged(_BoardBackground.grid),
+              ),
+              _ToolChip(
+                label: 'Lined',
+                icon: Icons.horizontal_rule_rounded,
+                selected: background == _BoardBackground.lined,
+                onTap: () => onBackgroundChanged(_BoardBackground.lined),
+              ),
+              _ToolChip(
+                label: 'Plain',
+                icon: Icons.crop_square_rounded,
+                selected: background == _BoardBackground.plain,
+                onTap: () => onBackgroundChanged(_BoardBackground.plain),
+              ),
             ],
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: OutlinedButton.icon(onPressed: onUndo, icon: const Icon(Icons.undo_rounded), label: const Text('Undo'))),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onUndo,
+                  icon: const Icon(Icons.undo_rounded),
+                  label: const Text('Undo'),
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: OutlinedButton.icon(onPressed: onClear, icon: const Icon(Icons.delete_outline_rounded), label: const Text('Clear'))),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('Clear'),
+                ),
+              ),
             ],
           ),
         ],
@@ -790,7 +927,12 @@ class _AirBoardToolbar extends StatelessWidget {
 }
 
 class _BoardPageTabs extends StatelessWidget {
-  const _BoardPageTabs({required this.pages, required this.activePageIndex, required this.onSelect, required this.onAdd});
+  const _BoardPageTabs({
+    required this.pages,
+    required this.activePageIndex,
+    required this.onSelect,
+    required this.onAdd,
+  });
 
   final List<_AirBoardPage> pages;
   final int activePageIndex;
@@ -803,7 +945,10 @@ class _BoardPageTabs extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(icon: Icons.sticky_note_2_outlined, title: 'Rough-work pages'),
+          const _PanelTitle(
+            icon: Icons.sticky_note_2_outlined,
+            title: 'Rough-work pages',
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -816,7 +961,11 @@ class _BoardPageTabs extends StatelessWidget {
                   hasWork: page.strokes.isNotEmpty,
                   onTap: () => onSelect(page.index),
                 ),
-              OutlinedButton.icon(onPressed: onAdd, icon: const Icon(Icons.add_rounded, size: 18), label: const Text('Add')),
+              OutlinedButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add'),
+              ),
             ],
           ),
         ],
@@ -852,7 +1001,13 @@ class _BoardCanvasCard extends StatelessWidget {
         color: _surface,
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -862,7 +1017,10 @@ class _BoardCanvasCard extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 child: const Icon(Icons.border_color_outlined, color: _brand),
               ),
               const SizedBox(width: 10),
@@ -870,9 +1028,22 @@ class _BoardCanvasCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Digital rough work', style: TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 17)),
+                    Text(
+                      'Digital rough work',
+                      style: TextStyle(
+                        color: _brandDark,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                      ),
+                    ),
                     SizedBox(height: 2),
-                    Text('Write with mouse, touchscreen, or stylus.', style: TextStyle(color: _muted, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Write with mouse, touchscreen, or stylus.',
+                      style: TextStyle(
+                        color: _muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -891,7 +1062,11 @@ class _BoardCanvasCard extends StatelessWidget {
                 onPointerCancel: (_) => onEnd(),
                 child: RepaintBoundary(
                   child: CustomPaint(
-                    painter: _AirBoardPainter(page: page, activeStroke: activeStroke, background: background),
+                    painter: _AirBoardPainter(
+                      page: page,
+                      activeStroke: activeStroke,
+                      background: background,
+                    ),
                     child: const SizedBox.expand(),
                   ),
                 ),
@@ -923,26 +1098,70 @@ class _RustEvidenceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(icon: Icons.memory_outlined, title: 'Rust Air Board result'),
+          const _PanelTitle(
+            icon: Icons.memory_outlined,
+            title: 'Rust Air Board result',
+          ),
           const SizedBox(height: 12),
-          _EvidenceLine(label: 'Currently writing', value: summary.currentlyWriting ? 'Yes' : 'No'),
-          _EvidenceLine(label: 'Active page', value: 'Page ${summary.activePageIndex + 1}'),
+          _EvidenceLine(
+            label: 'Currently writing',
+            value: summary.currentlyWriting ? 'Yes' : 'No',
+          ),
+          _EvidenceLine(
+            label: 'Active page',
+            value: 'Page ${summary.activePageIndex + 1}',
+          ),
           _EvidenceLine(label: 'Strokes', value: '${summary.strokeCount}'),
           _EvidenceLine(label: 'Points', value: '${summary.totalPoints}'),
-          _EvidenceLine(label: 'Air Board', value: _friendlyLevel(summary.attentionLevel)),
+          _EvidenceLine(
+            label: 'Air Board',
+            value: _friendlyLevel(summary.attentionLevel),
+          ),
           const Divider(height: 20, color: _line),
-          _EvidenceLine(label: 'Hand visible', value: handSignal.handVisible ? 'Yes' : 'No'),
-          _EvidenceLine(label: 'Hand match', value: handDecision.handMatchesAirBoard ? 'Matched' : 'Not confirmed'),
-          _EvidenceLine(label: 'Hand review', value: handDecision.reviewRequired ? 'Review' : 'Normal'),
-          _EvidenceLine(label: 'Hand level', value: _friendlyLevel(handDecision.attentionLevel)),
+          _EvidenceLine(
+            label: 'Hand visible',
+            value: handSignal.handVisible ? 'Yes' : 'No',
+          ),
+          _EvidenceLine(
+            label: 'Hand match',
+            value: handDecision.handMatchesAirBoard
+                ? 'Matched'
+                : 'Not confirmed',
+          ),
+          _EvidenceLine(
+            label: 'Hand review',
+            value: handDecision.reviewRequired ? 'Review' : 'Normal',
+          ),
+          _EvidenceLine(
+            label: 'Hand level',
+            value: _friendlyLevel(handDecision.attentionLevel),
+          ),
           const SizedBox(height: 10),
-          Text(summary.reason, style: const TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600)),
+          Text(
+            summary.reason,
+            style: const TextStyle(
+              color: _muted,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(handDecision.reviewerSummary, style: const TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600)),
+          Text(
+            handDecision.reviewerSummary,
+            style: const TextStyle(
+              color: _muted,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 10),
           SelectableText(
             manifest,
-            style: const TextStyle(color: _brandDark, fontSize: 11, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              color: _brandDark,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -951,7 +1170,11 @@ class _RustEvidenceCard extends StatelessWidget {
 }
 
 class _AirBoardPainter extends CustomPainter {
-  const _AirBoardPainter({required this.page, required this.activeStroke, required this.background});
+  const _AirBoardPainter({
+    required this.page,
+    required this.activeStroke,
+    required this.background,
+  });
 
   final _AirBoardPage page;
   final _AirBoardStroke? activeStroke;
@@ -991,12 +1214,24 @@ class _AirBoardPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
-    final path = Path()..moveTo(stroke.points.first.position.dx, stroke.points.first.position.dy);
+    final path = Path()
+      ..moveTo(
+        stroke.points.first.position.dx,
+        stroke.points.first.position.dy,
+      );
     for (var i = 1; i < stroke.points.length; i++) {
       final previous = stroke.points[i - 1].position;
       final current = stroke.points[i].position;
-      final midpoint = Offset((previous.dx + current.dx) / 2, (previous.dy + current.dy) / 2);
-      path.quadraticBezierTo(previous.dx, previous.dy, midpoint.dx, midpoint.dy);
+      final midpoint = Offset(
+        (previous.dx + current.dx) / 2,
+        (previous.dy + current.dy) / 2,
+      );
+      path.quadraticBezierTo(
+        previous.dx,
+        previous.dy,
+        midpoint.dx,
+        midpoint.dy,
+      );
     }
     canvas.drawPath(path, paint);
   }
@@ -1018,7 +1253,13 @@ class _PanelCard extends StatelessWidget {
         color: _surface,
         border: Border.all(color: _line),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
       child: child,
     );
@@ -1037,14 +1278,28 @@ class _PanelTitle extends StatelessWidget {
       children: [
         Icon(icon, color: _brand, size: 20),
         const SizedBox(width: 8),
-        Expanded(child: Text(title, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900, fontSize: 16))),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
 class _ToolChip extends StatelessWidget {
-  const _ToolChip({required this.label, required this.icon, required this.selected, required this.onTap});
+  const _ToolChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final IconData icon;
@@ -1057,7 +1312,13 @@ class _ToolChip extends StatelessWidget {
       selected: selected,
       onSelected: (_) => onTap(),
       avatar: Icon(icon, size: 17, color: selected ? Colors.white : _brand),
-      label: Text(label, style: TextStyle(fontWeight: FontWeight.w900, color: selected ? Colors.white : _brandDark)),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          color: selected ? Colors.white : _brandDark,
+        ),
+      ),
       selectedColor: _brand,
       backgroundColor: _surfaceSoft,
       side: BorderSide(color: selected ? _brand : _line),
@@ -1067,7 +1328,12 @@ class _ToolChip extends StatelessWidget {
 }
 
 class _PageButton extends StatelessWidget {
-  const _PageButton({required this.label, required this.selected, required this.hasWork, required this.onTap});
+  const _PageButton({
+    required this.label,
+    required this.selected,
+    required this.hasWork,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
@@ -1082,7 +1348,11 @@ class _PageButton extends StatelessWidget {
         backgroundColor: selected ? const Color(0xFFEFF6FF) : Colors.white,
         side: BorderSide(color: selected ? _brand : _line),
       ),
-      icon: Icon(hasWork ? Icons.check_circle : Icons.note_outlined, size: 18, color: hasWork ? _success : _brand),
+      icon: Icon(
+        hasWork ? Icons.check_circle : Icons.note_outlined,
+        size: 18,
+        color: hasWork ? _success : _brand,
+      ),
       label: Text(label),
     );
   }
@@ -1102,7 +1372,14 @@ class _WhiteTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 }
@@ -1117,8 +1394,22 @@ class _HeaderStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Text(label, style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w700))),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     );
   }
@@ -1136,8 +1427,22 @@ class _EvidenceLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 9),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: _muted, fontWeight: FontWeight.w700))),
-          Text(value, style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w900)),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
     );
@@ -1153,8 +1458,18 @@ class _SmallStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: _warning.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: const TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w900, fontSize: 12)),
+      decoration: BoxDecoration(
+        color: _warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFF92400E),
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 }
@@ -1175,6 +1490,7 @@ String _friendlyLevel(String value) {
 }
 
 enum _AirBoardTool { pen, eraser }
+
 enum _BoardBackground { grid, lined, plain }
 
 class _AirBoardPage {

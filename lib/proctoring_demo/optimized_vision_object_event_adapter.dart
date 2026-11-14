@@ -18,6 +18,30 @@ class OptimizedVisionObjectEventAdapter {
   final E1ModelEventAdapter e1ModelEvents;
   final double minimumConfidence;
 
+  /// Labels that need more confidence than [minimumConfidence]. At the
+  /// model's 0.45 the COCO baseline calls a dark board or a window a TV in
+  /// about 0.5% of frames without a screen; at 0.55 that falls to about 0.2%
+  /// while still finding 62% of real extra screens in a single frame.
+  static const Map<String, double> labelMinimumConfidence = <String, double>{
+    'laptop': 0.55,
+    'tv': 0.55,
+    'television': 0.55,
+    'monitor': 0.55,
+  };
+
+  /// One Rust decode per runtime result, shared by [mapResult] and
+  /// [mapModelEvents] (each decode of the 3,549-prediction tensor costs tens
+  /// of milliseconds on the UI isolate).
+  static final Expando<NativeObjectReviewSnapshot> _decodedReviews =
+      Expando<NativeObjectReviewSnapshot>('native_yolo_review');
+
+  double minimumConfidenceFor(String label) {
+    final specific = labelMinimumConfidence[_normalize(label)];
+    return specific == null
+        ? minimumConfidence
+        : (specific > minimumConfidence ? specific : minimumConfidence);
+  }
+
   /// Produces frozen Stage 3 E1 observations only when the runtime result has
   /// trustworthy source-frame, capture-time, inference-time, and model
   /// provenance. Missing provenance remains UNKNOWN and yields no formal model
@@ -62,14 +86,17 @@ class OptimizedVisionObjectEventAdapter {
     final nativeReview = _decodeNativeYoloReview(result.outputs);
     if (nativeReview != null) {
       final labels = nativeReview.detections
-          .where((item) => item.confidence >= minimumConfidence)
+          .where((item) => item.confidence >= minimumConfidenceFor(item.label))
           .map((item) => item.label)
           .toList();
       final decisions = mapper.mapLabels(
         labels,
         source: 'native_vision_yolo_decoder',
       );
-      final enriched = decisions
+      // People are deliberately not reported here: one frame is not enough
+      // evidence of a second person. The live monitor counts people with
+      // PersonCountPolicy and acts only when it persists over several frames.
+      return decisions
           .map(
             (decision) => ObjectReviewEventDecision(
               eventType: decision.eventType,
@@ -85,35 +112,28 @@ class OptimizedVisionObjectEventAdapter {
             ),
           )
           .toList();
-
-      if (nativeReview.peopleCount > 1) {
-        enriched.add(
-          ObjectReviewEventDecision(
-            eventType: 'camera_view_needs_review',
-            severity: 'warning',
-            message: 'Camera view may need review.',
-            labels: const <String>['person'],
-            metadata: <String, Object?>{
-              'source_component': 'native_vision_yolo_decoder',
-              'native_vision_review': nativeReview.toJson(),
-              'person_count': nativeReview.peopleCount,
-            },
-          ),
-        );
-      }
-
-      return enriched;
     }
 
     if (_requiresRustYoloDecode(result.outputs)) {
-      return const <ObjectReviewEventDecision>[];
+      // The Rust decoder is not available (Flutter Rust Bridge not started
+      // yet, or failed to load). The native engines decode the same model
+      // output identically, so use their detections instead of silently
+      // dropping every object event. The heuristic substring flags are not
+      // used for YOLO results.
+      return mapper.mapLabels(
+        extractObjectLabels(result.outputs, includeHeuristicFlags: false),
+        source: 'native_runtime_objects',
+      );
     }
 
     final labels = extractObjectLabels(result.outputs);
     return mapper.mapLabels(labels, source: source);
   }
 
-  List<String> extractObjectLabels(Map<String, Object?> outputs) {
+  List<String> extractObjectLabels(
+    Map<String, Object?> outputs, {
+    bool includeHeuristicFlags = true,
+  }) {
     final labels = <String>{};
     final rawObjects = outputs['objects'];
     if (rawObjects is Iterable) {
@@ -123,13 +143,14 @@ class OptimizedVisionObjectEventAdapter {
         final label = _readLabel(object);
         if (label.isEmpty) continue;
         final confidence = _readConfidence(object);
-        if (confidence < minimumConfidence) continue;
+        if (confidence < minimumConfidenceFor(label)) continue;
         labels.add(_normalize(label));
       }
     }
 
-    if (outputs['screen_glow'] == true ||
-        outputs['offscreen_interaction'] == true) {
+    if (includeHeuristicFlags &&
+        (outputs['screen_glow'] == true ||
+            outputs['offscreen_interaction'] == true)) {
       labels.add('screen');
     }
 
@@ -143,6 +164,16 @@ class OptimizedVisionObjectEventAdapter {
   }
 
   NativeObjectReviewSnapshot? _decodeNativeYoloReview(
+    Map<String, Object?> outputs,
+  ) {
+    final cached = _decodedReviews[outputs];
+    if (cached != null) return cached;
+    final review = _decodeNativeYoloReviewUncached(outputs);
+    if (review != null) _decodedReviews[outputs] = review;
+    return review;
+  }
+
+  NativeObjectReviewSnapshot? _decodeNativeYoloReviewUncached(
     Map<String, Object?> outputs,
   ) {
     final output = _readDoubleList(

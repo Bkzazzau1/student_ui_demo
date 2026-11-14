@@ -81,7 +81,8 @@ class FaceLandmarkMatrix {
     int width,
     int height,
   ) {
-    final eyesVisible = kLeftEyeLandmarkIndexes.every(points.containsKey) &&
+    final eyesVisible =
+        kLeftEyeLandmarkIndexes.every(points.containsKey) &&
         kRightEyeLandmarkIndexes.every(points.containsKey);
     final noseVisible = kNoseLandmarkIndexes.every(points.containsKey);
     final mouthVisible = kMouthLandmarkIndexes.every(points.containsKey);
@@ -89,7 +90,11 @@ class FaceLandmarkMatrix {
     // detections from being treated as a complete face.
     final landmarksComplete = points.length >= 400;
 
-    if (!eyesVisible || !noseVisible || !mouthVisible || width <= 0 || height <= 0) {
+    if (!eyesVisible ||
+        !noseVisible ||
+        !mouthVisible ||
+        width <= 0 ||
+        height <= 0) {
       return FaceLandmarkMatrix(
         landmarkCount: points.length,
         eyesVisible: eyesVisible,
@@ -164,7 +169,8 @@ class FaceLandmarkMatrix {
     final pitch = eyeDistance <= 0
         ? 0.0
         : (nose.y - (leftEye.y + rightEye.y) / 2) / eyeDistance;
-    final roll = math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) /
+    final roll =
+        math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) /
         (math.pi / 4);
 
     final eyeOpenness = eyeDistance <= 0
@@ -172,8 +178,9 @@ class FaceLandmarkMatrix {
         : (_distance(points[159]!, points[145]!) +
                   _distance(points[386]!, points[374]!)) /
               (2 * eyeDistance);
-    final smileWidth =
-        eyeDistance <= 0 ? 0.0 : _distance(mouthLeft, mouthRight) / eyeDistance;
+    final smileWidth = eyeDistance <= 0
+        ? 0.0
+        : _distance(mouthLeft, mouthRight) / eyeDistance;
     final mouthOpenness =
         eyeDistance > 0 && points.containsKey(13) && points.containsKey(14)
         ? _distance(points[13]!, points[14]!) / eyeDistance

@@ -18,7 +18,8 @@ class AssessmentDeviceGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final deviceClass = deviceClassOverride ??
+    final deviceClass =
+        deviceClassOverride ??
         AssessmentDeviceClassResolver.resolve(
           platform: defaultTargetPlatform,
           shortestSide: MediaQuery.sizeOf(context).shortestSide,
@@ -73,17 +74,17 @@ class AssessmentDeviceGate extends StatelessWidget {
                   Text(
                     decision.title,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF0F172A),
-                        ),
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0F172A),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     decision.message,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: const Color(0xFF475569),
-                          height: 1.45,
-                        ),
+                      color: const Color(0xFF475569),
+                      height: 1.45,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   const Text(

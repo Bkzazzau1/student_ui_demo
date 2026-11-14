@@ -281,11 +281,7 @@ abstract final class E1ObjectTaxonomyV1 {
 }
 
 class _E1TaxonomyEntry {
-  const _E1TaxonomyEntry(
-    this.canonicalObjectId,
-    this.group,
-    this.coverage,
-  );
+  const _E1TaxonomyEntry(this.canonicalObjectId, this.group, this.coverage);
 
   final String canonicalObjectId;
   final String group;

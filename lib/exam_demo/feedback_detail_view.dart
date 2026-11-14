@@ -15,10 +15,7 @@ const Color _warning = Color(0xFFF59E0B);
 const Color _purple = Color(0xFF7C3AED);
 
 class FeedbackDetailView extends StatelessWidget {
-  const FeedbackDetailView({
-    super.key,
-    required this.feedbackItem,
-  });
+  const FeedbackDetailView({super.key, required this.feedbackItem});
 
   final DemoFeedbackItem feedbackItem;
 
@@ -63,12 +60,18 @@ class FeedbackDetailView extends StatelessWidget {
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final wide = constraints.maxWidth >= 900;
-                          final feedback = _FeedbackMessageCard(item: feedbackItem);
+                          final feedback = _FeedbackMessageCard(
+                            item: feedbackItem,
+                          );
                           final side = _FeedbackSidePanel(item: feedbackItem);
                           if (!wide) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [feedback, const SizedBox(height: 14), side],
+                              children: [
+                                feedback,
+                                const SizedBox(height: 14),
+                                side,
+                              ],
                             );
                           }
                           return Row(
@@ -107,7 +110,11 @@ class _FeedbackHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
+          BoxShadow(
+            color: Color(0x1F0F172A),
+            blurRadius: 24,
+            offset: Offset(0, 14),
+          ),
         ],
       ),
       child: Container(
@@ -129,19 +136,28 @@ class _FeedbackHero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _HeroTag(icon: Icons.school_outlined, text: item.course.code),
-                    _HeroTag(icon: Icons.rate_review_outlined, text: 'Lecturer feedback'),
-                    _HeroTag(icon: Icons.event_available_outlined, text: 'Released ${item.releasedLabel}'),
+                    _HeroTag(
+                      icon: Icons.school_outlined,
+                      text: item.course.code,
+                    ),
+                    _HeroTag(
+                      icon: Icons.rate_review_outlined,
+                      text: 'Lecturer feedback',
+                    ),
+                    _HeroTag(
+                      icon: Icons.event_available_outlined,
+                      text: 'Released ${item.releasedLabel}',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text(
                   item.title,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.4,
+                  ),
                 ),
                 const SizedBox(height: 7),
                 Text(
@@ -198,24 +214,37 @@ class _HeroSummary extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            feedbackOnly ? Icons.forum_outlined : Icons.workspace_premium_outlined,
+            feedbackOnly
+                ? Icons.forum_outlined
+                : Icons.workspace_premium_outlined,
             color: const Color(0xFF93C5FD),
             size: 28,
           ),
           const SizedBox(height: 10),
           Text(
             item.scoreLabel,
-            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
             'Released feedback',
-            style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800),
+            style: TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
             item.releasedLabel,
-            style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35, fontWeight: FontWeight.w800),
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              height: 1.35,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -264,7 +293,10 @@ class _FeedbackMessageCard extends StatelessWidget {
             children: [
               _InfoChip(label: item.scoreLabel, color: _brand),
               const _InfoChip(label: 'Lecturer comment', color: _success),
-              _InfoChip(label: 'Released ${item.releasedLabel}', color: _purple),
+              _InfoChip(
+                label: 'Released ${item.releasedLabel}',
+                color: _purple,
+              ),
             ],
           ),
         ],
@@ -289,7 +321,10 @@ class _FeedbackSidePanel extends StatelessWidget {
             title: 'Assessment details',
           ),
           const SizedBox(height: 14),
-          _DetailRow(label: 'Course', value: '${item.course.code} - ${item.course.title}'),
+          _DetailRow(
+            label: 'Course',
+            value: '${item.course.code} - ${item.course.title}',
+          ),
           _DetailRow(label: 'Lecturer', value: item.course.lecturer),
           _DetailRow(label: 'Released', value: item.releasedLabel),
           _DetailRow(label: 'Record', value: item.scoreLabel),
@@ -335,24 +370,24 @@ class _NextStepsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          _SectionTitle(
-            icon: Icons.checklist_outlined,
-            title: 'Next steps',
-          ),
+          _SectionTitle(icon: Icons.checklist_outlined, title: 'Next steps'),
           SizedBox(height: 12),
           _GuidanceLine(
             icon: Icons.menu_book_outlined,
-            text: 'Review the feedback and revise the weak areas before the next assessment.',
+            text:
+                'Review the feedback and revise the weak areas before the next assessment.',
           ),
           SizedBox(height: 8),
           _GuidanceLine(
             icon: Icons.question_answer_outlined,
-            text: 'Ask your lecturer for clarification if any comment is not clear.',
+            text:
+                'Ask your lecturer for clarification if any comment is not clear.',
           ),
           SizedBox(height: 8),
           _GuidanceLine(
             icon: Icons.trending_up_outlined,
-            text: 'Use the feedback to improve your next submission or exam preparation.',
+            text:
+                'Use the feedback to improve your next submission or exam preparation.',
           ),
         ],
       ),
@@ -376,7 +411,11 @@ class _GuidanceLine extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(color: Color(0xFF475569), height: 1.45, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              color: Color(0xFF475569),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -431,7 +470,13 @@ class _HeroTag extends StatelessWidget {
         children: [
           Icon(icon, color: Colors.white, size: 15),
           const SizedBox(width: 7),
-          Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
     );
@@ -462,9 +507,9 @@ class _SectionTitle extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandDark,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: _brandDark,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
       ],
@@ -516,13 +561,19 @@ class _DetailRow extends StatelessWidget {
             width: 82,
             child: Text(
               label,
-              style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: _brandDark,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

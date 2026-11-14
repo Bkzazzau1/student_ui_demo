@@ -1,10 +1,6 @@
 import 'demo_exam_models.dart';
 
-enum AssessmentMonitoringMode {
-  strictExam,
-  gradedLight,
-  standardAccess,
-}
+enum AssessmentMonitoringMode { strictExam, gradedLight, standardAccess }
 
 class AssessmentMonitoringProfile {
   const AssessmentMonitoringProfile({
@@ -36,18 +32,18 @@ class AssessmentMonitoringProfile {
   bool get showsLiveMonitor => requiresCamera || requiresMicrophone;
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'mode': mode.name,
-        'label': label,
-        'panel_title': panelTitle,
-        'requires_camera': requiresCamera,
-        'requires_microphone': requiresMicrophone,
-        'uses_system_security_panel': usesSystemSecurityPanel,
-        'uses_review_clip_sampler': usesReviewClipSampler,
-        'uses_companion_camera': usesCompanionCamera,
-        'auto_submit_when_backgrounded': autoSubmitWhenBackgrounded,
-        'pause_on_critical_monitoring_event': pauseOnCriticalMonitoringEvent,
-        'review_audience': reviewAudience,
-      };
+    'mode': mode.name,
+    'label': label,
+    'panel_title': panelTitle,
+    'requires_camera': requiresCamera,
+    'requires_microphone': requiresMicrophone,
+    'uses_system_security_panel': usesSystemSecurityPanel,
+    'uses_review_clip_sampler': usesReviewClipSampler,
+    'uses_companion_camera': usesCompanionCamera,
+    'auto_submit_when_backgrounded': autoSubmitWhenBackgrounded,
+    'pause_on_critical_monitoring_event': pauseOnCriticalMonitoringEvent,
+    'review_audience': reviewAudience,
+  };
 
   static AssessmentMonitoringProfile forAssessment(DemoAssessment assessment) {
     if (assessment.isStrictExam) {

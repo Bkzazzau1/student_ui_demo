@@ -60,10 +60,16 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
                 height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_brand, Color(0xFF1D4ED8)]),
+                  gradient: const LinearGradient(
+                    colors: [_brand, Color(0xFF1D4ED8)],
+                  ),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.task_alt_rounded, color: Colors.white, size: 19),
+                child: const Icon(
+                  Icons.task_alt_rounded,
+                  color: Colors.white,
+                  size: 19,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -124,13 +130,34 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
                             final wide = constraints.maxWidth >= 900;
                             final summary = _SubmissionSummaryCard(
                               rows: [
-                                _SummaryItem('Course', '${result.assessment.course.code} - ${result.assessment.course.title}'),
-                                _SummaryItem('Started', _formatDateTime(result.startedAt)),
-                                _SummaryItem('Submitted', _formatDateTime(result.endedAt)),
-                                _SummaryItem('Duration used', '${duration.inMinutes} min ${duration.inSeconds % 60} sec'),
-                                _SummaryItem('Identity check', _identityLabel(result.agentDecision)),
-                                _SummaryItem('Exam check', _examCheckLabel(result.agentDecision)),
-                                _SummaryItem('Review record', _reviewRecordLabel),
+                                _SummaryItem(
+                                  'Course',
+                                  '${result.assessment.course.code} - ${result.assessment.course.title}',
+                                ),
+                                _SummaryItem(
+                                  'Started',
+                                  _formatDateTime(result.startedAt),
+                                ),
+                                _SummaryItem(
+                                  'Submitted',
+                                  _formatDateTime(result.endedAt),
+                                ),
+                                _SummaryItem(
+                                  'Duration used',
+                                  '${duration.inMinutes} min ${duration.inSeconds % 60} sec',
+                                ),
+                                _SummaryItem(
+                                  'Identity check',
+                                  _identityLabel(result.agentDecision),
+                                ),
+                                _SummaryItem(
+                                  'Exam check',
+                                  _examCheckLabel(result.agentDecision),
+                                ),
+                                _SummaryItem(
+                                  'Review record',
+                                  _reviewRecordLabel,
+                                ),
                               ],
                             );
                             final observation = _ObservationCard(
@@ -146,7 +173,11 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
 
                             if (!wide) {
                               return Column(
-                                children: [summary, const SizedBox(height: 14), observation],
+                                children: [
+                                  summary,
+                                  const SizedBox(height: 14),
+                                  observation,
+                                ],
                               );
                             }
                             return Row(
@@ -163,7 +194,8 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
                         _CompletionNotice(
                           onFeedback: () => Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) => StudentExamFeedbackView(result: result),
+                              builder: (_) =>
+                                  StudentExamFeedbackView(result: result),
                             ),
                           ),
                         ),
@@ -203,12 +235,15 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
 
   void _showDashboardReminder(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Use the Dashboard button to leave this page.')),
+      const SnackBar(
+        content: Text('Use the Dashboard button to leave this page.'),
+      ),
     );
   }
 
   String _identityLabel(String decision) {
-    if (result.assessment.attendanceOnly) return 'Not required for this activity';
+    if (result.assessment.attendanceOnly)
+      return 'Not required for this activity';
     if (decision == 'approved_to_start' ||
         decision == 'agentic_proctoring_ready' ||
         decision == 'face_id_verified' ||
@@ -219,7 +254,8 @@ class _DemoExamResultViewState extends State<DemoExamResultView> {
   }
 
   String _examCheckLabel(String decision) {
-    if (result.assessment.attendanceOnly) return 'Not required for this activity';
+    if (result.assessment.attendanceOnly)
+      return 'Not required for this activity';
     if (decision == 'approved_to_start' ||
         decision == 'agentic_proctoring_ready' ||
         decision == 'security_review_ready' ||
@@ -282,7 +318,11 @@ class _SubmissionHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(color: Color(0x1F0F172A), blurRadius: 24, offset: Offset(0, 14)),
+          BoxShadow(
+            color: Color(0x1F0F172A),
+            blurRadius: 24,
+            offset: Offset(0, 14),
+          ),
         ],
       ),
       child: Container(
@@ -305,10 +345,10 @@ class _SubmissionHero extends StatelessWidget {
                 Text(
                   result.assessment.title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.35,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.35,
+                  ),
                 ),
                 const SizedBox(height: 7),
                 Text(
@@ -383,7 +423,11 @@ class _ScoreBox extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle_outline, color: Color(0xFF86EFAC), size: 28),
+          const Icon(
+            Icons.check_circle_outline,
+            color: Color(0xFF86EFAC),
+            size: 28,
+          ),
           const SizedBox(height: 10),
           Text(
             scoreText,
@@ -396,7 +440,10 @@ class _ScoreBox extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             marksText,
-            style: const TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.w800),
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 10),
           _GlassTag(
@@ -423,7 +470,11 @@ class _SubmissionSummaryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _line),
         boxShadow: const [
-          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -445,9 +496,9 @@ class _SubmissionSummaryCard extends StatelessWidget {
                 child: Text(
                   'Submission summary',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: _brandDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: _brandDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],
@@ -483,13 +534,19 @@ class _SummaryRow extends StatelessWidget {
             width: 128,
             child: Text(
               item.label,
-              style: const TextStyle(color: _muted, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: _muted,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               item.value,
-              style: const TextStyle(color: _brandDark, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: _brandDark,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -520,7 +577,11 @@ class _ObservationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _line),
         boxShadow: const [
-          BoxShadow(color: Color(0x080F172A), blurRadius: 18, offset: Offset(0, 10)),
+          BoxShadow(
+            color: Color(0x080F172A),
+            blurRadius: 18,
+            offset: Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -542,9 +603,9 @@ class _ObservationCard extends StatelessWidget {
                 child: Text(
                   'Student observation',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: _brandDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: _brandDark,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],
@@ -552,7 +613,11 @@ class _ObservationCard extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Write any report, concern, or observation before returning to the dashboard.',
-            style: TextStyle(color: _muted, height: 1.4, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: _muted,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 13),
           TextField(
@@ -561,7 +626,8 @@ class _ObservationCard extends StatelessWidget {
             minLines: 4,
             maxLines: 6,
             decoration: InputDecoration(
-              hintText: 'Example: I had a network issue, power interruption, noise around me, or another observation...',
+              hintText:
+                  'Example: I had a network issue, power interruption, noise around me, or another observation...',
               filled: true,
               fillColor: _surfaceSoft,
               border: OutlineInputBorder(
@@ -583,7 +649,9 @@ class _ObservationCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  saved ? 'Observation saved.' : 'Optional. You can leave it empty.',
+                  saved
+                      ? 'Observation saved.'
+                      : 'Optional. You can leave it empty.',
                   style: TextStyle(
                     color: saved ? _success : _muted,
                     fontWeight: FontWeight.w800,
@@ -592,7 +660,9 @@ class _ObservationCard extends StatelessWidget {
               ),
               FilledButton.icon(
                 onPressed: onSave,
-                icon: Icon(saved ? Icons.check_circle_outline : Icons.save_outlined),
+                icon: Icon(
+                  saved ? Icons.check_circle_outline : Icons.save_outlined,
+                ),
                 label: Text(saved ? 'Saved' : 'Save'),
               ),
             ],
@@ -684,7 +754,10 @@ class _BottomActionBar extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'Submission completed. Choose your next action.',
-                    style: TextStyle(color: _muted, fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      color: _muted,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 feedback,

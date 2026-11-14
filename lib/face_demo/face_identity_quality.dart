@@ -128,8 +128,12 @@ class FaceIdentityQualityGrader {
     // stays a hard block above.
 
     final facePresent =
-        landmarks.eyesVisible && landmarks.noseVisible && landmarks.mouthVisible;
-    if (!landmarks.eyesVisible || !landmarks.noseVisible || !landmarks.mouthVisible) {
+        landmarks.eyesVisible &&
+        landmarks.noseVisible &&
+        landmarks.mouthVisible;
+    if (!landmarks.eyesVisible ||
+        !landmarks.noseVisible ||
+        !landmarks.mouthVisible) {
       reasons.add('Keep your eyes, nose, and mouth clearly visible.');
     }
     if (!landmarks.landmarksComplete) {
@@ -177,7 +181,8 @@ class FaceIdentityQualityGrader {
     // a merely lower tier. The score only ranks samples that already
     // cleared every gate. `personPresent` deliberately does not appear here
     // — see the comment above where it is computed.
-    final hardBlock = !singlePerson ||
+    final hardBlock =
+        !singlePerson ||
         !facePresent ||
         !landmarks.landmarksComplete ||
         !landmarks.faceCentered ||
@@ -223,15 +228,19 @@ class FaceIdentityQualityGrader {
     // Only "multiple people" zeroes the score here, matching hardBlock above
     // — see the comment in grade() on why a YOLO "no person" reading alone
     // must not override a landmarker-confirmed face.
-    if (personGate.state == FaceIdentityPersonGateState.multiplePeopleDetected) {
+    if (personGate.state ==
+        FaceIdentityPersonGateState.multiplePeopleDetected) {
       return 0.0;
     }
-    if (!landmarks.eyesVisible || !landmarks.noseVisible || !landmarks.mouthVisible) {
+    if (!landmarks.eyesVisible ||
+        !landmarks.noseVisible ||
+        !landmarks.mouthVisible) {
       return 0.0;
     }
     if (!landmarks.landmarksComplete || !landmarks.faceCentered) return 0.0;
 
-    var score = faceConfidence.clamp(0.0, 1.0) * 0.45 +
+    var score =
+        faceConfidence.clamp(0.0, 1.0) * 0.45 +
         landmarks.faceCoverage.clamp(0.0, 1.0) * 0.2 +
         landmarks.alignmentQuality.clamp(0.0, 1.0) * 0.2;
     score += poseAcceptable ? 0.1 : 0.0;
