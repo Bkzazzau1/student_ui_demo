@@ -107,11 +107,40 @@ fn head_pose_flags_large_yaw() {
 
 #[test]
 fn head_pose_accepts_centered_face() {
+    // Real frontal proportions: the nose sits about 0.61 of the way from the
+    // eyes to the mouth.
     let result =
-        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 60.0, 60.0, 60.0, 92.0, 100.0, 120.0);
+        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 60.0, 60.0, 60.0, 72.8, 100.0, 120.0);
 
     assert!(result.usable);
     assert!(!result.looking_away);
+    assert!(result.pitch_score.abs() < 0.1);
+}
+
+#[test]
+fn head_pose_allows_reading_the_bottom_of_the_screen() {
+    // About 20 degrees down: nose ratio 0.78.
+    let result =
+        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 60.0, 60.0, 60.0, 65.6, 100.0, 120.0);
+
+    assert!(!result.looking_away);
+    assert!(result.pitch_score > 0.5);
+}
+
+#[test]
+fn head_pose_flags_looking_up_and_tells_left_from_right() {
+    // About 25 degrees up: nose ratio 0.37.
+    let up =
+        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 60.0, 60.0, 60.0, 94.0, 100.0, 120.0);
+    assert!(up.looking_away);
+    assert!(up.pitch_score < -0.72);
+
+    let right =
+        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 74.0, 60.0, 60.0, 72.8, 100.0, 120.0);
+    let left =
+        analyze_head_pose_geometry(40.0, 40.0, 80.0, 40.0, 46.0, 60.0, 60.0, 72.8, 100.0, 120.0);
+    assert!(right.yaw_score > 0.7);
+    assert!(left.yaw_score < -0.7);
 }
 
 fn detection(

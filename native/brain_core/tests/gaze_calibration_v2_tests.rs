@@ -54,11 +54,24 @@ fn builds_bound_multi_target_profile() {
 }
 
 #[test]
-fn predicts_nearest_personal_zone_and_deviation() {
+fn looking_at_a_calibrated_zone_is_not_deviation() {
+    // The student looks at the air board, a zone they calibrated.
     let result = predict_calibrated_gaze_zone_v2(profile(), 0.745, 0.565, 0.01, -0.01, 0.91, 500);
     assert_eq!(result.zone, "air_board");
     assert!(result.actionable);
-    assert!(result.deviation_score > 2.0);
+    assert!(result.deviation_score < 1.0, "{}", result.deviation_score);
+    // Reading the question area is not deviation either.
+    let question = predict_calibrated_gaze_zone_v2(profile(), 0.285, 0.485, 0.01, -0.01, 0.91, 500);
+    assert_eq!(question.zone, "question_area");
+    assert!(question.deviation_score < 1.0);
+    assert_eq!(question.attention_level, "normal");
+}
+
+#[test]
+fn looking_away_from_every_calibrated_zone_is_deviation() {
+    let result = predict_calibrated_gaze_zone_v2(profile(), 0.98, 0.95, 0.01, -0.01, 0.91, 500);
+    assert!(result.deviation_score >= 3.0, "{}", result.deviation_score);
+    assert_eq!(result.attention_level, "medium_attention_required");
 }
 
 #[test]

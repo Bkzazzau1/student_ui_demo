@@ -141,11 +141,15 @@ class FaceIdentityLivenessGate {
       if (!controller.value.isInitialized) break;
       Map<String, Object?>? payload;
       Uint8List encoded;
+      var frameWidth = 0;
+      var frameHeight = 0;
       try {
         final file = await controller.takePicture();
         encoded = await File(file.path).readAsBytes();
         final decoded = img.decodeImage(encoded);
         if (decoded == null) continue;
+        frameWidth = decoded.width;
+        frameHeight = decoded.height;
         payload = await _landmarker.analyseRgbRaw(
           rgbBytes: _toRgb(decoded),
           width: decoded.width,
@@ -160,6 +164,8 @@ class FaceIdentityLivenessGate {
       final result = activeSession.addLandmarkPayload(
         payload,
         timestampMs: timestampMs,
+        imageWidth: frameWidth,
+        imageHeight: frameHeight,
       );
       final observation = activeSession.lastObservation;
       if (activeSession.observationCount > before && observation != null) {
@@ -213,9 +219,16 @@ class FaceIdentityLivenessGate {
             if (payload == null || completed.isCompleted) return;
             final before = session.observationCount;
             final timestampMs = DateTime.now().toUtc().millisecondsSinceEpoch;
+            // Landmarks are in the upright frame: a quarter turn swaps sides.
             final result = session.addLandmarkPayload(
               payload,
               timestampMs: timestampMs,
+              imageWidth: orientation.swapsWidthAndHeight
+                  ? image.height
+                  : image.width,
+              imageHeight: orientation.swapsWidthAndHeight
+                  ? image.width
+                  : image.height,
             );
             final observation = session.lastObservation;
             if (session.observationCount > before && observation != null) {

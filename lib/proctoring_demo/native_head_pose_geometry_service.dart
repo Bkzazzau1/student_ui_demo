@@ -96,11 +96,23 @@ class NativeHeadPoseGeometryService {
     required double imageHeight,
   }) {
     final points = <_Point>[];
-    for (final item in landmarks) {
-      final name = '${item['name'] ?? item['label'] ?? item['type'] ?? ''}';
-      if (names.contains(name)) {
-        final point = _pointFromMap(item, imageWidth, imageHeight);
+    // A full face mesh: average the same indexed points on every platform
+    // (Android and iOS also send single named points, which gave head-pose
+    // ratios different from Windows for the same face).
+    if (landmarks.length >= 468) {
+      for (final index in fallbackIndices) {
+        final point = _pointFromMap(landmarks[index], imageWidth, imageHeight);
         if (point != null) points.add(point);
+      }
+    }
+
+    if (points.isEmpty) {
+      for (final item in landmarks) {
+        final name = '${item['name'] ?? item['label'] ?? item['type'] ?? ''}';
+        if (names.contains(name)) {
+          final point = _pointFromMap(item, imageWidth, imageHeight);
+          if (point != null) points.add(point);
+        }
       }
     }
 
