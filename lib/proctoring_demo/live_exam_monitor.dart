@@ -885,7 +885,7 @@ class _LiveExamMonitorState extends State<LiveExamMonitor> {
 
       final gaze = await _gazeEstimator.analyse(
         image,
-        orientation: CameraFrameOrientation.of(_camera?.description),
+        orientation: orientation,
       );
       if (gaze == null) return;
       _handleLandmarkGaze(gaze);
